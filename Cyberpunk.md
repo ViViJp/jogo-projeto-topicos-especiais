@@ -18,3 +18,12 @@ Conforme sobe, o corpo vira máquina e o cenário fica mais limpo e luxuoso. No 
 ## Em uma frase
 
 Ele sobe na vida trocando carne e moral por metal e crédito.
+
+- Referências: Robocop, Cyberpunk2077, Celeste
+- Título: Glitch City
+- Universo: esgotos em um universo cyberpunk
+- Personagens: Alex Murphy 
+- Objetos: 
+- Objetivo: chegar ao pináculo da sociedade
+- Regras:
+- Premissa: O X(nome do personagem) está cansado da sua vida e está disposto a fazer de tudo para “subir” ao “pico” da sociedade. Enfrentando obstáculos cada vez mais complexos, tendo que evoluir à medida que os desafios vão surgindo.
