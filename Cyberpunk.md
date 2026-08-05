@@ -27,9 +27,9 @@ Conforme sobe, o corpo vira máquina e o cenário fica mais limpo e luxuoso. No 
 - Personagens: Alex Murphy 
 - Objetos: 
 - Objetivo: chegar ao pináculo da sociedade
-- Regras:
+- Regras: 
 
 ## Premissa: 
 Alex está cansado da sua vida, após viver anos vivendo na margem da sociedade na grande cidade de Glitch City, está disposto a fazer de tudo para subir ao pico da sociedade, disposto a realizar modificações corporais e diversos atos questionáveis para chegar nesse objetivo 
 
-Em cada fase enfrenta obstáculos mais complexos, tendo que alterar seu corpo e quebrar diversos limites morais para alcançar o pinaculo da sociedade, a ganância em atingir seu objetivo pode acabar o cegando das mudanças que estão sendo causadas, chegando   mas talvez já não reste humanidade suficiente para desfrutar de nada disso. 
+Em cada fase enfrenta obstáculos mais complexos, tendo que alterar seu corpo e quebrar diversos limites morais para alcançar o pinaculo da sociedade, a ganância em atingir seu objetivo pode acabar o cegando das mudanças que estão sendo causadas, o propósito pode ser sido alcançado, mas talvez já não reste humanidade suficiente para desfrutar de seus espólios.
