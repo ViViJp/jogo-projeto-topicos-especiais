@@ -30,4 +30,6 @@ Conforme sobe, o corpo vira máquina e o cenário fica mais limpo e luxuoso. No 
 - Regras:
 
 ## Premissa: 
-O Alex Murphy está cansado da sua vida e está disposto a fazer de tudo para subir ao pico da sociedade. Enfrentando obstáculos cada vez mais complexos, tendo que evoluir à medida que os desafios vão ficando maiores.
+Alex está cansado da sua vida, após viver anos vivendo na margem da sociedade na grande cidade de Glitch City, está disposto a fazer de tudo para subir ao pico da sociedade, disposto a realizar modificações corporais e diversos atos questionáveis para chegar nesse objetivo 
+
+Em cada fase enfrenta obstáculos mais complexos, tendo que alterar seu corpo e quebrar diversos limites morais para alcançar o pinaculo da sociedade, a ganância em atingir seu objetivo pode acabar o cegando das mudanças que estão sendo causadas, chegando   mas talvez já não reste humanidade suficiente para desfrutar de nada disso. 
