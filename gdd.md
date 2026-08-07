@@ -8,15 +8,23 @@ Revision: 0.0.1
 
 - Overview
   - Theme / Setting / Genre
+  
+   Cyperpunk
   - Core Gameplay Mechanics Brief
+
+  Um runner 2D onde o personagem pode correr e pular agachar, após aprimoramentos o personagem vai atacar/quebrar obstaculos, realizar pulos duplos, subir em plataformas invisiveis e realizar DASH's
   - Targeted platforms
+
+  Computador
   - Monetization model (Brief/Document)
+  
+  Pensei em manter a monetização em customização de personagem ou cobrar uma valor pelo jogo
   - Project Scope
   - Influences (Brief)
-    - <Influence #1>
-    - <Influence #2>
-    - <Influence #3>
-    - <Influence #4>
+    - <Robocop #1> 
+    - <Rayman Jungle Run #2>
+    - <BIT.TRIP.RUNNER #3>
+    - <Cyberpunk2077 #4>
   - The elevator Pitch
   - Project Description (Brief):
   - Project Description (Detailed)
@@ -59,7 +67,7 @@ Revision: 0.0.1
   - <Gameplay Mechanic #4>
 
 ## Targeted platforms
-  - <Example Platform #1 Here>
+  - Computador
   - <Example Platform #2 Here>
   - <Example Platform #3 Here>
 

@@ -5,7 +5,7 @@ criado: 2026-07-28
 tags: [cyberpunk, jogo, faculdade]
 ---
 
-# Cyberpunk
+# Flesh to Chrome
 
 ## Sobre o Jogo
 
@@ -22,7 +22,7 @@ Conforme sobe, o corpo vira máquina e o cenário fica mais limpo e luxuoso. No 
 ## Mais informações
 
 - Referências: Robocop, Cyberpunk2077, Rayman Jungle Run e BIT.TRIP.RUNNER
-- Título: Glitch City
+- Título: Flesh to Chrome
 - Universo: esgotos em um universo cyberpunk
 - Personagens: Alex Murphy 
 - Objetos: 
