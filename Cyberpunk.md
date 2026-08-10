@@ -23,7 +23,7 @@ Conforme sobe, o corpo vira máquina e o cenário fica mais limpo e luxuoso. No 
 
 - Referências: Robocop, Cyberpunk2077, Rayman Jungle Run e BIT.TRIP.RUNNER
 - Título: Flesh to Chrome
-- Universo: esgotos em um universo cyberpunk
+- Universo: Cidade vertical cyberpunk dividida em setores sociais, começando pelos esgotos e periferias industriais e terminando nos distritos corporativos da elite.
 - Personagens: Alex Murphy 
 - Objetos: 
 - Objetivo: chegar ao pináculo da sociedade

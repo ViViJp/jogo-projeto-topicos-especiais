@@ -8,17 +8,9 @@ Revision: 0.0.1
 
 - Overview
   - Theme / Setting / Genre
-  
-   Cyperpunk
   - Core Gameplay Mechanics Brief
-
-  Um runner 2D onde o personagem pode correr e pular agachar, após aprimoramentos o personagem vai atacar/quebrar obstaculos, realizar pulos duplos, subir em plataformas invisiveis e realizar DASH's
   - Targeted platforms
-
-  Computador
   - Monetization model (Brief/Document)
-  
-  Pensei em manter a monetização em customização de personagem ou cobrar uma valor pelo jogo
   - Project Scope
   - Influences (Brief)
     - <Robocop #1> 
@@ -57,19 +49,30 @@ Revision: 0.0.1
 
 ## Theme / Setting / Genre
 
-<Insert Theme here>
+### Theme
+Ascensão social, ganância, transumanismo, desigualdade, perda de humanidade, obsessão pelo sucesso.
+
+### Setting
+
+Megacidade cyberpunk vertical e socialmente estratificada, com setores pobres e industriais em seus níveis inferiores e distritos corporativos luxuosos no topo.
+
+### Genre
+
+2D auto-runner / action platformer.
 
 ## Core Gameplay Mechanics Brief
 
-  - <Gameplay Mechanic #1>
-  - <Gameplay Mechanic #2>
-  - <Gameplay Mechanic #3>
-  - <Gameplay Mechanic #4>
+  - Corrida automatica
+  - Pular
+  - Agachar
+  - Atacar/Quebrar
+  - Salto Duplo
+  - Visão artifical
+  - Dash
+  - Coleta
 
 ## Targeted platforms
-  - Computador
-  - <Example Platform #2 Here>
-  - <Example Platform #3 Here>
+  - Desktop navegador Web
 
 ## Monetization model (Brief/Document) 
   - Monetization Type (Premium, Paid Alpha/Beta/Final, Ad Driven, Micro-transactions, Subscription, etc.)
