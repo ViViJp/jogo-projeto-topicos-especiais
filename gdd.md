@@ -59,12 +59,11 @@ Ascensão social, ganância, transumanismo, desigualdade, perda de humanidade, o
 - Dash (upgrade)
 - Coleta de créditos
 - Sistema de vidas (proposta)
-- Escolha de final (aceitar ou recusar o último implante)
+- Escolha de final (aceitar ou recusar o último implante) -- pensei em fazer um final retroativo, tipo deixar a pessoa rejogar as fases e para ir recuperando a humanidade dele, assim deixando as fases mais dificeis sem os upgrades.
 
 ## Targeted platforms
 
 - Desktop, navegador web
-- Engine: **Phaser**
 
 ## Monetization model
 
@@ -77,7 +76,6 @@ Modelo documentado (não precisa de pagamento real na entrega):
 - Créditos coletados in-game também podem desbloquear extras (vidas, skins básicas)
 - Nada que altere poder de combate (pay-to-win)
 
-> Detalhe a fechar: se o “valor representativo” é só vitrine acadêmica (preço fictício em R$) ou também um catálogo interno em créditos.
 
 ## Project Scope
 
@@ -85,11 +83,11 @@ Modelo documentado (não precisa de pagamento real na entrega):
 
 - **Prazo:** até o fim do semestre (~2–3 meses)
 - **Custo:** acadêmico (sem orçamento formal; ferramentas gratuitas / Phaser)
-- **Conteúdo alvo:** 5 fases + 4 upgrades + 2 finais + loja de skins
+- **Conteúdo alvo:** 5 fases + 4 upgrades + 2 finais + loja de skins(não obrigatório)
 
 ### Team Size
 
-- **Core team:** 3–4 pessoas
+- **Core team:** 3 pessoas
 - Papéis sugeridos (nomes a preencher):
   - Programação / Phaser (player, fases, colisão, UI)
   - Game design / GDD / balanceamento
@@ -133,6 +131,8 @@ Um auto-runner cyberpunk no navegador em que você sobe os andares de Glitch Cit
 **Flesh to Chrome** é um auto-runner 2D no navegador. Alex Murphy vive à margem de Glitch City e decide subir até o pináculo da sociedade. Cada fase é um setor social: o chão corre sozinho, o jogador desvia, quebra, coleta créditos e sobrevive.
 
 Ao fim de cada fase, Alex recebe uma peça mecânica nova (pernas, braços, olhos, propulsores). O cenário fica mais limpo e luxuoso; o corpo, menos humano. Créditos compram vidas e extras; skins têm valor representativo na loja. No último implante, o jogador escolhe: aceitar o cromo total (final trágico) ou recuar (final humano).
+
+(Caso seguirmos o caminho de existir um final alternativo podemos fazer uma descida, rejogando as fases, com uma dificuldade maior e fazendo a direção contrária)
 
 ## Project Description (Detailed)
 
@@ -190,13 +190,15 @@ Como funciona: botão de ataque com hitbox à frente por poucos frames. Obstácu
 
 Detalhe: o setor corporativo esconde plataformas, armadilhas e rotas de créditos atrás de camuflagem / vidro / HUD.
 
-Como funciona: toggle ou visão permanente na fase. Plataformas “fantasmas” só colidem / aparecem com os olhos ativos. Risco: a visão pode ofuscar o cenário (feedback de “menos humano”).
+Como funciona: toggle fase. Plataformas “fantasmas” só colidem / aparecem com os olhos ativos. Risco: a visão pode ofuscar o cenário, não mostrando espinhos e outras ameaças (feedback de “menos humano”).
 
 ### 7. Dash — propulsores (Fase 5, final cromo)
 
 Detalhe: só se o jogador **aceitar** o último implante. Atravessa vãos longos, i-frames curtos ou quebra de laser.
 
 Como funciona: impulso horizontal rápido com cooldown. Recusar o implante = Fase 5 alternativa **sem** dash (final humano), mais lenta / outra rota.
+
+(Caso seguirmos o caminho de existir um final alternativo podemos fazer uma descida, rejogando as fases, com uma dificuldade maior e fazendo a direção contrária)
 
 ### 8. Vidas (proposta, estilo Crash)
 
@@ -213,13 +215,15 @@ Ainda em discussão no time; isto é a proposta oficial no GDD até alguém veta
 
 Alex Murphy, cansado da margem de Glitch City, sobe andar por andar vendendo o próprio corpo. Cada clínica o deixa mais capaz e menos humano. No último implante ele escolhe: virar cromo puro no topo, ou recuar e viver (talvez mais embaixo) ainda como gente.
 
+(Caso seguirmos o caminho de existir um final alternativo podemos fazer uma descida, rejogando as fases, com uma dificuldade maior e fazendo a direção contrária)
+
 ## Story (Detailed)
 
-Alex vive anos nos andares baixos: trabalho precário, violência, neon que não é para ele. A promessa da cidade é simples — quem se modifica, sobe. Ele entra no circuito de clínicas clandestinas.
+Alex vive anos nos andares baixos: trabalho precário, violência; que não é para ele. A promessa da cidade é simples — quem se modifica, sobe. Ele entra no circuito de clínicas clandestinas.
 
 **Arco por fase**
 
-1. **Submundo** — ainda carne. Medo, fome, sucata. Ele decide que “dessa vez vai”.
+1. **Esgoto** — ainda carne. Medo, fome, sucata. Ele decide que “dessa vez vai”.
 2. **Industrial** — pernas novas. Corre mais longe, já não sente o chão como antes.
 3. **Meio da cidade** — braços. Quebra o que o bloqueava; começa a quebrar pessoas/sistemas no caminho (inimigos como obstáculo moral, não cutscene longa).
 4. **Corporativo** — olhos. Vê o que os ricos escondem. Também deixa de ver o que era humano.
@@ -229,9 +233,15 @@ Alex vive anos nos andares baixos: trabalho precário, violência, neon que não
 
 **Final B — Flesh (humano):** recusa. Enfrenta o último trecho sem o dash (ou entra num epílogo de descida / exílio). Não é o topo dos cartões-postais, mas resta alguém para lembrar quem ele era.
 
+**Segunda opção de finais**
+**Final A — Chrome (trágico):** Após escolher atravessar o parte final da ultima fase. Chega ao pináculo. Corpo máquina, sucesso vazio. A cidade o aceita; ele já não sabe por quê queria isso.
+
+**Final B — Flesh (humano):** Decide por não atravessar o portão final da ultima fase. Entra num epílogo de descida / exílio. Não é o topo dos cartões-postais, mas resta alguém para lembrar quem ele era.
+
+
 Tom: sátira amarga, não comédia leve. Diálogos curtos entre fases (clínica, vendedor de cromo, anúncios da cidade). Sem novela: o corpo na tela conta a história.
 
-Personagem jogável: **Alex Murphy**. NPCs de apoio (clínico, vendedor, voz de anúncio corporativo) — nomes a definir.
+Personagem jogável: **Alex Murphy**. NPCs de apoio (clínico - George Vektor, vendedor - Mercador)
 
 ## Gameplay (Brief)
 
@@ -251,12 +261,14 @@ Cinco fases horizontais de auto-runner. Entre fases: clínica (upgrade automáti
 
 | Fase | Setor | Verbos | Upgrade ao terminar |
 | --- | --- | --- | --- |
-| 1 | Submundo / esgoto / periferia | Correr, pular, agachar, coletar | Pernas → salto duplo |
-| 2 | Industrial | + salto duplo | Braços → atacar / quebrar |
-| 3 | Meio urbano | + ataque | Olhos → visão artificial |
-| 4 | Corporativo | + visão | Escolha: propulsores ou recusa |
+| 1 | esgoto / periferia | Correr, pular, agachar, coletar | Pernas -> salto duplo |
+| 2 | Industrial | + salto duplo | Braços -> atacar / quebrar |
+| 3 | Meio urbano | + ataque | Olhos -> visão artificial |
+| 4 | Corporativo | + visão | Propulsores -> dash  |
 | 5A | Topo (final cromo) | + dash | — |
 | 5B | Topo / exílio (final humano) | sem dash, rota alternativa | — |
+
+(Caso seguirmos o caminho de existir um final alternativo podemos fazer uma descida, rejogando as fases, com uma dificuldade maior e fazendo a direção contrária)
 
 ### Controles (proposta)
 
@@ -276,11 +288,12 @@ Hit em espinho, buraco, inimigo ou laser consome 1 vida e volta ao checkpoint. S
 
 - Vidas extras
 - Skins (valor representativo)
-- Nada que pule fase ou dê invencibilidade permanente
 
 ### Dificuldade
 
 Cada setor ensina o upgrade novo em 10–20s “seguros” e depois exige o verbo. Fase 5A é o exame do dash; Fase 5B é o exame de tudo **menos** o dash (pulo, visão, ataque, paciência).
+
+(Caso seguirmos o caminho de existir um final alternativo podemos fazer uma descida, rejogando as fases, com uma dificuldade maior e fazendo a direção contrária)
 
 # Assets Needed
 
@@ -291,13 +304,15 @@ Jogo 2D; **sem assets 3D**.
 ## 2D
 
 - Player Alex: corpo humano → 4 estágios de cromo (+ skin variants)
-- Tilesets: submundo, industrial, urbano, corporativo, topo
+- Tilesets: esgoto, industrial, urbano, corporativo, topo
 - Obstáculos: buraco, espinho, cano, caixa quebrável, laser, drone
 - Inimigos simples (silhueta / hitbox)
 - Coletável de crédito
 - UI: vidas, créditos, loja, título, tela de final A/B
 - Backgrounds em camadas (parallax) por setor
 - Ícones de implante na clínica
+
+(Caso seguirmos o caminho de existir um final alternativo podemos fazer uma descida, rejogando as fases, com uma dificuldade maior e fazendo a direção contrária)
 
 ## 3D
 
@@ -323,9 +338,10 @@ Não se aplica.
 - Spawner / tilemap de obstáculos
 - Coleta e carteira de créditos
 - Vidas + checkpoint + game over
-- Persistência simples (fase atual, upgrades, skins) — localStorage
+- Persistência simples (fase atual, upgrades, skins) 
 - Sistema de skins / vitrine de preço representativo
 - Flag de escolha do final → carrega Fase 5A ou 5B
+(Caso seguirmos o caminho de existir um final alternativo podemos fazer uma descida, rejogando as fases, com uma dificuldade maior e fazendo a direção contrária)
 - HUD
 
 ## Animation
@@ -340,47 +356,11 @@ Não se aplica.
 
 Semestre (~8–12 semanas). Ajustar datas quando a disciplina publicar o calendário.
 
-### Marco 1 — Runner mínimo (semanas 1–2)
-
-- Projeto Phaser no ar no navegador
-- Player corre, pula, agacha
-- 1 trecho de obstáculos + morte + restart
-- Placeholders
-
-### Marco 2 — Loop de fase (semanas 3–4)
-
-- Créditos + HUD
-- 1 fase completa (Fase 1)
-- Tela entre fases (clínica stub)
-- Proposta de vidas implementada
-
-### Marco 3 — Upgrades (semanas 5–7)
-
-- Salto duplo, ataque, visão
-- Fases 2–4 jogáveis (ainda placeholders)
-- Loja: vidas + 1 skin com preço representativo
-
-### Marco 4 — Finais e conteúdo (semanas 8–10)
-
-- Dash + escolha do implante
-- Fase 5A e 5B
-- Textos / anúncios / dois endings
-
-### Marco 5 — Polimento e entrega (semanas 11–12)
-
-- Pass rápido de arte ou placeholders consistentes
-- Áudio mínimo
-- Balanceamento e bugfix
-- Build web + GDD alinhado ao build
 
 ---
 
 ## Aberto / a preencher no time
 
-- Nomes e papéis dos 3–4 integrantes
-- Calendário oficial da disciplina
-- Se visão artificial é toggle ou permanente na Fase 4
 - Fechamento do sistema de vidas (proposta Crash acima)
 - Lista inicial de skins e tabela de “valor representativo”
-- Nomes dos NPCs da clínica / loja
 - Estilo de arte final (depois dos placeholders)
