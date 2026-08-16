@@ -138,7 +138,7 @@ Ao fim de cada fase, Alex recebe uma peça mecânica nova (pernas, braços, olho
 
 Glitch City é uma torre social. Embaixo, esgoto, periferia industrial e violência. No topo, vidro, neon corporativo e silêncio. Alex está cansado de viver na margem. Ele aceita clínicas clandestinas, dívida moral e modificações irreversíveis para “chegar lá”.
 
-A jogabilidade é um runner horizontal por fase. Não há exploração livre: o desafio é timing, leitura de obstáculo e uso do upgrade daquele setor. A progressão narrativa e a progressão mecânica são a mesma coisa — cada andar desbloqueia um verbo novo.
+A jogabilidade é um runner horizontal por fase. Não há exploração livre: o desafio é timing, leitura de obstáculo e uso do upgrade daquele setor. A progressão narrativa e a progressão mecânica são a mesma coisa — cada andar desbloqueia uma nova acão de jogador (uma nova função de personagem).
 
 Os créditos servem à sobrevivência (vidas, no modelo Crash) e à fantasia de consumo (skins / valor representativo). Isso reforça o tema: o mesmo recurso que te mantém vivo também te vende identidade.
 
@@ -148,7 +148,7 @@ O projeto é acadêmico (disciplina de tópicos especiais), feito em Phaser por 
 
 # What sets this project apart?
 
-- **Upgrade = andar social:** cada implante muda o corpo e o verbo de jogo.
+- **Upgrade = andar social:** cada implante muda o corpo e o acão de jogo para o personagem.
 - **Cidade vertical, fases horizontais:** a subida é estrutura de campanha, não o eixo do nível.
 - **Dois finais amarrados ao último cromo:** a escolha moral é também escolha de kit mecânico.
 - **Tema de consumo no meta:** créditos, vidas e skins ecoam a ganância do protagonista.
@@ -164,7 +164,7 @@ Isso mantém o foco em timing e leitura de nível, no estilo Jungle Run / BIT.TR
 
 ### 2. Pular e agachar
 
-Verbos base da Fase 1. Pulo evita buracos, lâminas e barreiras baixas. Agachar passa sob canos, drones e tetos baixos.
+Acões base da Fase 1. Pulo evita buracos, lâminas e barreiras baixas. Agachar passa sob canos, drones e tetos baixos.
 
 A combinação dos dois já permite uma fase completa sem upgrades. Falha = hit (ver vidas).
 
@@ -259,7 +259,7 @@ Cinco fases horizontais de auto-runner. Entre fases: clínica (upgrade automáti
 
 ### Mapa de fases
 
-| Fase | Setor | Verbos | Upgrade ao terminar |
+| Fase | Setor | Ações | Upgrade ao terminar |
 | --- | --- | --- | --- |
 | 1 | esgoto / periferia | Correr, pular, agachar, coletar | Pernas -> salto duplo |
 | 2 | Industrial | + salto duplo | Braços -> atacar / quebrar |
@@ -291,7 +291,7 @@ Hit em espinho, buraco, inimigo ou laser consome 1 vida e volta ao checkpoint. S
 
 ### Dificuldade
 
-Cada setor ensina o upgrade novo em 10–20s “seguros” e depois exige o verbo. Fase 5A é o exame do dash; Fase 5B é o exame de tudo **menos** o dash (pulo, visão, ataque, paciência).
+Cada setor ensina o upgrade novo em 10–20s “seguros” e depois exige a caracteristica do personagem. Fase 5A é o exame do dash; Fase 5B é o exame de tudo **menos** o dash (pulo, visão, ataque, paciência).
 
 (Caso seguirmos o caminho de existir um final alternativo podemos fazer uma descida, rejogando as fases, com uma dificuldade maior e fazendo a direção contrária)
 
