@@ -1,6 +1,6 @@
 # Game Design Document — Flesh to Chrome
 
-Revision: 0.1.0  
+Revision: 0.2.0  
 Base: template de Benjamin “HeadClot” Stanley  
 Fonte complementar: `Cyberpunk.md`
 
@@ -59,50 +59,77 @@ Ascensão social, ganância, transumanismo, desigualdade, perda de humanidade, o
 - Dash (upgrade)
 - Coleta de créditos
 - Sistema de vidas (proposta)
-- Escolha de final (aceitar ou recusar o último implante) -- pensei em fazer um final retroativo, tipo deixar a pessoa rejogar as fases e para ir recuperando a humanidade dele, assim deixando as fases mais dificeis sem os upgrades.
+- Hub de setores (rejogar fases já visitadas com o kit atual)
+- Zonas secretas (1 por fase 1–4; só alcançáveis com o upgrade da fase seguinte)
+- Escolha no topo: Portão (Final Chrome) ou volta (descida)
+- Descida: rejogar 4 → 3 → 2 → 1, Marrow/Vektor arranca 1 implante por andar
+- Três finais: Chrome / Flesh / Hollow
 
 ## Targeted platforms
 
 - Desktop, navegador web
+- Engine: Phaser
 
 ## Monetization model
 
-Trabalho acadêmico, jogo jogável de graça no navegador.
+Jogo acadêmico, **grátis** no navegador. A loja existe para demonstrar dois tipos de gasto: **créditos in-game** e **valor representativo** (simula dinheiro real). Nenhum item muda poder, pulo, dash, vidas máximas permanentes nem pula fase — **sem pay-to-win**.
 
-Modelo documentado (não precisa de pagamento real na entrega):
+### Moeda in-game — créditos
 
-- **Skins cosméticas** (aparência do personagem / cromo)
-- Compra com **valor representativo** (preço simbólico na loja, para demonstrar o sistema)
-- Créditos coletados in-game também podem desbloquear extras (vidas, skins básicas)
-- Nada que altere poder de combate (pay-to-win)
+Coletados nas fases (rotas de risco pagam mais). Gastam-se no hub / Mercador:
 
+| Item | Preço (créditos) | Efeito |
+| --- | --- | --- |
+| Vida extra | 100 | +1 vida (modelo Crash; proposta) |
+| Skin “Sucata” | 80 | Só visual |
+| Skin “Tinta de rua” | 150 | Só visual |
+| Skin “Cabo desencapado” | 200 | Só visual |
+
+### Valor representativo — “dinheiro real” (simulado)
+
+Vitrine do Mercador com preços em R$ fictícios. Na entrega acadêmica o botão **Comprar** abre um modal: *pagamento simulado — compra registrada*. Não há gateway real.
+
+| Item | Preço representativo | Efeito |
+| --- | --- | --- |
+| Skin “Neon Elite” | R$ 4,90 | Só visual |
+| Skin “Chrome Mirror” | R$ 9,90 | Só visual |
+| Skin “Vektor Special” | R$ 14,90 | Só visual |
+
+Créditos **não** compram as skins de vitrine; R$ simbólico **não** compra vidas. Os dois eixos ficam separados de propósito: sobreviver custa suor; identidade de elite custa o cartão.
 
 ## Project Scope
 
 ### Game Time Scale
 
 - **Prazo:** até o fim do semestre (~2–3 meses)
-- **Custo:** acadêmico (sem orçamento formal; ferramentas gratuitas / Phaser)
-- **Conteúdo alvo:** 5 fases + 4 upgrades + 2 finais + loja de skins(não obrigatório)
+- **Custo:** acadêmico (sem orçamento formal)
+- **Conteúdo alvo:** 5 fases de subida + hub de replay + 4 zonas secretas + descida (reusa os mesmos mapas) + 3 finais + loja (créditos + vitrine)
 
 ### Team Size
 
 - **Core team:** 3 pessoas
 - Papéis sugeridos (nomes a preencher):
-  - Programação / Phaser (player, fases, colisão, UI)
-  - Game design / GDD / balanceamento
+  - Programação / Phaser (player, fases, colisão, UI, hub, persistência)
+  - Game design / GDD / balanceamento / rotas secretas
   - Arte 2D / placeholders → pixel art depois
-  - Áudio / narrativa / QA (pode acumular com outro papel)
-- **Marketing:** não se aplica (entrega de disciplina)
+  - Áudio / narrativa / QA (acumula com outro papel)
+- **Marketing:** não se aplica
 - **Licenças:** Phaser (open source), assets próprios ou com licença livre
 
 ### Entrega mínima vs. desejável
 
 | Mínimo jogável | Desejável |
 | --- | --- |
-| 1 fase com corrida, pulo, agachar, obstáculos, morte e restart | 5 fases |
+| 1 fase com corrida, pulo, agachar, obstáculos, morte e restart | 5 fases de subida |
 | Placeholders visuais | Pass de arte pixel + neon |
-| 1 upgrade funcionando | 4 upgrades + loja + 2 finais |
+| 1 upgrade funcionando | 4 upgrades + hub + 4 segredos |
+| Final Chrome (portão) | Descida + finais Flesh e Hollow + loja |
+
+### Corte de escopo (se o tempo apertar)
+
+1. Descida usa **os mesmos tilemaps, mesma direção L→R**, só muda HUD (“retorno ao setor”) e o kit (implante a menos). Percurso invertido (correr para a esquerda) é extra, não requisito da entrega.
+2. 4 segredos = 1 plataforma / 1 rota curta por mapa, não um nível novo.
+3. Hollow pode ser a mesma cutscene de Flesh com 2–3 linhas e um sprite a menos (família ausente).
 
 ## Influences
 
@@ -124,151 +151,164 @@ Game. Referência de mundo, cromo, clínicas de implante e desigualdade urbana. 
 
 ## The elevator Pitch
 
-Um auto-runner cyberpunk no navegador em que você sobe os andares de Glitch City trocando carne por cromo — e no topo descobre se ainda resta humanidade para aproveitar o que conquistou.
+Um auto-runner cyberpunk no navegador em que você sobe Glitch City trocando carne por cromo — e no topo escolhe ficar máquina ou descer, devolver as peças e descobrir se ainda resta alguém esperando no esgoto.
 
 ## Project Description (Brief)
 
-**Flesh to Chrome** é um auto-runner 2D no navegador. Alex Murphy vive à margem de Glitch City e decide subir até o pináculo da sociedade. Cada fase é um setor social: o chão corre sozinho, o jogador desvia, quebra, coleta créditos e sobrevive.
+**Flesh to Chrome** é um auto-runner 2D no navegador. Alex Murphy vive à margem de Glitch City e sobe setor por setor. Cada fase dá um implante novo. Entre fases, um **hub** deixa rejogar setores já visitados com o kit atual: teases da primeira passagem viram rotas secretas.
 
-Ao fim de cada fase, Alex recebe uma peça mecânica nova (pernas, braços, olhos, propulsores). O cenário fica mais limpo e luxuoso; o corpo, menos humano. Créditos compram vidas e extras; skins têm valor representativo na loja. No último implante, o jogador escolhe: aceitar o cromo total (final trágico) ou recuar (final humano).
+No topo, o Portão. Atravessar é o **Final Chrome** (sucesso oco). Recusar inicia a **descida**: os mesmos setores, um implante a menos a cada andar. Quatro **fragmentos** escondidos (um por fase 1–4) só saem com o verbo que você ainda não tinha na primeira visita. Trazer os quatro para casa é o **Final Flesh**. Descer sem eles é o **Final Hollow** — o esgoto, sem a família.
 
-(Caso seguirmos o caminho de existir um final alternativo podemos fazer uma descida, rejogando as fases, com uma dificuldade maior e fazendo a direção contrária)
+Créditos compram vidas e skins baratas. O Mercador vende cromo de vitrine a preço em R$ representativo (pagamento simulado).
 
 ## Project Description (Detailed)
 
-Glitch City é uma torre social. Embaixo, esgoto, periferia industrial e violência. No topo, vidro, neon corporativo e silêncio. Alex está cansado de viver na margem. Ele aceita clínicas clandestinas, dívida moral e modificações irreversíveis para “chegar lá”.
+Glitch City é uma torre social. Embaixo, esgoto, periferia industrial e violência. No topo, vidro, neon corporativo e silêncio. Alex aceita clínicas, dívida moral e cromo para “chegar lá”.
 
-A jogabilidade é um runner horizontal por fase. Não há exploração livre: o desafio é timing, leitura de obstáculo e uso do upgrade daquele setor. A progressão narrativa e a progressão mecânica são a mesma coisa — cada andar desbloqueia uma nova acão de jogador (uma nova função de personagem).
+A subida é linear e ensina um verbo por andar. O jogo deixa de ser um corredor estático no **hub**: depois de cada implante, o mapa da cidade reabre os andares de baixo. O salto que não existia na Fase 1 agora alcança uma prateleira que o jogador já viu e não pegou. Interatividade = **voltar com ferramenta nova**, não árvore de diálogo.
 
-Os créditos servem à sobrevivência (vidas, no modelo Crash) e à fantasia de consumo (skins / valor representativo). Isso reforça o tema: o mesmo recurso que te mantém vivo também te vende identidade.
+O Portão no topo é a pergunta do tema. Quem atravessa fecha o pacto. Quem volta paga o preço mecânico: Vektor arranca as peças na ordem inversa. Sem dash o corporativo dói; sem pernas o esgoto, que você já “ganhou”, vira outro jogo.
 
-O contraste visual é parte do design. Fases baixas são sujas, apertadas, cheias de sucata. Fases altas são amplas, limpas, letais de outro jeito (vidro, drones, segurança corporativa). No fim, chegar ao topo sem humanidade é vitória oca; recusar o último implante é abrir mão do “sucesso” para não desaparecer.
+Os fragmentos são memória, não loot de poder: foto, voz, brinquedo, nome. Quem os carrega ainda consegue reconhecer o que deixou. Quem só desce o corpo chega num quarto vazio.
 
-O projeto é acadêmico (disciplina de tópicos especiais), feito em Phaser por um time de 3–4 pessoas, com placeholders no começo e 5 fases como alvo do semestre.
+O consumo no meta ecoa o tema. Crédito de rua compra mais uma chance. O cartão (simulado) compra brilho. Nenhum dos dois compra humanidade — isso só o caminho de volta.
 
 # What sets this project apart?
 
-- **Upgrade = andar social:** cada implante muda o corpo e o acão de jogo para o personagem.
-- **Cidade vertical, fases horizontais:** a subida é estrutura de campanha, não o eixo do nível.
-- **Dois finais amarrados ao último cromo:** a escolha moral é também escolha de kit mecânico.
-- **Tema de consumo no meta:** créditos, vidas e skins ecoam a ganância do protagonista.
-- **Web + Phaser:** sessão curta, fácil de apresentar e jogar no navegador.
+- **Upgrade = andar social:** cada implante muda o corpo e o verbo de jogo.
+- **Hub + tease:** ver o inacessível na subida e voltar com a peça certa.
+- **Descida como inverso moral e mecânico:** perde cromo, ganha (ou não) a família.
+- **Três finais** amarrados a uma escolha + coletáveis, sem novela.
+- **Duas carteiras:** suor (créditos) vs. vitrine (R$ simbólico), zero pay-to-win.
+- **Web + Phaser:** sessão curta, fácil de apresentar no navegador.
 
 ## Core Gameplay Mechanics (Detailed)
 
 ### 1. Corrida automática
 
-Alex corre sozinho da esquerda para a direita. O jogador não controla velocidade base; controla **quando** pular, agachar, atacar e (depois) dashar.
+Alex corre sozinho da esquerda para a direita. O jogador controla **quando** pular, agachar, atacar e (depois) dashar. Cada fase é um percurso fechado.
 
-Isso mantém o foco em timing e leitura de nível, no estilo Jungle Run / BIT.TRIP. Cada fase é um percurso fechado, não um mundo aberto.
+A descida, na entrega, reusa esse eixo. “Voltar” é seleção de setor + kit reduzido, não obrigatoriamente espelhar o mapa.
 
 ### 2. Pular e agachar
 
-Acões base da Fase 1. Pulo evita buracos, lâminas e barreiras baixas. Agachar passa sob canos, drones e tetos baixos.
-
-A combinação dos dois já permite uma fase completa sem upgrades. Falha = hit (ver vidas).
+Verbos da Fase 1. Pulo: buracos, lâminas, barreiras baixas. Agachar: canos, drones, tetos baixos. Falha = hit (ver vidas).
 
 ### 3. Coleta de créditos
 
-Moedas / chips espalhados no percurso, inclusive em rotas arriscadas (pulo justo, quebrar caixa, plataforma alta).
+Chips em rotas de risco. Alimentam vidas e skins baratas. Não desbloqueiam fragmentos nem finais.
 
-Uso híbrido: **vidas e extras** na clínica / loja entre fases. 100 créditos = 1 vida (proposta). Skins podem ter preço representativo separado.
+### 4. Salto duplo — pernas (após Fase 1)
 
-### 4. Salto duplo — pernas mecânicas (Fase 2)
+Segundo pulo no ar, uma vez por voo. Abre gaps da Fase 2 e o **segredo da Fase 1** no replay.
 
-Detalhe: após a Fase 1, cirurgia automática. Pernas cromadas. O cenário industrial exige gaps maiores.
+### 5. Atacar / quebrar — braços (após Fase 2)
 
-Como funciona: um segundo pulo no ar, com cooldown interno de “já usou neste pulo”. Não substitui o pulo normal.
+Golpe curto à frente. Caixas vs. sólidos com leitura visual clara. Abre o **segredo da Fase 2**.
 
-### 5. Atacar / quebrar — braços mecânicos (Fase 3)
+### 6. Visão artificial — olhos (após Fase 3)
 
-Detalhe: soco / golpe curto à frente. Quebra caixas, barricadas e alguns inimigos fracos. Não é combo de luta; é ferramenta de runner.
+Toggle na fase. Plataformas fantasma só existem com os olhos ligados; o HUD pode esconder ameaças (menos humano). Abre o **segredo da Fase 3**.
 
-Como funciona: botão de ataque com hitbox à frente por poucos frames. Obstáculos quebráveis vs. sólidos precisam de leitura visual clara (cor / crack).
+### 7. Dash — propulsores (após Fase 4)
 
-### 6. Visão artificial — olhos (Fase 4)
+Impulso horizontal com cooldown e i-frames curtos. Exame da Fase 5 (topo) e **segredo da Fase 4**.
 
-Detalhe: o setor corporativo esconde plataformas, armadilhas e rotas de créditos atrás de camuflagem / vidro / HUD.
+### 8. Hub de setores
 
-Como funciona: toggle fase. Plataformas “fantasmas” só colidem / aparecem com os olhos ativos. Risco: a visão pode ofuscar o cenário, não mostrando espinhos e outras ameaças (feedback de “menos humano”).
+Depois da clínica, o mapa de Glitch City. Setores já visitados podem ser refeitos **com o kit atual**. Progresso da campanha (próxima fase nova) continua linear. Fragmentos coletados persistem (localStorage).
 
-### 7. Dash — propulsores (Fase 5, final cromo)
+Não existe chave obrigatória para subir. Voltar é opcional na subida e **necessário** se o jogador recusar o Portão e quiser o Final Flesh.
 
-Detalhe: só se o jogador **aceitar** o último implante. Atravessa vãos longos, i-frames curtos ou quebra de laser.
+### 9. Zonas secretas (fragmentos)
 
-Como funciona: impulso horizontal rápido com cooldown. Recusar o implante = Fase 5 alternativa **sem** dash (final humano), mais lenta / outra rota.
+Uma rota curta por fase 1–4, visível na primeira passagem (luz, plataforma alta, parede rachada) e inalcançável com o kit daquela visita.
 
-(Caso seguirmos o caminho de existir um final alternativo podemos fazer uma descida, rejogando as fases, com uma dificuldade maior e fazendo a direção contrária)
+| Setor | Fragmento | Ferramenta exigida | Quando fica pegável |
+| --- | --- | --- | --- |
+| 1 Esgoto | Lembrança da família (ex.: foto) | Salto duplo | Após Fase 1, replay ou descida |
+| 2 Industrial | Lembrança do trabalho / nome antigo | Braços (quebrar) | Após Fase 2 |
+| 3 Meio urbano | Lembrança da rua / voz | Olhos | Após Fase 3 |
+| 4 Corporativo | Lembrança do que ele ainda era | Dash | Após Fase 4 |
 
-### 8. Vidas (proposta, estilo Crash)
+Na descida, o jogador **ainda tem** a ferramenta daquele segredo e só a perde **depois** de completar aquele setor (Vektor opera na clínica de retorno).
+
+### 10. Portão e descida
+
+Fim da Fase 5:
+
+- **Atravessar o Portão** → Final Chrome. Campanha encerra. Fragmentos não mudam esse final (a ganância ganha mesmo com a memória no bolso).
+- **Recusar** → modo descida: ordem 4 → 3 → 2 → 1. Após cada setor, um implante é removido (dash → olhos → braços → pernas). Chega ao esgoto em carne.
+
+Fragmentos 4/4 na chegada → **Final Flesh**. Menos de 4 → **Final Hollow**.
+
+### 11. Vidas (proposta, estilo Crash)
 
 - 1 hit = morte da tentativa
-- 100 créditos = +1 vida
+- 100 créditos = +1 vida (loja ou automático — o time fecha na implementação)
 - Checkpoints no meio da fase
-- 0 vidas = game over → volta ao início da fase ou hub entre fases
-
-Ainda em discussão no time; isto é a proposta oficial no GDD até alguém vetar.
+- 0 vidas = restart da fase; hub e fragmentos salvam
 
 # Story and Gameplay
 
 ## Story (Brief)
 
-Alex Murphy, cansado da margem de Glitch City, sobe andar por andar vendendo o próprio corpo. Cada clínica o deixa mais capaz e menos humano. No último implante ele escolhe: virar cromo puro no topo, ou recuar e viver (talvez mais embaixo) ainda como gente.
-
-(Caso seguirmos o caminho de existir um final alternativo podemos fazer uma descida, rejogando as fases, com uma dificuldade maior e fazendo a direção contrária)
+Alex Murphy sobe Glitch City vendendo o corpo. No Portão, fica cromo ou volta. Na volta, Vektor devolve carne trecho a trecho. Se Alex trouxer as quatro lembranças, a família ainda está no esgoto. Se só trouxer o corpo, o quarto está vazio.
 
 ## Story (Detailed)
 
-Alex vive anos nos andares baixos: trabalho precário, violência; que não é para ele. A promessa da cidade é simples — quem se modifica, sobe. Ele entra no circuito de clínicas clandestinas.
+Alex vive nos andares baixos. A cidade promete: quem se modifica, sobe. Ele entra no circuito do **George Vektor** (clínico) e do **Mercador** (vitrine de identidade).
 
-**Arco por fase**
+**Arco de subida**
 
-1. **Esgoto** — ainda carne. Medo, fome, sucata. Ele decide que “dessa vez vai”.
-2. **Industrial** — pernas novas. Corre mais longe, já não sente o chão como antes.
-3. **Meio da cidade** — braços. Quebra o que o bloqueava; começa a quebrar pessoas/sistemas no caminho (inimigos como obstáculo moral, não cutscene longa).
-4. **Corporativo** — olhos. Vê o que os ricos escondem. Também deixa de ver o que era humano.
-5. **Topo** — a clínica final oferece propulsores / cromo completo.
+1. **Esgoto** — carne. Medo, sucata, a decisão.
+2. **Industrial** — pernas. O chão já não é o mesmo.
+3. **Meio da cidade** — braços. Quebra o que o bloqueava; começa a quebrar gente no caminho.
+4. **Corporativo** — olhos. Vê o que os ricos escondem; deixa de ver o que era humano.
+5. **Topo** — dash. O Portão. Vektor oferece o último fecho de cromo / o status que a cidade reconhece.
 
-**Final A — Chrome (trágico):** aceita. Chega ao pináculo. Corpo máquina, sucesso vazio. A cidade o aceita; ele já não sabe por quê queria isso.
+Os fragmentos são coisas que ele **não olhou** enquanto subia: uma foto no cano, uma caixa que ele não parou para abrir, uma plataforma que só os olhos de elite revelam, um vão que só o propulsor cruza. Cada uma é uma versão dele que a subida tornou inconveniente.
 
-**Final B — Flesh (humano):** recusa. Enfrenta o último trecho sem o dash (ou entra num epílogo de descida / exílio). Não é o topo dos cartões-postais, mas resta alguém para lembrar quem ele era.
+**Final Chrome:** atravessa. Pináculo, corpo máquina, vitória oca. A cidade o aceita. Ele não sabe mais por que queria isso.
 
-**Segunda opção de finais**
-**Final A — Chrome (trágico):** Após escolher atravessar o parte final da ultima fase. Chega ao pináculo. Corpo máquina, sucesso vazio. A cidade o aceita; ele já não sabe por quê queria isso.
+**Final Flesh:** recusa, desce, devolve as quatro peças, entrega as quatro lembranças. Não é o cartão-postal. Resta alguém — e restam pessoas no esgoto que ainda usam o nome dele.
 
-**Final B — Flesh (humano):** Decide por não atravessar o portão final da ultima fase. Entra num epílogo de descida / exílio. Não é o topo dos cartões-postais, mas resta alguém para lembrar quem ele era.
+**Final Hollow:** recusa e desce, mas a corrida de volta foi só corpo. Sem os fragmentos, a família não está. Ele voltou ao endereço certo, pessoa errada.
 
-
-Tom: sátira amarga, não comédia leve. Diálogos curtos entre fases (clínica, vendedor de cromo, anúncios da cidade). Sem novela: o corpo na tela conta a história.
-
-Personagem jogável: **Alex Murphy**. NPCs de apoio (clínico - George Vektor, vendedor - Mercador)
+Tom: sátira amarga. Falas curtas na clínica, no Mercador e nos anúncios da cidade. O corpo na tela conta o resto.
 
 ## Gameplay (Brief)
 
-Cinco fases horizontais de auto-runner. Entre fases: clínica (upgrade automático da peça daquele andar) + loja (vidas, extras, skins a valor representativo). Quatro upgrades ao longo da campanha; o quinto (dash) é a escolha do final. Placeholders visuais no protótipo.
+Cinco fases de subida. Hub para replay com kit atual. Quatro fragmentos opcionais na subida, recuperáveis na descida. Portão = Chrome. Recusa = descida 4→1 com perda de implante. 4/4 = Flesh; <4 = Hollow. Loja: créditos vs. R$ simbólico.
 
 ## Gameplay (Detailed)
 
-### Estrutura de uma run
+### Estrutura de uma sessão (subida)
 
-1. HUD: vidas, créditos, setor atual.
-2. Corrida automática; obstáculos em padrões crescentes.
-3. Créditos em rotas de risco.
-4. Checkpoint.
-5. Chegada → cutscene curta da clínica → loja → próxima fase.
+1. HUD: vidas, créditos, setor, fragmentos (4 slots).
+2. Corrida; obstáculos; teases de segredo.
+3. Checkpoint.
+4. Chegada → clínica (implante automático) → Mercador / loja → **mapa do hub** (próxima fase nova e/ou replay).
 
 ### Mapa de fases
 
-| Fase | Setor | Ações | Upgrade ao terminar |
-| --- | --- | --- | --- |
-| 1 | esgoto / periferia | Correr, pular, agachar, coletar | Pernas -> salto duplo |
-| 2 | Industrial | + salto duplo | Braços -> atacar / quebrar |
-| 3 | Meio urbano | + ataque | Olhos -> visão artificial |
-| 4 | Corporativo | + visão | Propulsores -> dash  |
-| 5A | Topo (final cromo) | + dash | — |
-| 5B | Topo / exílio (final humano) | sem dash, rota alternativa | — |
+| Fase | Setor | Verbos na primeira visita | Upgrade ao terminar | Segredo (replay) |
+| --- | --- | --- | --- | --- |
+| 1 | Esgoto / periferia | Correr, pular, agachar, coletar | Pernas → salto duplo | Foto (precisa salto duplo) |
+| 2 | Industrial | + salto duplo | Braços → atacar | Caixa/rota quebrável |
+| 3 | Meio urbano | + ataque | Olhos → visão | Plataforma fantasma |
+| 4 | Corporativo | + visão | Propulsores → dash | Vão de dash |
+| 5 | Topo | + dash | — (escolha do Portão) | — |
 
-(Caso seguirmos o caminho de existir um final alternativo podemos fazer uma descida, rejogando as fases, com uma dificuldade maior e fazendo a direção contrária)
+**Descida (se recusar o Portão)**
+
+| Ordem | Setor | Kit ao entrar | Perde depois | Pode pegar o fragmento? |
+| --- | --- | --- | --- | --- |
+| D1 | 4 Corporativo | tudo, incl. dash | dash | sim, se ainda não tiver |
+| D2 | 3 Meio urbano | sem dash | olhos | sim |
+| D3 | 2 Industrial | sem olhos | braços | sim |
+| D4 | 1 Esgoto | sem braços, **ainda com salto duplo** | pernas | sim |
+| — | Casa | carne | — | avalia 4/4 → Flesh ou Hollow |
 
 ### Controles (proposta)
 
@@ -278,41 +318,35 @@ Cinco fases horizontais de auto-runner. Entre fases: clínica (upgrade automáti
 | Agachar | S / ↓ |
 | Atacar | J / clique |
 | Dash | K / Shift |
-| Visão (se toggle) | L / E |
+| Visão (toggle) | L / E |
 
 ### Morte e restart
 
-Hit em espinho, buraco, inimigo ou laser consome 1 vida e volta ao checkpoint. Sem vidas: restart da fase. (Proposta.)
+Hit consome 1 vida e volta ao checkpoint. Sem vidas: restart da fase. Hub, créditos, skins e fragmentos salvam.
 
-### Loja entre fases
+### Loja (Mercador)
 
-- Vidas extras
-- Skins (valor representativo)
+Ver tabela em Monetization. Sempre acessível no hub. Skins não alteram hitbox.
 
 ### Dificuldade
 
-Cada setor ensina o upgrade novo em 10–20s “seguros” e depois exige a caracteristica do personagem. Fase 5A é o exame do dash; Fase 5B é o exame de tudo **menos** o dash (pulo, visão, ataque, paciência).
-
-(Caso seguirmos o caminho de existir um final alternativo podemos fazer uma descida, rejogando as fases, com uma dificuldade maior e fazendo a direção contrária)
+Cada fase nova ensina o upgrade em 10–20s e depois exige o verbo. Teases de segredo devem ser **legíveis e injustos na primeira visita** (o jogador entende *por que* não alcançou). Replay e descida é o exame do kit completo, depois do kit reduzido.
 
 # Assets Needed
 
-Estilo visual: **placeholders primeiro** (retângulos, cores por camada). Meta posterior: pixel art + neon cyberpunk (não fechado).
-
-Jogo 2D; **sem assets 3D**.
+Estilo visual: **placeholders primeiro**. Meta posterior: pixel art + neon (não fechado). Jogo 2D; **sem 3D**.
 
 ## 2D
 
-- Player Alex: corpo humano → 4 estágios de cromo (+ skin variants)
+- Player Alex: humano → 4 estágios de cromo (+ skins)
 - Tilesets: esgoto, industrial, urbano, corporativo, topo
-- Obstáculos: buraco, espinho, cano, caixa quebrável, laser, drone
-- Inimigos simples (silhueta / hitbox)
-- Coletável de crédito
-- UI: vidas, créditos, loja, título, tela de final A/B
-- Backgrounds em camadas (parallax) por setor
-- Ícones de implante na clínica
-
-(Caso seguirmos o caminho de existir um final alternativo podemos fazer uma descida, rejogando as fases, com uma dificuldade maior e fazendo a direção contrária)
+- Obstáculos: buraco, espinho, cano, caixa quebrável, laser, drone, plataforma fantasma
+- 4 props de fragmento + teaser visível
+- Portão do topo
+- Hub: mapa vertical da cidade
+- UI: vidas, créditos, 4 slots de fragmento, loja (créditos + vitrine R$), finais Chrome / Flesh / Hollow
+- Ícones de implante na clínica (colocar e arrancar)
+- Família no esgoto (presente / ausente)
 
 ## 3D
 
@@ -320,47 +354,89 @@ Não se aplica.
 
 ## Sound
 
-- Ambiência por setor (5 camadas: sucata → fábrica → rua → escritório → silêncio de luxo)
-- Passos / corrida
-- Pulo, aterrissagem, agachar
-- Hit, morte, checkpoint
-- Quebrar caixa / soco
-- Dash / propulsor
-- Pickup de crédito
-- UI da loja e da clínica
-- Stingers dos dois finais
-- Música loop curta por fase (pode ser 1 tema com variações)
+- Ambiência por setor (5 camadas)
+- Passos, pulo, agachar, hit, morte, checkpoint
+- Quebrar, dash, pickup de crédito, pickup de fragmento
+- UI da loja / clínica / extração de implante
+- Stingers dos três finais
+- Música por fase (um tema com variações; descida = o mesmo tema mais seco)
 
 ## Code (Phaser)
 
-- Game boot / cenas (menu, fase, clínica, loja, ending)
-- Player controller (run auto, jump, crouch, attack, double jump, dash, vision)
-- Spawner / tilemap de obstáculos
-- Coleta e carteira de créditos
+- Cenas: menu, fase, clínica, loja, hub, endings
+- Player (run, jump, crouch, attack, double jump, dash, vision)
+- Tilemap / spawner
+- Créditos + carteira
 - Vidas + checkpoint + game over
-- Persistência simples (fase atual, upgrades, skins) 
-- Sistema de skins / vitrine de preço representativo
-- Flag de escolha do final → carrega Fase 5A ou 5B
-(Caso seguirmos o caminho de existir um final alternativo podemos fazer uma descida, rejogando as fases, com uma dificuldade maior e fazendo a direção contrária)
+- Persistência: fase, kit, fragmentos, skins, flag de descida (localStorage)
+- Hub (setores liberados + replay com kit atual)
+- Loja em dois eixos (créditos vs. compra simulada)
+- Flag do Portão → Chrome ou descida 4→1 com perda de implante
+- Avaliação 4/4 vs <4 no fim da descida
 - HUD
 
 ## Animation
 
-- Player: idle (loja), run, jump, double jump, crouch, attack, dash, hit, death
-- Transição visual de implante (clínica)
-- Caixa quebrando, crédito coletado
-- Parallax / luzes de neon
-- Inimigos: loop simples + morte
+- Player: idle, run, jump, double jump, crouch, attack, dash, hit, death
+- Clínica: implante e extração
+- Caixa, crédito, fragmento
+- Portão
+- Família (idle simples) / quarto vazio
+- Parallax / neon
+- Inimigos: loop + morte
 
 # Schedule
 
-Semestre (~8–12 semanas). Ajustar datas quando a disciplina publicar o calendário.
+Semestre (~8–12 semanas). Ajustar ao calendário da disciplina.
 
+### Marco 1 — Runner mínimo (semanas 1–2)
+
+- Phaser no navegador
+- Corre, pula, agacha
+- Obstáculos + morte + restart
+- Placeholders
+
+### Marco 2 — Loop de fase (semanas 3–4)
+
+- Créditos + HUD
+- Fase 1 completa
+- Clínica stub + loja (vida 100 créditos + 1 skin barata + 1 skin R$ simulada)
+
+### Marco 3 — Upgrades e hub (semanas 5–7)
+
+- Salto duplo, ataque, visão, dash
+- Fases 2–5 jogáveis
+- Hub: replay de setor visitado
+- 4 teases + 4 rotas secretas (mínimo: 1–2 rotas se o tempo apertar, o GDD mantém 4)
+
+### Marco 4 — Portão e descida (semanas 8–10)
+
+- Escolha do Portão → Final Chrome
+- Descida reusando mapas + perda de implante
+- Finais Flesh e Hollow
+- Textos curtos (Vektor, Mercador, anúncios)
+
+### Marco 5 — Polimento e entrega (semanas 11–12)
+
+- Placeholders consistentes ou pass rápido de arte
+- Áudio mínimo
+- Balanceamento
+- Build web + GDD = build
 
 ---
 
+## Decisões fechadas nesta revisão
+
+- Subida linear 1→5; hub para rejogar com kit atual; **sem** chave obrigatória para avançar.
+- Segredo da fase N exige o upgrade ganho **ao terminar N**.
+- Descida = recusar o Portão; implementação pode manter L→R.
+- Três finais: Chrome (portão), Flesh (descida + 4 fragmentos), Hollow (descida sem os 4).
+- Monetização acadêmica: créditos vs. vitrine R$ simulada; só cosmético + vidas por crédito.
+
 ## Aberto / a preencher no time
 
-- Fechamento do sistema de vidas (proposta Crash acima)
-- Lista inicial de skins e tabela de “valor representativo”
+- Nomes e papéis dos 3 integrantes
+- Calendário oficial da disciplina
+- Fechar vidas: 100 créditos automáticos vs. compra na loja
+- Texto exato dos 4 fragmentos e das 3 cutscenes
 - Estilo de arte final (depois dos placeholders)
