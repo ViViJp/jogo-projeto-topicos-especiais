@@ -1,6 +1,6 @@
 # Game Design Document — Flesh to Chrome
 
-Revision: 0.2.1  
+Revision: 0.2.2  
 Base: template de Benjamin “HeadClot” Stanley  
 Fonte complementar: `Cyberpunk.md`
 
@@ -60,9 +60,9 @@ Ascensão social, ganância, transumanismo, desigualdade, perda de humanidade, o
 - Coleta de créditos
 - Sistema de vidas (proposta)
 - Hub de setores (rejogar fases já visitadas com o kit atual)
-- Zonas secretas / fragmentos (1 por fase 1–4; só alcançáveis com o upgrade da fase seguinte)
-- Escolha no Portão: Final Chrome, ou descida perdendo os implantes
-- Três finais: Chrome / Flesh / Hollow
+- Zonas secretas (1 por fase 1–4; só alcançáveis com o upgrade da fase seguinte; não definem o final)
+- Escolha no Portão: ficar no topo, voltar ao esgoto com as partes, ou descer perdendo os implantes
+- Três finais: Chrome (topo, máquina) / Hollow (esgoto, ainda com partes) / Flesh (esgoto, sem nenhuma parte, família)
 
 ## Targeted platforms
 
@@ -131,7 +131,7 @@ Créditos **não** compram as skins de vitrine; R$ simbólico **não** compra vi
 
 1. Descida reusa os mesmos tilemaps, mesma direção L→R; percurso invertido é extra.
 2. 4 segredos = 1 rota curta por mapa, não um nível novo.
-3. Hollow pode ser a mesma cutscene de Flesh com a família ausente.
+3. Hollow pode ser a mesma cutscene de Flesh com a família ausente (ele ainda está cromado).
 
 ## Influences
 
@@ -161,7 +161,13 @@ Um auto-runner cyberpunk no navegador em que você sobe os andares de Glitch Cit
 
 Ao fim de cada fase, Alex recebe uma peça mecânica nova (pernas, braços, olhos, propulsores). O cenário fica mais limpo e luxuoso; o corpo, menos humano. Créditos compram vidas e extras; skins têm valor representativo na loja.
 
-No topo, o Portão. Atravessar é o **Final Chrome** (sucesso oco, corpo máquina). Recusar inicia a **descida**: os mesmos setores, um implante a menos a cada andar. Esse caminho — ir perdendo as partes mecânicas — é o que pode devolver o Alex à família no esgoto (**Final Flesh**), se ele trouxer os quatro fragmentos das zonas secretas. Descer e perder o cromo sem os fragmentos é o **Final Hollow**: mesmo endereço, quarto vazio.
+No topo, o Portão. Três saídas:
+
+- **Final Chrome:** atravessa o Portão. Fica no topo, corpo máquina.
+- **Final Hollow:** volta ao esgoto **ainda com as partes mecânicas**. Quarto vazio; a família não está.
+- **Final Flesh:** desce os setores perdendo **todas** as partes (incluindo o salto duplo). Chega no esgoto **sem nenhuma peça mecânica**. A família está lá.
+
+Quem define família vs. sozinho é o corpo: carne = Flesh; cromo no esgoto = Hollow. As zonas secretas não mudam o final.
 
 Entre fases, um **hub** deixa rejogar setores já visitados com o kit atual: teases da primeira passagem viram rotas secretas.
 
@@ -175,7 +181,7 @@ O hub entra depois da clínica: setores já visitados podem ser refeitos com o k
 
 Os créditos servem à sobrevivência (vidas, no modelo Crash) e à fantasia de consumo (skins / valor representativo). Isso reforça o tema: o mesmo recurso que te mantém vivo também te vende identidade.
 
-O contraste visual é parte do design. Fases baixas são sujas, apertadas, cheias de sucata. Fases altas são amplas, limpas, letais de outro jeito (vidro, drones, segurança corporativa). No fim, chegar ao topo sem humanidade é vitória oca. Recusar o Portão e ir perdendo as peças na descida é o caminho de volta à família — se as lembranças (fragmentos) forem com ele.
+O contraste visual é parte do design. Fases baixas são sujas, apertadas, cheias de sucata. Fases altas são amplas, limpas, letais de outro jeito (vidro, drones, segurança corporativa). No fim, chegar ao topo sem humanidade é vitória oca. Voltar ao esgoto ainda cromado é o Hollow. Só quem perde **todas** as partes mecânicas na descida chega em casa como carne e encontra a família (Flesh).
 
 O projeto é acadêmico (disciplina de tópicos especiais), feito em Phaser por um time de 3 pessoas, com placeholders no começo e 5 fases como alvo do semestre.
 
@@ -184,7 +190,7 @@ O projeto é acadêmico (disciplina de tópicos especiais), feito em Phaser por 
 - **Upgrade = andar social:** cada implante muda o corpo e o acão de jogo para o personagem.
 - **Cidade vertical, fases horizontais:** a subida é estrutura de campanha, não o eixo do nível.
 - **Hub + zonas secretas:** ver o inacessível na subida e voltar com a peça certa.
-- **Três finais:** Chrome no Portão; Flesh e Hollow na descida, perdendo as partes mecânicas (família só no Flesh, com os 4 fragmentos).
+- **Três finais:** Chrome = fica no topo com as partes. Hollow = volta ao esgoto com as partes. Flesh = volta ao esgoto sem nenhuma parte mecânica (família).
 - **Tema de consumo no meta:** créditos, vidas e skins ecoam a ganância do protagonista.
 - **Web + Phaser:** sessão curta, fácil de apresentar e jogar no navegador.
 
@@ -208,13 +214,13 @@ A combinação dos dois já permite uma fase completa sem upgrades. Falha = hit 
 
 Moedas / chips espalhados no percurso, inclusive em rotas arriscadas (pulo justo, quebrar caixa, plataforma alta).
 
-Uso híbrido: **vidas e extras** na clínica / loja entre fases. 100 créditos = 1 vida (proposta). Skins podem ter preço representativo separado. Créditos não desbloqueiam fragmentos nem finais.
+Uso híbrido: **vidas e extras** na clínica / loja entre fases. 100 créditos = 1 vida (proposta). Skins podem ter preço representativo separado. Créditos não desbloqueiam finais.
 
 ### 4. Salto duplo — pernas mecânicas (Fase 2)
 
 Detalhe: após a Fase 1, cirurgia automática. Pernas cromadas. O cenário industrial exige gaps maiores.
 
-Como funciona: um segundo pulo no ar, com cooldown interno de “já usou neste pulo”. Não substitui o pulo normal. Também abre o **segredo da Fase 1** no replay / descida.
+Como funciona: um segundo pulo no ar, com cooldown interno de “já usou neste pulo”. Não substitui o pulo normal. Também abre o **segredo da Fase 1** no replay do hub. Na descida Flesh, as pernas saem **antes** de ele correr o esgoto de volta — chega na primeira fase já sem pulo duplo.
 
 ### 5. Atacar / quebrar — braços mecânicos (Fase 3)
 
@@ -236,9 +242,9 @@ No Portão o jogador não ganha um sexto implante: escolhe ficar com o cromo (**
 
 ### 8. Hub de setores
 
-Depois da clínica, o mapa de Glitch City. Setores já visitados podem ser refeitos **com o kit atual**. Progresso da campanha (próxima fase nova) continua linear. Fragmentos coletados persistem.
+Depois da clínica, o mapa de Glitch City. Setores já visitados podem ser refeitos **com o kit atual**. Progresso da campanha (próxima fase nova) continua linear. Fragmentos coletados persistem como coletável opcional (não definem o final).
 
-Não existe chave obrigatória para subir. Voltar é opcional na subida. Na descida, o percurso 4 → 3 → 2 → 1 é o caminho do final humano.
+Não existe chave obrigatória para subir. Voltar é opcional na subida. Na descida Flesh, o percurso 4 → 3 → 2 → 1 é o caminho em que Vektor arranca as peças **antes** de cada setor; o esgoto de volta já é em carne.
 
 ### 9. Zonas secretas (fragmentos)
 
@@ -246,24 +252,22 @@ Uma rota curta por fase 1–4, visível na primeira passagem (luz, plataforma al
 
 | Setor | Fragmento | Ferramenta exigida | Quando fica pegável |
 | --- | --- | --- | --- |
-| 1 Esgoto | Lembrança da família (ex.: foto) | Salto duplo | Após Fase 1, replay ou descida |
+| 1 Esgoto | Lembrança da família (ex.: foto) | Salto duplo | Após Fase 1, replay no hub |
 | 2 Industrial | Lembrança do trabalho / nome antigo | Braços (quebrar) | Após Fase 2 |
 | 3 Meio urbano | Lembrança da rua / voz | Olhos | Após Fase 3 |
 | 4 Corporativo | Lembrança do que ele ainda era | Dash | Após Fase 4 |
 
-Na descida, o jogador **ainda tem** a ferramenta daquele segredo e só a perde **depois** de completar aquele setor (George Vektor opera na clínica de retorno).
+Na descida Flesh, o jogador **já perdeu** a ferramenta daquele setor ao entrar (Vektor opera **antes** da corrida). Segredos que precisarem do upgrade ficam para o replay do hub na subida.
 
 ### 10. Portão e descida
 
-Fim da Fase 5:
+Fim da Fase 5 — o jogador escolhe:
 
-- **Atravessar o Portão** → Final Chrome. Campanha encerra. Fragmentos não mudam esse final.
-- **Recusar** → descida 4 → 3 → 2 → 1. Após cada setor, um implante é removido (dash → olhos → braços → pernas). Chega ao esgoto em carne.
+- **Atravessar o Portão** → **Final Chrome.** Fica no topo. Todas as partes mecânicas. Campanha encerra.
+- **Voltar ao esgoto agora** → **Final Hollow.** Chega em casa **ainda com as partes mecânicas**. Sozinho; o quarto está vazio.
+- **Descer pelas clínicas** → **Final Flesh.** Percurso 4 → 3 → 2 → 1. Vektor arranca um implante **antes** de cada setor (dash → olhos → braços → pernas). Ele entra no esgoto (Fase 1 de volta) **sem nenhuma parte mecânica**. Família.
 
-A família só entra neste segundo caminho (perdendo as partes mecânicas):
-
-- Fragmentos 4/4 na chegada → **Final Flesh** (família no esgoto)
-- Menos de 4 → **Final Hollow** (mesmo endereço, quarto vazio)
+Quem define sozinho vs. família é só o corpo (cromo no esgoto vs. carne). Zonas secretas não entram nessa conta.
 
 ### 11. Vidas (proposta, estilo Crash)
 
@@ -278,7 +282,7 @@ Ainda em discussão no time; isto é a proposta oficial no GDD até alguém veta
 
 ## Story (Brief)
 
-Alex Murphy, cansado da margem de Glitch City, sobe andar por andar vendendo o próprio corpo. Cada clínica o deixa mais capaz e menos humano. No Portão ele escolhe: virar cromo puro no topo, ou recuar, ir perdendo as partes mecânicas na descida e tentar voltar para a família no esgoto.
+Alex Murphy, cansado da margem de Glitch City, sobe andar por andar vendendo o próprio corpo. Cada clínica o deixa mais capaz e menos humano. No Portão ele escolhe: ficar máquina no topo, voltar ao esgoto ainda cromado, ou descer perdendo **todas** as partes mecânicas e chegar em casa só de carne, com a família.
 
 ## Story (Detailed)
 
@@ -292,13 +296,13 @@ Alex vive anos nos andares baixos: trabalho precário, violência; que não é p
 4. **Corporativo** — olhos. Vê o que os ricos escondem. Também deixa de ver o que era humano.
 5. **Topo** — dash. O Portão. George Vektor oferece ficar máquina de vez.
 
-Os fragmentos são coisas que ele **não olhou** enquanto subia: uma foto no cano, uma caixa que ele não parou para abrir, uma plataforma que só os olhos de elite revelam, um vão que só o propulsor cruza.
+Os fragmentos das zonas secretas são coisas que ele **não olhou** enquanto subia: uma foto no cano, uma caixa que ele não parou para abrir, uma plataforma que só os olhos de elite revelam, um vão que só o propulsor cruza. São coletáveis opcionais. Não decidem o final.
 
 **Final Chrome (trágico):** atravessa o Portão. Chega ao pináculo. Corpo máquina, sucesso vazio. A cidade o aceita; ele já não sabe por quê queria isso.
 
-**Final Flesh (família):** recusa o Portão e desce, perdendo as partes mecânicas andar por andar. Traz os quatro fragmentos. Não é o topo dos cartões-postais, mas a família ainda está no esgoto e resta alguém para lembrar quem ele era.
+**Final Hollow:** recusa o Portão e volta ao esgoto **ainda com as partes mecânicas**. Endereço certo, pessoa errada. O quarto está vazio.
 
-**Final Hollow:** recusa e também desce perdendo as peças, mas sem os fragmentos. Volta ao endereço certo; o quarto está vazio.
+**Final Flesh (família):** recusa o Portão e desce pelas clínicas, perdendo **todas** as partes mecânicas. Entra no esgoto sem pulo duplo, sem braços, sem olhos, sem dash. Carne. A família ainda está lá.
 
 Tom: sátira amarga, não comédia leve. Diálogos curtos entre fases (clínica, vendedor de cromo, anúncios da cidade). Sem novela: o corpo na tela conta a história.
 
@@ -306,7 +310,7 @@ Personagem jogável: **Alex Murphy**. NPCs de apoio (clínico - George Vektor, v
 
 ## Gameplay (Brief)
 
-Cinco fases horizontais de auto-runner. Entre fases: clínica (upgrade automático da peça daquele andar) + loja (vidas, extras, skins a valor representativo) + hub (replay opcional). Quatro upgrades ao longo da campanha. No Portão: Chrome, ou descida 4→1 perdendo implantes (Flesh se 4/4 fragmentos, Hollow se faltar). Placeholders visuais no protótipo.
+Cinco fases horizontais de auto-runner. Entre fases: clínica (upgrade automático da peça daquele andar) + loja (vidas, extras, skins a valor representativo) + hub (replay opcional). Quatro upgrades ao longo da campanha. No Portão: Chrome (topo, máquina), Hollow (esgoto com as partes) ou Flesh (esgoto sem nenhuma parte, família). Placeholders visuais no protótipo.
 
 ## Gameplay (Detailed)
 
@@ -328,15 +332,17 @@ Cinco fases horizontais de auto-runner. Entre fases: clínica (upgrade automáti
 | 4 | Corporativo | + visão | Propulsores -> dash | Vão de dash |
 | 5 | Topo | + dash | — (escolha do Portão) | — |
 
-**Descida (se recusar o Portão)** — caminho em que ele vai perdendo as partes mecânicas; é o único caminho que pode terminar com a família.
+**Descida Flesh (se escolher as clínicas)** — Vektor arranca a peça **antes** de cada setor. O esgoto de volta já é sem nenhuma parte mecânica; esse é o único caminho da família.
 
-| Ordem | Setor | Kit ao entrar | Perde depois | Pode pegar o fragmento? |
-| --- | --- | --- | --- | --- |
-| D1 | 4 Corporativo | tudo, incl. dash | dash | sim, se ainda não tiver |
-| D2 | 3 Meio urbano | sem dash | olhos | sim |
-| D3 | 2 Industrial | sem olhos | braços | sim |
-| D4 | 1 Esgoto | sem braços, **ainda com salto duplo** | pernas | sim |
-| — | Casa | carne | — | 4/4 → Flesh (família); <4 → Hollow |
+| Ordem | Setor | Perde **antes** de entrar | Kit na corrida |
+| --- | --- | --- | --- |
+| D1 | 4 Corporativo | dash | sem dash |
+| D2 | 3 Meio urbano | olhos | sem dash, sem olhos |
+| D3 | 2 Industrial | braços | sem dash, sem olhos, sem braços |
+| D4 | 1 Esgoto | pernas (salto duplo) | **nenhuma parte mecânica** |
+| — | Casa | — | carne → **Final Flesh** (família) |
+
+**Final Hollow** não usa essa tabela: o jogador volta ao esgoto direto, **ainda com as partes**.
 
 ### Controles (proposta)
 
@@ -412,8 +418,7 @@ Não se aplica.
 - Persistência simples (fase atual, upgrades, skins, fragmentos, flag de descida)
 - Sistema de skins / vitrine de preço representativo
 - Hub (setores liberados + replay com kit atual)
-- Flag do Portão → Chrome ou descida 4→1 com perda de implante
-- Avaliação 4/4 vs <4 no fim da descida
+- Flag do Portão → Chrome, Hollow (volta com as partes) ou descida Flesh 4→1 (extração **antes** de cada setor; esgoto já em carne)
 - HUD
 
 ## Animation
@@ -469,5 +474,5 @@ Semestre (~8–12 semanas). Ajustar datas quando a disciplina publicar o calend�
 
 - Fechamento do sistema de vidas (proposta Crash acima)
 - Estilo de arte final (depois dos placeholders)
-- Texto exato dos 4 fragmentos e das 3 cutscenes
+- Texto exato das 3 cutscenes
 - Nomes e papéis dos 3 integrantes
