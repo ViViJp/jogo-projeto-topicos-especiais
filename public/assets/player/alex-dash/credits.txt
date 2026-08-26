@@ -205,18 +205,6 @@ arms/hands/gloves/thin
 	- Links:
 		- https://opengameart.org/content/lpc-medieval-fantasy-character-sprites
 		- http://opengameart.org/content/lpc-clothing-updates
-facial/glasses/sunglasses
-	- Note: 
-	- Licenses:
-		- CC-BY-SA 3.0
-		- GPL 3.0
-	- Authors:
-		- Michael Whitlock (bigbeargames)
-		- Thane Brimhall (pennomi)
-		- laetissima
-	- Links:
-		- https://opengameart.org/content/lpc-base-character-expressions
-		- https://opengameart.org/content/lpc-expanded-hats-facial-helmets
 backpack/jetpack
 	- Note: trivial adjustments by bluecarrot16 to be compatible with v3 bases
 	- Licenses:
@@ -268,26 +256,26 @@ shoulders/bauldron
 - arms/hands/gloves/male/spellcast.png
 - arms/hands/gloves/male/thrust.png
 - arms/hands/gloves/male/walk.png
-- backpack/jetpack/male/hurt/bronze.png
-- backpack/jetpack/male/shoot/bronze.png
-- backpack/jetpack/male/slash/bronze.png
-- backpack/jetpack/male/spellcast/bronze.png
-- backpack/jetpack/male/thrust/bronze.png
-- backpack/jetpack/male/walk/bronze.png
-- facial/glasses/sunglasses/adult/backslash.png
-- facial/glasses/sunglasses/adult/combat_idle.png
-- facial/glasses/sunglasses/adult/emote.png
-- facial/glasses/sunglasses/adult/halfslash.png
-- facial/glasses/sunglasses/adult/hurt.png
-- facial/glasses/sunglasses/adult/idle.png
-- facial/glasses/sunglasses/adult/jump.png
-- facial/glasses/sunglasses/adult/run.png
-- facial/glasses/sunglasses/adult/shoot.png
-- facial/glasses/sunglasses/adult/sit.png
-- facial/glasses/sunglasses/adult/slash.png
-- facial/glasses/sunglasses/adult/spellcast.png
-- facial/glasses/sunglasses/adult/thrust.png
-- facial/glasses/sunglasses/adult/walk.png
+- backpack/jetpack/male/hurt/steel.png
+- backpack/jetpack/male/shoot/steel.png
+- backpack/jetpack/male/slash/steel.png
+- backpack/jetpack/male/spellcast/steel.png
+- backpack/jetpack/male/thrust/steel.png
+- backpack/jetpack/male/walk/steel.png
+- eyes/human/adult/default/backslash/red.png
+- eyes/human/adult/default/combat_idle/red.png
+- eyes/human/adult/default/emote/red.png
+- eyes/human/adult/default/halfslash/red.png
+- eyes/human/adult/default/hurt/red.png
+- eyes/human/adult/default/idle/red.png
+- eyes/human/adult/default/jump/red.png
+- eyes/human/adult/default/run/red.png
+- eyes/human/adult/default/shoot/red.png
+- eyes/human/adult/default/sit/red.png
+- eyes/human/adult/default/slash/red.png
+- eyes/human/adult/default/spellcast/red.png
+- eyes/human/adult/default/thrust/red.png
+- eyes/human/adult/default/walk/red.png
 - feet/armour/plate/male/climb.png
 - feet/armour/plate/male/emote.png
 - feet/armour/plate/male/hurt.png

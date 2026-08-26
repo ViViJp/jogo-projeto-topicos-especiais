@@ -76,7 +76,7 @@ def recolor_metal(im: Image.Image, tint: tuple[int, int, int] = (170, 185, 200))
 
 
 def recolor_cyan(im: Image.Image) -> Image.Image:
-    """Recolor opaque pixels toward cyan (cyber eyes / visor)."""
+    """Recolor opaque pixels toward cyan (Neon Elite skin / visor)."""
     px = im.load()
     w, h = im.size
     for y in range(h):
@@ -92,30 +92,55 @@ def recolor_cyan(im: Image.Image) -> Image.Image:
     return im
 
 
+def recolor_red_glow(im: Image.Image) -> Image.Image:
+    """Push eye pixels toward bright implant red."""
+    px = im.load()
+    w, h = im.size
+    for y in range(h):
+        for x in range(w):
+            r, g, b, a = px[x, y]
+            if a == 0:
+                continue
+            lum = (r * 30 + g * 59 + b * 11) // 100
+            # Keep highlights near white; body of the eye goes hot red
+            if lum > 200:
+                px[x, y] = (255, min(255, lum), min(220, lum - 20), a)
+            else:
+                nr = min(255, 180 + lum // 2)
+                ng = min(80, lum // 3)
+                nb = min(60, lum // 4)
+                px[x, y] = (nr, ng, nb, a)
+    return im
+
+
 def resolve_anim_file(layer_dir: Path, anim: str) -> Path | None:
     """Find animation PNG for a layer directory (handles nested color files)."""
+    # Prefer red eyes / steel metal / white bandages when color variants exist.
+    preferred = (
+        "red.png",
+        "steel.png",
+        "bronze.png",
+        "gold.png",
+        "white.png",
+        "sunglasses.png",
+    )
+    anim_dir = layer_dir / anim
+    if anim_dir.is_dir():
+        for name in preferred:
+            p = anim_dir / name
+            if p.is_file():
+                return p
+        nested = sorted(anim_dir.glob("*.png"))
+        if nested:
+            return nested[0]
+
     candidates = [
         layer_dir / f"{anim}.png",
         layer_dir / anim / f"{anim}.png",
     ]
-    # e.g. facial/glasses/.../walk/sunglasses.png
-    if (layer_dir / anim).is_dir():
-        nested = list((layer_dir / anim).glob("*.png"))
-        if nested:
-            candidates.extend(nested)
     for c in candidates:
         if c.is_file():
             return c
-    # jetpack style: layer_dir/anim/steel.png
-    anim_dir = layer_dir / anim
-    if anim_dir.is_dir():
-        for name in ("steel.png", "bronze.png", "gold.png"):
-            p = anim_dir / name
-            if p.is_file():
-                return p
-        pngs = list(anim_dir.glob("*.png"))
-        if pngs:
-            return pngs[0]
     return None
 
 
@@ -141,6 +166,8 @@ def overlay_layer(
             strip = recolor_metal(strip)
         elif recolor == "cyan":
             strip = recolor_cyan(strip)
+        elif recolor == "red":
+            strip = recolor_red_glow(strip)
 
         sw, sh = strip.size
         frames_w = sw // FRAME
@@ -247,8 +274,9 @@ def main() -> None:
         ("arms/bracers/male", "metal"),
         ("arms/hands/gloves/male", "metal"),
     ]
+    # Visão artificial: olhos implantados vermelhos (não óculos ciano).
     eyes_layers = arms_layers + [
-        ("facial/glasses/sunglasses/adult", "cyan"),
+        ("eyes/human/adult/default", "red"),
     ]
     dash_layers = eyes_layers + [
         ("backpack/jetpack/male", "metal"),
@@ -260,7 +288,7 @@ def main() -> None:
         "feet/feet_armour.json",
         "arms/wrists/arms_bracers.json",
         "arms/arms_gloves.json",
-        "headwear/accessories/glasses/facial_glasses_sunglasses.json",
+        "head/eyes/meta_eyes.json",
         "torso/backpack/backpack_jetpack.json",
         "arms/bauldron.json",
     ]

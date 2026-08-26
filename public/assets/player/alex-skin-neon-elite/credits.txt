@@ -124,7 +124,7 @@ feet/shoes/basic/male/walk.png
 		- https://opengameart.org/content/lpc-expanded-socks-shoes
 
 
-# --- Skin: alex-skin-neon-elite — R$ 4,90 — neon elite / ciano ---
+# --- Skin: alex-skin-neon-elite — R$ 4,90 — neon elite / ciano (cosmético; upgrade de visão continua vermelho) ---
 arms/bracers
 	- Note: original by wulax, adjustments by Makrohn, climb/emote/jump/sit/run by JaidynReiman
 	- Licenses:
@@ -175,20 +175,20 @@ facial/glasses/sunglasses
 - arms/bracers/male/spellcast.png
 - arms/bracers/male/thrust.png
 - arms/bracers/male/walk.png
-- facial/glasses/sunglasses/adult/backslash.png
-- facial/glasses/sunglasses/adult/combat_idle.png
-- facial/glasses/sunglasses/adult/emote.png
-- facial/glasses/sunglasses/adult/halfslash.png
-- facial/glasses/sunglasses/adult/hurt.png
-- facial/glasses/sunglasses/adult/idle.png
-- facial/glasses/sunglasses/adult/jump.png
-- facial/glasses/sunglasses/adult/run.png
-- facial/glasses/sunglasses/adult/shoot.png
-- facial/glasses/sunglasses/adult/sit.png
-- facial/glasses/sunglasses/adult/slash.png
-- facial/glasses/sunglasses/adult/spellcast.png
-- facial/glasses/sunglasses/adult/thrust.png
-- facial/glasses/sunglasses/adult/walk.png
+- facial/glasses/sunglasses/adult/backslash/red.png
+- facial/glasses/sunglasses/adult/combat_idle/red.png
+- facial/glasses/sunglasses/adult/emote/red.png
+- facial/glasses/sunglasses/adult/halfslash/red.png
+- facial/glasses/sunglasses/adult/hurt/red.png
+- facial/glasses/sunglasses/adult/idle/red.png
+- facial/glasses/sunglasses/adult/jump/red.png
+- facial/glasses/sunglasses/adult/run/red.png
+- facial/glasses/sunglasses/adult/shoot/red.png
+- facial/glasses/sunglasses/adult/sit/red.png
+- facial/glasses/sunglasses/adult/slash/red.png
+- facial/glasses/sunglasses/adult/spellcast/red.png
+- facial/glasses/sunglasses/adult/thrust/red.png
+- facial/glasses/sunglasses/adult/walk/red.png
 - shoulders/bauldron/male/climb.png
 - shoulders/bauldron/male/emote.png
 - shoulders/bauldron/male/hurt.png

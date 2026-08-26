@@ -235,7 +235,7 @@ def main() -> None:
         note="créditos 200 — cabo / amarelo-preto",
     )
 
-    # 4) Neon Elite
+    # 4) Neon Elite — ciano cosmético; base já traz olhos vermelhos do upgrade
     print("=== Neon Elite ===")
     write_skin(
         "alex-skin-neon-elite",
@@ -250,7 +250,7 @@ def main() -> None:
             "arms/bauldron.json",
             "headwear/accessories/glasses/facial_glasses_sunglasses.json",
         ],
-        note="R$ 4,90 — neon elite / ciano",
+        note="R$ 4,90 — neon elite / ciano (cosmético; visão do upgrade = vermelho)",
     )
 
     # 5) Chrome Mirror
@@ -275,7 +275,7 @@ def main() -> None:
         note="R$ 9,90 — chrome mirror / espelhado",
     )
 
-    # 6) Vektor Special
+    # 6) Vektor Special — clínica; mantém olhos vermelhos do kit
     print("=== Vektor Special ===")
     write_skin(
         "alex-skin-vektor",
@@ -283,12 +283,10 @@ def main() -> None:
         layers=[
             ("torso/clothes/longsleeve/formal_striped/male", None, (245, 245, 250)),
             ("arms/hands/gloves/male", None, (20, 20, 25)),
-            ("facial/glasses/sunglasses/adult", None, (180, 20, 40)),  # clinic red lens
             ("shoulders/bauldron/male", "metal", None),
         ],
         extra_credit_defs=[
             "arms/arms_gloves.json",
-            "headwear/accessories/glasses/facial_glasses_sunglasses.json",
             "arms/bauldron.json",
         ],
         note="R$ 14,90 — Vektor Special / clínica corporativa",

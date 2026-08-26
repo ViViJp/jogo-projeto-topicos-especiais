@@ -124,7 +124,7 @@ feet/shoes/basic/male/walk.png
 		- https://opengameart.org/content/lpc-expanded-socks-shoes
 
 
-# --- Skin: alex-skin-vektor — R$ 14,90 — Vektor Special / clínica corporativa ---
+# --- Skin: alex-skin-vektor — R$ 14,90 — Vektor Special / clínica (olhos vermelhos do kit + look corporativo) ---
 arms/hands/gloves/male
 	- Note: metal gloves by wulax, recolors by bigbeargames, adapted to v3 bases by bluecarrot16, added to expanded animations by JaidynReiman
 	- Licenses:
@@ -156,18 +156,6 @@ arms/hands/gloves/thin
 	- Links:
 		- https://opengameart.org/content/lpc-medieval-fantasy-character-sprites
 		- http://opengameart.org/content/lpc-clothing-updates
-facial/glasses/sunglasses
-	- Note: 
-	- Licenses:
-		- CC-BY-SA 3.0
-		- GPL 3.0
-	- Authors:
-		- Michael Whitlock (bigbeargames)
-		- Thane Brimhall (pennomi)
-		- laetissima
-	- Links:
-		- https://opengameart.org/content/lpc-base-character-expressions
-		- https://opengameart.org/content/lpc-expanded-hats-facial-helmets
 shoulders/bauldron
 	- Note: Original by Nila122, climb/jump/sit/emote/run by JaidynReiman
 	- Licenses:
@@ -197,20 +185,6 @@ shoulders/bauldron
 - arms/hands/gloves/male/spellcast.png
 - arms/hands/gloves/male/thrust.png
 - arms/hands/gloves/male/walk.png
-- facial/glasses/sunglasses/adult/backslash.png
-- facial/glasses/sunglasses/adult/combat_idle.png
-- facial/glasses/sunglasses/adult/emote.png
-- facial/glasses/sunglasses/adult/halfslash.png
-- facial/glasses/sunglasses/adult/hurt.png
-- facial/glasses/sunglasses/adult/idle.png
-- facial/glasses/sunglasses/adult/jump.png
-- facial/glasses/sunglasses/adult/run.png
-- facial/glasses/sunglasses/adult/shoot.png
-- facial/glasses/sunglasses/adult/sit.png
-- facial/glasses/sunglasses/adult/slash.png
-- facial/glasses/sunglasses/adult/spellcast.png
-- facial/glasses/sunglasses/adult/thrust.png
-- facial/glasses/sunglasses/adult/walk.png
 - shoulders/bauldron/male/climb.png
 - shoulders/bauldron/male/emote.png
 - shoulders/bauldron/male/hurt.png
@@ -223,9 +197,9 @@ shoulders/bauldron
 - shoulders/bauldron/male/spellcast.png
 - shoulders/bauldron/male/thrust.png
 - shoulders/bauldron/male/walk.png
-- torso/clothes/longsleeve/formal_striped/male/hurt.png
-- torso/clothes/longsleeve/formal_striped/male/shoot.png
-- torso/clothes/longsleeve/formal_striped/male/slash.png
-- torso/clothes/longsleeve/formal_striped/male/spellcast.png
-- torso/clothes/longsleeve/formal_striped/male/thrust.png
-- torso/clothes/longsleeve/formal_striped/male/walk.png
+- torso/clothes/longsleeve/formal_striped/male/hurt/white.png
+- torso/clothes/longsleeve/formal_striped/male/shoot/white.png
+- torso/clothes/longsleeve/formal_striped/male/slash/white.png
+- torso/clothes/longsleeve/formal_striped/male/spellcast/white.png
+- torso/clothes/longsleeve/formal_striped/male/thrust/white.png
+- torso/clothes/longsleeve/formal_striped/male/walk/white.png
