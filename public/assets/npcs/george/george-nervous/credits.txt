@@ -1,0 +1,335 @@
+# George Vektor — cirurgião de implantes (Flesh to Chrome)
+# Variant: george-nervous — Fase 1 — inseguro, explica riscos ao instalar pernas
+
+feet/boots/basic
+	- Note: original by Nila122, edited for male and v3 bases by bluecarrot16, Jump/Sit/Emote/Run/Revised Combat by JaidynReiman
+	- Licenses:
+		- OGA-BY 3.0
+		- CC-BY-SA 3.0
+		- GPL 2.0
+		- GPL 3.0
+	- Authors:
+		- JaidynReiman
+		- bluecarrot16
+		- Nila122
+	- Links:
+		- https://opengameart.org/content/lpc-clothes-and-hair
+		- https://opengameart.org/content/lpc-expanded-socks-shoes
+
+feet/boots/basic/thin
+	- Note: original by Nila122, edited for v3 bases by bluecarrot16, Jump/Sit/Emote/Run/Revised Combat by JaidynReiman
+	- Licenses:
+		- OGA-BY 3.0
+		- CC-BY-SA 3.0
+		- GPL 2.0
+		- GPL 3.0
+	- Authors:
+		- JaidynReiman
+		- bluecarrot16
+		- Nila122
+	- Links:
+		- https://opengameart.org/content/lpc-clothes-and-hair
+		- https://opengameart.org/content/lpc-expanded-socks-shoes
+legs/cuffed/male
+	- Note: Original bases by Redshrike, thrust/shoot bases by Wulax, original overalls by ElizaWy, base animations adapted from v3 overalls by bluecarrot16, pants by JaidynReiman
+	- Licenses:
+		- OGA-BY 3.0
+		- GPL 3.0
+	- Authors:
+		- JaidynReiman
+		- ElizaWy
+		- Bluecarrot16
+		- Johannes Sjölund (wulax)
+		- Stephen Challener (Redshrike)
+	- Links:
+		- https://github.com/ElizaWy/LPC/tree/main/Characters/Clothing
+		- https://opengameart.org/content/lpc-expanded-sit-run-jump-more
+		- https://opengameart.org/content/lpc-expanded-pants
+
+legs/cuffed
+	- Note: Original bases by Redshrike, thrust/shoot bases by Wulax, original cuffed pants by ElizaWy, climb/jump/run/sit/emotes/revised combat by JaidynReiman
+	- Licenses:
+		- OGA-BY 3.0
+	- Authors:
+		- ElizaWy
+		- JaidynReiman
+		- Johannes Sjölund (wulax)
+		- Stephen Challener (Redshrike)
+	- Links:
+		- https://github.com/ElizaWy/LPC/tree/main/Characters/Clothing
+		- https://opengameart.org/content/lpc-expanded-sit-run-jump-more
+		- https://opengameart.org/content/lpc-expanded-pants
+torso/clothes/longsleeve/longsleeve/male
+	- Note: original by wulax; tweaks and further recolors by bluecarrot16; cleanup and climb/jump/run/sit/emote/revised combat adapted from LPC Revised by JaidynReiman
+	- Licenses:
+		- OGA-BY 3.0
+		- CC-BY-SA 3.0
+		- GPL 3.0
+	- Authors:
+		- JaidynReiman
+		- Johannes Sjölund (wulax)
+	- Links:
+		- https://opengameart.org/content/lpc-medieval-fantasy-character-sprites
+		- http://opengameart.org/content/lpc-clothing-updates
+		- https://opengameart.org/content/lpc-revised-character-basics
+		- https://github.com/ElizaWy/LPC/tree/main/Characters/Clothing
+		- https://opengameart.org/content/lpc-expanded-sit-run-jump-more
+		- https://opengameart.org/content/lpc-expanded-simple-shirts
+
+torso/clothes/longsleeve/longsleeve/female
+	- Note: original by ElizaWy, edited to v3 bases by bluecarrot16; cleanup and climb/jump/run/sit/emote/revised combat adapted from LPC Revised by JaidynReiman
+	- Licenses:
+		- OGA-BY 3.0
+		- CC-BY-SA 3.0
+		- GPL 3.0
+	- Authors:
+		- bluecarrot16
+		- ElizaWy
+		- JaidynReiman
+		- Stephen Challener (Redshrike)
+	- Links:
+		- https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles
+		- https://opengameart.org/content/lpc-7-womens-shirts
+		- http://opengameart.org/content/lpc-clothing-updates
+		- https://opengameart.org/content/lpc-revised-character-basics
+		- https://github.com/ElizaWy/LPC/tree/main/Characters/Clothing
+		- https://opengameart.org/content/lpc-expanded-sit-run-jump-more
+		- https://opengameart.org/content/lpc-expanded-simple-shirts
+
+torso/clothes/longsleeve/longsleeve/teen
+	- Note: body by Redshrike, shirt by ElizaWy derived from base, edited by bluecarrot16 to v3 bases; cleanup and climb/jump/run/sit/emote/revised combat adapted from LPC Revised by JaidynReiman
+	- Licenses:
+		- OGA-BY 3.0
+		- GPL 3.0
+	- Authors:
+		- bluecarrot16
+		- ElizaWy
+		- JaidynReiman
+		- Stephen Challener (Redshrike)
+		- Johannes Sjölund (wulax)
+	- Links:
+		- https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles
+		- https://opengameart.org/content/lpc-teen-unisex-base-clothes
+		- http://opengameart.org/content/lpc-clothing-updates
+		- https://opengameart.org/content/lpc-revised-character-basics
+		- https://github.com/ElizaWy/LPC/tree/main/Characters/Clothing
+		- https://opengameart.org/content/lpc-expanded-sit-run-jump-more
+		- https://opengameart.org/content/lpc-expanded-simple-shirts
+
+torso/clothes/longsleeve/longsleeve/pregnant
+	- Note: original by ElizaWy, edited to pregnant v3 bases by bluecarrot16
+	- Licenses:
+		- CC-BY-SA 3.0
+		- GPL 3.0
+	- Authors:
+		- bluecarrot16
+		- ElizaWy
+		- Stephen Challener (Redshrike)
+		- Johannes Sjölund (wulax)
+	- Links:
+		- https://opengameart.org/content/lpc-7-womens-shirts
+		- http://opengameart.org/content/lpc-clothing-updates
+		- https://opengameart.org/content/lpc-revised-character-basics
+		- https://github.com/ElizaWy/LPC/tree/main/Characters/Clothing
+		- https://opengameart.org/content/lpc-expanded-sit-run-jump-more
+		- https://opengameart.org/content/lpc-expanded-simple-shirts
+torso/aprons/apron
+	- Note: 
+	- Licenses:
+		- OGA-BY 3.0
+		- CC-BY-SA 3.0
+		- GPL 2.0
+		- GPL 3.0
+	- Authors:
+		- Nila122
+	- Links:
+		- https://opengameart.org/content/lpc-aprons
+hair/balding
+	- Note: 
+	- Licenses:
+		- OGA-BY 3.0
+	- Authors:
+		- ElizaWy
+	- Links:
+		- https://opengameart.org/content/lpc-hair
+facial/glasses/glasses
+	- Note: 
+	- Licenses:
+		- OGA-BY 3.0
+	- Authors:
+		- ElizaWy
+	- Links:
+		- https://github.com/ElizaWy/LPC/tree/main/Characters/Head%20Accessories
+		- https://opengameart.org/content/lpc-expanded-sit-run-jump-more
+head/faces
+	- Note: Original by Redshrike, Expressions by ElizaWy, mapped to all frames by JaidynReiman
+	- Licenses:
+		- OGA-BY 3.0
+	- Authors:
+		- JaidynReiman
+		- ElizaWy
+		- Stephen Challener (Redshrike)
+	- Links:
+		- https://github.com/ElizaWy/LPC/tree/main/Characters/Head
+		- https://opengameart.org/content/ulpc-expanded-expressions
+
+head/faces/elderly/shame
+	- Note: Original by Redshrike, Shame Expression by ElizaWy, mapped to all frames by JaidynReiman
+	- Licenses:
+		- OGA-BY 3.0
+	- Authors:
+		- JaidynReiman
+		- ElizaWy
+		- Stephen Challener (Redshrike)
+	- Links:
+		- https://github.com/ElizaWy/LPC/tree/main/Characters/Head
+		- https://opengameart.org/content/ulpc-expanded-expressions
+
+head/faces/female/shame
+	- Note: Original by Redshrike, Shame Expression by ElizaWy, mapped to all frames by JaidynReiman
+	- Licenses:
+		- OGA-BY 3.0
+	- Authors:
+		- JaidynReiman
+		- ElizaWy
+		- Stephen Challener (Redshrike)
+	- Links:
+		- https://github.com/ElizaWy/LPC/tree/main/Characters/Head
+		- https://opengameart.org/content/ulpc-expanded-expressions
+
+head/faces/male/shame
+	- Note: Original by Redshrike, Shame Expression by ElizaWy, mapped to all frames by JaidynReiman
+	- Licenses:
+		- OGA-BY 3.0
+	- Authors:
+		- JaidynReiman
+		- ElizaWy
+		- Stephen Challener (Redshrike)
+	- Links:
+		- https://github.com/ElizaWy/LPC/tree/main/Characters/Head
+		- https://opengameart.org/content/ulpc-expanded-expressions
+
+# Layer files used:
+- body/bodies/male/backslash.png
+- body/bodies/male/climb.png
+- body/bodies/male/combat_idle.png
+- body/bodies/male/emote.png
+- body/bodies/male/halfslash.png
+- body/bodies/male/hurt.png
+- body/bodies/male/idle.png
+- body/bodies/male/jump.png
+- body/bodies/male/run.png
+- body/bodies/male/shoot.png
+- body/bodies/male/sit.png
+- body/bodies/male/slash.png
+- body/bodies/male/spellcast.png
+- body/bodies/male/thrust.png
+- body/bodies/male/walk.png
+- facial/glasses/glasses/adult/backslash/red.png
+- facial/glasses/glasses/adult/combat_idle/red.png
+- facial/glasses/glasses/adult/emote/red.png
+- facial/glasses/glasses/adult/halfslash/red.png
+- facial/glasses/glasses/adult/hurt/red.png
+- facial/glasses/glasses/adult/idle/red.png
+- facial/glasses/glasses/adult/jump/red.png
+- facial/glasses/glasses/adult/run/red.png
+- facial/glasses/glasses/adult/shoot/red.png
+- facial/glasses/glasses/adult/sit/red.png
+- facial/glasses/glasses/adult/slash/red.png
+- facial/glasses/glasses/adult/spellcast/red.png
+- facial/glasses/glasses/adult/thrust/red.png
+- facial/glasses/glasses/adult/walk/red.png
+- feet/boots/basic/male/backslash.png
+- feet/boots/basic/male/climb.png
+- feet/boots/basic/male/combat_idle.png
+- feet/boots/basic/male/emote.png
+- feet/boots/basic/male/halfslash.png
+- feet/boots/basic/male/hurt.png
+- feet/boots/basic/male/idle.png
+- feet/boots/basic/male/jump.png
+- feet/boots/basic/male/run.png
+- feet/boots/basic/male/shoot.png
+- feet/boots/basic/male/sit.png
+- feet/boots/basic/male/slash.png
+- feet/boots/basic/male/spellcast.png
+- feet/boots/basic/male/thrust.png
+- feet/boots/basic/male/walk.png
+- hair/balding/adult/backslash.png
+- hair/balding/adult/climb.png
+- hair/balding/adult/combat_idle.png
+- hair/balding/adult/emote.png
+- hair/balding/adult/halfslash.png
+- hair/balding/adult/hurt.png
+- hair/balding/adult/idle.png
+- hair/balding/adult/jump.png
+- hair/balding/adult/run.png
+- hair/balding/adult/shoot.png
+- hair/balding/adult/sit.png
+- hair/balding/adult/slash.png
+- hair/balding/adult/spellcast.png
+- hair/balding/adult/thrust.png
+- hair/balding/adult/walk.png
+- head/faces/male/shame/backslash.png
+- head/faces/male/shame/combat_idle.png
+- head/faces/male/shame/emote.png
+- head/faces/male/shame/halfslash.png
+- head/faces/male/shame/idle.png
+- head/faces/male/shame/jump.png
+- head/faces/male/shame/run.png
+- head/faces/male/shame/shoot.png
+- head/faces/male/shame/sit.png
+- head/faces/male/shame/slash.png
+- head/faces/male/shame/spellcast.png
+- head/faces/male/shame/thrust.png
+- head/faces/male/shame/walk.png
+- head/heads/human/male/backslash.png
+- head/heads/human/male/climb.png
+- head/heads/human/male/combat_idle.png
+- head/heads/human/male/emote.png
+- head/heads/human/male/halfslash.png
+- head/heads/human/male/hurt.png
+- head/heads/human/male/idle.png
+- head/heads/human/male/jump.png
+- head/heads/human/male/run.png
+- head/heads/human/male/shoot.png
+- head/heads/human/male/sit.png
+- head/heads/human/male/slash.png
+- head/heads/human/male/spellcast.png
+- head/heads/human/male/thrust.png
+- head/heads/human/male/walk.png
+- legs/cuffed/male/backslash.png
+- legs/cuffed/male/climb.png
+- legs/cuffed/male/combat_idle.png
+- legs/cuffed/male/emote.png
+- legs/cuffed/male/halfslash.png
+- legs/cuffed/male/hurt.png
+- legs/cuffed/male/idle.png
+- legs/cuffed/male/jump.png
+- legs/cuffed/male/run.png
+- legs/cuffed/male/shoot.png
+- legs/cuffed/male/sit.png
+- legs/cuffed/male/slash.png
+- legs/cuffed/male/spellcast.png
+- legs/cuffed/male/thrust.png
+- legs/cuffed/male/walk.png
+- torso/aprons/apron/male/hurt/red.png
+- torso/aprons/apron/male/shoot/red.png
+- torso/aprons/apron/male/slash/red.png
+- torso/aprons/apron/male/spellcast/red.png
+- torso/aprons/apron/male/thrust/red.png
+- torso/aprons/apron/male/walk/red.png
+- torso/clothes/longsleeve/longsleeve/male/backslash.png
+- torso/clothes/longsleeve/longsleeve/male/climb.png
+- torso/clothes/longsleeve/longsleeve/male/combat_idle.png
+- torso/clothes/longsleeve/longsleeve/male/emote.png
+- torso/clothes/longsleeve/longsleeve/male/halfslash.png
+- torso/clothes/longsleeve/longsleeve/male/hurt.png
+- torso/clothes/longsleeve/longsleeve/male/idle.png
+- torso/clothes/longsleeve/longsleeve/male/jump.png
+- torso/clothes/longsleeve/longsleeve/male/run.png
+- torso/clothes/longsleeve/longsleeve/male/shoot.png
+- torso/clothes/longsleeve/longsleeve/male/sit.png
+- torso/clothes/longsleeve/longsleeve/male/slash.png
+- torso/clothes/longsleeve/longsleeve/male/spellcast.png
+- torso/clothes/longsleeve/longsleeve/male/thrust.png
+- torso/clothes/longsleeve/longsleeve/male/walk.png
