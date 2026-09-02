@@ -1,0 +1,351 @@
+head/heads/human/male/walk.png
+	- Note: original head by Redshrike, tweaks by BenCreating, modular version by bluecarrot16
+	- Licenses:
+		- OGA-BY 3.0
+		- CC-BY-SA 3.0
+		- GPL 3.0
+	- Authors:
+		- bluecarrot16
+		- Benjamin K. Smith (BenCreating)
+		- Stephen Challener (Redshrike)
+	- Links:
+		- https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles
+		- https://opengameart.org/content/lpc-character-bases
+
+head/faces/male/sad/walk.png
+	- Note: Original by Redshrike, Expressions by ElizaWy, mapped to all frames by JaidynReiman
+	- Licenses:
+		- OGA-BY 3.0
+	- Authors:
+		- JaidynReiman
+		- ElizaWy
+		- Stephen Challener (Redshrike)
+	- Links:
+		- https://github.com/ElizaWy/LPC/tree/main/Characters/Head
+		- https://opengameart.org/content/ulpc-expanded-expressions
+
+body/bodies/male/walk.png
+	- Note: see details at https://opengameart.org/content/lpc-character-bases; 'Thick' Male Revised Run/Climb by JaidynReiman (based on ElizaWy's LPC Revised)
+	- Licenses:
+		- OGA-BY 3.0
+		- CC-BY-SA 3.0
+		- GPL 3.0
+	- Authors:
+		- bluecarrot16
+		- JaidynReiman
+		- Benjamin K. Smith (BenCreating)
+		- Evert
+		- Eliza Wyatt (ElizaWy)
+		- TheraHedwig
+		- MuffinElZangano
+		- Durrani
+		- Johannes Sjölund (wulax)
+		- Stephen Challener (Redshrike)
+	- Links:
+		- https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles
+		- https://opengameart.org/content/lpc-medieval-fantasy-character-sprites
+		- https://opengameart.org/content/lpc-male-jumping-animation-by-durrani
+		- https://opengameart.org/content/lpc-runcycle-and-diagonal-walkcycle
+		- https://opengameart.org/content/lpc-revised-character-basics
+		- https://opengameart.org/content/lpc-be-seated
+		- https://opengameart.org/content/lpc-runcycle-for-male-muscular-and-pregnant-character-bases-with-modular-heads
+		- https://opengameart.org/content/lpc-jump-expanded
+		- https://opengameart.org/content/lpc-character-bases
+
+hair/messy2/adult/walk.png
+	- Licenses:
+		- CC-BY-SA 3.0
+		- GPL 3.0
+	- Authors:
+		- JaidynReiman
+		- Manuel Riecke (MrBeast)
+	- Links:
+		- https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles
+		- https://opengameart.org/content/lpc-expanded-hair
+
+beards/beard/5oclock_shadow/walk.png
+	- Note: Original by Pennomi, repositioning by JaidynReiman.
+	- Licenses:
+		- CC-BY-SA 3.0
+		- GPL 3.0
+	- Authors:
+		- JaidynReiman
+		- Thane Brimhall (pennomi)
+		- laetissima
+	- Links:
+		- https://opengameart.org/content/lpc-base-character-expressions
+
+torso/clothes/shortsleeve/tshirt/male/walk.png
+	- Note: original by ElizaWy; spellcast/thrust/shoot/hurt/male adapted from original by JaidynReiman
+	- Licenses:
+		- OGA-BY 3.0
+	- Authors:
+		- ElizaWy
+		- JaidynReiman
+		- Stephen Challener (Redshrike)
+		- Johannes Sjölund (wulax)
+	- Links:
+		- https://opengameart.org/content/lpc-revised-character-basics
+		- https://github.com/ElizaWy/LPC/tree/main/Characters/Clothing
+		- https://opengameart.org/content/lpc-expanded-sit-run-jump-more
+		- https://opengameart.org/content/lpc-expanded-simple-shirts
+
+legs/pants/male/walk.png
+	- Note: original male pants by wulax, recolors and edits to v3 base by bluecarrot16, climb/jump/run/sit/emotes/revised combat by JaidynReiman based on ElizaWy's LPC Revised
+	- Licenses:
+		- OGA-BY 3.0
+		- GPL 3.0
+		- CC-BY-SA 3.0
+	- Authors:
+		- bluecarrot16
+		- JaidynReiman
+		- ElizaWy
+		- Matthew Krohn (makrohn)
+		- Johannes Sjölund (wulax)
+		- Stephen Challener (Redshrike)
+	- Links:
+		- https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles
+		- https://opengameart.org/content/lpc-medieval-fantasy-character-sprites
+		- https://opengameart.org/content/lpc-expanded-pants
+
+feet/shoes/basic/male/walk.png
+	- Note: original by wulax, edited for v3 base by bluecarrot16, Jump/Sit/Emote/Run/Revised Combat by JaidynReiman
+	- Licenses:
+		- OGA-BY 3.0
+		- CC-BY-SA 3.0
+		- GPL 3.0
+	- Authors:
+		- JaidynReiman
+		- bluecarrot16
+		- Johannes Sjölund (wulax)
+	- Links:
+		- https://opengameart.org/content/lpc-medieval-fantasy-character-sprites
+		- http://opengameart.org/content/lpc-clothing-updates
+		- https://opengameart.org/content/lpc-expanded-socks-shoes
+
+
+# --- Ending: alex-chrome — Final Chrome — corpo máquina completo, Portão / topo ---
+torso/armour/plate/male
+	- Note: original by wulax, recolor by bigbeargames, color reduced to 7 colors and adapted to v3 bases by bluecarrot16, run/jump/sit/climb/revised combat by JaidynReiman, reduced colors to 6 (based on Napsio's Vitruvian)
+	- Licenses:
+		- OGA-BY 3.0
+		- CC-BY-SA 3.0
+		- GPL 3.0
+	- Authors:
+		- Napsio (Vitruvian Studio)
+		- JaidynReiman
+		- bluecarrot16
+		- Michael Whitlock (bigbeargames)
+		- Johannes Sjölund (wulax)
+	- Links:
+		- https://opengameart.org/content/lpc-medieval-fantasy-character-sprites
+		- https://opengameart.org/content/lpc-combat-armor-for-women
+
+torso/armour/plate/female
+	- Note: original by wulax, adapted to female base by makrohn, recolor by bigbeargames, color reduced to 7 colors and adapted to v3 bases by bluecarrot16, run/jump/sit/climb/revised combat by JaidynReiman, reduced colors to 6 (based on Napsio's Vitruvian)
+	- Licenses:
+		- OGA-BY 3.0
+		- CC-BY-SA 3.0
+		- GPL 3.0
+	- Authors:
+		- JaidynReiman
+		- bluecarrot16
+		- Michael Whitlock (bigbeargames)
+		- Matthew Krohn (makrohn)
+		- Johannes Sjölund (wulax)
+	- Links:
+		- https://opengameart.org/content/lpc-medieval-fantasy-character-sprites
+		- https://opengameart.org/content/lpc-combat-armor-for-women
+		- http://opengameart.org/content/lpc-clothing-updates
+
+torso/armour/plate/teen
+	- Note: original by wulax, color reduced to 7 colors and adapted to v3 bases by bluecarrot16, adapted to teen base from male/female by JaidynReiman
+	- Licenses:
+		- OGA-BY 3.0
+		- CC-BY-SA 3.0
+		- GPL 3.0
+	- Authors:
+		- JaidynReiman
+		- bluecarrot16
+		- Michael Whitlock (bigbeargames)
+		- Johannes Sjölund (wulax)
+	- Links:
+		- https://opengameart.org/content/lpc-medieval-fantasy-character-sprites
+		- https://opengameart.org/content/lpc-combat-armor-for-women
+arms/armour/plate/male
+	- Note: original by wulax, recolors by bigbeargames; adapted to v3 bases and further recolors by bluecarrot16, climb/emote/jump by JaidynReiman
+	- Licenses:
+		- OGA-BY 3.0
+		- CC-BY-SA 3.0
+		- GPL 3.0
+	- Authors:
+		- Michael Whitlock (bigbeargames)
+		- Matthew Krohn (makrohn)
+		- Johannes Sjölund (wulax)
+		- bluecarrot16
+		- JaidynReiman
+	- Links:
+		- https://opengameart.org/content/lpc-medieval-fantasy-character-sprites
+		- http://opengameart.org/content/lpc-clothing-updates
+
+arms/armour/plate/thin
+	- Note: original by wulax, adapted to female by makrohn, recolors by bigbeargames; adapted to v3 bases and further recolors by bluecarrot16, climb/emote by JaidynReiman
+	- Licenses:
+		- OGA-BY 3.0
+		- CC-BY-SA 3.0
+		- GPL 3.0
+	- Authors:
+		- Michael Whitlock (bigbeargames)
+		- Matthew Krohn (makrohn)
+		- Johannes Sjölund (wulax)
+		- bluecarrot16
+		- JaidynReiman
+	- Links:
+		- https://opengameart.org/content/lpc-medieval-fantasy-character-sprites
+		- https://opengameart.org/content/lpc-combat-armor-for-women
+		- http://opengameart.org/content/lpc-clothing-updates
+legs/armour/plate
+	- Note: reduced to 7 colors an adapted to v3 bases by bluecarrot16, climb/jump/sit/emote/run by JaidynReiman
+	- Licenses:
+		- OGA-BY 3.0
+		- CC-BY-SA 3.0
+		- GPL 3.0
+	- Authors:
+		- bluecarrot16
+		- JaidynReiman
+		- Michael Whitlock (bigbeargames)
+		- Matthew Krohn (makrohn)
+		- Johannes Sjölund (wulax)
+	- Links:
+		- https://opengameart.org/content/lpc-medieval-fantasy-character-sprites
+feet/armour/plate
+	- Note: original by wulax, recolors by bigbeargames, edits for v3 base and recolors by bluecarrot16
+	- Licenses:
+		- OGA-BY 3.0
+		- CC-BY-SA 3.0
+		- GPL 3.0
+	- Authors:
+		- Matthew Krohn (makrohn)
+		- Johannes Sjölund (wulax)
+	- Links:
+		- https://opengameart.org/content/lpc-medieval-fantasy-character-sprites
+
+feet/armour/plate/female
+	- Note: original by wulax, edited for female base by makrohn, recolors by bigbeargames, edits for v3 base and recolors by bluecarrot16
+	- Licenses:
+		- OGA-BY 3.0
+		- CC-BY-SA 3.0
+		- GPL 3.0
+	- Authors:
+		- Matthew Krohn (makrohn)
+		- Johannes Sjölund (wulax)
+	- Links:
+		- https://opengameart.org/content/lpc-medieval-fantasy-character-sprites
+hat/helmet/close
+	- Note: 
+	- Licenses:
+		- OGA-BY 3.0
+		- CC-BY 3.0
+		- CC-BY 4.0
+		- GPL 2.0
+		- GPL 3.0
+	- Authors:
+		- bluecarrot16
+	- Links:
+		- https://opengameart.org/content/lpc-helmets
+		- https://opengameart.org/content/lpc-expanded-hats-facial-helmets
+shoulders/pauldrons
+	- Note: adapted to female base by makrohn, adapted to v3 bases by bluecarrot16, climb/jump/sit/emote/run/revised combat by JaidynReiman
+	- Licenses:
+		- OGA-BY 3.0
+		- CC-BY-SA 3.0
+		- GPL 3.0
+	- Authors:
+		- Matthew Krohn (makrohn)
+		- Johannes Sjölund (wulax)
+		- bluecarrot16
+		- JaidynReiman
+	- Links:
+		- https://opengameart.org/content/lpc-medieval-fantasy-character-sprites
+		- http://opengameart.org/content/lpc-clothing-updates
+
+# Layer files used:
+- arms/armour/plate/male/climb.png
+- arms/armour/plate/male/emote.png
+- arms/armour/plate/male/hurt.png
+- arms/armour/plate/male/idle.png
+- arms/armour/plate/male/jump.png
+- arms/armour/plate/male/shoot.png
+- arms/armour/plate/male/sit.png
+- arms/armour/plate/male/slash.png
+- arms/armour/plate/male/spellcast.png
+- arms/armour/plate/male/thrust.png
+- arms/armour/plate/male/walk.png
+- feet/armour/plate/male/climb.png
+- feet/armour/plate/male/emote.png
+- feet/armour/plate/male/hurt.png
+- feet/armour/plate/male/idle.png
+- feet/armour/plate/male/jump.png
+- feet/armour/plate/male/run.png
+- feet/armour/plate/male/shoot.png
+- feet/armour/plate/male/sit.png
+- feet/armour/plate/male/slash.png
+- feet/armour/plate/male/spellcast.png
+- feet/armour/plate/male/thrust.png
+- feet/armour/plate/male/walk.png
+- hat/helmet/close/male/backslash.png
+- hat/helmet/close/male/climb.png
+- hat/helmet/close/male/combat_idle.png
+- hat/helmet/close/male/emote.png
+- hat/helmet/close/male/halfslash.png
+- hat/helmet/close/male/hurt.png
+- hat/helmet/close/male/idle.png
+- hat/helmet/close/male/jump.png
+- hat/helmet/close/male/run.png
+- hat/helmet/close/male/shoot.png
+- hat/helmet/close/male/sit.png
+- hat/helmet/close/male/slash.png
+- hat/helmet/close/male/spellcast.png
+- hat/helmet/close/male/thrust.png
+- hat/helmet/close/male/walk.png
+- legs/armour/plate/male/climb.png
+- legs/armour/plate/male/emote.png
+- legs/armour/plate/male/hurt.png
+- legs/armour/plate/male/idle.png
+- legs/armour/plate/male/jump.png
+- legs/armour/plate/male/shoot.png
+- legs/armour/plate/male/sit.png
+- legs/armour/plate/male/slash.png
+- legs/armour/plate/male/spellcast.png
+- legs/armour/plate/male/thrust.png
+- legs/armour/plate/male/walk.png
+- shoulders/pauldrons/male/backslash.png
+- shoulders/pauldrons/male/climb.png
+- shoulders/pauldrons/male/combat_idle.png
+- shoulders/pauldrons/male/emote.png
+- shoulders/pauldrons/male/halfslash.png
+- shoulders/pauldrons/male/hurt.png
+- shoulders/pauldrons/male/idle.png
+- shoulders/pauldrons/male/jump.png
+- shoulders/pauldrons/male/run.png
+- shoulders/pauldrons/male/shoot.png
+- shoulders/pauldrons/male/sit.png
+- shoulders/pauldrons/male/slash.png
+- shoulders/pauldrons/male/spellcast.png
+- shoulders/pauldrons/male/thrust.png
+- shoulders/pauldrons/male/walk.png
+- torso/armour/plate/male/backslash.png
+- torso/armour/plate/male/climb.png
+- torso/armour/plate/male/combat_idle.png
+- torso/armour/plate/male/emote.png
+- torso/armour/plate/male/halfslash.png
+- torso/armour/plate/male/hurt.png
+- torso/armour/plate/male/idle.png
+- torso/armour/plate/male/jump.png
+- torso/armour/plate/male/run.png
+- torso/armour/plate/male/shoot.png
+- torso/armour/plate/male/sit.png
+- torso/armour/plate/male/slash.png
+- torso/armour/plate/male/spellcast.png
+- torso/armour/plate/male/thrust.png
+- torso/armour/plate/male/walk.png

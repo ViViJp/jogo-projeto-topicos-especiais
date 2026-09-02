@@ -1,0 +1,86 @@
+{
+  "description": "Mapeamento GDD v0.11.0 — setores da campanha para pastas de tileset",
+  "ascensao": [
+    {
+      "fase": 1,
+      "id": "esgoto",
+      "nome": "Esgoto / Periferia",
+      "pasta": "tiles/esgoto",
+      "tileset": "cammellaro Sewer (16×16)",
+      "url": "https://cammellaro.itch.io/sewer",
+      "mecanicas": ["pulo", "slide"],
+      "perigos": ["quedas", "água tóxica", "canos"],
+      "implante": "pernas",
+      "notas": "Início da campanha. Epílogo Flesh/Hollow também usa este setor."
+    },
+    {
+      "fase": 2,
+      "id": "industrial",
+      "nome": "Industrial",
+      "pasta": "tiles/industrial",
+      "tileset": "Atomic Realm Industrial FREE (32×32)",
+      "url": "https://atomicrealm.itch.io/industrial-tileset",
+      "mecanicas": ["salto duplo"],
+      "perigos": ["maquinário", "gaps"],
+      "implante": "braços",
+      "notas": "Variantes cyber/neon do mesmo pack podem servir de transição visual."
+    },
+    {
+      "fase": 3,
+      "id": "meio-urbano",
+      "nome": "Meio Urbano",
+      "pasta": "tiles/meio-urbano",
+      "tileset": "PENDENTE — pack urbano/comercial",
+      "url": null,
+      "mecanicas": ["ataque"],
+      "perigos": ["bandido", "drone", "objetos quebráveis"],
+      "implante": "olhos (scan)",
+      "notas": "Interino: variante cyber do Industrial até achar tileset urbano dedicado."
+    },
+    {
+      "fase": 4,
+      "id": "corporativo",
+      "nome": "Corporativo",
+      "pasta": "tiles/corporativo",
+      "tileset": "Bulkhead Hangar (parallax) + Industrial limpo",
+      "url": "https://opengameart.org/content/bulkhead-walls-hangar",
+      "mecanicas": ["scan", "salto duplo"],
+      "perigos": ["rotas escondidas", "parede falsa", "armadilhas"],
+      "implante": "propulsores",
+      "notas": "Holograma do pai na unidade de reciclagem."
+    },
+    {
+      "fase": 5,
+      "id": "topo",
+      "nome": "Topo",
+      "pasta": "tiles/topo",
+      "tileset": "Bulkhead Hangar + Industrial neon",
+      "url": "https://atomicrealm.itch.io/industrial-tileset",
+      "mecanicas": ["dash", "kit completo"],
+      "perigos": ["combinações finais"],
+      "implante": null,
+      "notas": "~120 s de fase. Portão / decisão Chrome. Sem chefe."
+    }
+  ],
+  "descida": {
+    "regra": "Mesmo mapa-base, mesma direção horizontal, mesma câmera (GDD §17.5)",
+    "ordem": [
+      { "setor": "topo", "fragmento": "quem Alex era", "remove": "propulsores" },
+      { "setor": "corporativo", "fragmento": "rua/voz", "remove": "olhos" },
+      { "setor": "meio-urbano", "fragmento": "amigos", "remove": "braços" },
+      { "setor": "industrial", "fragmento": "família", "remove": "pernas" },
+      { "setor": "esgoto", "fragmento": null, "remove": "humano (epílogo)" }
+    ]
+  },
+  "camera": {
+    "alex_posicao": "30–40% da tela",
+    "espaco_frente": "maior que atrás",
+    "movimento_vertical": "mínimo"
+  },
+  "tile_sizes": {
+    "alex_lpc": 64,
+    "esgoto": 16,
+    "industrial": 32,
+    "nota": "Escalar tiles ou definir grid de colisão por setor no Tiled."
+  }
+}

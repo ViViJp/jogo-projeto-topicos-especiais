@@ -1,0 +1,12 @@
+Clinic scene — composed for Flesh to Chrome (ClinicScene)
+
+Tiles: Asset Pack Sewer — cammellaro
+https://cammellaro.itch.io/sewer
+License: personal and commercial use; no redistribution.
+
+Props: fan, lantern, pc (same pack)
+Source: public/assets/tiles/esgoto/tiles/
+
+GDD: clínica improvisada de George Vektor — Fase 1 / Marco 2
+Size: 640×288 px (40×18 tiles @ 16px)
+Layers: layers/back.png, mid.png, front.png (parallax opcional)
