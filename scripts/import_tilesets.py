@@ -6,9 +6,12 @@ Coloque os zips em public/assets/tiles/_downloads/:
   - industrial-tileset.zip (Atomic Realm FREE — Fase 2 Industrial)
   - cavern-set.zip         (Draconimous — props/inimigos Esgoto)
   - bulkhead-walls-files.zip (OpenGameArt — já importado se existir em shared/)
+  - future_city_27_gritty.png + alley-tiles.png (OGA — Fase 3 Meio Urbano, opcional)
+  - kenney_rpgUrbanKit.zip (Kenney CC0 — alternativa urbano)
 
 Uso:
   python3 scripts/import_tilesets.py
+  python3 scripts/setup_meio_urbano.py
 """
 
 from __future__ import annotations
@@ -134,6 +137,20 @@ def import_cavern() -> None:
         print(f"  cavern tiles -> esgoto/props ({n} files)")
 
 
+def import_meio_urbano() -> None:
+    """Delega para setup_meio_urbano (interim + PNGs opcionais em _downloads)."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "setup_meio_urbano",
+        ROOT / "scripts" / "setup_meio_urbano.py",
+    )
+    if spec and spec.loader:
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        mod.main()
+
+
 def main() -> None:
     DL.mkdir(parents=True, exist_ok=True)
     print("Importando tilesets...")
@@ -141,6 +158,7 @@ def main() -> None:
     import_sewer()
     import_industrial()
     import_cavern()
+    import_meio_urbano()
     print("Concluído. Veja public/assets/tiles/sectors.json para o mapa GDD -> pastas.")
 
 

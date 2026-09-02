@@ -30,12 +30,13 @@
       "id": "meio-urbano",
       "nome": "Meio Urbano",
       "pasta": "tiles/meio-urbano",
-      "tileset": "PENDENTE — pack urbano/comercial",
-      "url": null,
+      "tileset": "Interim: Industrial 1C cyber — opcional Future City 27 (CC0)",
+      "url": "https://opengameart.org/content/future-city-27",
       "mecanicas": ["ataque"],
       "perigos": ["bandido", "drone", "objetos quebráveis"],
       "implante": "olhos (scan)",
-      "notas": "Interino: variante cyber do Industrial até achar tileset urbano dedicado."
+      "inimigos": ["npcs/enemies/bandido", "npcs/enemies/drone"],
+      "notas": "Rode scripts/setup_meio_urbano.py. Inimigos: compose_meio_urbano_enemies.py."
     },
     {
       "fase": 4,

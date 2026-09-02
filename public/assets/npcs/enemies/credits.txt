@@ -9,3 +9,9 @@ Files:
 - tiles/esgoto/props/crystal-cave-tiles.png (32×32 tiles)
 
 GDD: inimigos e props extras do Esgoto / Periferia
+
+Meio Urbano enemies (procedural placeholders — Fase 3):
+- npcs/enemies/drone/drone.png (32×32, 2 frames idle)
+- npcs/enemies/bandido/bandido.png (48×48, 4 frames walk)
+
+Substituir quando importar pack dedicado (ex. OGA Pixel Art Drone CC0).

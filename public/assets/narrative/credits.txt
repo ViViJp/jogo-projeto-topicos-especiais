@@ -1,0 +1,12 @@
+Narrative assets — Flesh to Chrome (GDD §20.4)
+
+Procedural placeholders composed for MVP / Marco 3–4.
+Substituir por arte final quando houver tempo.
+
+prologue/     — jornal, familia (cutscene §14.1)
+father/       — pai-portrait, propaganda-pai (§14.2, Fase 4)
+recycling/    — unidade-reciclagem, holograma-pai (§14.5, §17.8)
+gate/         — portao (decisão Chrome)
+fragments/    — 4 fragmentos da descida (§17.4)
+
+Robô final: usar public/assets/player/alex-chrome/
