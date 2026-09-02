@@ -1,0 +1,17 @@
+HUD — Flesh to Chrome (João Pedro / UI)
+
+GDD §13.4:
+  - Créditos da fase: X/Y
+  - Total: Z
+
+Files:
+  hud/panel-9slice.png   — 9-slice panel (32×32 source)
+  hud/icon-credit.png    — HUD icon 16×16
+  hud/icon-credit-24.png — HUD icon 24×24
+  hud/hud-reference.png  — layout mockup 640×360
+  credit/credit.png      — pickup spritesheet 64×16 (4 frames @ 16×16)
+
+Phaser (Vitor):
+  - panel: setScrollFactor(0), depth 100, nine-slice scale
+  - credit anim: generateFrameNumbers, frameRate 8, repeat -1
+  - text: monospace #c8c8d0 or BitmapText later
