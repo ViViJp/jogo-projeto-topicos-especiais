@@ -1,0 +1,10 @@
+Industrial Tileset [FREE] — Atomic Realm
+https://atomicrealm.itch.io/industrial-tileset
+
+License: commercial/non-commercial; attribution required (link above).
+
+Starter Pack 32p (FREE):
+- tiles/industrial/tiles/ — 1_Industrial_Tileset_1(.png/B/C), template
+- tiles/industrial/backgrounds/ — parallax backgrounds
+
+GDD: Fase 2 — Industrial (32×32)

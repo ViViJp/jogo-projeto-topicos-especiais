@@ -4,3 +4,5 @@ dist
 *.local
 .tools/
 public/assets/player/_previews/
+public/assets/tiles/_downloads/
+public/assets/tiles/_downloads/**

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Final ending sprites: Alex feliz (Flesh) e robô completo (Chrome)."""
+"""Final ending sprites: Alex feliz (Flesh), Hollow e robô completo (Chrome)."""
 
 from __future__ import annotations
 
@@ -70,6 +70,17 @@ def main() -> None:
         ],
         credit_defs=["head/faces/face_happy.json"],
         note="Final Flesh — Alex em carne, rosto feliz, esgoto com família",
+    )
+
+    # Hollow — cadeia quebrada: ainda cromado, expressão vazia/triste, família não fala.
+    write_ending(
+        "alex-hollow",
+        base=DASH,
+        layers=[
+            ("head/faces/male/sad", None),
+        ],
+        credit_defs=["head/faces/face_sad.json"],
+        note="Hollow — Alex ainda cromado, rosto triste, esgoto sem reconciliação",
     )
 
     # Final Chrome — máquina completa no topo (Portão).
