@@ -8,10 +8,18 @@
       "pasta": "tiles/esgoto",
       "tileset": "cammellaro Sewer (16×16)",
       "url": "https://cammellaro.itch.io/sewer",
-      "mecanicas": ["pulo", "slide"],
-      "perigos": ["quedas", "água tóxica", "canos"],
+      "mecanicas": [
+        "pulo",
+        "slide"
+      ],
+      "perigos": [
+        "quedas",
+        "água tóxica",
+        "canos"
+      ],
       "implante": "pernas",
-      "notas": "Início da campanha. Epílogo Flesh/Hollow também usa este setor."
+      "mapa": "maps/esgoto/fase-1.json",
+      "notas": "Início da campanha. Epílogo Flesh/Hollow também usa este setor. Mapa Tiled: generate_fase1_map.py"
     },
     {
       "fase": 2,
@@ -20,10 +28,16 @@
       "pasta": "tiles/industrial",
       "tileset": "Atomic Realm Industrial FREE (32×32)",
       "url": "https://atomicrealm.itch.io/industrial-tileset",
-      "mecanicas": ["salto duplo"],
-      "perigos": ["maquinário", "gaps"],
+      "mecanicas": [
+        "salto duplo"
+      ],
+      "perigos": [
+        "maquinário",
+        "gaps"
+      ],
       "implante": "braços",
-      "notas": "Variantes cyber/neon do mesmo pack podem servir de transição visual."
+      "notas": "Variantes cyber/neon do mesmo pack podem servir de transição visual.",
+      "mapa": "maps/industrial/fase-2.json"
     },
     {
       "fase": 3,
@@ -32,11 +46,21 @@
       "pasta": "tiles/meio-urbano",
       "tileset": "Interim: Industrial 1C cyber — opcional Future City 27 (CC0)",
       "url": "https://opengameart.org/content/future-city-27",
-      "mecanicas": ["ataque"],
-      "perigos": ["bandido", "drone", "objetos quebráveis"],
+      "mecanicas": [
+        "ataque"
+      ],
+      "perigos": [
+        "bandido",
+        "drone",
+        "objetos quebráveis"
+      ],
       "implante": "olhos (scan)",
-      "inimigos": ["npcs/enemies/bandido", "npcs/enemies/drone"],
-      "notas": "Rode scripts/setup_meio_urbano.py. Inimigos: compose_meio_urbano_enemies.py."
+      "inimigos": [
+        "npcs/enemies/bandido",
+        "npcs/enemies/drone"
+      ],
+      "notas": "Rode scripts/setup_meio_urbano.py. Inimigos: compose_meio_urbano_enemies.py.",
+      "mapa": "maps/meio-urbano/fase-3.json"
     },
     {
       "fase": 4,
@@ -45,10 +69,18 @@
       "pasta": "tiles/corporativo",
       "tileset": "Bulkhead Hangar (parallax) + Industrial limpo",
       "url": "https://opengameart.org/content/bulkhead-walls-hangar",
-      "mecanicas": ["scan", "salto duplo"],
-      "perigos": ["rotas escondidas", "parede falsa", "armadilhas"],
+      "mecanicas": [
+        "scan",
+        "salto duplo"
+      ],
+      "perigos": [
+        "rotas escondidas",
+        "parede falsa",
+        "armadilhas"
+      ],
       "implante": "propulsores",
-      "notas": "Holograma do pai na unidade de reciclagem."
+      "notas": "Holograma do pai na unidade de reciclagem.",
+      "mapa": "maps/corporativo/fase-4.json"
     },
     {
       "fase": 5,
@@ -57,20 +89,46 @@
       "pasta": "tiles/topo",
       "tileset": "Bulkhead Hangar + Industrial neon",
       "url": "https://atomicrealm.itch.io/industrial-tileset",
-      "mecanicas": ["dash", "kit completo"],
-      "perigos": ["combinações finais"],
+      "mecanicas": [
+        "dash",
+        "kit completo"
+      ],
+      "perigos": [
+        "combinações finais"
+      ],
       "implante": null,
-      "notas": "~120 s de fase. Portão / decisão Chrome. Sem chefe."
+      "notas": "~120 s de fase. Portão / decisão Chrome. Sem chefe.",
+      "mapa": "maps/topo/fase-5.json"
     }
   ],
   "descida": {
     "regra": "Mesmo mapa-base, mesma direção horizontal, mesma câmera (GDD §17.5)",
     "ordem": [
-      { "setor": "topo", "fragmento": "quem Alex era", "remove": "propulsores" },
-      { "setor": "corporativo", "fragmento": "rua/voz", "remove": "olhos" },
-      { "setor": "meio-urbano", "fragmento": "amigos", "remove": "braços" },
-      { "setor": "industrial", "fragmento": "família", "remove": "pernas" },
-      { "setor": "esgoto", "fragmento": null, "remove": "humano (epílogo)" }
+      {
+        "setor": "topo",
+        "fragmento": "quem Alex era",
+        "remove": "propulsores"
+      },
+      {
+        "setor": "corporativo",
+        "fragmento": "rua/voz",
+        "remove": "olhos"
+      },
+      {
+        "setor": "meio-urbano",
+        "fragmento": "amigos",
+        "remove": "braços"
+      },
+      {
+        "setor": "industrial",
+        "fragmento": "família",
+        "remove": "pernas"
+      },
+      {
+        "setor": "esgoto",
+        "fragmento": null,
+        "remove": "humano (epílogo)"
+      }
     ]
   },
   "camera": {

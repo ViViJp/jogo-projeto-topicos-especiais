@@ -1,0 +1,4 @@
+Fase 5 — Topo (Tiled)
+Layout: levelDesign.md Fase 5 + GDD §16.5
+~90s desafio + ~30s contemplativo + Portão (Chrome/Flesh)
+Regenerar: python3 scripts/generate_tiled_maps.py --fase 5

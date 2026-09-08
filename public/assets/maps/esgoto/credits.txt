@@ -1,0 +1,23 @@
+Fase 1 — Esgoto / Periferia (Tiled map)
+
+Fonte de layout: levelDesign.md (Victor Blum) + GDD §16.1
+Tileset: cammellaro Sewer — public/assets/tiles/esgoto/tiles/tilesetSewer.png
+
+Arquivos:
+  tileset-sewer.tsj  — tileset Tiled (16×16)
+  fase-1.json        — mapa (720×20 tiles)
+
+Camadas:
+  deco     — teto, tubos decorativos, painéis
+  ground   — colisão / plataformas / gaps
+  hazards  — água tóxica, cano baixo (slide), fios
+  objects  — spawn, créditos, checkpoint, clinic_exit
+
+Regenerar:
+  python3 scripts/generate_fase1_map.py
+
+Abrir no Tiled:
+  File → Open → public/assets/maps/esgoto/fase-1.json
+
+Nota GDD §8: level design é responsabilidade de Victor Blum.
+Este mapa é um draft jogável para desbloquear Marco 2; Victor pode editar no Tiled.
