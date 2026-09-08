@@ -1,0 +1,17 @@
+Cavern Set — Draconimous
+https://draconimous.itch.io/cavern-set
+
+License: CC-BY 4.0 (Creative Commons Attribution v4.0)
+
+Files:
+- npcs/enemies/crystal-crab/crystal-crab.png (40×30, walk/hit/death)
+- npcs/enemies/dark-hand/dark-hand.png (48×48, walk/hit/death)
+- tiles/esgoto/props/crystal-cave-tiles.png (32×32 tiles)
+
+GDD: inimigos e props extras do Esgoto / Periferia
+
+Meio Urbano enemies (procedural placeholders — Fase 3):
+- npcs/enemies/drone/drone.png (32×32, 2 frames idle)
+- npcs/enemies/bandido/bandido.png (48×48, 4 frames walk)
+
+Substituir quando importar pack dedicado (ex. OGA Pixel Art Drone CC0).

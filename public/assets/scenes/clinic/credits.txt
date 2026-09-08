@@ -1,0 +1,11 @@
+Clinic scene — Flesh to Chrome (ClinicScene)
+
+Tiles + props: Asset Pack Sewer — cammellaro
+https://cammellaro.itch.io/sewer
+License: personal and commercial use; no redistribution.
+
+Source: public/assets/tiles/esgoto/tiles/tilesetSewer.png + fan/, pc/, lantern/
+Composed procedurally (no room GIFs — those contain PREVIEW watermark).
+
+Size: 960×320 px (60×20 tiles @ 16px)
+Layers: layers/back.png, mid.png, front.png (optional parallax)

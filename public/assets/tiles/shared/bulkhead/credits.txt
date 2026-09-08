@@ -1,0 +1,15 @@
+Bulkhead Walls Hangar — ansimuz
+https://opengameart.org/content/bulkhead-walls-hangar
+
+License: CC0 (public domain)
+Author: ansimuz (OpenGameArt)
+
+Used for: Fase 4 Corporativo, Fase 5 Topo (parallax / paredes hangar)
+
+Files:
+- bulkhead-wallsx1.png
+- bulkhead-wallsx3.png
+- bulkhead-walls-back.png
+- bulkhead-walls-pipes.png
+- bulkhead-walls-platform.png
+- cols.png

@@ -124,7 +124,18 @@ feet/shoes/basic/male/walk.png
 		- https://opengameart.org/content/lpc-expanded-socks-shoes
 
 
-# --- Additional chrome layers (composed for Flesh to Chrome) ---
+# --- Skin: alex-skin-sucata — créditos 80 — sucata / ferrugem / bandagens ---
+torso/bandage
+	- Note: 
+	- Licenses:
+		- OGA-BY 3.0
+		- CC-BY-SA 3.0
+		- GPL 2.0
+		- GPL 3.0
+	- Authors:
+		- Nila122
+	- Links:
+		- https://opengameart.org/content/lpc-bandages
 legs/armour/plate
 	- Note: reduced to 7 colors an adapted to v3 bases by bluecarrot16, climb/jump/sit/emote/run by JaidynReiman
 	- Licenses:
@@ -174,59 +185,6 @@ arms/bracers
 		- JaidynReiman
 	- Links:
 		- https://opengameart.org/content/lpc-medieval-fantasy-character-sprites
-arms/hands/gloves/male
-	- Note: metal gloves by wulax, recolors by bigbeargames, adapted to v3 bases by bluecarrot16, added to expanded animations by JaidynReiman
-	- Licenses:
-		- OGA-BY 3.0
-		- CC-BY-SA 3.0
-		- GPL 3.0
-	- Authors:
-		- Michael Whitlock (bigbeargames)
-		- Matthew Krohn (makrohn)
-		- Johannes Sjölund (wulax)
-		- bluecarrot16
-		- JaidynReiman
-	- Links:
-		- https://opengameart.org/content/lpc-medieval-fantasy-character-sprites
-		- http://opengameart.org/content/lpc-clothing-updates
-
-arms/hands/gloves/thin
-	- Note: metal gloves by wulax, extended to female base by makrohn, recolors by bigbeargames, adapted to v3 bases by bluecarrot16, added to expanded animations by JaidynReiman
-	- Licenses:
-		- OGA-BY 3.0
-		- CC-BY-SA 3.0
-		- GPL 3.0
-	- Authors:
-		- Michael Whitlock (bigbeargames)
-		- Matthew Krohn (makrohn)
-		- Johannes Sjölund (wulax)
-		- bluecarrot16
-		- JaidynReiman
-	- Links:
-		- https://opengameart.org/content/lpc-medieval-fantasy-character-sprites
-		- http://opengameart.org/content/lpc-clothing-updates
-backpack/jetpack
-	- Note: trivial adjustments by bluecarrot16 to be compatible with v3 bases
-	- Licenses:
-		- CC-BY-SA 3.0
-		- GPL 3.0
-	- Authors:
-		- Benjamin K. Smith (BenCreating)
-		- macmanmatty
-	- Links:
-		- https://opengameart.org/content/lpc-backpacks
-shoulders/bauldron
-	- Note: Original by Nila122, climb/jump/sit/emote/run by JaidynReiman
-	- Licenses:
-		- GPL 2.0
-		- GPL 3.0
-		- OGA-BY 3.0
-		- CC-BY-SA 3.0
-	- Authors:
-		- Nila122
-		- JaidynReiman
-	- Links:
-		- https://opengameart.org/content/more-lpc-clothes-and-hair
 
 # Layer files used:
 - arms/bracers/male/climb.png
@@ -241,41 +199,6 @@ shoulders/bauldron
 - arms/bracers/male/spellcast.png
 - arms/bracers/male/thrust.png
 - arms/bracers/male/walk.png
-- arms/hands/gloves/male/backslash.png
-- arms/hands/gloves/male/climb.png
-- arms/hands/gloves/male/combat_idle.png
-- arms/hands/gloves/male/emote.png
-- arms/hands/gloves/male/halfslash.png
-- arms/hands/gloves/male/hurt.png
-- arms/hands/gloves/male/idle.png
-- arms/hands/gloves/male/jump.png
-- arms/hands/gloves/male/run.png
-- arms/hands/gloves/male/shoot.png
-- arms/hands/gloves/male/sit.png
-- arms/hands/gloves/male/slash.png
-- arms/hands/gloves/male/spellcast.png
-- arms/hands/gloves/male/thrust.png
-- arms/hands/gloves/male/walk.png
-- backpack/jetpack/male/hurt/steel.png
-- backpack/jetpack/male/shoot/steel.png
-- backpack/jetpack/male/slash/steel.png
-- backpack/jetpack/male/spellcast/steel.png
-- backpack/jetpack/male/thrust/steel.png
-- backpack/jetpack/male/walk/steel.png
-- eyes/human/adult/default/backslash/red.png
-- eyes/human/adult/default/combat_idle/red.png
-- eyes/human/adult/default/emote/red.png
-- eyes/human/adult/default/halfslash/red.png
-- eyes/human/adult/default/hurt/red.png
-- eyes/human/adult/default/idle/red.png
-- eyes/human/adult/default/jump/red.png
-- eyes/human/adult/default/run/red.png
-- eyes/human/adult/default/shoot/red.png
-- eyes/human/adult/default/sit/red.png
-- eyes/human/adult/default/slash/red.png
-- eyes/human/adult/default/spellcast/red.png
-- eyes/human/adult/default/thrust/red.png
-- eyes/human/adult/default/walk/red.png
 - feet/armour/plate/male/climb.png
 - feet/armour/plate/male/emote.png
 - feet/armour/plate/male/hurt.png
@@ -299,15 +222,9 @@ shoulders/bauldron
 - legs/armour/plate/male/spellcast.png
 - legs/armour/plate/male/thrust.png
 - legs/armour/plate/male/walk.png
-- shoulders/bauldron/male/climb.png
-- shoulders/bauldron/male/emote.png
-- shoulders/bauldron/male/hurt.png
-- shoulders/bauldron/male/idle.png
-- shoulders/bauldron/male/jump.png
-- shoulders/bauldron/male/run.png
-- shoulders/bauldron/male/shoot.png
-- shoulders/bauldron/male/sit.png
-- shoulders/bauldron/male/slash.png
-- shoulders/bauldron/male/spellcast.png
-- shoulders/bauldron/male/thrust.png
-- shoulders/bauldron/male/walk.png
+- torso/bandage/male/hurt/white.png
+- torso/bandage/male/shoot/white.png
+- torso/bandage/male/slash/white.png
+- torso/bandage/male/spellcast/white.png
+- torso/bandage/male/thrust/white.png
+- torso/bandage/male/walk/white.png
