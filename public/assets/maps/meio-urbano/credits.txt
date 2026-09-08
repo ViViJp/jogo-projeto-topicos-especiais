@@ -1,5 +1,1 @@
-Fase 3 — Meio Urbano (Tiled)
-Layout: levelDesign.md Fase 3 + GDD §16.3
-Tileset interim: Industrial 1C (substituir por Future City 27)
-Inimigos: objects bandido/drone → npcs/enemies/
-Regenerar: python3 scripts/generate_tiled_maps.py --fase 3
+Fase 3 — Meio Urbano side-view (rua + rooftops)

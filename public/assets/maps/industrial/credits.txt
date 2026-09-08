@@ -1,4 +1,2 @@
-Fase 2 — Industrial (Tiled)
-Layout: levelDesign.md Fase 2 + GDD §16.2
-Tileset: Atomic Realm Industrial 32×32
-Regenerar: python3 scripts/generate_tiled_maps.py --fase 2
+Fase 2 — Industrial side-view vertical
+python3 scripts/generate_tiled_maps.py --fase 2
