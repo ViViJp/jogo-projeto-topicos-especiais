@@ -1,0 +1,21 @@
+{
+  "name": "flesh-to-chrome",
+  "version": "0.1.0",
+  "description": "Flesh to Chrome - 2D cyberpunk auto-runner (academic project prototype)",
+  "private": true,
+  "scripts": {
+    "start": "parcel src/index.html --open",
+    "dev": "parcel src/index.html",
+    "build": "parcel build src/index.html --dist-dir dist",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "parcel": "^2.12.0",
+    "process": "^0.11.10",
+    "typescript": "^5.5.0"
+  },
+  "dependencies": {
+    "phaser": "^4.2.1"
+  }
+}

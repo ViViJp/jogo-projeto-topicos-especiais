@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Flesh to Chrome</title>
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        background: #05050a;
+        height: 100%;
+        overflow: hidden;
+        font-family: "Courier New", monospace;
+      }
+      #game-root {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100vw;
+        height: 100vh;
+      }
+      canvas {
+        image-rendering: pixelated;
+        box-shadow: 0 0 40px rgba(0, 255, 200, 0.15);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="game-root"></div>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
