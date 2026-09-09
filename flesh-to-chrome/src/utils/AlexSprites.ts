@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { PLAYER_SIZE, PLAYER_SLIDE_SIZE } from "../config/GameConfig";
+import { ALEX_SHEET_URL } from "../assets/AssetUrls";
 
 /** LPC Universal — 64×64, 13 colunas. */
 export const LPC = {
@@ -21,14 +22,18 @@ export function lpcFrameRange(row: number, count: number): number[] {
 }
 
 export function preloadAlex(scene: Phaser.Scene): void {
-  scene.load.spritesheet(ALEX.sheet, "assets/player/alex-flesh/alex-flesh.png", {
+  scene.load.spritesheet(ALEX.sheet, ALEX_SHEET_URL, {
     frameWidth: LPC.FRAME,
     frameHeight: LPC.FRAME,
   });
 }
 
-export function createAlexAnims(scene: Phaser.Scene): void {
-  if (scene.anims.exists(ALEX.run)) return;
+export function createAlexAnims(scene: Phaser.Scene): boolean {
+  if (!scene.textures.exists(ALEX.sheet)) {
+    console.error("[alex] spritesheet não carregou — usando placeholder");
+    return false;
+  }
+  if (scene.anims.exists(ALEX.run)) return true;
 
   scene.anims.create({
     key: ALEX.run,
@@ -47,6 +52,7 @@ export function createAlexAnims(scene: Phaser.Scene): void {
     frameRate: 8,
     repeat: 0,
   });
+  return true;
 }
 
 export function applyStandBody(sprite: Phaser.Physics.Arcade.Sprite): void {
@@ -63,7 +69,6 @@ export function applySlideBody(sprite: Phaser.Physics.Arcade.Sprite): void {
   sprite.setScale(1);
   sprite.setDisplaySize(PLAYER_SLIDE_SIZE.width + 8, PLAYER_SLIDE_SIZE.height + 4);
   sprite.setSize(PLAYER_SLIDE_SIZE.width, PLAYER_SLIDE_SIZE.height);
-  // com origin (0.5, 1), offset em coords da textura exibida
   sprite.body!.setOffset(
     (sprite.displayWidth - PLAYER_SLIDE_SIZE.width) / 2 / sprite.scaleX,
     (sprite.displayHeight - PLAYER_SLIDE_SIZE.height) / sprite.scaleY

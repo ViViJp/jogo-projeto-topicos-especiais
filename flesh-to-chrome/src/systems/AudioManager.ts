@@ -1,7 +1,9 @@
+/// <reference path="./parcel-url.d.ts" />
 /**
- * AudioManager — public/assets/audio/ (issues #11–#14)
+ * AudioManager — SFX/BGM via URLs do Parcel (issues #11–#14)
  */
 import Phaser from "phaser";
+import { BGM_URLS, SFX_URLS } from "../assets/AssetUrls";
 
 export const SFX = {
   jump: "sfx-jump",
@@ -47,73 +49,61 @@ const PHASE_BGM: Record<string, string> = {
   fase5: BGM.fase5,
 };
 
-const SFX_FILES: [string, string][] = [
-  ["sfx-jump", "assets/audio/sfx/sfx-jump.wav"],
-  ["sfx-land", "assets/audio/sfx/sfx-land.wav"],
-  ["sfx-slide", "assets/audio/sfx/sfx-slide.wav"],
-  ["sfx-effort", "assets/audio/sfx/sfx-effort.wav"],
-  ["sfx-footstep", "assets/audio/sfx/sfx-footstep.wav"],
-  ["sfx-hurt", "assets/audio/sfx/sfx-hurt.wav"],
-  ["sfx-death", "assets/audio/sfx/sfx-death.wav"],
-  ["sfx-credit", "assets/audio/sfx/sfx-credit.wav"],
-  ["sfx-checkpoint", "assets/audio/sfx/sfx-checkpoint.wav"],
-  ["sfx-attack", "assets/audio/sfx/sfx-attack.wav"],
-  ["sfx-dash", "assets/audio/sfx/sfx-dash.wav"],
-  ["sfx-scan", "assets/audio/sfx/sfx-scan.wav"],
-  ["sfx-ui-select", "assets/audio/sfx/sfx-ui-select.wav"],
-  ["sfx-ui-confirm", "assets/audio/sfx/sfx-ui-confirm.wav"],
-  ["sfx-hazard-water", "assets/audio/sfx/sfx-hazard-water.wav"],
-  ["sfx-hazard-laser", "assets/audio/sfx/sfx-hazard-laser.wav"],
-  ["sfx-enemy-hit", "assets/audio/sfx/sfx-enemy-hit.wav"],
-  ["sfx-glitch", "assets/audio/sfx/sfx-glitch.wav"],
-  ["sfx-phase-clear", "assets/audio/sfx/sfx-phase-clear.wav"],
-  ["sfx-implant", "assets/audio/sfx/sfx-implant.wav"],
-  ["sfx-clinic-tools", "assets/audio/sfx/sfx-clinic-tools.wav"],
-];
-
-const BGM_FILES: [string, string][] = [
-  ["bgm-menu", "assets/audio/music/bgm-menu.wav"],
-  ["bgm-fase-1-esgoto", "assets/audio/music/bgm-fase-1-esgoto.wav"],
-  ["bgm-fase-2-industrial", "assets/audio/music/bgm-fase-2-industrial.wav"],
-  ["bgm-fase-3-meio-urbano", "assets/audio/music/bgm-fase-3-meio-urbano.wav"],
-  ["bgm-fase-4-corporativo", "assets/audio/music/bgm-fase-4-corporativo.wav"],
-  ["bgm-fase-5-topo", "assets/audio/music/bgm-fase-5-topo.wav"],
-  ["bgm-clinic", "assets/audio/music/bgm-clinic.wav"],
-  ["bgm-portao", "assets/audio/music/bgm-portao.wav"],
-];
-
 export class AudioManager {
   private scene: Phaser.Scene;
   private currentBgmKey: string | null = null;
   muted = false;
   sfxVolume = 0.55;
-  bgmVolume = 0.28;
+  bgmVolume = 0.32;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
   }
 
   static preload(scene: Phaser.Scene): void {
-    for (const [key, path] of SFX_FILES) scene.load.audio(key, path);
-    for (const [key, path] of BGM_FILES) scene.load.audio(key, path);
+    for (const [key, url] of SFX_URLS) scene.load.audio(key, url);
+    for (const [key, url] of BGM_URLS) scene.load.audio(key, url);
+  }
+
+  /** Browsers block audio until a user gesture — call on first click/key. */
+  unlock(): void {
+    try {
+      this.scene.sound.unlock();
+    } catch {
+      /* Phaser 4 / browser */
+    }
+    const ctx = (this.scene.sound as unknown as { context?: AudioContext }).context;
+    if (ctx && ctx.state === "suspended") {
+      void ctx.resume();
+    }
   }
 
   sfx(key: string, config: { volume?: number; rate?: number } = {}): void {
-    if (this.muted || !this.scene.cache.audio.exists(key)) return;
+    if (this.muted) return;
+    this.unlock();
+    if (!this.scene.cache.audio.exists(key)) {
+      console.warn(`[audio] SFX missing: ${key}`);
+      return;
+    }
     try {
       this.scene.sound.play(key, {
         volume: this.sfxVolume * (config.volume ?? 1),
         rate: config.rate ?? 1,
       });
-    } catch {
-      /* ignore */
+    } catch (e) {
+      console.warn(`[audio] play failed: ${key}`, e);
     }
   }
 
   playBgm(key: string, opts: { loop?: boolean; fadeMs?: number } = {}): void {
     const loop = opts.loop ?? true;
     const fadeMs = opts.fadeMs ?? 400;
-    if (!key || this.muted || !this.scene.cache.audio.exists(key)) return;
+    if (!key || this.muted) return;
+    this.unlock();
+    if (!this.scene.cache.audio.exists(key)) {
+      console.warn(`[audio] BGM missing: ${key}`);
+      return;
+    }
     if (this.currentBgmKey === key) return;
 
     const prev = this.currentBgmKey ? this.scene.sound.get(this.currentBgmKey) : null;

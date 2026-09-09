@@ -23,7 +23,14 @@ export class MenuScene extends Phaser.Scene {
   create(): void {
     this.cameras.main.setBackgroundColor(0x05050a);
     const audio = new AudioManager(this);
-    audio.playBgm(BGM.menu);
+    audio.unlock();
+    // BGM só depois do primeiro clique/tecla (autoplay policy)
+    const startMusic = () => {
+      audio.unlock();
+      audio.playBgm(BGM.menu);
+    };
+    this.input.once("pointerdown", startMusic);
+    this.input.keyboard?.once("keydown", startMusic);
 
     this.add
       .text(SCREEN_WIDTH / 2, 150, "FLESH TO CHROME", {

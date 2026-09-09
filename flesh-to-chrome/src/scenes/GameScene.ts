@@ -56,7 +56,12 @@ export class GameScene extends Phaser.Scene {
   create(): void {
     generatePlaceholderTextures(this);
     this.audio = new AudioManager(this);
+    this.audio.unlock();
     this.audio.playPhaseBgm(this.data$.phaseId);
+
+    if (!this.textures.exists("alex-flesh")) {
+      console.error("[GameScene] alex-flesh ausente — placeholder ativo");
+    }
 
     const level = LEVELS[this.data$.phaseId];
     this.physics.world.gravity.y = GRAVITY_Y;
