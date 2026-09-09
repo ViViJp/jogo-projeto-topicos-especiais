@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { AudioManager } from '../audio/AudioManager.js';
 
 /** LPC standard: 64x64 frames, 13 columns per row. */
 export const LPC = {
@@ -25,6 +26,7 @@ export class PreloadScene extends Phaser.Scene {
       frameWidth: LPC.FRAME,
       frameHeight: LPC.FRAME,
     });
+    AudioManager.preload(this);
   }
 
   create() {

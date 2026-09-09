@@ -5,6 +5,7 @@ import { InputManager } from "../systems/InputManager";
 import { CreditsSystem } from "../systems/CreditsSystem";
 import { HUD } from "../systems/HUD";
 import { SaveState } from "../systems/SaveState";
+import { AudioManager, SFX } from "../systems/AudioManager";
 import { Player } from "../entities/Player";
 import { LevelRuntime } from "../objects/LevelRuntime";
 import { LEVELS, getNextPhaseId } from "../levels";
@@ -35,6 +36,7 @@ export class GameScene extends Phaser.Scene {
   private pauseText?: Phaser.GameObjects.Text;
   private scanOverlay?: Phaser.GameObjects.Rectangle;
   private restarting = false;
+  private audio!: AudioManager;
 
   constructor() {
     super("GameScene");
@@ -53,6 +55,8 @@ export class GameScene extends Phaser.Scene {
 
   create(): void {
     generatePlaceholderTextures(this);
+    this.audio = new AudioManager(this);
+    this.audio.playPhaseBgm(this.data$.phaseId);
 
     const level = LEVELS[this.data$.phaseId];
     this.physics.world.gravity.y = GRAVITY_Y;
@@ -68,7 +72,7 @@ export class GameScene extends Phaser.Scene {
     this.player = new Player(this, spawnX, level.groundY, this.data$.abilities, this.input$, {
       onDeath: () => this.handlePlayerDeath(),
       onScanPulse: (active) => this.handleScanPulse(active),
-    });
+    }, this.audio);
 
     this.runtime = new LevelRuntime(
       this,
@@ -119,6 +123,7 @@ export class GameScene extends Phaser.Scene {
 
   private handleCreditCollected(id: string, value: number): void {
     this.credits.collect(id, value);
+    this.audio.sfx(SFX.credit);
     this.updateHud();
   }
 
@@ -126,6 +131,7 @@ export class GameScene extends Phaser.Scene {
     this.credits.consolidate();
     this.save.updateCheckpoint(x, this.credits.getConsolidatedIds(), this.credits.getTotal());
     this.data$.checkpointX = x;
+    this.audio.sfx(SFX.checkpoint);
     this.updateHud();
     this.hud.flashPrompt("Checkpoint alcançado — créditos consolidados");
   }
@@ -134,6 +140,7 @@ export class GameScene extends Phaser.Scene {
     this.credits.consolidate();
     this.save.updateCheckpoint(this.player.sprite.x, this.credits.getConsolidatedIds(), this.credits.getTotal());
     this.updateHud();
+    this.audio.sfx(SFX.phaseClear);
 
     const nextPhaseId = getNextPhaseId(this.data$.phaseId);
     // A clínica de George instala um novo implante ao final de cada uma das
@@ -144,6 +151,7 @@ export class GameScene extends Phaser.Scene {
     const destination = this.data$.phaseId === "fase1" ? "ClinicScene" : "EndingScene";
 
     this.time.delayedCall(300, () => {
+      this.audio.stopBgm();
       this.scene.start(destination, {
         completedPhaseId: this.data$.phaseId,
         nextPhaseId,
@@ -156,6 +164,7 @@ export class GameScene extends Phaser.Scene {
   private handlePlayerDeath(): void {
     if (this.restarting) return;
     this.restarting = true;
+    this.audio.sfx(SFX.death);
     this.credits.discardUncollected();
     this.cameras.main.shake(150, 0.01);
     this.hud.flashPrompt("Alex não resistiu — reiniciando do checkpoint", 900);
@@ -173,6 +182,7 @@ export class GameScene extends Phaser.Scene {
 
   private handleScanPulse(active: boolean): void {
     if (active) {
+      this.audio.sfx(SFX.scan);
       if (!this.scanOverlay) {
         this.scanOverlay = this.add
           .rectangle(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0x36e2ff, 0.08)

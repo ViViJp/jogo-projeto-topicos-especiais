@@ -1,0 +1,35 @@
+# Áudio — Flesh to Chrome
+
+## Estrutura
+```
+public/assets/audio/
+  music/   # BGM loops por cena
+  sfx/     # one-shots
+  credits.txt
+```
+
+## Music (BGM) — no repo
+Loops curtos `.wav` (~200 KB cada) **sintetizados** para caber no GitHub.
+Mood diferente por fase (freq/pulse). Trocar pelos packs OGA quando puder:
+
+| Arquivo | Uso | Pack CC0 sugerido (OGA) |
+| --- | --- | --- |
+| `bgm-fase-1-esgoto.wav` | Fase 1 | tricksntraps — Caves |
+| `bgm-fase-2-industrial.wav` | Fase 2 | Simulation Unknown |
+| `bgm-fase-3-meio-urbano.wav` | Fase 3 | Space Collisions |
+| `bgm-fase-4-corporativo.wav` | Fase 4 | Currents |
+| `bgm-fase-5-topo.wav` | Fase 5 | Anti Matter Magic |
+| `bgm-clinic.wav` | Clínica | Experiment G |
+| `bgm-menu.wav` | Menu | Test Subject |
+| `bgm-portao.wav` | Portão | Corrupt Data Stream |
+
+Pack: https://opengameart.org/content/t-t-free-cyberpunk-pack  
+Corrupt Data Stream: https://opengameart.org/content/corrupt-data-stream  
+
+Cópias full (opcional, local): `_downloads/audio/full-bgm/` (gitignore).
+
+## SFX
+`sfx-*.wav` sintetizados (domínio público no projeto).  
+Lista: jump, land, slide, effort, footstep, hurt, death, credit, checkpoint, attack, dash, scan, ui-select, ui-confirm, hazard-water, hazard-laser, enemy-hit, glitch, phase-clear, implant, clinic-tools.
+
+Mesmos nomes de arquivo = dá para trocar por Kenney/Freesound sem mudar código.

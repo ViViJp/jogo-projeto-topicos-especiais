@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { SCREEN_WIDTH, SCREEN_HEIGHT } from "../config/GameConfig";
 import { AbilityState } from "../systems/AbilityState";
 import { SaveState } from "../systems/SaveState";
+import { AudioManager, BGM, SFX } from "../systems/AudioManager";
 import { GameSceneData } from "./GameScene";
 
 interface ClinicSceneData {
@@ -29,6 +30,9 @@ export class ClinicScene extends Phaser.Scene {
 
   create(): void {
     this.cameras.main.setBackgroundColor(0x120a1a);
+    const audio = new AudioManager(this);
+    audio.playBgm(BGM.clinic);
+    audio.sfx(SFX.clinicTools);
 
     const implantKey: keyof AbilityState = "legs"; // apenas Fase 1 chega aqui neste protótipo
     const implantLabel = "pernas mecânicas";
@@ -37,6 +41,7 @@ export class ClinicScene extends Phaser.Scene {
     const save = SaveState.load();
     const newAbilities: AbilityState = { ...this.data$.abilities, [implantKey]: true };
     save.unlockAbility(implantKey);
+    this.time.delayedCall(400, () => audio.sfx(SFX.implant));
 
     this.add
       .text(SCREEN_WIDTH / 2, 160, "CLÍNICA DE GEORGE VEKTOR", {
