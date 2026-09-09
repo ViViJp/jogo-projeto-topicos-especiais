@@ -130,153 +130,148 @@ def build() -> tuple[list[int], list[int], list[int], list[dict]]:
         objects.append(obj(name, oid, tx, ty, props))
         oid += 1
 
-    # Heightmap base: superfície do chão principal por coluna (None = gap/vazio)
-    # Valores menores = mais alto na tela (Y menor)
+    # Heightmap: MONTANHA / ASCENSÃO (GDD — Glitch City vertical)
+    # Y menor = mais alto na tela. Tendência: início no fundo → fim no alto.
+    # Descidas locais OK, mas o baseline sobe; nunca volta ao nível do spawn por longo.
     surface: list[int | None] = [None] * MAP_W
 
     def set_span(x0: int, x1: int, y: int) -> None:
         for x in range(x0, min(x1, MAP_W)):
             surface[x] = y
 
-    # --- levelDesign.md Fase 1 — VERTICALIDADE forte (Celeste) ---
-    # Y menor = mais alto. Amplitude ~ Y=6 (topo) … Y=22 (fundo do fosso)
+    # Baseline da montanha: Y=24 no spawn → Y=7 na clínica
+    START_Y, END_Y = 24, 7
 
-    # 0–36: início seguro no fundo do setor, sobe escada
-    set_span(0, 28, 20)
-    add("spawn", 5, 18, {"type": "spawn"})
-    set_span(28, 32, 18)
-    set_span(32, 36, 16)
-    set_span(36, 42, 14)  # primeiro platô alto
+    def mountain_y(x: int) -> int:
+        t = x / max(1, MAP_W - 1)
+        return int(round(START_Y + (END_Y - START_Y) * t))
 
-    # 42–70: primeiro pulo (gap) + aterrissa mais baixo
-    # gap 42–48
-    set_span(48, 58, 17)
-    set_span(58, 64, 13)  # sobe de novo
-    # gap 64–68
-    set_span(68, 80, 16)
+    # Preenche baseline contínuo; gaps sobrescrevem com None depois
+    for x in range(MAP_W):
+        surface[x] = mountain_y(x)
 
-    # 80–130: torre de plataformas (sobe de verdade)
-    set_span(80, 88, 18)
-    # shaft vazio 88–92
-    set_span(92, 100, 12)
-    # gap
-    set_span(106, 114, 8)  # bem alto
-    # gap
-    set_span(120, 130, 14)
+    # --- Variação local SOBRE a montanha (nunca “volta ao zero”) ---
+    # 0–40: planície baixa (início seguro) — ligeiramente acima do baseline
+    set_span(0, 40, 23)
+    add("spawn", 5, 21, {"type": "spawn"})
 
-    # 130–165: slide em corredor elevado (chão alto + teto)
-    set_span(130, 165, 11)
+    # 40–80: primeiro degrau da ascensão + gap
+    set_span(40, 52, 21)
+    for x in range(52, 58):
+        surface[x] = None  # gap
+    set_span(58, 80, 19)
 
-    # 165–210: desce em degraus + pulo/slide
-    set_span(165, 175, 13)
-    set_span(175, 182, 16)
-    # gap
-    set_span(188, 200, 19)
-    set_span(200, 210, 15)
+    # 80–130: sobe forte (torre) — bem acima do início
+    set_span(80, 95, 17)
+    for x in range(95, 100):
+        surface[x] = None
+    set_span(100, 115, 14)
+    for x in range(115, 120):
+        surface[x] = None
+    set_span(120, 140, 12)
 
-    # 210–270: GRANDE FOSZO de água + ilhas em 3 alturas
-    set_span(210, 218, 14)
-    # pit 218–262
-    set_span(262, 280, 16)
+    # 140–175: corredor de slide na encosta (ainda mais alto que spawn)
+    set_span(140, 175, 11)
 
-    # 280–350: dual path — rua baixa vs rota risco no teto
-    set_span(280, 350, 20)
+    # 175–220: pequena descida LOCAL (ainda Y<<23) + gap
+    set_span(175, 190, 13)  # desce um pouco, mas longe do início
+    for x in range(190, 196):
+        surface[x] = None
+    set_span(196, 220, 12)
 
-    # 350–410: tubulação rompida — degraus agressivos
-    set_span(350, 358, 17)
-    # gap
-    set_span(364, 372, 10)
-    # gap
-    set_span(378, 386, 18)
-    # gap
-    set_span(392, 410, 12)
+    # 220–280: fosso de água na encosta + ilhas SUBINDO
+    for x in range(220, 270):
+        surface[x] = None
+    set_span(270, 295, 11)
 
-    # 410–445: checkpoint no alto
-    set_span(410, 445, 9)
+    # 295–360: dual path — rua na encosta + risco ainda MAIS alto
+    set_span(295, 360, 12)
 
-    # 445–520: fios + fosso profundo (maior desafio)
-    set_span(445, 455, 12)
-    # pit 455–500
-    set_span(500, 520, 15)
+    # 360–420: tubulação / degraus subindo de novo
+    set_span(360, 375, 11)
+    for x in range(375, 380):
+        surface[x] = None
+    set_span(380, 395, 9)
+    for x in range(395, 400):
+        surface[x] = None
+    set_span(400, 430, 8)
 
-    # 520–590: domínio — sobe ao pico, slide, fosso, desce
-    set_span(520, 535, 13)
-    set_span(535, 555, 7)  # pico da fase
-    # pit 555–570
-    set_span(570, 590, 18)
+    # 430–470: checkpoint no alto da encosta
+    set_span(430, 470, 8)
 
-    # 590–640: desce até a clínica
-    set_span(590, 610, 15)
-    set_span(610, MAP_W, 17)
+    # 470–540: fosso profundo (queda perigosa) — aterrissa ainda alto
+    for x in range(470, 520):
+        surface[x] = None
+    set_span(520, 550, 9)
 
-    # Materializa heightmap
+    # 550–600: pico da fase (domínio) — mais alto do mapa
+    set_span(550, 580, 6)
+    for x in range(580, 588):
+        surface[x] = None
+    set_span(588, 610, 7)
+
+    # 610–640: platô final / clínica — topo desta fase
+    set_span(610, MAP_W, 7)
+
+    # Materializa
     for x, sy in enumerate(surface):
         if sy is not None:
             fill_column(ground, x, sy)
 
-    # Plataformas flutuantes / escadas Celeste
-    floating_platform(ground, 44, 47, 12)  # meio do 1º gap
-    floating_platform(ground, 88, 91, 15)  # shaft assist
-    floating_platform(ground, 88, 91, 11)
-    floating_platform(ground, 101, 105, 10)
-    floating_platform(ground, 114, 118, 11)
-    floating_platform(ground, 182, 186, 14)
+    # Plataformas flutuantes SEMPRE acima do baseline local (continuar a subida)
+    floating_platform(ground, 53, 57, 18)  # meio do 1º gap
+    floating_platform(ground, 96, 99, 15)
+    floating_platform(ground, 116, 119, 13)
 
-    # Ilhas no 1º fosso (3 alturas)
-    floating_platform(ground, 222, 227, 16)
-    floating_platform(ground, 230, 236, 12)
-    floating_platform(ground, 238, 244, 8)
-    floating_platform(ground, 246, 252, 13)
-    floating_platform(ground, 254, 260, 17)
+    # Ilhas do fosso 1 — cada uma mais alta (sobe atravessando)
+    floating_platform(ground, 225, 231, 16)
+    floating_platform(ground, 235, 241, 13)
+    floating_platform(ground, 245, 252, 10)
+    floating_platform(ground, 256, 263, 12)
+    floating_platform(ground, 265, 269, 11)
 
-    # Rota risco (créditos) bem acima da rua
-    floating_platform(ground, 290, 340, 8, thickness=2)
-    floating_platform(ground, 300, 308, 5)  # ainda mais alto (opcional)
+    # Rota risco: acima da rua da encosta
+    floating_platform(ground, 305, 350, 6, thickness=2)
 
-    # Ilhas no 2º fosso (fios)
-    floating_platform(ground, 460, 466, 14)
-    floating_platform(ground, 470, 476, 10)
-    floating_platform(ground, 480, 486, 7)
-    floating_platform(ground, 490, 496, 12)
+    # Ilhas fosso 2 — subindo em direção ao checkpoint já passado / próximo pico
+    floating_platform(ground, 475, 482, 12)
+    floating_platform(ground, 488, 495, 9)
+    floating_platform(ground, 500, 508, 7)
+    floating_platform(ground, 512, 518, 8)
 
-    # Domínio
-    floating_platform(ground, 558, 563, 11)
-    floating_platform(ground, 564, 569, 9)
+    # Assist domínio
+    floating_platform(ground, 582, 586, 8)
 
-    # Fossos de água (fundo do mapa)
-    water_pit(hazards, 218, 262, 23)
-    water_pit(hazards, 455, 500, 23)
-    water_pit(hazards, 555, 570, 23)
+    # Água só no FUNDO dos fossos (não no nível do início)
+    water_pit(hazards, 220, 270, 25)
+    water_pit(hazards, 470, 520, 25)
+    water_pit(hazards, 580, 588, 25)
 
-    # Slide: teto baixo sobre chão elevado
-    low_ceiling(hazards, 138, 158, 8)  # chão Y=11 → gap ~2–3 tiles
-    low_ceiling(hazards, 538, 552, 4)  # no pico
+    # Slide sob teto (encosta + pico)
+    low_ceiling(hazards, 148, 168, 8)
+    low_ceiling(hazards, 555, 575, 3)
 
-    # Fios pendurados sobre fossos
-    wires(hazards, 458, 498, 5)
-    wires(hazards, 556, 568, 6)
+    wires(hazards, 475, 518, 4)
+    wires(hazards, 580, 587, 3)
 
-    # Deco teto / atmosfera
     for x in range(0, MAP_W, 4):
         set_t(deco, x, 1, CEIL_PIPE)
         if x % 12 == 0:
             set_t(deco, x, 2, PANEL)
+    for x in range(432, 465):
+        set_t(deco, x, 7, MOSS)
 
-    for x in range(412, 440):
-        set_t(deco, x, 8, MOSS)
+    for i, cx in enumerate(range(310, 345, 7)):
+        add(f"credit_risk_{i}", cx, 4, {"type": "credit", "route": "risk", "id": f"f1-r-{i}"})
+    for i, cx in enumerate(range(310, 350, 12)):
+        add(f"credit_safe_{i}", cx, 10, {"type": "credit", "route": "normal", "id": f"f1-s-{i}"})
 
-    # Objects alinhados às novas alturas
-    for i, cx in enumerate(range(295, 335, 8)):
-        add(f"credit_risk_{i}", cx, 6, {"type": "credit", "route": "risk", "id": f"f1-r-{i}"})
-    for i, cx in enumerate(range(300, 340, 12)):
-        add(f"credit_safe_{i}", cx, 18, {"type": "credit", "route": "normal", "id": f"f1-s-{i}"})
-
-    add("checkpoint_1", 425, 7, {"type": "checkpoint", "id": "cp1"})
+    add("checkpoint_1", 445, 6, {"type": "checkpoint", "id": "cp1"})
     for c in range(6):
-        set_t(deco, 422 + c, 7, PANEL)
+        set_t(deco, 442 + c, 6, PANEL)
 
-    add("clinic_exit", 622, 15, {"type": "clinic", "next": "ClinicScene"})
-    add("phase_end", 632, 15, {"type": "phase_end", "fase": "1"})
+    add("clinic_exit", 622, 5, {"type": "clinic", "next": "ClinicScene"})
+    add("phase_end", 632, 5, {"type": "phase_end", "fase": "1"})
 
     return ground, hazards, deco, objects
 
