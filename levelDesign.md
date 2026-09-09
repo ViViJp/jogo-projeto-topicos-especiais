@@ -236,14 +236,17 @@
              └────────┬───────┘
                       ↓
                     DRONE
-                      │
-          ┌───────────┴────────────┐
-          │                        │
-      ataque aéreo             passar por baixo
-      + recompensa                slide
-          │                        │
-          └────────────┬───────────┘
-                       ↓
+                      |
+            JOGADOR TENTA ATACAR
+                      |
+               ATAQUE NÃO FUNCIONA
+                      |
+               DRONE É BLINDADO
+                      |
+               APRENDE A EVITAR
+                      |
+            SLIDE / ROTA ALTERNATIVA
+                      |
                   BARRICADAS
                        │
                        ↓
