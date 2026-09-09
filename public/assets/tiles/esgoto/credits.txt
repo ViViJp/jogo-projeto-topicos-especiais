@@ -1,7 +1,11 @@
-Asset Pack - Sewer — cammellaro
-https://cammellaro.itch.io/sewer
+Esgoto / Periferia — Flesh to Chrome (Fase 1)
 
-License: personal and commercial use; no redistribution.
-Place sewer.zip in tiles/_downloads/ and run: python3 scripts/import_tilesets.py
+Tileset principal (mapas side-view):
+  tileset-sideview.png — MrBeast / OpenGameArt (CC-BY 3.0)
+  https://opengameart.org/content/sewer-tileset
+  Credit: MrBeast, OpenGameArt.org
 
-GDD: Fase 1 — Esgoto / Periferia (16×16)
+Props / extras:
+  tilesetSewer.png + fan/pc/lantern — cammellaro (itch.io/sewer)
+
+Parallax: parallax/bg-far.png, bg-mid.png (issue #8)

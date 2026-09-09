@@ -16,38 +16,37 @@ from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "public/assets/maps/esgoto"
-TILESET_PNG = ROOT / "public/assets/tiles/esgoto/tiles/tilesetSewer.png"
-TILESET_REL = "../../tiles/esgoto/tiles/tilesetSewer.png"
+TILESET_PNG = ROOT / "public/assets/tiles/esgoto/tiles/tileset-sideview.png"
+TILESET_REL = "../../tiles/esgoto/tiles/tileset-sideview.png"
+BG_FAR = "../../tiles/esgoto/parallax/bg-far.png"
+BG_MID = "../../tiles/esgoto/parallax/bg-mid.png"
 
 TS = 16
-SHEET_COLS = 25
+SHEET_COLS = 16  # Beast sewer 256×352
 MAP_W = 640
-MAP_H = 28  # mais altura jogável (Celeste-like)
+MAP_H = 28  # mais altura jogável (Celeste-like / montanha)
 
 
 def gid(col: int, row: int) -> int:
     return 1 + row * SHEET_COLS + col
 
 
-# --- Tiles side-view (tilesetSewer.png) ---
-# Plataforma girder (faixa inferior do sheet — leitura lateral clara)
-PLAT_TOP = gid(4, 15)  # 380
-PLAT_BODY = gid(4, 16)  # 405
-PLAT_TOP_B = gid(5, 15)
-PLAT_BODY_B = gid(5, 16)
-# Blocos de parede/sólido (topo do sheet) — preenchimento de terreno
-SOLID_A = gid(2, 0)  # 3
-SOLID_B = gid(2, 1)  # 28
-SOLID_C = gid(2, 2)  # 53
-# Painéis teal (água / hazard visual)
-WATER = gid(3, 7)  # 179
-WATER_B = gid(3, 8)  # 204
-# Cano / teto baixo (slide)
-PIPE = gid(13, 14)  # 364 — se vazio no sheet, fallback
-CEIL_PIPE = gid(11, 0)  # 12
-WIRE = gid(10, 10)  # 261
-PANEL = gid(4, 7)  # 180
-MOSS = gid(14, 0)  # 15 — detalhe topo
+# --- Tiles side-view (MrBeast sewer OGA CC-BY) ---
+PLAT_TOP = gid(0, 0)  # 1 — tijolo topo
+PLAT_TOP_B = gid(1, 0)  # 2
+PLAT_BODY = gid(0, 2)  # 33 — fill
+PLAT_BODY_B = gid(1, 2)  # 34
+SOLID_A = gid(0, 3)  # 49
+SOLID_B = gid(1, 3)  # 50
+SOLID_C = gid(0, 4)  # 65
+WATER = gid(0, 11)  # 177 — superfície
+WATER_B = gid(1, 11)  # 178
+CEIL_PIPE = gid(7, 1)  # 24 — variante sólida / grade
+PIPE = gid(8, 1)  # 25
+WIRE = gid(9, 5)  # 90
+PANEL = gid(2, 0)  # 3
+MOSS = gid(3, 0)  # 4
+STAIR = gid(6, 0)  # 7
 
 
 def empty() -> list[int]:
@@ -283,17 +282,16 @@ def write_tileset() -> None:
         {"id": SOLID_A - 1, "properties": [{"name": "solid", "type": "bool", "value": True}]},
         {"id": WATER - 1, "properties": [{"name": "hazard", "type": "bool", "value": True}, {"name": "kind", "type": "string", "value": "toxic_water"}]},
         {"id": CEIL_PIPE - 1, "properties": [{"name": "solid", "type": "bool", "value": True}, {"name": "slide", "type": "bool", "value": True}]},
-        {"id": WIRE - 1, "properties": [{"name": "hazard", "type": "bool", "value": True}, {"name": "kind", "type": "string", "value": "wire"}]},
     ]
     tsj = {
         "columns": SHEET_COLS,
         "image": TILESET_REL,
-        "imageheight": 308,
-        "imagewidth": 400,
+        "imageheight": 352,
+        "imagewidth": 256,
         "margin": 0,
-        "name": "sewer",
+        "name": "sewer-sideview",
         "spacing": 0,
-        "tilecount": SHEET_COLS * 19,
+        "tilecount": SHEET_COLS * 22,
         "tiledversion": "1.10.2",
         "tileheight": TS,
         "tilewidth": TS,
@@ -326,9 +324,35 @@ def write_map(ground: list[int], hazards: list[int], deco: list[int], objects: l
         "width": MAP_W,
         "infinite": False,
         "layers": [
-            layer("deco", 1, deco),
-            layer("ground", 2, ground),
-            layer("hazards", 3, hazards),
+            {
+                "id": 1,
+                "image": BG_FAR,
+                "name": "bg-far",
+                "opacity": 1,
+                "type": "imagelayer",
+                "visible": True,
+                "x": 0,
+                "y": 0,
+                "repeatx": True,
+                "offsetx": 0,
+                "offsety": 0,
+            },
+            {
+                "id": 2,
+                "image": BG_MID,
+                "name": "bg-mid",
+                "opacity": 0.85,
+                "type": "imagelayer",
+                "visible": True,
+                "x": 0,
+                "y": 40,
+                "repeatx": True,
+                "offsetx": 0,
+                "offsety": 0,
+            },
+            layer("deco", 3, deco),
+            layer("ground", 4, ground),
+            layer("hazards", 5, hazards),
             {
                 "draworder": "topdown",
                 "id": 99,
@@ -354,9 +378,10 @@ def write_map(ground: list[int], hazards: list[int], deco: list[int], objects: l
         "properties": [
             {"name": "fase", "type": "int", "value": 1},
             {"name": "setor", "type": "string", "value": "esgoto"},
-            {"name": "perspective", "type": "string", "value": "side-view"},
-            {"name": "gdd", "type": "string", "value": "§16.1 + levelDesign.md + issue #3"},
+            {"name": "perspective", "type": "string", "value": "side-view-ascent"},
+            {"name": "gdd", "type": "string", "value": "§16.1 montanha + issues #3 #7 #8"},
             {"name": "implante", "type": "string", "value": "pernas"},
+            {"name": "tileset", "type": "string", "value": "MrBeast sewer CC-BY"},
         ],
     }
     (OUT / "fase-1.json").write_text(json.dumps(tiled, indent=2) + "\n")
@@ -365,8 +390,11 @@ def write_map(ground: list[int], hazards: list[int], deco: list[int], objects: l
 def render_preview(ground: list[int], hazards: list[int], deco: list[int]) -> None:
     """PNG side-view para validar sem Tiled."""
     if not TILESET_PNG.is_file():
+        print(f"  skip preview: missing {TILESET_PNG}")
         return
     sheet = Image.open(TILESET_PNG).convert("RGBA")
+    bg_far = ROOT / "public/assets/tiles/esgoto/parallax/bg-far.png"
+    bg_mid = ROOT / "public/assets/tiles/esgoto/parallax/bg-mid.png"
 
     def blit(canvas: Image.Image, data: list[int]) -> None:
         for i, g in enumerate(data):
@@ -378,20 +406,23 @@ def render_preview(ground: list[int], hazards: list[int], deco: list[int]) -> No
             x, y = (i % MAP_W) * TS, (i // MAP_W) * TS
             canvas.alpha_composite(tile, (x, y))
 
-    # preview: primeiros 120 tiles de largura (zoom legível) + full mini
-    bg = (12, 10, 20, 255)
-    full = Image.new("RGBA", (MAP_W * TS, MAP_H * TS), bg)
+    full = Image.new("RGBA", (MAP_W * TS, MAP_H * TS), (12, 10, 20, 255))
+    if bg_far.is_file():
+        far = Image.open(bg_far).convert("RGBA").resize((MAP_W * TS, MAP_H * TS), Image.NEAREST)
+        full.alpha_composite(far)
+    if bg_mid.is_file():
+        mid = Image.open(bg_mid).convert("RGBA")
+        mid = mid.resize((MAP_W * TS, MAP_H * TS), Image.NEAREST)
+        full.alpha_composite(mid)
     blit(full, deco)
     blit(full, ground)
     blit(full, hazards)
 
-    # strip início (0–100) e meio (200–320) e final
     for name, x0, x1 in (("preview-start.png", 0, 100), ("preview-mid.png", 200, 320), ("preview-end.png", 500, 640)):
         crop = full.crop((x0 * TS, 0, x1 * TS, MAP_H * TS))
         crop = crop.resize((crop.width * 2, crop.height * 2), Image.NEAREST)
         crop.save(OUT / name)
 
-    # mini full (1/4)
     mini = full.resize((MAP_W * TS // 4, MAP_H * TS // 4), Image.NEAREST)
     mini.save(OUT / "preview-full-mini.png")
     print(f"  previews em {OUT.relative_to(ROOT)}/preview-*.png")
@@ -399,17 +430,16 @@ def render_preview(ground: list[int], hazards: list[int], deco: list[int]) -> No
 
 def write_credits() -> None:
     (OUT / "credits.txt").write_text(
-        """Fase 1 — Esgoto (side-view redesenhada, issue #3)
+        """Fase 1 — Esgoto (side-view + montanha + art upgrade #7 #8)
 
-Perspectiva: perfil Mario/Celeste (NÃO top-down)
-Layout: levelDesign.md + verticalidade (heightmap + plataformas flutuantes)
+Tileset: MrBeast sewer (OpenGameArt) CC-BY 3.0 — tileset-sideview.png
+Parallax: tiles/esgoto/parallax/bg-far.png, bg-mid.png
+Layout: ascensão spawn baixo → clínica alto (GDD cidade vertical)
 
-Tiles: cammellaro Sewer — plataforma girder (rows 15–16) + sólidos + água teal
-Camadas: deco, ground, hazards, objects
-
-Previews: preview-start.png, preview-mid.png, preview-end.png, preview-full-mini.png
+Previews: preview-start.png, preview-mid.png, preview-end.png
 
 Regenerar:
+  python3 scripts/import_art_upgrade.py
   python3 scripts/generate_fase1_map.py
 """
     )

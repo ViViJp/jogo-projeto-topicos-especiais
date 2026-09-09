@@ -1,12 +1,12 @@
 {
-  "columns": 25,
-  "image": "../../tiles/esgoto/tiles/tilesetSewer.png",
-  "imageheight": 308,
-  "imagewidth": 400,
+  "columns": 16,
+  "image": "../../tiles/esgoto/tiles/tileset-sideview.png",
+  "imageheight": 352,
+  "imagewidth": 256,
   "margin": 0,
-  "name": "sewer",
+  "name": "sewer-sideview",
   "spacing": 0,
-  "tilecount": 475,
+  "tilecount": 352,
   "tiledversion": "1.10.2",
   "tileheight": 16,
   "tilewidth": 16,
@@ -14,7 +14,7 @@
   "version": "1.10",
   "tiles": [
     {
-      "id": 379,
+      "id": 0,
       "properties": [
         {
           "name": "solid",
@@ -24,7 +24,7 @@
       ]
     },
     {
-      "id": 404,
+      "id": 32,
       "properties": [
         {
           "name": "solid",
@@ -34,7 +34,7 @@
       ]
     },
     {
-      "id": 2,
+      "id": 48,
       "properties": [
         {
           "name": "solid",
@@ -44,7 +44,7 @@
       ]
     },
     {
-      "id": 178,
+      "id": 176,
       "properties": [
         {
           "name": "hazard",
@@ -59,7 +59,7 @@
       ]
     },
     {
-      "id": 11,
+      "id": 23,
       "properties": [
         {
           "name": "solid",
@@ -70,21 +70,6 @@
           "name": "slide",
           "type": "bool",
           "value": true
-        }
-      ]
-    },
-    {
-      "id": 260,
-      "properties": [
-        {
-          "name": "hazard",
-          "type": "bool",
-          "value": true
-        },
-        {
-          "name": "kind",
-          "type": "string",
-          "value": "wire"
         }
       ]
     }

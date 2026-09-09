@@ -1,12 +1,11 @@
-Fase 1 — Esgoto (side-view redesenhada, issue #3)
+Fase 1 — Esgoto (side-view + montanha + art upgrade #7 #8)
 
-Perspectiva: perfil Mario/Celeste (NÃO top-down)
-Layout: levelDesign.md + verticalidade (heightmap + plataformas flutuantes)
+Tileset: MrBeast sewer (OpenGameArt) CC-BY 3.0 — tileset-sideview.png
+Parallax: tiles/esgoto/parallax/bg-far.png, bg-mid.png
+Layout: ascensão spawn baixo → clínica alto (GDD cidade vertical)
 
-Tiles: cammellaro Sewer — plataforma girder (rows 15–16) + sólidos + água teal
-Camadas: deco, ground, hazards, objects
-
-Previews: preview-start.png, preview-mid.png, preview-end.png, preview-full-mini.png
+Previews: preview-start.png, preview-mid.png, preview-end.png
 
 Regenerar:
+  python3 scripts/import_art_upgrade.py
   python3 scripts/generate_fase1_map.py
