@@ -14,7 +14,7 @@
   "version": "1.10",
   "tiles": [
     {
-      "id": 27,
+      "id": 379,
       "properties": [
         {
           "name": "solid",
@@ -24,7 +24,7 @@
       ]
     },
     {
-      "id": 28,
+      "id": 404,
       "properties": [
         {
           "name": "solid",
@@ -34,7 +34,7 @@
       ]
     },
     {
-      "id": 50,
+      "id": 2,
       "properties": [
         {
           "name": "solid",
@@ -44,7 +44,7 @@
       ]
     },
     {
-      "id": 175,
+      "id": 178,
       "properties": [
         {
           "name": "hazard",
@@ -52,9 +52,24 @@
           "value": true
         },
         {
-          "name": "damage",
+          "name": "kind",
           "type": "string",
-          "value": "1hit"
+          "value": "toxic_water"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "properties": [
+        {
+          "name": "solid",
+          "type": "bool",
+          "value": true
+        },
+        {
+          "name": "slide",
+          "type": "bool",
+          "value": true
         }
       ]
     },
@@ -67,19 +82,9 @@
           "value": true
         },
         {
-          "name": "damage",
+          "name": "kind",
           "type": "string",
-          "value": "1hit"
-        }
-      ]
-    },
-    {
-      "id": 55,
-      "properties": [
-        {
-          "name": "solid",
-          "type": "bool",
-          "value": true
+          "value": "wire"
         }
       ]
     }

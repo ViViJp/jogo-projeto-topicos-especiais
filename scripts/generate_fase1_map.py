@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
-"""Gera mapa Tiled JSON da Fase 1 (Esgoto) conforme levelDesign.md + GDD §16.1.
+"""Fase 1 Esgoto — mapa Tiled side-view com verticalidade (Mario/Celeste).
 
-Saída:
-  public/assets/maps/esgoto/tileset-sewer.tsj
-  public/assets/maps/esgoto/fase-1.json
+Corrige o draft flat: chão em várias alturas, fossos, plataformas flutuantes,
+slide sob teto baixo. Perspectiva de perfil (auto-runner GDD).
 
-Abrir no Tiled: File → Open → fase-1.json
-Phaser: this.load.tilemapTiledJSON('fase-1', 'assets/maps/esgoto/fase-1.json')
+  python3 scripts/generate_fase1_map.py
 """
 
 from __future__ import annotations
@@ -14,270 +12,282 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from PIL import Image
+
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "public/assets/maps/esgoto"
-TILESET_IMG = "../../tiles/esgoto/tiles/tilesetSewer.png"
+TILESET_PNG = ROOT / "public/assets/tiles/esgoto/tiles/tilesetSewer.png"
+TILESET_REL = "../../tiles/esgoto/tiles/tilesetSewer.png"
 
 TS = 16
-SHEET_COLS = 25  # tilesetSewer.png 400×308
-MAP_H = 20  # tiles (320 px)
-MAP_W = 720  # tiles (~11520 px ≈ 64 s a 180 px/s; ajustável)
-
-GROUND_Y = 16  # floor top row (tiles from top)
+SHEET_COLS = 25
+MAP_W = 640
+MAP_H = 28  # mais altura jogável (Celeste-like)
 
 
 def gid(col: int, row: int) -> int:
-    """Tiled GID (firstgid=1)."""
     return 1 + row * SHEET_COLS + col
 
 
-# Peças úteis do tileset (col, row) — mesma base do compose_clinic_scene
-FLOOR = gid(2, 1)
-FLOOR_ALT = gid(3, 1)
-WALL_TOP = gid(2, 0)
-WALL_FILL = gid(0, 2)
-WALL_CAP = gid(5, 2)
-PIPE_H = gid(13, 14)
-PANEL = gid(3, 7)
-PANEL_GLOW = gid(4, 7)
-WIRE = gid(10, 10)
-# Água / hazard visual — painel teal como proxy de “água tóxica” até tile dedicado
-WATER = gid(0, 7)
-# Cano baixo (slide) — parede/cap
-PIPE_LOW = WALL_CAP
+# --- Tiles side-view (tilesetSewer.png) ---
+# Plataforma girder (faixa inferior do sheet — leitura lateral clara)
+PLAT_TOP = gid(4, 15)  # 380
+PLAT_BODY = gid(4, 16)  # 405
+PLAT_TOP_B = gid(5, 15)
+PLAT_BODY_B = gid(5, 16)
+# Blocos de parede/sólido (topo do sheet) — preenchimento de terreno
+SOLID_A = gid(2, 0)  # 3
+SOLID_B = gid(2, 1)  # 28
+SOLID_C = gid(2, 2)  # 53
+# Painéis teal (água / hazard visual)
+WATER = gid(3, 7)  # 179
+WATER_B = gid(3, 8)  # 204
+# Cano / teto baixo (slide)
+PIPE = gid(13, 14)  # 364 — se vazio no sheet, fallback
+CEIL_PIPE = gid(11, 0)  # 12
+WIRE = gid(10, 10)  # 261
+PANEL = gid(4, 7)  # 180
+MOSS = gid(14, 0)  # 15 — detalhe topo
 
 
-def empty(n: int = MAP_W * MAP_H) -> list[int]:
-    return [0] * n
+def empty() -> list[int]:
+    return [0] * (MAP_W * MAP_H)
 
 
-def set_tile(data: list[int], x: int, y: int, tile: int) -> None:
-    if 0 <= x < MAP_W and 0 <= y < MAP_H:
+def set_t(data: list[int], x: int, y: int, tile: int) -> None:
+    if 0 <= x < MAP_W and 0 <= y < MAP_H and tile:
         data[y * MAP_W + x] = tile
 
 
-def fill_floor(ground: list[int], x0: int, x1: int, y: int = GROUND_Y) -> None:
+def plat_tile(x: int, body: bool = False) -> int:
+    if body:
+        return PLAT_BODY if x % 2 == 0 else PLAT_BODY_B
+    return PLAT_TOP if x % 2 == 0 else PLAT_TOP_B
+
+
+def solid_tile(x: int, y: int) -> int:
+    return SOLID_A if (x + y) % 2 == 0 else SOLID_B
+
+
+def fill_column(ground: list[int], x: int, surface_y: int, to_bottom: bool = True) -> None:
+    """Coluna de terreno side-view: topo = plataforma, abaixo = fill sólido."""
+    if surface_y < 0 or surface_y >= MAP_H - 1:
+        return
+    set_t(ground, x, surface_y, plat_tile(x, body=False))
+    end = MAP_H if to_bottom else min(MAP_H, surface_y + 4)
+    for y in range(surface_y + 1, end):
+        set_t(ground, x, y, solid_tile(x, y) if y < surface_y + 3 else SOLID_C)
+
+
+def floating_platform(ground: list[int], x0: int, x1: int, y: int, thickness: int = 2) -> None:
     for x in range(x0, x1):
-        t = FLOOR if x % 2 == 0 else FLOOR_ALT
-        set_tile(ground, x, y, t)
-        set_tile(ground, x, y + 1, t)
-        set_tile(ground, x, y + 2, WALL_FILL)
-        set_tile(ground, x, y + 3, WALL_FILL)
+        set_t(ground, x, y, plat_tile(x))
+        for dy in range(1, thickness):
+            set_t(ground, x, y + dy, plat_tile(x, body=True))
 
 
-def gap(ground: list[int], x0: int, x1: int) -> None:
+def water_pit(hazards: list[int], x0: int, x1: int, water_y: int) -> None:
     for x in range(x0, x1):
-        for y in range(GROUND_Y, MAP_H):
-            set_tile(ground, x, y, 0)
+        for y in range(water_y, MAP_H):
+            set_t(hazards, x, y, WATER if y == water_y else WATER_B)
 
 
-def platform(ground: list[int], x0: int, x1: int, y: int) -> None:
+def low_ceiling(hazards: list[int], x0: int, x1: int, y: int) -> None:
+    """Teto baixo — força slide (pipe sobre o chão)."""
     for x in range(x0, x1):
-        set_tile(ground, x, y, FLOOR if x % 2 == 0 else FLOOR_ALT)
+        set_t(hazards, x, y, CEIL_PIPE)
+        set_t(hazards, x, y - 1, PIPE if PIPE else CEIL_PIPE)
 
 
-def ceiling_band(deco: list[int], x0: int, x1: int) -> None:
-    for x in range(x0, x1):
-        set_tile(deco, x, 0, WALL_TOP)
-        set_tile(deco, x, 1, WALL_CAP)
-        if x % 4 == 0:
-            set_tile(deco, x, 2, PIPE_H)
-
-
-def low_pipe(hazards: list[int], x0: int, x1: int, y: int = GROUND_Y - 2) -> None:
-    """Cano baixo — ensina slide (altura baixa sobre o chão)."""
-    for x in range(x0, x1):
-        set_tile(hazards, x, y, PIPE_LOW)
-        set_tile(hazards, x, y - 1, PIPE_H)
-
-
-def toxic_water(hazards: list[int], x0: int, x1: int) -> None:
-    for x in range(x0, x1):
-        set_tile(hazards, x, GROUND_Y, WATER)
-        set_tile(hazards, x, GROUND_Y + 1, WATER)
-
-
-def wires(hazards: list[int], x0: int, x1: int, y: int = GROUND_Y - 3) -> None:
+def wires(hazards: list[int], x0: int, x1: int, y: int) -> None:
     for x in range(x0, x1, 2):
-        set_tile(hazards, x, y, WIRE)
-        set_tile(hazards, x, y + 1, WIRE)
+        set_t(hazards, x, y, WIRE)
+        set_t(hazards, x, y + 1, WIRE)
 
 
-def build_layers() -> tuple[list[int], list[int], list[int], list[dict]]:
-    ground = empty()
-    hazards = empty()
-    deco = empty()
-    objects: list[dict] = []
-
-    # ---- Seções (tiles X) conforme levelDesign.md Fase 1 ----
-    # 0–40: início seguro
-    fill_floor(ground, 0, 40)
-    ceiling_band(deco, 0, MAP_W)
-    objects.append(obj("spawn", 3, GROUND_Y - 2, {"type": "spawn"}))
-
-    # 40–55: primeiro pulo (gap pequeno)
-    fill_floor(ground, 40, 48)
-    gap(ground, 48, 52)
-    fill_floor(ground, 52, 70)
-
-    # 70–120: gaps repetidos
-    x = 70
-    for _ in range(4):
-        fill_floor(ground, x, x + 8)
-        gap(ground, x + 8, x + 12)
-        x += 12
-    fill_floor(ground, x, 130)
-
-    # 130–150: cano baixo (slide)
-    fill_floor(ground, 130, 160)
-    low_pipe(hazards, 138, 152)
-
-    # 160–200: pulo + slide
-    fill_floor(ground, 160, 175)
-    gap(ground, 175, 179)
-    fill_floor(ground, 179, 200)
-    low_pipe(hazards, 185, 195)
-
-    # 200–240: água tóxica (plataforma sobre água + hazard)
-    fill_floor(ground, 200, 210)
-    gap(ground, 210, 235)
-    toxic_water(hazards, 210, 235)
-    platform(ground, 214, 218, GROUND_Y - 3)
-    platform(ground, 222, 226, GROUND_Y - 4)
-    platform(ground, 230, 234, GROUND_Y - 3)
-    fill_floor(ground, 235, 260)
-
-    # 260–320: rota de créditos (normal embaixo / risco em cima)
-    fill_floor(ground, 260, 320)
-    platform(ground, 270, 310, GROUND_Y - 5)  # rota de risco
-    for i, cx in enumerate(range(275, 308, 8)):
-        objects.append(
-            obj(
-                f"credit_risk_{i}",
-                cx,
-                GROUND_Y - 7,
-                {"type": "credit", "route": "risk", "id": f"f1-risk-{i}"},
-            )
-        )
-    for i, cx in enumerate(range(280, 310, 12)):
-        objects.append(
-            obj(
-                f"credit_safe_{i}",
-                cx,
-                GROUND_Y - 2,
-                {"type": "credit", "route": "normal", "id": f"f1-safe-{i}"},
-            )
-        )
-
-    # 320–360: tubulação rompida (gaps + pipes)
-    fill_floor(ground, 320, 330)
-    for gx in (332, 340, 348):
-        gap(ground, gx, gx + 4)
-        fill_floor(ground, gx + 4, gx + 8)
-        for px in range(gx, gx + 4):
-            set_tile(deco, px, GROUND_Y - 4, PIPE_H)
-    fill_floor(ground, 356, 390)
-
-    # 390: checkpoint
-    for c in range(6):
-        set_tile(deco, 392 + c, GROUND_Y - 2, PANEL_GLOW if c in (1, 4) else PANEL)
-        set_tile(deco, 392 + c, GROUND_Y - 3, PANEL)
-    objects.append(obj("checkpoint_1", 394, GROUND_Y - 2, {"type": "checkpoint", "id": "cp1"}))
-
-    # 410–460: fios energizados próximos à água
-    fill_floor(ground, 410, 430)
-    gap(ground, 430, 455)
-    toxic_water(hazards, 430, 455)
-    wires(hazards, 432, 454, GROUND_Y - 4)
-    platform(ground, 435, 439, GROUND_Y - 5)
-    platform(ground, 444, 448, GROUND_Y - 6)
-    platform(ground, 450, 454, GROUND_Y - 5)
-    fill_floor(ground, 455, 500)
-
-    # 500–620: sequência de domínio (pulo + slide + água + tubos + fios)
-    fill_floor(ground, 500, 520)
-    low_pipe(hazards, 510, 520)
-    gap(ground, 520, 526)
-    fill_floor(ground, 526, 540)
-    gap(ground, 540, 560)
-    toxic_water(hazards, 540, 560)
-    wires(hazards, 542, 558, GROUND_Y - 3)
-    platform(ground, 545, 549, GROUND_Y - 4)
-    platform(ground, 553, 557, GROUND_Y - 5)
-    fill_floor(ground, 560, 580)
-    low_pipe(hazards, 568, 578)
-    for gx in (582, 592, 602):
-        gap(ground, gx, gx + 5)
-        fill_floor(ground, gx + 5, gx + 10)
-        for px in range(gx, gx + 5):
-            set_tile(deco, px, GROUND_Y - 5, PIPE_H)
-    fill_floor(ground, 620, 700)
-
-    # 680–720: final → clínica
-    for c in range(8):
-        set_tile(deco, 690 + c, GROUND_Y - 2, PANEL_GLOW if c in (0, 7) else PANEL)
-    objects.append(obj("clinic_exit", 695, GROUND_Y - 2, {"type": "clinic", "next": "ClinicScene"}))
-    objects.append(obj("phase_end", 710, GROUND_Y - 2, {"type": "phase_end", "fase": 1}))
-
-    fill_floor(ground, 700, MAP_W)
-
-    return ground, hazards, deco, objects
-
-
-def obj(name: str, tx: int, ty: int, props: dict) -> dict:
-    o: dict = {
-        "id": abs(hash(name)) % 100000,
+def obj(name: str, oid: int, tx: int, ty: int, props: dict) -> dict:
+    return {
+        "id": oid,
         "name": name,
-        "type": props.get("type", ""),
+        "type": str(props.get("type", "")),
         "x": tx * TS,
         "y": ty * TS,
         "width": TS,
         "height": TS,
         "rotation": 0,
         "visible": True,
+        "properties": [{"name": k, "type": "string", "value": str(v)} for k, v in props.items()],
     }
-    if props:
-        o["properties"] = [{"name": k, "type": "string", "value": str(v)} for k, v in props.items()]
-    return o
 
 
-def layer(name: str, data: list[int]) -> dict:
-    return {
-        "data": data,
-        "height": MAP_H,
-        "width": MAP_W,
-        "id": abs(hash(name)) % 1000,
-        "name": name,
-        "opacity": 1,
-        "type": "tilelayer",
-        "visible": True,
-        "x": 0,
-        "y": 0,
-    }
+def build() -> tuple[list[int], list[int], list[int], list[dict]]:
+    ground, hazards, deco = empty(), empty(), empty()
+    objects: list[dict] = []
+    oid = 1
+
+    def add(name: str, tx: int, ty: int, props: dict) -> None:
+        nonlocal oid
+        objects.append(obj(name, oid, tx, ty, props))
+        oid += 1
+
+    # Heightmap: MONTANHA / ASCENSÃO (GDD — Glitch City vertical)
+    # Y menor = mais alto na tela. Tendência: início no fundo → fim no alto.
+    # Descidas locais OK, mas o baseline sobe; nunca volta ao nível do spawn por longo.
+    surface: list[int | None] = [None] * MAP_W
+
+    def set_span(x0: int, x1: int, y: int) -> None:
+        for x in range(x0, min(x1, MAP_W)):
+            surface[x] = y
+
+    # Baseline da montanha: Y=24 no spawn → Y=7 na clínica
+    START_Y, END_Y = 24, 7
+
+    def mountain_y(x: int) -> int:
+        t = x / max(1, MAP_W - 1)
+        return int(round(START_Y + (END_Y - START_Y) * t))
+
+    # Preenche baseline contínuo; gaps sobrescrevem com None depois
+    for x in range(MAP_W):
+        surface[x] = mountain_y(x)
+
+    # --- Variação local SOBRE a montanha (nunca “volta ao zero”) ---
+    # 0–40: planície baixa (início seguro) — ligeiramente acima do baseline
+    set_span(0, 40, 23)
+    add("spawn", 5, 21, {"type": "spawn"})
+
+    # 40–80: primeiro degrau da ascensão + gap
+    set_span(40, 52, 21)
+    for x in range(52, 58):
+        surface[x] = None  # gap
+    set_span(58, 80, 19)
+
+    # 80–130: sobe forte (torre) — bem acima do início
+    set_span(80, 95, 17)
+    for x in range(95, 100):
+        surface[x] = None
+    set_span(100, 115, 14)
+    for x in range(115, 120):
+        surface[x] = None
+    set_span(120, 140, 12)
+
+    # 140–175: corredor de slide na encosta (ainda mais alto que spawn)
+    set_span(140, 175, 11)
+
+    # 175–220: pequena descida LOCAL (ainda Y<<23) + gap
+    set_span(175, 190, 13)  # desce um pouco, mas longe do início
+    for x in range(190, 196):
+        surface[x] = None
+    set_span(196, 220, 12)
+
+    # 220–280: fosso de água na encosta + ilhas SUBINDO
+    for x in range(220, 270):
+        surface[x] = None
+    set_span(270, 295, 11)
+
+    # 295–360: dual path — rua na encosta + risco ainda MAIS alto
+    set_span(295, 360, 12)
+
+    # 360–420: tubulação / degraus subindo de novo
+    set_span(360, 375, 11)
+    for x in range(375, 380):
+        surface[x] = None
+    set_span(380, 395, 9)
+    for x in range(395, 400):
+        surface[x] = None
+    set_span(400, 430, 8)
+
+    # 430–470: checkpoint no alto da encosta
+    set_span(430, 470, 8)
+
+    # 470–540: fosso profundo (queda perigosa) — aterrissa ainda alto
+    for x in range(470, 520):
+        surface[x] = None
+    set_span(520, 550, 9)
+
+    # 550–600: pico da fase (domínio) — mais alto do mapa
+    set_span(550, 580, 6)
+    for x in range(580, 588):
+        surface[x] = None
+    set_span(588, 610, 7)
+
+    # 610–640: platô final / clínica — topo desta fase
+    set_span(610, MAP_W, 7)
+
+    # Materializa
+    for x, sy in enumerate(surface):
+        if sy is not None:
+            fill_column(ground, x, sy)
+
+    # Plataformas flutuantes SEMPRE acima do baseline local (continuar a subida)
+    floating_platform(ground, 53, 57, 18)  # meio do 1º gap
+    floating_platform(ground, 96, 99, 15)
+    floating_platform(ground, 116, 119, 13)
+
+    # Ilhas do fosso 1 — cada uma mais alta (sobe atravessando)
+    floating_platform(ground, 225, 231, 16)
+    floating_platform(ground, 235, 241, 13)
+    floating_platform(ground, 245, 252, 10)
+    floating_platform(ground, 256, 263, 12)
+    floating_platform(ground, 265, 269, 11)
+
+    # Rota risco: acima da rua da encosta
+    floating_platform(ground, 305, 350, 6, thickness=2)
+
+    # Ilhas fosso 2 — subindo em direção ao checkpoint já passado / próximo pico
+    floating_platform(ground, 475, 482, 12)
+    floating_platform(ground, 488, 495, 9)
+    floating_platform(ground, 500, 508, 7)
+    floating_platform(ground, 512, 518, 8)
+
+    # Assist domínio
+    floating_platform(ground, 582, 586, 8)
+
+    # Água só no FUNDO dos fossos (não no nível do início)
+    water_pit(hazards, 220, 270, 25)
+    water_pit(hazards, 470, 520, 25)
+    water_pit(hazards, 580, 588, 25)
+
+    # Slide sob teto (encosta + pico)
+    low_ceiling(hazards, 148, 168, 8)
+    low_ceiling(hazards, 555, 575, 3)
+
+    wires(hazards, 475, 518, 4)
+    wires(hazards, 580, 587, 3)
+
+    for x in range(0, MAP_W, 4):
+        set_t(deco, x, 1, CEIL_PIPE)
+        if x % 12 == 0:
+            set_t(deco, x, 2, PANEL)
+    for x in range(432, 465):
+        set_t(deco, x, 7, MOSS)
+
+    for i, cx in enumerate(range(310, 345, 7)):
+        add(f"credit_risk_{i}", cx, 4, {"type": "credit", "route": "risk", "id": f"f1-r-{i}"})
+    for i, cx in enumerate(range(310, 350, 12)):
+        add(f"credit_safe_{i}", cx, 10, {"type": "credit", "route": "normal", "id": f"f1-s-{i}"})
+
+    add("checkpoint_1", 445, 6, {"type": "checkpoint", "id": "cp1"})
+    for c in range(6):
+        set_t(deco, 442 + c, 6, PANEL)
+
+    add("clinic_exit", 622, 5, {"type": "clinic", "next": "ClinicScene"})
+    add("phase_end", 632, 5, {"type": "phase_end", "fase": "1"})
+
+    return ground, hazards, deco, objects
 
 
 def write_tileset() -> None:
-    tiles = []
-    # Marca tiles de colisão / hazard via propriedades (opcional no Tiled)
-    for name, g, solid, hazard in (
-        ("floor", FLOOR, True, False),
-        ("floor_alt", FLOOR_ALT, True, False),
-        ("wall_fill", WALL_FILL, True, False),
-        ("water", WATER, False, True),
-        ("wire", WIRE, False, True),
-        ("pipe_low", PIPE_LOW, True, False),
-    ):
-        props = []
-        if solid:
-            props.append({"name": "solid", "type": "bool", "value": True})
-        if hazard:
-            props.append({"name": "hazard", "type": "bool", "value": True})
-            props.append({"name": "damage", "type": "string", "value": "1hit"})
-        tiles.append({"id": g - 1, "properties": props})
-
+    tiles = [
+        {"id": PLAT_TOP - 1, "properties": [{"name": "solid", "type": "bool", "value": True}]},
+        {"id": PLAT_BODY - 1, "properties": [{"name": "solid", "type": "bool", "value": True}]},
+        {"id": SOLID_A - 1, "properties": [{"name": "solid", "type": "bool", "value": True}]},
+        {"id": WATER - 1, "properties": [{"name": "hazard", "type": "bool", "value": True}, {"name": "kind", "type": "string", "value": "toxic_water"}]},
+        {"id": CEIL_PIPE - 1, "properties": [{"name": "solid", "type": "bool", "value": True}, {"name": "slide", "type": "bool", "value": True}]},
+        {"id": WIRE - 1, "properties": [{"name": "hazard", "type": "bool", "value": True}, {"name": "kind", "type": "string", "value": "wire"}]},
+    ]
     tsj = {
         "columns": SHEET_COLS,
-        "image": TILESET_IMG,
+        "image": TILESET_REL,
         "imageheight": 308,
         "imagewidth": 400,
         "margin": 0,
@@ -296,9 +306,19 @@ def write_tileset() -> None:
 
 
 def write_map(ground: list[int], hazards: list[int], deco: list[int], objects: list[dict]) -> None:
-    # Object IDs must be unique
-    for i, o in enumerate(objects, start=1):
-        o["id"] = i
+    def layer(name: str, lid: int, data: list[int]) -> dict:
+        return {
+            "data": data,
+            "height": MAP_H,
+            "width": MAP_W,
+            "id": lid,
+            "name": name,
+            "opacity": 1,
+            "type": "tilelayer",
+            "visible": True,
+            "x": 0,
+            "y": 0,
+        }
 
     tiled = {
         "compressionlevel": -1,
@@ -306,9 +326,9 @@ def write_map(ground: list[int], hazards: list[int], deco: list[int], objects: l
         "width": MAP_W,
         "infinite": False,
         "layers": [
-            layer("deco", deco),
-            layer("ground", ground),
-            layer("hazards", hazards),
+            layer("deco", 1, deco),
+            layer("ground", 2, ground),
+            layer("hazards", 3, hazards),
             {
                 "draworder": "topdown",
                 "id": 99,
@@ -334,50 +354,83 @@ def write_map(ground: list[int], hazards: list[int], deco: list[int], objects: l
         "properties": [
             {"name": "fase", "type": "int", "value": 1},
             {"name": "setor", "type": "string", "value": "esgoto"},
-            {"name": "gdd", "type": "string", "value": "§16.1 + levelDesign.md Fase 1"},
+            {"name": "perspective", "type": "string", "value": "side-view"},
+            {"name": "gdd", "type": "string", "value": "§16.1 + levelDesign.md + issue #3"},
             {"name": "implante", "type": "string", "value": "pernas"},
         ],
     }
     (OUT / "fase-1.json").write_text(json.dumps(tiled, indent=2) + "\n")
 
 
+def render_preview(ground: list[int], hazards: list[int], deco: list[int]) -> None:
+    """PNG side-view para validar sem Tiled."""
+    if not TILESET_PNG.is_file():
+        return
+    sheet = Image.open(TILESET_PNG).convert("RGBA")
+
+    def blit(canvas: Image.Image, data: list[int]) -> None:
+        for i, g in enumerate(data):
+            if not g:
+                continue
+            tid = g - 1
+            c, r = tid % SHEET_COLS, tid // SHEET_COLS
+            tile = sheet.crop((c * TS, r * TS, (c + 1) * TS, (r + 1) * TS))
+            x, y = (i % MAP_W) * TS, (i // MAP_W) * TS
+            canvas.alpha_composite(tile, (x, y))
+
+    # preview: primeiros 120 tiles de largura (zoom legível) + full mini
+    bg = (12, 10, 20, 255)
+    full = Image.new("RGBA", (MAP_W * TS, MAP_H * TS), bg)
+    blit(full, deco)
+    blit(full, ground)
+    blit(full, hazards)
+
+    # strip início (0–100) e meio (200–320) e final
+    for name, x0, x1 in (("preview-start.png", 0, 100), ("preview-mid.png", 200, 320), ("preview-end.png", 500, 640)):
+        crop = full.crop((x0 * TS, 0, x1 * TS, MAP_H * TS))
+        crop = crop.resize((crop.width * 2, crop.height * 2), Image.NEAREST)
+        crop.save(OUT / name)
+
+    # mini full (1/4)
+    mini = full.resize((MAP_W * TS // 4, MAP_H * TS // 4), Image.NEAREST)
+    mini.save(OUT / "preview-full-mini.png")
+    print(f"  previews em {OUT.relative_to(ROOT)}/preview-*.png")
+
+
 def write_credits() -> None:
     (OUT / "credits.txt").write_text(
-        """Fase 1 — Esgoto / Periferia (Tiled map)
+        """Fase 1 — Esgoto (side-view redesenhada, issue #3)
 
-Fonte de layout: levelDesign.md (Victor Blum) + GDD §16.1
-Tileset: cammellaro Sewer — public/assets/tiles/esgoto/tiles/tilesetSewer.png
+Perspectiva: perfil Mario/Celeste (NÃO top-down)
+Layout: levelDesign.md + verticalidade (heightmap + plataformas flutuantes)
 
-Arquivos:
-  tileset-sewer.tsj  — tileset Tiled (16×16)
-  fase-1.json        — mapa (720×20 tiles)
+Tiles: cammellaro Sewer — plataforma girder (rows 15–16) + sólidos + água teal
+Camadas: deco, ground, hazards, objects
 
-Camadas:
-  deco     — teto, tubos decorativos, painéis
-  ground   — colisão / plataformas / gaps
-  hazards  — água tóxica, cano baixo (slide), fios
-  objects  — spawn, créditos, checkpoint, clinic_exit
+Previews: preview-start.png, preview-mid.png, preview-end.png, preview-full-mini.png
 
 Regenerar:
   python3 scripts/generate_fase1_map.py
-
-Abrir no Tiled:
-  File → Open → public/assets/maps/esgoto/fase-1.json
-
-Nota GDD §8: level design é responsabilidade de Victor Blum.
-Este mapa é um draft jogável para desbloquear Marco 2; Victor pode editar no Tiled.
 """
     )
 
 
 def main() -> None:
     write_tileset()
-    ground, hazards, deco, objects = build_layers()
+    ground, hazards, deco, objects = build()
     write_map(ground, hazards, deco, objects)
+    render_preview(ground, hazards, deco)
     write_credits()
-    print(f"Wrote {OUT / 'fase-1.json'} ({MAP_W}x{MAP_H} tiles @ {TS}px)")
-    print(f"Wrote {OUT / 'tileset-sewer.tsj'}")
-    print(f"Objects: {len(objects)} (spawn, credits, checkpoint, clinic)")
+    # sanity: unique surface heights
+    heights = set()
+    for x in range(MAP_W):
+        for y in range(MAP_H):
+            if ground[y * MAP_W + x] in (PLAT_TOP, PLAT_TOP_B):
+                heights.add(y)
+                break
+    print(f"Wrote {OUT / 'fase-1.json'} ({MAP_W}x{MAP_H} @ {TS}px)")
+    print(f"  platform surface heights Y={sorted(heights)}")
+    print(f"  objects={len(objects)}")
 
 
 if __name__ == "__main__":

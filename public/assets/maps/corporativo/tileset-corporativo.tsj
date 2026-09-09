@@ -30,11 +30,6 @@
           "name": "fake",
           "type": "bool",
           "value": true
-        },
-        {
-          "name": "scan",
-          "type": "bool",
-          "value": true
         }
       ]
     }

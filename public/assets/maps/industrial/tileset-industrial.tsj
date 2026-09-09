@@ -40,11 +40,6 @@
           "name": "hazard",
           "type": "bool",
           "value": true
-        },
-        {
-          "name": "kind",
-          "type": "string",
-          "value": "press"
         }
       ]
     }
