@@ -1,0 +1,14 @@
+{ "columns":26,
+ "image":"..\/..\/tiles\/esgoto\/crystal cave tiles.png",
+ "imageheight":320,
+ "imagewidth":416,
+ "margin":0,
+ "name":"crystal-cave-tiles",
+ "spacing":0,
+ "tilecount":520,
+ "tiledversion":"1.12.2-2-geb83ddb9",
+ "tileheight":16,
+ "tilewidth":16,
+ "type":"tileset",
+ "version":"1.10"
+}

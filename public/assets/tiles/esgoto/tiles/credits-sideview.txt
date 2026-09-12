@@ -1,7 +1,0 @@
-Side-view sewer tileset — MrBeast (OpenGameArt)
-https://opengameart.org/content/sewer-tileset
-License: CC-BY 3.0 (credit: MrBeast / OpenGameArt.org)
-File: tileset-sideview.png (16×16)
-
-Usado como tileset principal dos mapas Fase 1 (issue #7).
-Pack cammellaro (tilesetSewer.png) permanece para props/fan/pc.

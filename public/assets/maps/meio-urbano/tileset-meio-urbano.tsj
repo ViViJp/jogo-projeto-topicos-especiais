@@ -1,15 +1,27 @@
 {
-  "columns": 16,
-  "image": "../../tiles/meio-urbano/tiles/future_city_gritty.png",
-  "imageheight": 272,
-  "imagewidth": 256,
+  "columns": 3,
+  "image": "../../tiles/meio-urbano/tiles/tileset-interim.png",
+  "imageheight": 96,
+  "imagewidth": 96,
   "margin": 0,
-  "name": "future-city",
+  "name": "meio-urbano",
   "spacing": 0,
-  "tilecount": 272,
+  "tilecount": 9,
   "tiledversion": "1.10.2",
-  "tileheight": 16,
-  "tilewidth": 16,
+  "tileheight": 32,
+  "tilewidth": 32,
   "type": "tileset",
-  "version": "1.10"
+  "version": "1.10",
+  "tiles": [
+    {
+      "id": 0,
+      "properties": [
+        {
+          "name": "solid",
+          "type": "bool",
+          "value": true
+        }
+      ]
+    }
+  ]
 }

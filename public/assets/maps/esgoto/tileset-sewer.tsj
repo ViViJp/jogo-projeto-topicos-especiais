@@ -1,77 +1,14 @@
-{
-  "columns": 16,
-  "image": "../../tiles/esgoto/tiles/tileset-sideview.png",
-  "imageheight": 352,
-  "imagewidth": 256,
-  "margin": 0,
-  "name": "sewer-sideview",
-  "spacing": 0,
-  "tilecount": 352,
-  "tiledversion": "1.10.2",
-  "tileheight": 16,
-  "tilewidth": 16,
-  "type": "tileset",
-  "version": "1.10",
-  "tiles": [
-    {
-      "id": 0,
-      "properties": [
-        {
-          "name": "solid",
-          "type": "bool",
-          "value": true
-        }
-      ]
-    },
-    {
-      "id": 32,
-      "properties": [
-        {
-          "name": "solid",
-          "type": "bool",
-          "value": true
-        }
-      ]
-    },
-    {
-      "id": 48,
-      "properties": [
-        {
-          "name": "solid",
-          "type": "bool",
-          "value": true
-        }
-      ]
-    },
-    {
-      "id": 176,
-      "properties": [
-        {
-          "name": "hazard",
-          "type": "bool",
-          "value": true
-        },
-        {
-          "name": "kind",
-          "type": "string",
-          "value": "toxic_water"
-        }
-      ]
-    },
-    {
-      "id": 23,
-      "properties": [
-        {
-          "name": "solid",
-          "type": "bool",
-          "value": true
-        },
-        {
-          "name": "slide",
-          "type": "bool",
-          "value": true
-        }
-      ]
-    }
-  ]
+{ "columns":25,
+ "image":"..\/..\/tiles\/esgoto\/sewer\/tilesetSewer.png",
+ "imageheight":308,
+ "imagewidth":400,
+ "margin":0,
+ "name":"tileset-sewer",
+ "spacing":0,
+ "tilecount":475,
+ "tiledversion":"1.12.2-2-geb83ddb9",
+ "tileheight":16,
+ "tilewidth":16,
+ "type":"tileset",
+ "version":"1.10"
 }
