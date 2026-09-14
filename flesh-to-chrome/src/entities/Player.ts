@@ -261,8 +261,11 @@ export class Player {
     this.setSliding(false);
   }
 
-  /** Em pé ↔ agachar: textura/escala + hitbox alinhados aos pés. */
+  /** Em pé ↔ agachar: hitbox ancorada nos pés (não afunda no chão). */
   private setSliding(sliding: boolean): void {
+    const feetX = this.sprite.x;
+    const feetY = this.sprite.y;
+
     if (this.useAlexSheet) {
       this.sprite.anims?.stop();
       this.sprite.setTexture(this.standKey);
@@ -272,14 +275,22 @@ export class Player {
         applyStandBody(this.sprite);
         this.sprite.play(ALEX.run, true);
       }
+      this.pinFeet(feetX, feetY);
       return;
     }
 
     const textureKey = sliding ? this.slideKey : this.standKey;
     this.sprite.setTexture(textureKey);
     this.sprite.setScale(1, 1);
+    this.sprite.setCrop();
     this.sprite.body!.setSize(this.sprite.width, this.sprite.height);
     this.sprite.body!.setOffset(0, 0);
+    this.pinFeet(feetX, feetY);
+  }
+
+  /** Mantém a origem (0.5,1) nos pés após mudar textura/hitbox. */
+  private pinFeet(x: number, y: number): void {
+    this.sprite.setPosition(x, y);
   }
 
   // ---- Ataque / quebra (seção 14.6) ----
