@@ -1,6 +1,6 @@
 {
   "name": "flesh-to-chrome",
-  "version": "0.1.0",
+  "version": "0.3.2",
   "description": "Flesh to Chrome - 2D cyberpunk auto-runner (academic project prototype)",
   "private": true,
   "scripts": {

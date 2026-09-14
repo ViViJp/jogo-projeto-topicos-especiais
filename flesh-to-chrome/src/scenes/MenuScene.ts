@@ -1,7 +1,6 @@
 import Phaser from "phaser";
 import { SCREEN_WIDTH, SCREEN_HEIGHT } from "../config/GameConfig";
 import { SaveState } from "../systems/SaveState";
-import { AudioManager, BGM, SFX } from "../systems/AudioManager";
 import { GameSceneData } from "./GameScene";
 
 interface MenuOption {
@@ -22,15 +21,6 @@ export class MenuScene extends Phaser.Scene {
 
   create(): void {
     this.cameras.main.setBackgroundColor(0x05050a);
-    const audio = new AudioManager(this);
-    audio.unlock();
-    // BGM só depois do primeiro clique/tecla (autoplay policy)
-    const startMusic = () => {
-      audio.unlock();
-      audio.playBgm(BGM.menu);
-    };
-    this.input.once("pointerdown", startMusic);
-    this.input.keyboard?.once("keydown", startMusic);
 
     this.add
       .text(SCREEN_WIDTH / 2, 150, "FLESH TO CHROME", {
@@ -66,36 +56,18 @@ export class MenuScene extends Phaser.Scene {
         })
         .setOrigin(0.5)
         .setInteractive({ useHandCursor: true })
-        .on("pointerover", () => {
-          this.setSelected(i);
-          audio.sfx(SFX.uiSelect);
-        })
+        .on("pointerover", () => this.setSelected(i))
         .on("pointerdown", () => this.confirmSelection());
       this.optionTexts.push(text);
     });
 
     this.setSelected(0);
 
-    this.input.keyboard?.on("keydown-UP", () => {
-      this.setSelected((this.selectedIndex - 1 + this.options.length) % this.options.length);
-      audio.sfx(SFX.uiSelect);
-    });
-    this.input.keyboard?.on("keydown-DOWN", () => {
-      this.setSelected((this.selectedIndex + 1) % this.options.length);
-      audio.sfx(SFX.uiSelect);
-    });
-    this.input.keyboard?.on("keydown-W", () => {
-      this.setSelected((this.selectedIndex - 1 + this.options.length) % this.options.length);
-      audio.sfx(SFX.uiSelect);
-    });
-    this.input.keyboard?.on("keydown-S", () => {
-      this.setSelected((this.selectedIndex + 1) % this.options.length);
-      audio.sfx(SFX.uiSelect);
-    });
-    this.input.keyboard?.on("keydown-ENTER", () => {
-      audio.sfx(SFX.uiConfirm);
-      this.confirmSelection();
-    });
+    this.input.keyboard?.on("keydown-UP", () => this.setSelected((this.selectedIndex - 1 + this.options.length) % this.options.length));
+    this.input.keyboard?.on("keydown-DOWN", () => this.setSelected((this.selectedIndex + 1) % this.options.length));
+    this.input.keyboard?.on("keydown-W", () => this.setSelected((this.selectedIndex - 1 + this.options.length) % this.options.length));
+    this.input.keyboard?.on("keydown-S", () => this.setSelected((this.selectedIndex + 1) % this.options.length));
+    this.input.keyboard?.on("keydown-ENTER", () => this.confirmSelection());
 
     this.add
       .text(SCREEN_WIDTH / 2, SCREEN_HEIGHT - 40, "↑↓ / W S navegar   ENTER confirmar", {

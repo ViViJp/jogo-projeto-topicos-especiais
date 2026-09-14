@@ -1,0 +1,52 @@
+{
+  "columns": 6,
+  "image": "../../tiles/industrial/tiles/1_Industrial_Tileset_1.png",
+  "imageheight": 128,
+  "imagewidth": 192,
+  "margin": 0,
+  "name": "industrial",
+  "spacing": 0,
+  "tilecount": 24,
+  "tiledversion": "1.10.2",
+  "tileheight": 32,
+  "tilewidth": 32,
+  "type": "tileset",
+  "version": "1.10",
+  "tiles": [
+    {
+      "id": 0,
+      "properties": [
+        {
+          "name": "solid",
+          "type": "bool",
+          "value": true
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "properties": [
+        {
+          "name": "solid",
+          "type": "bool",
+          "value": true
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "properties": [
+        {
+          "name": "hazard",
+          "type": "bool",
+          "value": true
+        },
+        {
+          "name": "kind",
+          "type": "string",
+          "value": "press"
+        }
+      ]
+    }
+  ]
+}

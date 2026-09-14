@@ -151,11 +151,6 @@ export class LevelRuntime {
 
     // Queda em poço / água tóxica
     if (py > this.level.groundY + 140 && player.getState() !== "dead") {
-      try {
-        this.scene.sound.play("sfx-hazard-water", { volume: 0.4 });
-      } catch {
-        /* audio opcional */
-      }
       player.kill();
       return;
     }

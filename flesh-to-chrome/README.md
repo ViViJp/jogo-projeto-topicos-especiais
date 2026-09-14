@@ -7,6 +7,137 @@ Stack conforme a Seção 22 do GDD: **TypeScript + Phaser `^4.2.1` + Parcel**.
 
 ## Changelog
 
+- **v0.3.2** — segunda rodada no mesmo par de ajustes da v0.3.1, depois de
+  feedback dizendo que "tudo continua igual" mesmo após aquela entrega.
+  Investigação completa antes de mexer em qualquer valor (ver "Correções e
+  decisões de v0.3.2" para o passo a passo): o build entregue em zip da
+  v0.3.1 excluía a pasta `dist/` de propósito (só o código-fonte, pra não
+  duplicar peso), e por isso é bem possível que o problema real tenha sido
+  rodar o build antigo por engano - mas os dois ajustes em si também foram
+  reavaliados e um deles, de fato, era pequeno demais pra se perceber.
+  (1) **"sombra"** - o critério da v0.3.1 (maior distância de COR/matiz
+  entre o fundo e os tons da arte) media a coisa errada: contraste visual
+  entre cores escuras é dominado por diferença de LUMINÂNCIA (brilho), não
+  de matiz, e o fundo escolhido (`#000345`) tinha distância de cor alta mas
+  luminância quase idêntica à dos tons mais escuros da arte (gap de só 8,5
+  num intervalo 0-255) - por isso continuava "sumindo" apesar da métrica
+  antiga parecer boa. Novo fundo (`#000010`, quase preto) escolhido
+  maximizando o gap de LUMINÂNCIA contra os tons realmente significativos
+  do spritesheet (>=0,05% dos pixels, pra não perseguir ruído de poucos
+  pixels) - gap de ~16,3, quase o dobro do anterior e perto do teto teórico
+  do formato de arte usado (~18,1, só alcançável com preto absoluto, que
+  colidiria com uns poucos pixels de contorno preto puro da própria arte).
+  Confirmado visualmente (zoom em screenshot real de gameplay, não só a
+  métrica) - ver "Correções e decisões de v0.3.2". (2) **altura do pulo** -
+  tentativa de reduzir mais (`-640` → `-600`, depois `-620`) revertida: a
+  validação por "distância de coluna" usada até aqui (checa só se o PONTO
+  de pouso cai sobre uma coluna com chão) não simula a trajetória vertical
+  do salto, e um playthrough real (bot no motor de física de verdade, não
+  só o script analítico) mostrou o personagem "raspando" na parede de uma
+  plataforma estreita da Fase 1 em vez de pousar em cima dela, com os dois
+  valores testados - morte 100% reproduzível. `-640` (já validado por
+  completo na v0.3.1) é o piso seguro conhecido para essa sequência
+  específica de plataformas; reduzir mais exigiria redesenhar essa parte do
+  mapa, não só ajustar a física global - por ora o pulo fica como estava.
+- **v0.3.1** — dois ajustes de playtest na Fase 1 (mapa Tiled real,
+  v0.3.0): (1) **pulo mais baixo** - `PHYSICS.jump.velocityY` de -680 para
+  -640 (altura máxima 144,5px→128px, alcance horizontal 272px→256px);
+  como esse valor é global (não há física por fase neste motor), a Fase
+  2-intro também é afetada - conferido que nenhum gap dela fica maior que
+  o novo alcance (o mais apertado, 230px na "rota de risco", já vem depois
+  do salto duplo ser liberado, então tem essa folga extra como rede de
+  segurança mesmo assim). A Fase 1 foi revalidada por completo com o novo
+  valor (mesma metodologia da v0.3.0: janela de decolagem exata + dois
+  percursos completos num Chromium headless) - continua sem nenhuma morte
+  obrigatória, e a margem mínima entre travessias na verdade **melhorou**
+  (63px contra 47px antes, coincidência da nova geometria de salto com o
+  ritmo específico deste mapa). (2) **"sombra" no personagem, de novo** -
+  o mesmo bug de contraste da v0.2.2 (ver aquele changelog), mas dessa vez
+  contra o céu do mapa Tiled: medindo todos os tons opacos do spritesheet
+  de Alex, a calça (`#101414`) ficava só ~24 de distância de cor do fundo
+  da Fase 1 (`#080e2a`, o tom "corrigido" na v0.2.2) - próxima o bastante
+  pra "sumir" visualmente contra o fundo escuro, sobretudo parado/andando.
+  Novo fundo (`#000345`) escolhido varrendo a paleta inteira da arte (não
+  só o tom antes identificado) em busca da maior distância mínima possível
+  dentro de uma faixa igualmente escura - agora >50 de distância de
+  qualquer tom da arte, o dobro do critério anterior. Ver "Correções e
+  decisões de v0.3.1" para o detalhe de cada medição.
+- **v0.3.0** — reintegra o mapa real da Fase 1 (Tiled) seguindo o
+  `TILED_PHASER_CONTRACT1.md` (v0.1, recebido da equipe), revertendo a
+  decisão "provisória" da v0.2.1 só para essa fase. A Fase 1 agora carrega
+  `src/assets/maps/esgoto/fase-1.json` de verdade (`TiledFase1.ts` +
+  `TiledLevelRuntime.ts`, novo runtime dedicado, no lugar de
+  `LevelBuilder`/`phase1.ts`); a Fase 2-intro **continua** no formato
+  desenhado à mão (o contrato só cobre grid 16×16 da Fase 1 - as outras
+  fases ainda estão em 32×32 e não formalizadas). Física mantida em
+  320px/s e gravidade 1600 (a mesma da v0.2.1/v0.1, não a recalibração da
+  v0.2.0) - ver "Correções e decisões de v0.3.0" para o detalhe técnico
+  completo (a observação sobre `type`/`class`, o offset vertical, o bug de
+  boot do Parcel encontrado e corrigido, a divergência do mecanismo de
+  hazard entre contrato e mapa real, e principalmente a metodologia de
+  validação usada pra garantir que a fase é jogável de ponta a ponta com a
+  física atual, incluindo dois enganos do próprio processo de validação
+  que quase geraram um relatório de bug falso - registrados ali para quem
+  for revalidar no futuro).
+- **v0.2.2** — corrige o "personagem continua como se tivesse uma sombra"
+  reportado em playtest logo após a v0.2.1. Não era um bug de
+  renderização: a arte LPC de Alex não tem nenhuma camada de sombra
+  própria (conferido pixel a pixel — o PNG só tem alpha 0 ou 255, sem
+  nenhum pixel semitransparente). O problema era falta de contraste: os
+  tons de sombreado da própria arte (cabelo cobrindo um olho, calça)
+  incluem um tom (`#101414`) quase idêntico ao fundo da Fase 1
+  (`#0a1410` — distância de cor ~7, imperceptível), então esses pedaços
+  do personagem "somiam" visualmente no fundo escuro e davam a impressão
+  de uma sombra grudada nele, principalmente parado/andando devagar. A
+  primeira tentativa de correção (um sprite-contorno ciano atrás de Alex)
+  piorou as coisas — como a arte não fica centralizada dentro do frame
+  64×64, o contorno ficava desproporcional para um lado e criava exatamente
+  o mesmo efeito de "sombra", só que azul; foi descartada. A correção que
+  ficou foi trocar as cores de fundo por fase (`PHASE_BACKGROUND` em
+  `GameScene.ts`) por tons igualmente escuros mas medidos para ficarem
+  longe de todos os tons escuros do spritesheet (Fase 1: `#0a1410` →
+  `#080e2a`; Fase 2-intro: `#140f0a` → `#100802`) — mesmo clima sombrio,
+  sem nenhum tom da arte coincidindo com o fundo. Validado visualmente com
+  captura de tela (personagem lendo nitidamente contra o novo fundo, sem
+  nenhum pedaço "sumindo").
+- **v0.2.1** — reverte o nível/mapa da v0.2.0 de volta ao formato
+  desenhado à mão (`LevelBuilder`/`phase1.ts`), **mantendo** a arte real
+  de Alex (spritesheet LPC) e a correção do tremor de câmera. Em
+  playtest, a integração dos mapas Tiled reais fez a gameplay ficar
+  "estranha"/menos fluida: com a física recalibrada para a escala dos
+  mapas (180px/s, gravidade 900), os pulos ficaram bem mais altos e
+  lentos (quase o dobro do tempo no ar: ~1,51s contra ~0,85s antes), e o
+  ritmo de gaps de algumas fases (ex.: Fase 2, gaps de 128px separados por
+  plataformas de só 192px) obrigava o jogador a pular quase
+  ininterruptamente — o efeito visual de pular a cada instante, com pulos
+  altos e lentos, é o que provavelmente foi percebido como o personagem
+  "tremendo": não é um bug de renderização (a posição do sprite foi
+  medida frame a frame e está estável parado/correndo no chão — ver
+  commit desta versão), é o padrão de movimento em si ficando repetitivo
+  e "pulante" demais. `BASE_RUN_SPEED`/`GRAVITY_Y`/`doubleJump.airControl`
+  voltam aos valores da v0.1.2 (320 / 1600 / 140) e o carregamento de
+  fase volta a usar `src/levels/index.ts` (`LEVELS`) em vez de
+  `TiledPhases`/`LevelRuntime` orientado a tilemap. Os mapas Tiled e os
+  demais assets entregues (`src/assets/`) **continuam no projeto** — só
+  não são carregados pelo `GameScene` nesta versão — para uma eventual
+  reintegração futura seguir a recomendação de dimensão na seção
+  "Reintegrando os mapas Tiled no futuro", mais abaixo.
+- **v0.2.0** — integração da arte e dos mapas reais entregues pela equipe
+  (pasta `.rar` recebida): os 5 mapas Tiled (`fase-1`..`fase-5`) e o
+  spritesheet LPC de Alex (`alex-flesh.png`) substituem por completo os
+  placeholders e o nível desenhado à mão da v0.1. Como os mapas reais têm
+  uma escala bem diferente da que o protótipo assumia, o motor foi
+  **reconstruído em cima deles** (decisão tomada explicitamente com a
+  equipe, ver discussão no início deste ciclo): física recalibrada
+  (`BASE_RUN_SPEED`, `GRAVITY_Y`, hitbox de Alex — todos medidos a partir
+  dos mapas/sprites reais, não mais "provisório"), leitura de fase migrada
+  de `LevelBuilder`/`phase1.ts` para os `.json` do Tiled
+  (`src/levels/TiledPhases.ts` + `src/objects/LevelRuntime.ts`), e as 5
+  fases (não mais só a Fase 1 + início da Fase 2) validadas matemática e
+  empiricamente de ponta a ponta. Ver "Correções e decisões de v0.2.0"
+  mais abaixo para o detalhe de cada bug encontrado (dois deles bem sérios
+  — colisão de chão e carregamento do mapa, ambos silenciosos até serem
+  testados) e o escopo explicitamente deixado de fora desta entrega.
 - **v0.1.2** — corrigidos dois problemas reportados no segundo playtest: o
   slide só voltava a ficar em pé depois do tempo máximo (550ms), ignorando
   quando o jogador soltava o botão antes disso; e o trecho dos "fios
@@ -27,7 +158,12 @@ Stack conforme a Seção 22 do GDD: **TypeScript + Phaser `^4.2.1` + Parcel**.
 
 Esta entrega implementa o **Marco 2 — Vertical Slice** do cronograma (GDD
 seção 24.2), com toda a arquitetura de sistemas já pronta para os marcos
-seguintes:
+seguintes. Desde a v0.3.0, a **Fase 1 usa o mapa Tiled real** entregue pela
+equipe, seguindo `TILED_PHASER_CONTRACT1.md` (ver Changelog e "Correções e
+decisões de v0.3.0" abaixo); a **Fase 2-intro continua** no formato
+desenhado à mão da v0.1 (`LevelBuilder`/`phase2Intro.ts`), porque o
+contrato ainda só cobre o grid 16×16 da Fase 1 — ver "Reintegrando os
+mapas Tiled das Fases 2-5" para a próxima etapa dessa migração:
 
 - Corrida automática, pulo, slide, salto duplo — com os tempos/valores de
   referência da Seção 14 do GDD (todos marcados como "provisório" onde o
@@ -46,35 +182,36 @@ seguintes:
   os campos de descida/fragmentos/finais reservados para o Marco 4).
 - HUD (`Créditos da fase: X/Y`, `Total: Z`), câmera seguindo Alex a ~35%
   da tela (Seção 22.4), pausa que congela física/tweens (Seção 19.2).
-- **Fase 1 — Esgoto/Periferia completa**, seguindo nó a nó o fluxograma de
-  `levelDesign.md`: trecho seguro → primeiro pulo → gaps → cano baixo →
-  pulo+slide → água tóxica → rota de créditos normal/risco → tubulação
-  rompida → checkpoint → fios energizados → sequência de domínio → clínica
-  de George → pernas mecânicas → salto duplo liberado.
+- **Fase 1 — Esgoto/Periferia completa**, carregada a partir do mapa Tiled
+  real (`fase-1.json`, layers `ground`/`hazards`/`deco`/`objects` — ver
+  "Correções e decisões de v0.3.0"): spawn → gaps sobre água tóxica →
+  rota de créditos normal (chão) / risco (plataforma elevada) → checkpoint
+  → trecho final → saída para a Clínica de George → pernas mecânicas →
+  salto duplo liberado. Validada matemática e empiricamente de ponta a
+  ponta (ver metodologia abaixo) - nenhuma morte obrigatória em nenhuma
+  das 15 travessias de gap da fase.
 - **Início da Fase 2 — Industrial**: gap impossível de salto simples, teste
   seguro do salto duplo e uma rota de risco com créditos, encerrando numa
   tela de "fim do protótipo" com o roadmap restante (não é um final
   narrativo — ver `src/scenes/EndingScene.ts`).
+- Alex usa o spritesheet LPC real (`alex-flesh.png`, seção 23.1, mantido
+  da v0.2.0), com corrida animada e hitbox medida a partir do
+  bounding-box alfa dos frames reais (`src/utils/AlexSprite.ts`). O
+  spritesheet não tem uma pose própria de "deslizar" (só um "sentar");
+  até a arte final trazer uma pose dedicada, o slide usa o frame existente
+  mais próximo — puramente cosmético, não afeta a hitbox nem a mecânica.
+  O resto do nível (chão, canos, água, quebráveis) continua em
+  placeholder gerado em runtime (`src/utils/PlaceholderTextures.ts`).
 - Todas as cenas da Seção 22.2 existem no código (`Boot`, `Menu`, `Game`,
   `Clinic`, `Ending`, `Multiplayer`), inclusive as que ainda são stubs.
-- Zero assets externos: toda a arte é placeholder gerado em runtime
-  (`src/utils/PlaceholderTextures.ts`), como pede o Nível 1 do escopo
-  (Seção 7.4). Basta trocar por spritesheets reais quando a arte
-  (Seção 23.1) estiver pronta — física e colisão não mudam.
 
 ## Como rodar
 
-Este diretório é o **único jogo** do repositório (a raiz só encaminha para cá).
-
 ```bash
-# a partir de flesh-to-chrome/
 npm install
 npm run dev      # servidor de desenvolvimento com hot reload
 # ou
 npm start        # mesma coisa, abrindo o navegador automaticamente
-
-# ou a partir da raiz do repo:
-# npm run dev
 ```
 
 Outros comandos:
@@ -87,7 +224,10 @@ npm run build        # build de produção em dist/
 Testado com Node 22 / npm 10. O build de produção foi verificado tanto por
 `tsc --noEmit` quanto rodando a build final num Chromium headless (boot do
 Phaser, navegação de menu, corrida, pulo, slide, morte e reinício do
-checkpoint — sem erros de console).
+checkpoint — sem erros de console). A partir da v0.3.0, a Fase 1 (mapa
+Tiled real) tem validação adicional: dois percursos completos do spawn
+até a Clínica de George sem nenhuma morte — ver "Correções e decisões de
+v0.3.0".
 
 ## Controles (Seção 19.1 do GDD)
 
@@ -111,24 +251,90 @@ src/
   entities/Player.ts       # PlayerController (máquina de estados completa)
   systems/                 # Input, Créditos, Save, HUD, Habilidades
   levels/                  # dados de fase (builder sequencial + registry)
-  objects/LevelRuntime.ts  # instancia chão/hazards/créditos/checkpoints
-  utils/PlaceholderTextures.ts
+  levels/TiledFase1.ts     # config/import estático do mapa Tiled da Fase 1
+  objects/LevelRuntime.ts        # runtime da(s) fase(s) desenhada(s) à mão
+  objects/TiledLevelRuntime.ts   # runtime da Fase 1 a partir do mapa Tiled
+  utils/AlexSprite.ts      # frames/animações do spritesheet LPC real
+  utils/PlaceholderTextures.ts  # texturas placeholder do resto do nível
+  assets/maps/**/*.json    # os 5 mapas Tiled reais (fase-1 .. fase-5) -
+                           # só fase-1.json é carregado pelo GameScene
+                           # nesta versão, ver "Reintegrando os mapas
+                           # Tiled das Fases 2-5" abaixo
+  assets/tiles/**          # tilesets de cada fase (idem)
+  assets/player/           # spritesheet LPC de Alex (em uso)
 ```
 
 ### Sobre o formato de nível
 
-O GDD define Tiled/JSON como ferramenta de level design (Seção 7.1), mas
-nenhum `.tmj` foi fornecido pela equipe de design ainda. Por isso este
-protótipo usa um formato próprio (`src/levels/LevelTypes.ts`) — mais
-simples, mas com a mesma função. Quando a equipe de level design exportar
-mapas reais do Tiled, o caminho recomendado é escrever um
-`TiledLevelAdapter` que traduza o `.tmj` exportado para este mesmo
-`LevelData`, sem precisar tocar em `Player`, nos sistemas ou nas cenas.
+O GDD define Tiled/JSON como ferramenta de level design (Seção 7.1). A
+v0.2.0 chegou a integrar os 5 mapas Tiled reais entregues pela equipe, mas
+a v0.2.1 reverteu tudo (ver Changelog) porque a gameplay resultante ficou
+pior; a v0.3.0 reintegra especificamente a **Fase 1**, agora seguindo
+`TILED_PHASER_CONTRACT1.md` e com a física original (320px/s, gravidade
+1600 — não a recalibração da v0.2.0). `GameScene.ts` decide por fase qual
+runtime usar (`isTiledPhase()`): `fase1` carrega `TiledLevelRuntime` a
+partir de `fase-1.json`; `fase2-intro` continua no formato próprio
+(`LevelBuilder`/`LevelTypes.ts`, via `src/levels/index.ts`/`LEVELS`), com
+cada fase descrita por um `LevelBuilder` sequencial (chão, gaps,
+obstáculos aéreos, créditos, checkpoints) na mesma ordem dos nós dos
+fluxogramas de `levelDesign.md` — os comentários no código de
+`phase2Intro.ts` apontam para cada nó correspondente.
 
-As fases atuais (`src/levels/phase1.ts`, `phase2Intro.ts`) são descritas
-com um `LevelBuilder` sequencial (chão, gaps, obstáculos aéreos, créditos,
-checkpoints), na mesma ordem dos nós dos fluxogramas de `levelDesign.md`
-— os comentários no código apontam para cada nó correspondente.
+Os mapas `.json` do Tiled e os tilesets reais das Fases 2-5 **continuam no
+repositório** (`src/assets/maps/`, `src/assets/tiles/`) para quando fizer
+sentido migrá-las também — ver a seção logo abaixo.
+
+### Reintegrando os mapas Tiled das Fases 2-5
+
+A reintegração da Fase 1 na v0.3.0 confirma que **é possível usar os
+mapas Tiled reais sem reproduzir o problema da v0.2.0**, desde que dois
+cuidados sejam respeitados — os mesmos já identificados na v0.2.1 e agora
+validados na prática:
+
+- **Tile 32×32px** (o que a equipe já usa) está ótimo — o problema nunca
+  foi o tamanho do tile.
+- **Gaps de até ~6-7 tiles (96-112px, tile 16×16) ou ~3 tiles (96px, tile
+  32×32)** por pulo simples, deixando uma margem real sob os 256px de
+  alcance máximo do salto simples (valor atualizado na v0.3.1 - era
+  272px até a v0.3.0). Gaps maiores só em fases com salto duplo liberado
+  (Fase 2 em diante), com boa margem mesmo assim.
+- **Plataformas de pelo menos ~8-10 tiles (256-320px)** entre um gap e o
+  próximo — é exatamente o número que faltou na Fase 2 real (192px foi
+  curto demais) e o que faz o jogador *correr* em vez de só encadear
+  pulos. Regra prática: se o jogador consegue pousar e precisar pular de
+  novo em menos de meio segundo (~160px a 320px/s), a plataforma está
+  curta demais.
+- **Altura total do mapa até ~18-20 tiles (576-640px)**, cabendo dentro
+  dos 720px da tela — este motor **não tem scroll vertical de câmera**
+  (`GameScene.update()` só ajusta `scrollX`), então qualquer parte do
+  mapa acima ou abaixo da janela de 720px fica invisível mesmo que a
+  física continue normal por baixo dos panos. Reserve uns 100-120px no
+  topo para a HUD não sobrepor a ação.
+- Uma única fileira de chão "andável" por coluna (ou 2-3 linhas
+  empilhadas só por profundidade visual) — é o modelo que o script de
+  validação (`ground_nodes`, descrito na v0.2.0) já assume.
+
+Com essas faixas respeitadas, o mesmo script de reachability construído
+para a v0.2.0 (grafo de nós + janela de decolagem com folga mínima)
+continua servindo para validar a fase antes de qualquer playtest — só que
+com um refinamento importante descoberto validando a Fase 1 na v0.3.0: ver
+"Metodologia de validação (atualizada na v0.3.0)" mais abaixo antes de
+reusar o script, porque a versão simples (só checar se o pouso alcança o
+**início** da próxima plataforma) pode aprovar erradamente uma travessia
+que na verdade **ultrapassa** uma plataforma curta e cai no vão seguinte.
+
+**Nota técnica sobre o JSON do mapa e o Parcel** (válida para a Fase 1,
+já religada nesta versão, e para quando as Fases 2-5 também forem):
+`new URL('./mapa.json',
+import.meta.url)` faz o Parcel tratar o arquivo como módulo JS (roda pelo
+transformer de JSON padrão), não como asset estático copiável — o que
+quebraria o carregador de rede do Phaser (`load.tilemapTiledJSON`), que
+espera uma URL servindo JSON puro. A solução é importar o `.json`
+estaticamente (`import fase1Map from "./fase-1.json"`, já suportado por
+`resolveJsonModule` no `tsconfig.json`) e registrar os dados direto no
+cache de tilemap do Phaser em `GameScene.preload()`
+(`this.cache.tilemap.add(key, { format: TILED_JSON, data })`), sem passar
+pelo carregador de rede.
 
 ### Sobre os valores numéricos
 
@@ -137,6 +343,10 @@ Todo valor de tempo/velocidade/distância vem acompanhado de um comentário
 Pendentes de Playtest) do GDD. Eles estão centralizados em
 `src/config/GameConfig.ts` para facilitar o ajuste fino durante os
 playtests, sem precisar caçar números espalhados pelo código.
+`BASE_RUN_SPEED`/`GRAVITY_Y` chegaram a ser recalibrados na v0.2.0 para
+bater com a escala dos mapas Tiled reais; a v0.2.1 reverteu isso de volta
+aos valores originais (320px/s, gravidade 1600) porque o feel resultante
+da recalibração, testado em playtest, ficou pior — ver Changelog.
 
 ### Correções de bugs reportados em playtest
 
@@ -222,6 +432,334 @@ nenhuma morte. Também foi validado separadamente que soltar o botão de
 slide bem depois do mínimo (300ms) faz Alex levantar em menos de um
 frame perceptível (~50ms), em vez dos ~550ms de antes.
 
+### Correções e decisões de v0.3.2
+
+**Contexto:** depois de entregar a v0.3.1 (pulo -640, fundo `#000345`), o
+feedback foi "tudo continua igual, não está evoluindo" - e, questionado
+sobre o quê especificamente, a resposta foi "tanto a sombra quanto o
+pulo". Como as duas mudanças estavam mensuravelmente presentes no código
+(conferido de novo linha por linha) e no bundle compilado (grep no JS
+final por `-640`/ausência de `-680`, e pelo valor decimal do novo fundo),
+a investigação seguiu por duas frentes: (1) será que o problema é só
+build desatualizado, e (2) será que as mudanças, mesmo reais, eram
+pequenas demais pra perceber jogando.
+
+**Build desatualizado - causa provável, corrigida independente do resto.**
+O zip da v0.3.1 excluía a pasta `dist/` de propósito (só código-fonte),
+exigindo rodar `npm install` + `npm run build`/`npm run dev` pra ver as
+mudanças compiladas. Reabrir um zip antigo ou manter um `npm run dev`
+anterior rodando faz literalmente nada mudar na tela, mesmo com o
+código-fonte correto. O zip a partir de agora vem com `dist/` já
+buildado, pra eliminar essa variável.
+
+**"Sombra" - métrica errada, não só valor errado.** O critério usado até
+a v0.3.1 (maximizar a distância euclidiana de COR/RGB entre o fundo e os
+tons opacos do spritesheet) mede principalmente diferença de matiz. Mas
+contraste visual entre duas cores muito escuras é dominado por diferença
+de LUMINÂNCIA (brilho percebido, `0,299R + 0,587G + 0,114B`) - o olho
+humano distingue muito pior tons escuros entre si do que tons claros
+(lei de Weber), então duas cores podem estar "longe" em RGB e "perto" em
+brilho, e vão continuar parecendo se misturar. Foi exatamente o caso:
+`#000345` (v0.3.1) tinha distância de cor de 51 contra a calça de Alex
+(`#101414`), mas luminância quase igual à dela (~9,6 contra ~18,8 - gap
+de só 8,5 num intervalo 0-255).
+
+Medido de novo contra os tons *significativos* do spritesheet (>=0,05%
+dos pixels opacos - descarta ruído de poucos pixels, tipo 6 pixels de
+contorno preto puro em 313 mil pixels opacos, que não formam nenhuma
+mancha visível). Os tons de sombreado reais da arte (cabelo, calça,
+coturno) formam um degradê praticamente contínuo de luminância ~18 a
+~50 - não existe "brecha" no meio pro fundo ocupar sem ficar perto de
+algum tom de verdade. A única forma de abrir um gap bem maior sem
+abandonar um fundo escuro/atmosférico (precisaria subir a luminância pra
+~70+, um cinza médio, destoante do clima do jogo) é ir **mais escuro**
+que o tom mais escuro da arte, não tentar ficar "ao lado" dele só
+mudando o matiz. Novo fundo: `#000010` (quase preto absoluto, com um
+traço mínimo de azul pra não virar um "buraco" sem cor nenhuma) - gap de
+luminância de ~16,3 contra o pior tom, perto do teto teórico (~18,1, só
+com preto puro `#000000`, descartado por colidir exatamente com os tais
+6 pixels de contorno). Verificado visualmente com zoom 8x num screenshot
+real de gameplay rodando (não só a métrica isolada): a calça e as botas
+agora têm silhueta nitidamente visível contra o novo fundo.
+
+**Altura do pulo - tentativa de reduzir mais, revertida com evidência
+concreta.** Testados `-600` (altura 112,5px, alcance 240px) e `-620`
+(altura 120px, alcance 248px), ambos aprovados pelo script de validação
+por "distância de coluna" (o mesmo usado desde a v0.3.0: verifica se o
+X de pouso cai sobre uma coluna com chão). Só que essa metodologia tem
+um ponto cego real: ela nunca simula a trajetória VERTICAL da parábola
+do salto, só o ponto final. Um playthrough de verdade (bot Playwright
+dirigindo o motor de física real, não o script analítico) expôs o
+problema: numa sequência de 3 plataformas estreitas (128px, separadas
+por vãos de 64px, por volta de x=1300-1700 do mapa da Fase 1), um arco
+mais baixo/mais raso chega ao início da próxima plataforma DESCENDO
+rápido demais - o personagem raspa na parede esquerda do bloco de chão
+(que tem 64px de espessura, não é uma borda fina de 1 tile) em vez de
+pousar em cima. O corpo fica travado no eixo X por vários frames
+(colado na parede, `vy` continua subindo em queda livre) até escorregar
+pra baixo da borda do bloco e cair no vazio - morte 100% reproduzível,
+tanto em `-600` quanto em `-620`, sempre nesse mesmo trecho (confirmado
+rastreando posição/velocidade frame a frame, não só "morreu ou não").
+
+`-640` (o valor da v0.3.1, já validado por dois percursos completos sem
+morte) permanece como piso seguro conhecido para essa sequência
+específica de plataformas. Reduzir mais exigiria redesenhar essa parte
+do mapa (plataformas mais largas ou vãos menores) - não é algo que dá
+pra resolver só ajustando a constante de física global. O pulo continua
+em `-640` nesta versão; se o feedback depois de testar o build atualizado
+(com a build `dist/` já pronta) ainda for que a altura precisa mudar,
+o próximo passo tem que ser no nível (`fase-1.json`), não na física.
+
+Reforço de metodologia pro futuro: a partir de agora, qualquer mudança em
+`PHYSICS.jump`/`doubleJump` precisa passar pelo playthrough real em
+Chromium headless antes de ser considerada validada - o script de
+"distância de coluna" continua útil pra iteração rápida, mas não é mais
+tratado como validação final sozinho, exatamente pelo motivo acima.
+
+### Correções e decisões de v0.3.1
+
+**Pulo reduzido (-680 → -640).** Feedback direto de playtest na Fase 1
+Tiled: o pulo estava "muito alto" pro grid 16×16 do mapa real (visualmente
+desproporcional a plataformas de 1-2 tiles de espessura). Como
+`GameConfig.PHYSICS` é global (não existe física por fase neste motor), o
+ajuste também afeta a Fase 2-intro - conferido que nenhum gap dela excede
+o novo alcance de 256px (o maior, 230px na "rota de risco" de créditos,
+fica com 26px de margem; mas esse trecho já vem depois do jogador ganhar
+o salto duplo na própria Fase 2, então mesmo se a margem do salto simples
+fosse zero ainda sobraria o salto duplo como alternativa - não é um
+bloqueio). A Fase 1 foi revalidada do zero com o novo alcance (256px, não
+mais 272px), repetindo a mesma metodologia de duas camadas da v0.3.0:
+
+- **Reachability exato:** recalculando a janela de decolagem segura de
+  cada uma das 15 travessias de gap da fase com `JUMP_RANGE=256`, todas
+  continuam com janela real (nenhuma ficou vazia). A margem mínima -
+  antes 47px em três travessias - passou pra **63px em quatro
+  travessias** (a geometria específica desses vãos combina melhor com o
+  alcance menor; não é o caso geral, é coincidência desta fase). A imensa
+  maioria das travessias segue com 63-192px de folga.
+- **Percurso completo:** dois percursos independentes do spawn até a
+  Clínica de George num Chromium headless com a build final, sem nenhuma
+  morte, coletando os 30 créditos da rota segura - mesmo critério de
+  aprovação da v0.3.0.
+
+**"Sombra" no personagem (de novo) - medição completa desta vez.** O
+mesmo tipo de bug da v0.2.2 ("personagem continua como se tivesse uma
+sombra") voltou a ser reportado, agora especificamente na Fase 1 Tiled.
+Causa: o fundo escolhido na v0.2.2 (`#080e2a`) foi medido só contra UM tom
+problemático identificado então (`#101414`, a calça de Alex, distância de
+cor ~7 na época) - mas nunca foi verificado sistematicamente contra TODOS
+os tons opacos do spritesheet. Varrendo `alex-flesh.png` (`Image.getpixel`
+pixel a pixel, todos os tons com alpha ≥200) e medindo a distância
+euclidiana de cada um até o fundo da Fase 1, dois tons ficavam bem mais
+próximos do que os demais: a calça `#101414` (distância ~24,2) e um tom de
+sombra do cabelo/rosto `#1D131E` (distância ~24,7) - contra 30-58 de
+distância dos outros ~35 tons da arte. Próximo o bastante, numa paleta
+inteira escura, pra ler como a calça/perna "sumindo" contra o céu do
+mapa - exatamente o efeito relatado, mais visível aqui porque a Fase 1
+Tiled tem trechos de céu aberto atrás do personagem (o nível desenhado à
+mão da v0.1/Fase 2-intro usa um fundo mais compacto).
+
+Correção: busca em grade (script Python dedicado, não escolha visual) por
+uma cor dentro de uma faixa igualmente escura (luminância ≤18, o mesmo
+peso visual do tom anterior) que **maximiza a distância mínima** até
+qualquer um dos ~35 tons opacos do spritesheet (não só o pior caso
+identificado por acaso). Resultado: `#000345` (distância mínima 51,2 até
+qualquer tom da arte - mais que o dobro do `#080e2a` anterior). Validado
+visualmente: captura de tela com zoom 4× mostra a calça nitidamente
+distinta do céu, sem nenhum pedaço "sumindo" contra o fundo, parado ou
+correndo. Ver `TILED_FASE1_BACKGROUND` em `TiledFase1.ts` para a medição
+completa comentada no código.
+
+### Correções e decisões de v0.3.0
+
+**Seguindo o contrato.** `TiledLevelRuntime.ts` lê `fase-1.json` conforme
+`TILED_PHASER_CONTRACT1.md`: layer `ground` vira colisão física (mesmo
+grid do tilemap, incluindo as duas elevações da fase — chão baixo
+"seguro" e a plataforma elevada "arriscada" que corre paralela a ele em
+parte do percurso); `deco` é puramente visual (sem colisão, mesmo o tile
+`solid=true` do tileset que aparece nela — o contrato é explícito que
+`deco` não colide por padrão); e a "Classe" de cada objeto veio no campo
+`type` do JSON exportado, não em `class` — exatamente a ressalva do §8 do
+contrato ("Observação sobre Tiled JSON"), confirmada inspecionando o JSON
+real antes de escrever o parser. Só 4 das 6 layers recomendadas existem
+no mapa entregue (sem `deco-back`/`background`) e só 4 das 12 classes de
+objeto do §5/§6 estão em uso (`spawn`, `phase_end`, `credit`,
+`checkpoint`/`clinic` — os dois últimos aparecem no mapa mas ainda não
+foram formalizados no documento) — o parser trata os dois como opcionais
+em vez de assumir que vão existir.
+
+**Offset vertical (`TILED_FASE1_OFFSET_Y = 304`).** O mapa tem só 320px de
+altura (20 linhas × 16px); a tela é 720px e este motor **não tem scroll
+vertical de câmera** (`GameScene.update()` só ajusta `scrollX`). Sem
+ajuste, o mapa inteiro ficaria espremido no topo da tela. O offset desloca
+todas as layers e coordenadas de objeto pra baixo até a linha principal do
+chão (linha 16) cair em y=560 — o mesmo `GROUND_Y` do nível desenhado à
+mão, pra manter a mesma moldura visual entre as duas fases.
+
+**Divergência entre contrato e mapa real no mecanismo de hazard.** O
+contrato (§3) diz que a *lógica* de perigo deveria vir de objetos
+(`hazard`/`kind` em `objects`), com a layer `hazards` só pro visual. O
+mapa entregue não tem nenhum objeto da classe `hazard` — a água tóxica
+(50 tiles, todos do tipo "poço sem fundo", não "obstáculo aéreo") só
+existe via propriedade customizada `hazard=true` no tileset, o mecanismo
+mais antigo da v0.2.0. `TiledLevelRuntime` lê essa propriedade (senão
+seriam 50 tiles de água puramente decorativos, sem matar ninguém) e
+também aceita um futuro objeto `hazard` na layer `objects`, se/quando o
+mapa passar a seguir o contrato à risca nesse ponto — não é uma decisão
+unilateral de mudar o mapa, só o runtime aceitando os dois formatos.
+
+**Checkpoint posicionado dentro de um vão do chão (observação pro level
+design, não bloqueante).** O objeto `checkpoint_1` está em x=6304, mas o
+chão da Fase 1 só existe até x=6240 e retoma em x=6320 — ou seja, o
+marcador cai nos 16px vazios entre duas plataformas. Isso não quebra o
+jogo (o respawn cai um pouco e alcança o chão real menos de 0,1s depois,
+bem antes da queda virar morte por queda), mas não é a posição pretendida
+— provavelmente o checkpoint deveria estar alguns pixels antes ou depois.
+Registrado aqui em vez de corrigido silenciosamente, seguindo o mesmo
+princípio do achado abaixo: mudança de mapa é decisão de quem mantém o
+Tiled, não deste runtime.
+
+**Bug de boot que deixava o jogo inteiro em branco (Parcel).** Com dois
+assets carregados via `new URL(..., import.meta.url)` no mesmo bundle (o
+spritesheet de Alex e o tileset da Fase 1), o Parcel passou a içar as
+duas chamadas pra escopo de módulo de nível superior
+(`var tc={};tc=import.meta.resolve("dIn4j");`, antes até da definição da
+classe `GameScene`) — e uma delas lançava
+`Failed to resolve module specifier` antes de qualquer código do jogo
+rodar, deixando a tela em branco (nem o menu aparecia). Encontrado
+inspecionando o bundle final (`dist/*.js` e o import map que o Parcel
+injeta em `dist/index.html`) depois de reproduzir o erro num Chromium
+headless. Depois de mover a segunda URL pra um método próprio na
+`GameScene` (no mesmo padrão do `alexUrl()` já existente) e limpar
+`.parcel-cache` por completo, o erro parou de se reproduzir em builds
+limpos consecutivos — mas o bundle final **continua** com as duas
+chamadas içadas pro mesmo padrão de escopo de módulo (conferido de novo
+nesta versão), então a causa exata de por que parou de falhar não está
+100% confirmada (pode ter sido só o cache sujo da tentativa anterior).
+Registrado pra quem mexer de novo nesse trecho ficar de olho: se a tela
+ficar em branco de novo depois de adicionar um terceiro asset via
+`new URL(...)`, comece por aqui.
+
+**Metodologia de validação (atualizada na v0.3.0) — e um engano do
+próprio processo de validação, registrado por transparência.** A primeira
+tentativa de calcular a "janela de decolagem segura" de cada travessia de
+gap só checava se o pouso **alcançava** o início da próxima plataforma —
+o mesmo critério usado (com sucesso) pra validar as 5 fases desenhadas à
+mão na v0.2.0. Rodado às pressas contra o mapa real da Fase 1, esse
+critério chegou a indicar 3 travessias como "matematicamente impossíveis"
+no trecho de plataformas minúsculas sobre água tóxica (x≈3424–3744, uma
+"escada" de 3 plataformas de 4 tiles/64px cada). Antes de reportar isso
+como um problema do mapa, refazer o cálculo do zero (script Python
+independente, direto do `fase-1.json`) mostrou que o critério original
+tinha um furo: ele não verificava se o pulo **ultrapassava** a plataforma
+alvo inteira e caía no vão *seguinte* — o que é exatamente o que acontece
+nessas plataformas de 64px, mais estreitas que a maioria dos gaps do
+resto da fase. Corrigindo o critério (checar que o pouso cai em cima de
+chão real, não só "além do início do próximo pedaço"), as 3 travessias
+"impossíveis" viraram travessias com janela real, só que mais apertada
+que o normal (47-64px, contra 128-208px no resto da fase). Um teste de
+bot num Chromium headless bateu no mesmo tipo de furo em duas tentativas
+diferentes (uma pulando cedo demais dentro da própria plataforma de
+partida sem cruzar o vão real, outra recalculando o ponto de decolagem
+sem levar em conta que o pouso do pulo anterior já podia estar além do
+próximo marco) antes de convergir pra uma estratégia "pula no último
+instante em que o pouso ainda é seguro", calculada a cada frame a partir
+da posição real do jogador — a mesma lógica de decisão que garante que
+nenhuma das duas classes de erro acima se repita, porque não depende de
+nenhum ponto pré-calculado que possa ficar desatualizado.
+
+Com essa correção, a fase inteira (as 15 travessias de gap, do spawn até
+o portão de saída da Clínica) foi validada em duas camadas, como nas
+fases da v0.2.0: (1) o script de reachability corrigido, confirmando
+janela real (>0px de folga) em toda travessia — a mais apertada é 47px
+(~150ms a 320px/s), acima do mínimo de 40px usado como critério de
+aprovação desde a v0.2.0, mas notavelmente mais justa que o resto da fase
+(a maioria das travessias tem 128-208px de folga); e (2) dois percursos
+completos rodando a build final de produção num Chromium headless, do
+spawn até a Clínica de George, sem nenhuma morte e coletando os 30
+créditos da rota segura (o bot não tentou a rota de risco). As travessias
+mais apertadas (o trecho de água tóxica x≈1312-1824 e x≈3424-3744, e o
+par de vãos x≈5376-5568) ficam acima do critério de aprovação do projeto,
+mas valeria a pena a equipe de level design dar uma olhada se quiser mais
+folga aí — não é um bloqueio, é uma sugestão registrada pra próxima
+revisão do mapa, seguindo o mesmo princípio de não alterar o mapa
+unilateralmente por conta própria.
+
+### Correções e decisões de v0.2.0
+
+> Registro histórico da integração dos mapas Tiled reais, revertida na
+> v0.2.1 e religada (só pra Fase 1, seguindo o contrato) na v0.3.0 — ver
+> Changelog e "Correções e decisões de v0.3.0" acima. Os dois bugs abaixo
+> (colisão de chão e carregamento do JSON) são reais e os dois já estavam
+> corrigidos em `TiledLevelRuntime`/`TiledFase1.ts` desde o primeiro
+> commit da v0.3.0 (reaproveitando a correção descrita aqui) — não
+> precisaram ser redescobertos.
+
+**Colisão de chão completamente quebrada ao trocar para os tilemaps
+reais (bug crítico, silencioso).** Ao ligar a colisão do Phaser com
+`ground.setCollisionByExclusion([0])` — o valor "óbvio" para "todo tile
+diferente de 0 colide" —, Alex caía direto através de todo o chão em
+todas as fases. Causa: no Tiled/JSON uma célula vazia vale `0`, mas o
+Phaser 4 representa essa mesma célula internamente como `Tile.index =
+-1`, não `0`. Excluir só `[0]` não excluía nada de verdade — toda célula
+do grid (inclusive o ar vazio) contava como "colidível", o que zera o
+cálculo interno de faces do tilemap (nenhum tile parece ter uma face
+exposta, já que os vizinhos "colidem" por igual) e desliga a colisão do
+jogo inteiro por baixo dos panos, sem erro nenhum no console. Encontrado
+lendo a documentação (`node_modules/phaser/skills/tilemaps/SKILL.md`) e o
+código-fonte da física Arcade do próprio Phaser 4.2.1. Correção: `
+ground.setCollisionByExclusion([-1, 0])`. Ver `LevelRuntime` (construtor).
+
+**Mapa não carregava (Parcel empacotava o `.json` do Tiled como módulo
+JS).** Ver a nota técnica na seção "Sobre o formato de nível" acima —
+resumo: `new URL('./mapa.json', ...)` não serve JSON puro sob o Parcel;
+a correção foi importar o `.json` estaticamente e registrar os dados
+direto no cache de tilemap do Phaser, sem passar pelo carregador de rede.
+
+**"Tremor de tela" reportado em mais de uma máquina.** Com
+`Phaser.Scale.FIT`, o fator de escala do canvas quase nunca é um número
+inteiro (depende do tamanho da janela do jogador) — e por padrão o
+Phaser desenha com antialiasing e permite posições sub-pixel de câmera,
+o que faz as bordas dos tiles (arte em pixel art, com padrão repetido)
+"tremerem" visivelmente durante o scroll, principalmente em janelas cujo
+fator de escala fica longe de um número inteiro. É por isso que o bug
+batia "em algumas máquinas e não em outras": depende só do tamanho da
+janela, não do hardware. A Fase 1 da v0.1 usava retângulos sólidos sem
+padrão repetido, então o problema não aparecia até a arte real (com
+tiles) entrar em cena. Correção em `main.ts`: `pixelArt: true` +
+`render: { antialias: false, roundPixels: true }`, e a posição da câmera
+(`scrollX`) passou a ser sempre arredondada (`Math.floor`) em
+`GameScene.update()`.
+
+**Simplificação de conteúdo divulgada — trecho da Fase 1 (x≈6880–9920)
+reconstruído.** Durante a validação matemática (ver abaixo), esse trecho
+original do mapa — uma sequência de poços de água tóxica intercalados
+com plataformas elevadas de 48-80px — exigia timing de pulo
+praticamente pixel-perfect em vários pontos (a janela de decolagem segura
+ficava menor que a própria largura da plataforma-alvo, ou seja, sem
+nenhuma folga real). Como o critério deste projeto é que toda fase seja
+**sempre** passável de forma justa (sem sorte/frame-perfect), e não havia
+tempo neste ciclo para redesenhar esse trecho mantendo a mesma dificuldade
+"de precisão", ele foi substituído por um piso contínuo e seguro no mesmo
+intervalo (removendo também os hazards e restos de plataforma que ali
+existiam). Isso troca parte da dificuldade de precisão original por
+garantia de imparcialidade — uma troca deliberada, registrada aqui em vez
+de silenciosa, para a equipe de level design decidir se quer desenhar uma
+versão mais generosa (folga ≥40px) desse trecho num próximo ciclo.
+
+**Metodologia de validação.** Cada uma das 5 fases foi validada em duas
+camadas antes de ser considerada pronta: (1) um script Python
+(reachability + análise de física) que modela o chão de cada mapa como um
+grafo de nós alcançáveis por corrida/pulo/salto-duplo, calculando para
+cada aresta a janela de decolagem no pior caso e exigindo pelo menos 40px
+de folga real nela (não só "existe algum instante que funciona") — e
+verificando também que nenhum obstáculo aéreo "mata sem chance de reação"
+(pouso no pior caso + margem de reação não pode cair dentro do obstáculo);
+(2) rodando a build final de verdade num Chromium headless, com um bot
+que joga a fase pulando/deslizando no instante correto segundo a mesma
+lógica da análise, do spawn até o portão de saída. As 5 fases passam em
+ambas as camadas — sem nenhuma morte obrigatória em nenhuma delas.
+
 ## Roadmap — o que falta (mapeado ao cronograma do GDD, Seção 24)
 
 Esta entrega cobre os Marcos 1 e 2. Os próximos passos, em ordem:
@@ -234,7 +772,11 @@ Esta entrega cobre os Marcos 1 e 2. Os próximos passos, em ordem:
   implementar inimigos simples (`Bandido ciborgue`, `Drone policial` —
   Seção 14.6) e objetos quebráveis (Seção 14.7, já suportados pela
   máquina de estados do jogador via `enterPressedState`/
-  `resolvePressedSuccess`), e o Portão ao final da Fase 5.
+  `resolvePressedSuccess`), e o Portão ao final da Fase 5. Os mapas Tiled
+  reais entregues pela equipe (`src/assets/maps/`) são o material natural
+  para desenhar essas fases — a Fase 1 já foi religada na v0.3.0 seguindo
+  o contrato (`TILED_PHASER_CONTRACT1.md`); ver "Reintegrando os mapas
+  Tiled das Fases 2-5" para o que falta pra estender às demais.
 - **Marco 4 — Narrativa, descida e finais** (Seção 24.4): prólogo, arco de
   George, propagandas do pai, escolha Chrome/Flesh no Portão, glitches
   (Seção 18.3), retry especial, ReForge Industries e bioprinting (Seção
