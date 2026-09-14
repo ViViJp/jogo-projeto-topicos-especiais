@@ -2,16 +2,12 @@
   "name": "flesh-to-chrome",
   "private": true,
   "version": "0.1.0",
-  "type": "module",
+  "description": "Monorepo wrapper — o jogo oficial está em ./flesh-to-chrome",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "phaser": "^3.87.0"
-  },
-  "devDependencies": {
-    "vite": "^6.0.0"
+    "dev": "npm --prefix flesh-to-chrome run dev",
+    "start": "npm --prefix flesh-to-chrome run start",
+    "build": "npm --prefix flesh-to-chrome run build",
+    "typecheck": "npm --prefix flesh-to-chrome run typecheck",
+    "postinstall": "npm --prefix flesh-to-chrome install"
   }
 }

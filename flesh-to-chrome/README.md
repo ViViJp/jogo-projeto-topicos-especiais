@@ -64,11 +64,17 @@ seguintes:
 
 ## Como rodar
 
+Este diretório é o **único jogo** do repositório (a raiz só encaminha para cá).
+
 ```bash
+# a partir de flesh-to-chrome/
 npm install
 npm run dev      # servidor de desenvolvimento com hot reload
 # ou
 npm start        # mesma coisa, abrindo o navegador automaticamente
+
+# ou a partir da raiz do repo:
+# npm run dev
 ```
 
 Outros comandos:
