@@ -18,7 +18,7 @@ export const ALEX = {
 
 export function lpcFrameRange(row: number, count: number): number[] {
   const start = row * LPC.COLS;
-  return Phaser.Utils.Array.NumberArray(start, start + count - 1);
+  return Phaser.Utils.Array.NumberArray(start, start + count - 1) as number[];
 }
 
 export function preloadAlex(scene: Phaser.Scene): void {
@@ -55,22 +55,33 @@ export function createAlexAnims(scene: Phaser.Scene): boolean {
   return true;
 }
 
+/**
+ * Corpo em pé: hitbox ancorada na base do frame (origem dos pés = 0.5, 1).
+ * Não usa setDisplaySize — isso descasa body × sprite e afunda no chão.
+ */
 export function applyStandBody(sprite: Phaser.Physics.Arcade.Sprite): void {
   sprite.setScale(1);
-  sprite.setDisplaySize(LPC.FRAME, LPC.FRAME);
-  sprite.setSize(PLAYER_SIZE.width, PLAYER_SIZE.height);
+  sprite.setCrop(); // limpa crop do slide
+  const body = sprite.body as Phaser.Physics.Arcade.Body;
+  body.setSize(PLAYER_SIZE.width, PLAYER_SIZE.height);
   const ox = (LPC.FRAME - PLAYER_SIZE.width) / 2;
   const oy = LPC.FRAME - PLAYER_SIZE.height;
-  sprite.body!.setOffset(ox, oy);
+  body.setOffset(ox, oy);
 }
 
-/** Slide/agachar: visual mais baixo + hitbox PLAYER_SLIDE_SIZE (canos). */
+/**
+ * Slide/agachar: mantém o frame 64×64 e a origem nos pés; só reduz o
+ * corpo físico ancorado embaixo. Visual: crop do topo (parece agachado)
+ * sem mover Y no mundo.
+ */
 export function applySlideBody(sprite: Phaser.Physics.Arcade.Sprite): void {
   sprite.setScale(1);
-  sprite.setDisplaySize(PLAYER_SLIDE_SIZE.width + 8, PLAYER_SLIDE_SIZE.height + 4);
-  sprite.setSize(PLAYER_SLIDE_SIZE.width, PLAYER_SLIDE_SIZE.height);
-  sprite.body!.setOffset(
-    (sprite.displayWidth - PLAYER_SLIDE_SIZE.width) / 2 / sprite.scaleX,
-    (sprite.displayHeight - PLAYER_SLIDE_SIZE.height) / sprite.scaleY
-  );
+  const cropTop = LPC.FRAME - PLAYER_SLIDE_SIZE.height;
+  sprite.setCrop(0, cropTop, LPC.FRAME, PLAYER_SLIDE_SIZE.height);
+
+  const body = sprite.body as Phaser.Physics.Arcade.Body;
+  body.setSize(PLAYER_SLIDE_SIZE.width, PLAYER_SLIDE_SIZE.height);
+  const ox = (LPC.FRAME - PLAYER_SLIDE_SIZE.width) / 2;
+  const oy = LPC.FRAME - PLAYER_SLIDE_SIZE.height;
+  body.setOffset(ox, oy);
 }
