@@ -1,12 +1,4 @@
 { "compressionlevel":-1,
- "editorsettings":
-    {
-     "export":
-        {
-         "format":"json",
-         "target":"fase-1.json"
-        }
-    },
  "height":28,
  "infinite":false,
  "layers":[
@@ -525,12 +517,30 @@
  "tileheight":16,
  "tilesets":[
         {
+         "columns":26,
          "firstgid":1,
-         "source":"crystal-cave-tiles.tsj"
+         "image":"..\/..\/tiles\/esgoto\/crystal cave tiles.png",
+         "imageheight":320,
+         "imagewidth":416,
+         "margin":0,
+         "name":"crystal-cave-tiles",
+         "spacing":0,
+         "tilecount":520,
+         "tileheight":16,
+         "tilewidth":16
         }, 
         {
+         "columns":25,
          "firstgid":521,
-         "source":"tileset-sewer.tsj"
+         "image":"..\/..\/tiles\/esgoto\/sewer\/tilesetSewer.png",
+         "imageheight":308,
+         "imagewidth":400,
+         "margin":0,
+         "name":"tileset-sewer",
+         "spacing":0,
+         "tilecount":475,
+         "tileheight":16,
+         "tilewidth":16
         }],
  "tilewidth":16,
  "type":"map",
