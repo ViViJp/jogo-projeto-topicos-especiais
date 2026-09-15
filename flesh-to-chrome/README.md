@@ -207,13 +207,27 @@ mapas Tiled das Fases 2-5" para a próxima etapa dessa migração:
 
 ## Como rodar
 
+Este diretório é o **único jogo** do repositório.
+
 ```bash
+# preferível a partir da raiz do repo (sincroniza assets e sobe o Parcel):
+# npm run dev
+
 npm install
 npm run dev      # servidor de desenvolvimento com hot reload
 # ou
 npm start        # mesma coisa, abrindo o navegador automaticamente
 ```
 
+### Assets (fonte única)
+
+| Editar | Runtime (Parcel) |
+| --- | --- |
+| `../public/assets/` (biblioteca oficial) | `src/assets/` (cópia gerada) |
+
+Na raiz: `npm run sync-assets`. Áudio (BGM/SFX) e Alex estão integrados;
+mapas Tiled das 5 fases existem; **LD Fase 1 do Victor** = `../public/assets/maps/esgoto/fase-1.tmj`.
+Placeholders ainda cobrem parte dos hazards/UI.
 Outros comandos:
 
 ```bash
@@ -249,20 +263,27 @@ src/
   config/                 # constantes (dimensões, física, teclas)
   scenes/                 # Boot, Menu, Game, Clinic, Ending, Multiplayer
   entities/Player.ts       # PlayerController (máquina de estados completa)
-  systems/                 # Input, Créditos, Save, HUD, Habilidades
+  systems/                 # Input, Créditos, Save, HUD, Habilidades, AudioManager
   levels/                  # dados de fase (builder sequencial + registry)
   levels/TiledFase1.ts     # config/import estático do mapa Tiled da Fase 1
   objects/LevelRuntime.ts        # runtime da(s) fase(s) desenhada(s) à mão
   objects/TiledLevelRuntime.ts   # runtime da Fase 1 a partir do mapa Tiled
   utils/AlexSprite.ts      # frames/animações do spritesheet LPC real
   utils/PlaceholderTextures.ts  # texturas placeholder do resto do nível
-  assets/maps/**/*.json    # os 5 mapas Tiled reais (fase-1 .. fase-5) -
+  assets/audio/            # BGM + SFX (espelho de public/assets/audio)
+  assets/maps/**/*.json    # os 5 mapas Tiled (fase-1 .. fase-5) -
                            # só fase-1.json é carregado pelo GameScene
                            # nesta versão, ver "Reintegrando os mapas
                            # Tiled das Fases 2-5" abaixo
   assets/tiles/**          # tilesets de cada fase (idem)
   assets/player/           # spritesheet LPC de Alex (em uso)
 ```
+
+### Áudio (BGM global)
+
+`AudioManager.forScene()` guarda estado de BGM no `game.registry`. Só uma
+BGM toca por vez; `playBgm` / `stopAllBgmImmediate` destroem instâncias
+antigas (Menu → Fase → Clínica → `scene.restart` após morte).
 
 ### Sobre o formato de nível
 

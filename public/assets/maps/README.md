@@ -1,44 +1,42 @@
 # Mapas Tiled — Flesh to Chrome
 
-Gerados a partir de `levelDesign.md` + GDD §16 (draft jogável; editável no Tiled).
+Biblioteca oficial (Victor edita aqui): `public/assets/maps/`
+
+Runtime Phaser (cópia / adaptação Motoca): `flesh-to-chrome/src/assets/maps/`
 
 ## Arquivos
 
-| Fase | Setor | Mapa | Tile |
+| Fase | Setor | Mapa (raiz) | Tile |
 | --- | --- | --- | --- |
-| 1 | Esgoto | `esgoto/fase-1.json` | 16×16 |
+| 1 | Esgoto | `esgoto/fase-1.json` + **`fase-1.tmj`** (LD Victor) | 16×16 |
 | 2 | Industrial | `industrial/fase-2.json` | 32×32 |
 | 3 | Meio Urbano | `meio-urbano/fase-3.json` | 32×32 |
 | 4 | Corporativo | `corporativo/fase-4.json` | 32×32 |
 | 5 | Topo | `topo/fase-5.json` | 32×32 |
 
-## Camadas (todas as fases)
+## Camadas (padrão)
 
-- `deco` — decoração / teto
-- `ground` — colisão, plataformas, gaps
-- `hazards` — canos, prensas, barricadas (tiles)
-- `objects` — spawn, checkpoint, créditos, inimigos, clínica, Portão
-
-## Regenerar
-
-```bash
-python3 scripts/generate_tiled_maps.py          # todas
-python3 scripts/generate_tiled_maps.py --fase 3 # uma fase
-```
+- `deco` / `background` / `deco-back` — decoração
+- `ground` — colisão / plataformas / gaps
+- `hazards` — água, canos, prensas, etc.
+- `objects` — spawn, checkpoint, créditos, clínica, Portão
 
 ## Abrir no Tiled
 
 1. Instale https://www.mapeditor.org/
-2. **File → Open** → `public/assets/maps/<setor>/fase-N.json`
-3. Edite e salve
+2. **File → Open** → `public/assets/maps/<setor>/fase-N.json` (ou `fase-1.tmj`)
+3. Edite e salve **na raiz** (`public/assets/`)
+4. Rode `npm run sync-assets` se o Phaser precisar da cópia
 
-## Phaser (Vitor)
+Packs / links: [`../LINKS-VICTOR.md`](../LINKS-VICTOR.md)
 
-```js
-this.load.tilemapTiledJSON('fase-1', 'assets/maps/esgoto/fase-1.json');
-this.load.image('sewer', 'assets/tiles/esgoto/tiles/tilesetSewer.png');
-const map = this.make.tilemap({ key: 'fase-1' });
-```
+## Regenerar (cuidado)
 
-Object types úteis: `spawn`, `checkpoint`, `credit`, `clinic`, `enemy`,
-`hazard`, `breakable`, `scan_reveal`, `gate`, `ending_choice`, `phase_end`.
+Scripts em `scripts/generate_*.py` são **geradores opcionais de draft**.
+**Não** rode por cima do `fase-1.tmj` / mapas que o Victor já editou à mão.
+
+## Phaser (Motoca)
+
+A Fase 1 jogável carrega `flesh-to-chrome/src/assets/maps/esgoto/fase-1.json`
+via `TiledFase1.ts` / `TiledLevelRuntime.ts`. Alinhar esse JSON com o
+`fase-1.tmj` do Victor é responsabilidade da integração Phaser.

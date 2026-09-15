@@ -5,6 +5,7 @@ import { InputManager } from "../systems/InputManager";
 import { CreditsSystem } from "../systems/CreditsSystem";
 import { HUD } from "../systems/HUD";
 import { SaveState } from "../systems/SaveState";
+import { AudioManager, SFX } from "../systems/AudioManager";
 import { Player } from "../entities/Player";
 import { LevelRuntime } from "../objects/LevelRuntime";
 import { TiledLevelRuntime } from "../objects/TiledLevelRuntime";
@@ -77,6 +78,7 @@ export class GameScene extends Phaser.Scene {
   private scanOverlay?: Phaser.GameObjects.Rectangle;
   private restarting = false;
   private levelLengthPx = 0;
+  private audio!: AudioManager;
 
   constructor() {
     super("GameScene");
@@ -128,6 +130,10 @@ export class GameScene extends Phaser.Scene {
 
   create(): void {
     generatePlaceholderTextures(this);
+    this.audio = AudioManager.forScene(this);
+    this.audio.unlock();
+    // Troca/garante uma única BGM mesmo após scene.restart()
+    this.audio.playPhaseBgm(this.data$.phaseId);
 
     this.physics.world.gravity.y = GRAVITY_Y;
     this.cameras.main.setBackgroundColor(PHASE_BACKGROUND[this.data$.phaseId] ?? 0x0a0a10);
@@ -159,10 +165,18 @@ export class GameScene extends Phaser.Scene {
     this.levelLengthPx = runtime.lengthPx;
 
     const spawnX = this.data$.checkpointX > 0 ? this.data$.checkpointX : runtime.spawn.x;
-    this.player = new Player(this, spawnX, runtime.spawn.y, this.data$.abilities, this.input$, {
-      onDeath: () => this.handlePlayerDeath(),
-      onScanPulse: (active) => this.handleScanPulse(active),
-    });
+    this.player = new Player(
+      this,
+      spawnX,
+      runtime.spawn.y,
+      this.data$.abilities,
+      this.input$,
+      {
+        onDeath: () => this.handlePlayerDeath(),
+        onScanPulse: (active) => this.handleScanPulse(active),
+      },
+      this.audio
+    );
 
     runtime.registerPhysics(this.player);
 
@@ -174,10 +188,18 @@ export class GameScene extends Phaser.Scene {
     this.levelLengthPx = level.length;
 
     const spawnX = this.data$.checkpointX > 0 ? this.data$.checkpointX : level.playerSpawnX;
-    this.player = new Player(this, spawnX, level.groundY, this.data$.abilities, this.input$, {
-      onDeath: () => this.handlePlayerDeath(),
-      onScanPulse: (active) => this.handleScanPulse(active),
-    });
+    this.player = new Player(
+      this,
+      spawnX,
+      level.groundY,
+      this.data$.abilities,
+      this.input$,
+      {
+        onDeath: () => this.handlePlayerDeath(),
+        onScanPulse: (active) => this.handleScanPulse(active),
+      },
+      this.audio
+    );
 
     const runtime = new LevelRuntime(this, level, new Set(this.data$.consolidatedCreditIds), {
       onCreditCollected: (id, value) => this.handleCreditCollected(id, value),
@@ -228,6 +250,7 @@ export class GameScene extends Phaser.Scene {
 
   private handleCreditCollected(id: string, value: number): void {
     this.credits.collect(id, value);
+    this.audio.sfx(SFX.credit);
     this.updateHud();
   }
 
@@ -235,6 +258,7 @@ export class GameScene extends Phaser.Scene {
     this.credits.consolidate();
     this.save.updateCheckpoint(x, this.credits.getConsolidatedIds(), this.credits.getTotal());
     this.data$.checkpointX = x;
+    this.audio.sfx(SFX.checkpoint);
     this.updateHud();
     this.hud.flashPrompt("Checkpoint alcançado — créditos consolidados");
   }
@@ -259,6 +283,8 @@ export class GameScene extends Phaser.Scene {
     const destination = destinationOverride ?? (this.data$.phaseId === "fase1" ? "ClinicScene" : "EndingScene");
 
     this.time.delayedCall(300, () => {
+      this.audio.sfx(SFX.phaseClear);
+      this.audio.stopBgm(150);
       this.scene.start(destination, {
         completedPhaseId: this.data$.phaseId,
         nextPhaseId,
@@ -271,11 +297,13 @@ export class GameScene extends Phaser.Scene {
   private handlePlayerDeath(): void {
     if (this.restarting) return;
     this.restarting = true;
+    this.audio.sfx(SFX.death);
     this.credits.discardUncollected();
     this.cameras.main.shake(150, 0.01);
     this.hud.flashPrompt("Alex não resistiu — reiniciando do checkpoint", 900);
 
     this.time.delayedCall(700, () => {
+      // playPhaseBgm no create() limpa instâncias antigas — não deixa BGM dobrada
       this.scene.restart({
         phaseId: this.data$.phaseId,
         checkpointX: this.data$.checkpointX,

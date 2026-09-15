@@ -1,11 +1,16 @@
-Fase 1 — Esgoto (side-view + montanha + art upgrade #7 #8)
+Fase 1 — Esgoto / Periferia (Tiled)
 
-Tileset: MrBeast sewer (OpenGameArt) CC-BY 3.0 — tileset-sideview.png
-Parallax: tiles/esgoto/parallax/bg-far.png, bg-mid.png
-Layout: ascensão spawn baixo → clínica alto (GDD cidade vertical)
+Fonte de level design (Victor): public/assets/maps/esgoto/fase-1.tmj
+Runtime Phaser (Motoca): flesh-to-chrome/src/assets/maps/esgoto/fase-1.json
 
-Previews: preview-start.png, preview-mid.png, preview-end.png
+Tilesets usados no mapa atual:
+  - cammellaro Sewer 16×16 — https://cammellaro.itch.io/sewer
+    caminho raiz: public/assets/tiles/esgoto/sewer/tilesetSewer.png
+    caminho runtime: flesh-to-chrome/src/assets/tiles/esgoto/tiles/tilesetSewer.png
+  - Crystal Cave / Cavern props — https://draconimous.itch.io/cavern-set
+    public/assets/tiles/esgoto/crystal cave tiles.png
 
-Regenerar:
-  python3 scripts/import_art_upgrade.py
-  python3 scripts/generate_fase1_map.py
+Abrir no Tiled:
+  File → Open → public/assets/maps/esgoto/fase-1.tmj
+
+NÃO regenerar com generate_fase1_map.py por cima do blockout do Victor.

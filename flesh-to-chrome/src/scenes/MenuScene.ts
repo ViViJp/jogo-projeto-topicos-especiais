@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { SCREEN_WIDTH, SCREEN_HEIGHT } from "../config/GameConfig";
 import { SaveState } from "../systems/SaveState";
+import { AudioManager, BGM, SFX } from "../systems/AudioManager";
 import { GameSceneData } from "./GameScene";
 
 interface MenuOption {
@@ -14,6 +15,7 @@ export class MenuScene extends Phaser.Scene {
   private selectedIndex = 0;
   private confirmVisible = false;
   private confirmText?: Phaser.GameObjects.Text;
+  private audio!: AudioManager;
 
   constructor() {
     super("MenuScene");
@@ -21,6 +23,15 @@ export class MenuScene extends Phaser.Scene {
 
   create(): void {
     this.cameras.main.setBackgroundColor(0x05050a);
+    this.audio = AudioManager.forScene(this);
+    this.audio.unlock();
+
+    const startMusic = () => {
+      this.audio.unlock();
+      this.audio.playBgm(BGM.menu);
+    };
+    this.input.once("pointerdown", startMusic);
+    this.input.keyboard?.once("keydown", startMusic);
 
     this.add
       .text(SCREEN_WIDTH / 2, 150, "FLESH TO CHROME", {
@@ -56,18 +67,36 @@ export class MenuScene extends Phaser.Scene {
         })
         .setOrigin(0.5)
         .setInteractive({ useHandCursor: true })
-        .on("pointerover", () => this.setSelected(i))
+        .on("pointerover", () => {
+          this.setSelected(i);
+          this.audio.sfx(SFX.uiSelect);
+        })
         .on("pointerdown", () => this.confirmSelection());
       this.optionTexts.push(text);
     });
 
     this.setSelected(0);
 
-    this.input.keyboard?.on("keydown-UP", () => this.setSelected((this.selectedIndex - 1 + this.options.length) % this.options.length));
-    this.input.keyboard?.on("keydown-DOWN", () => this.setSelected((this.selectedIndex + 1) % this.options.length));
-    this.input.keyboard?.on("keydown-W", () => this.setSelected((this.selectedIndex - 1 + this.options.length) % this.options.length));
-    this.input.keyboard?.on("keydown-S", () => this.setSelected((this.selectedIndex + 1) % this.options.length));
-    this.input.keyboard?.on("keydown-ENTER", () => this.confirmSelection());
+    this.input.keyboard?.on("keydown-UP", () => {
+      this.setSelected((this.selectedIndex - 1 + this.options.length) % this.options.length);
+      this.audio.sfx(SFX.uiSelect);
+    });
+    this.input.keyboard?.on("keydown-DOWN", () => {
+      this.setSelected((this.selectedIndex + 1) % this.options.length);
+      this.audio.sfx(SFX.uiSelect);
+    });
+    this.input.keyboard?.on("keydown-W", () => {
+      this.setSelected((this.selectedIndex - 1 + this.options.length) % this.options.length);
+      this.audio.sfx(SFX.uiSelect);
+    });
+    this.input.keyboard?.on("keydown-S", () => {
+      this.setSelected((this.selectedIndex + 1) % this.options.length);
+      this.audio.sfx(SFX.uiSelect);
+    });
+    this.input.keyboard?.on("keydown-ENTER", () => {
+      this.audio.sfx(SFX.uiConfirm);
+      this.confirmSelection();
+    });
 
     this.add
       .text(SCREEN_WIDTH / 2, SCREEN_HEIGHT - 40, "↑↓ / W S navegar   ENTER confirmar", {
@@ -91,16 +120,21 @@ export class MenuScene extends Phaser.Scene {
     this.options[this.selectedIndex]?.action();
   }
 
+  private goToGame(data: GameSceneData): void {
+    this.audio.stopBgm(150);
+    this.scene.start("GameScene", data);
+  }
+
   private continueGame(): void {
     const save = SaveState.load();
     const data = save.get();
-    this.scene.start("GameScene", {
+    this.goToGame({
       phaseId: data.currentPhaseId,
       checkpointX: data.checkpoint.x,
       consolidatedCreditIds: data.checkpoint.consolidatedCreditIds,
       wallet: data.wallet,
       abilities: data.abilities,
-    } as GameSceneData);
+    });
   }
 
   private newGame(hasSave: boolean): void {
@@ -109,7 +143,7 @@ export class MenuScene extends Phaser.Scene {
       return;
     }
     SaveState.newGame();
-    this.scene.start("GameScene", { phaseId: "fase1" } as GameSceneData);
+    this.goToGame({ phaseId: "fase1" });
   }
 
   private showConfirm(): void {
@@ -132,7 +166,7 @@ export class MenuScene extends Phaser.Scene {
     const onConfirm = () => {
       cleanup();
       SaveState.newGame();
-      this.scene.start("GameScene", { phaseId: "fase1" } as GameSceneData);
+      this.goToGame({ phaseId: "fase1" });
     };
     const onCancel = () => {
       cleanup();

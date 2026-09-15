@@ -4,6 +4,9 @@
   "version": "0.1.0",
   "description": "Monorepo wrapper — o jogo oficial está em ./flesh-to-chrome",
   "scripts": {
+    "sync-assets": "python3 scripts/sync_runtime_assets.py",
+    "predev": "npm run sync-assets",
+    "prebuild": "npm run sync-assets",
     "dev": "npm --prefix flesh-to-chrome run dev",
     "start": "npm --prefix flesh-to-chrome run start",
     "build": "npm --prefix flesh-to-chrome run build",
