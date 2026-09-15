@@ -48,6 +48,14 @@ export class InputManager {
     return this.anyIsDown("slide");
   }
 
+  isMoveLeftDown(): boolean {
+    return this.anyIsDown("moveLeft");
+  }
+
+  isMoveRightDown(): boolean {
+    return this.anyIsDown("moveRight");
+  }
+
   isAttackJustDown(): boolean {
     const viaKeyboard = this.anyJustDown("attack");
     const viaMouse = this.attackPointerJustDown;

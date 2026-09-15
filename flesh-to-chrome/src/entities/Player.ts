@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { BASE_RUN_SPEED, PHYSICS } from "../config/GameConfig";
+import { BASE_RUN_SPEED, AUTO_RUN, PHYSICS } from "../config/GameConfig";
 import { AbilityState } from "../systems/AbilityState";
 import { InputManager } from "../systems/InputManager";
 import { AudioManager, SFX } from "../systems/AudioManager";
@@ -78,11 +78,12 @@ export class Player {
     if (this.useAlexSheet) {
       applyStandBody(this.sprite);
       this.sprite.play(ALEX.run);
+      this.sprite.anims.pause();
     } else {
       this.sprite.body!.setSize(this.sprite.width, this.sprite.height);
     }
 
-    this.sprite.setVelocityX(BASE_RUN_SPEED);
+    this.sprite.setVelocityX(AUTO_RUN ? BASE_RUN_SPEED : 0);
   }
 
   getState(): PlayerState {
@@ -107,7 +108,7 @@ export class Player {
     if (this.state !== "pressed") return;
     this.state = "running";
     this.currentBreakable = null;
-    this.sprite.setVelocityX(BASE_RUN_SPEED);
+    this.applyHorizontalVelocity();
   }
 
   kill(): void {
@@ -161,24 +162,54 @@ export class Player {
     this.handleDash();
     this.updateRunAnim(grounded, deltaMs);
 
-    // fora dos estados especiais, garante velocidade base constante
-    if (this.state === "running" || this.state === "jumping") {
+    // corrida: automática (GDD) ou só enquanto segura A/D
+    if (this.state === "running" || this.state === "jumping" || this.state === "sliding") {
       if (this.dashTimer <= 0) {
-        this.sprite.setVelocityX(BASE_RUN_SPEED);
+        this.applyHorizontalVelocity();
       }
+    }
+  }
+
+  /** Velocidade X conforme AUTO_RUN ou input A/D. */
+  private applyHorizontalVelocity(): void {
+    const speed =
+      this.state === "sliding" ? BASE_RUN_SPEED * 0.55 : BASE_RUN_SPEED;
+
+    if (AUTO_RUN) {
+      this.sprite.setVelocityX(speed);
+      this.sprite.setFlipX(false);
+      return;
+    }
+
+    const left = this.input.isMoveLeftDown();
+    const right = this.input.isMoveRightDown();
+    if (left && !right) {
+      this.sprite.setVelocityX(-speed);
+      this.sprite.setFlipX(true);
+    } else if (right && !left) {
+      this.sprite.setVelocityX(speed);
+      this.sprite.setFlipX(false);
+    } else {
+      this.sprite.setVelocityX(0);
     }
   }
 
   private updateRunAnim(grounded: boolean, deltaMs: number): void {
     if (!this.useAlexSheet) return;
-    if (this.state === "sliding" || this.state === "dashing" || this.state === "attacking") return;
+    if (this.state === "dashing" || this.state === "attacking") return;
 
-    if (grounded && this.state === "running") {
+    const moving = Math.abs(this.sprite.body!.velocity.x) > 20;
+    const canWalkAnim =
+      grounded && (this.state === "running" || this.state === "sliding") && moving;
+
+    if (canWalkAnim) {
       if (this.sprite.anims.currentAnim?.key !== ALEX.run) {
         this.sprite.play(ALEX.run, true);
+      } else if (!this.sprite.anims.isPlaying) {
+        this.sprite.anims.resume();
       }
       this.footstepAcc += deltaMs;
-      if (this.footstepAcc >= 220) {
+      if (this.footstepAcc >= (this.state === "sliding" ? 280 : 220)) {
         this.footstepAcc = 0;
         this.audio?.sfx(SFX.footstep, { volume: 0.35, rate: 1.0 + Math.random() * 0.1 });
       }
@@ -197,7 +228,7 @@ export class Player {
     if (this.dashTimer > 0) {
       this.dashTimer -= deltaMs;
       if (this.dashTimer <= 0) {
-        this.sprite.setVelocityX(BASE_RUN_SPEED);
+        this.applyHorizontalVelocity();
       }
     }
 
@@ -244,7 +275,7 @@ export class Player {
   // ---- Slide (seção 14.3) ----
   private handleSlide(grounded: boolean): void {
     if (this.state === "sliding") return;
-    if (!grounded) return; // slide só no chão (implícito: precisa estar correndo)
+    if (!grounded) return;
     if (this.state !== "running") return;
     if (!this.input.isSlideDown()) return;
 
@@ -261,20 +292,27 @@ export class Player {
     this.setSliding(false);
   }
 
-  /** Em pé ↔ agachar: hitbox ancorada nos pés (não afunda no chão). */
+  /** Em pé ↔ agachar: scaleY provisório (LPC não tem crouch) + hitbox baixa. */
   private setSliding(sliding: boolean): void {
     const feetX = this.sprite.x;
     const feetY = this.sprite.y;
+    const flipX = this.sprite.flipX;
 
     if (this.useAlexSheet) {
-      this.sprite.anims?.stop();
-      this.sprite.setTexture(this.standKey);
       if (sliding) {
         applySlideBody(this.sprite);
+        this.sprite.play(ALEX.run, true);
+        if (Math.abs(this.sprite.body!.velocity.x) < 20) {
+          this.sprite.anims.pause();
+        }
       } else {
         applyStandBody(this.sprite);
         this.sprite.play(ALEX.run, true);
+        if (Math.abs(this.sprite.body!.velocity.x) < 20) {
+          this.sprite.anims.pause();
+        }
       }
+      this.sprite.setFlipX(flipX);
       this.pinFeet(feetX, feetY);
       return;
     }
@@ -285,6 +323,7 @@ export class Player {
     this.sprite.setCrop();
     this.sprite.body!.setSize(this.sprite.width, this.sprite.height);
     this.sprite.body!.setOffset(0, 0);
+    this.sprite.setFlipX(flipX);
     this.pinFeet(feetX, feetY);
   }
 
@@ -335,7 +374,7 @@ export class Player {
     this.state = "dashing";
     this.dashTimer = PHYSICS.dash.durationMs;
     this.dashCooldownTimer = PHYSICS.dash.cooldownMs;
-    this.sprite.setVelocityX(PHYSICS.dash.speed);
+    this.sprite.setVelocityX(this.sprite.flipX ? -PHYSICS.dash.speed : PHYSICS.dash.speed);
     this.scene.events.emit("player-dash-start");
     this.audio?.sfx(SFX.dash);
     this.scene.time.delayedCall(PHYSICS.dash.durationMs, () => {
