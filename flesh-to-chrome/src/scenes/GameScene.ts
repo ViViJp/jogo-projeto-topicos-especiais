@@ -12,6 +12,7 @@ import { LEVELS, getNextPhaseId } from "../levels";
 import {
   TILED_FASE1_MAP_KEY,
   TILED_FASE1_TILESET_KEY,
+  TILED_FASE1_TILESET2_KEY,
   TILED_FASE1_MAP_DATA,
   TILED_FASE1_BACKGROUND,
   TILED_FASE1_NAME,
@@ -104,6 +105,12 @@ export class GameScene extends Phaser.Scene {
       if (!this.textures.exists(TILED_FASE1_TILESET_KEY)) {
         this.load.image(TILED_FASE1_TILESET_KEY, this.tilesetSewerUrl().href);
       }
+      // Segundo tileset do mapa v0.4.0 (pano de fundo, `crystal cave tiles`
+      // - ver "Correções e decisões de v0.4.0" no README e a nota de
+      // classe em `TiledLevelRuntime.ts`).
+      if (!this.textures.exists(TILED_FASE1_TILESET2_KEY)) {
+        this.load.image(TILED_FASE1_TILESET2_KEY, this.tilesetCrystalCaveUrl().href);
+      }
       // O JSON do mapa já foi importado estaticamente (ver TiledFase1.ts) -
       // vai direto pro cache de tilemap do Phaser, sem passar pelo loader
       // de rede (que exigiria uma URL servindo JSON puro - o pipeline de
@@ -124,6 +131,10 @@ export class GameScene extends Phaser.Scene {
 
   private tilesetSewerUrl(): URL {
     return new URL("../assets/tiles/esgoto/tiles/tilesetSewer.png", import.meta.url);
+  }
+
+  private tilesetCrystalCaveUrl(): URL {
+    return new URL("../assets/tiles/esgoto/crystal-cave-tiles.png", import.meta.url);
   }
 
   create(): void {

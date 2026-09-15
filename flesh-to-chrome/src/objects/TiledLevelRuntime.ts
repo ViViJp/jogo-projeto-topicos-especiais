@@ -5,6 +5,8 @@ import {
   TILED_FASE1_MAP_KEY,
   TILED_FASE1_TILESET_KEY,
   TILED_FASE1_TILESET_NAME,
+  TILED_FASE1_TILESET2_KEY,
+  TILED_FASE1_TILESET2_NAME,
   TILED_FASE1_OFFSET_Y,
 } from "../levels/TiledFase1";
 
@@ -20,6 +22,13 @@ export interface TiledCheckpointObj {
   id: string;
   x: number;
 }
+
+/** `hazard.kind` conhecidos (contrato §5.3 + `electric_wire`, novo na v0.4.0 - ver nota em `buildObjectHazards`). */
+type HazardBehavior = "floor" | "overhead";
+const HAZARD_KIND_BEHAVIOR: Record<string, HazardBehavior> = {
+  toxic_water: "floor",
+  electric_wire: "overhead",
+};
 
 /**
  * Instancia a Fase 1 a partir do mapa Tiled real, seguindo
@@ -53,6 +62,33 @@ export interface TiledCheckpointObj {
  *    no campo `type` do JSON, não em `class` (contrato §8 - "Observação
  *    sobre Tiled JSON" já avisa que isso pode variar por versão/exportação;
  *    confirmado inspecionando o JSON real antes de escrever este parser).
+ *
+ * v0.4.0 - blockout final da Fase 1 (1050×28, dois tilesets - ver
+ * `TiledFase1.ts`). Duas mudanças de mecanismo importantes em relação ao
+ * mapa provisório usado desde a v0.3.0:
+ *
+ *  1. **Dois tilesets por mapa.** `ground`/`hazards`/`deco` continuam no
+ *     tileset `tileset-sewer` (primeiro plano); a nova layer `background`
+ *     usa exclusivamente `crystal-cave-tiles` (pano de fundo distante,
+ *     confirmado pelo range de gid de cada layer no JSON antes de
+ *     escrever este código). `createLayer` recebe os dois tilesets numa
+ *     lista para toda layer, já que não custa nada e evita surpresa se
+ *     uma exportação futura misturar tiles dos dois num mesmo layer (a
+ *     própria `hazards` já faz isso aqui, puramente pro visual).
+ *  2. **Hazards por objeto de verdade**, finalmente batendo com o
+ *     contrato §5.3 ("hazards: só o visual; a lógica fica em objects") -
+ *     o mapa antigo não tinha nenhum objeto `hazard` real (só um
+ *     `hazard=true` no tileset, mecanismo velho da v0.2.0, mantido aqui
+ *     como fallback morto - `classifyHazardTiles`/`setCollisionByProperty`
+ *     - caso algum mapa futuro ainda dependa dele). Este mapa tem 6
+ *     objetos `hazard` reais: `kind=toxic_water` (4×, poço sem fundo -
+ *     mesmo comportamento "floor" de sempre) e `kind=electric_wire` (2×,
+ *     NOVO, não documentado no contrato ainda). Pela geometria do objeto
+ *     (16px de altura, encostado bem em cima da superfície do chão
+ *     principal) e pelo levelDesign.md ("fios elétricos" citados junto
+ *     com a mecânica de slide na "sequência de domínio"), tratado como
+ *     "overhead" (mesma regra de sempre: mata a não ser que Alex esteja
+ *     deslizando) - `HAZARD_KIND_BEHAVIOR` acima. Ver `buildObjectHazards()`.
  */
 export class TiledLevelRuntime {
   readonly map: Phaser.Tilemaps.Tilemap;
@@ -67,6 +103,7 @@ export class TiledLevelRuntime {
   readonly checkpoints: TiledCheckpointObj[] = [];
   readonly creditSprites = new Map<string, Phaser.Physics.Arcade.Sprite>();
   readonly checkpointTriggered = new Set<string>();
+  private readonly hazardZones: Array<{ zone: Phaser.GameObjects.Zone; behavior: HazardBehavior; kind: string }> = [];
 
   private endGateTriggered = false;
 
@@ -84,13 +121,21 @@ export class TiledLevelRuntime {
     if (!tileset) {
       throw new Error(`Tileset "${TILED_FASE1_TILESET_NAME}" não encontrado no mapa da Fase 1`);
     }
+    const tileset2 = this.map.addTilesetImage(TILED_FASE1_TILESET2_NAME, TILED_FASE1_TILESET2_KEY);
+    if (!tileset2) {
+      throw new Error(`Tileset "${TILED_FASE1_TILESET2_NAME}" não encontrado no mapa da Fase 1`);
+    }
+    const allTilesets = [tileset, tileset2];
 
     const offsetY = TILED_FASE1_OFFSET_Y;
 
-    const deco = this.map.createLayer("deco", tileset, 0, offsetY) as Phaser.Tilemaps.TilemapLayer | null;
-    deco?.setDepth(-10);
+    const background = this.map.createLayer("background", allTilesets, 0, offsetY) as Phaser.Tilemaps.TilemapLayer | null;
+    background?.setDepth(-20);
 
-    const ground = this.map.createLayer("ground", tileset, 0, offsetY) as Phaser.Tilemaps.TilemapLayer | null;
+    const decoBack = this.map.createLayer("deco-back", allTilesets, 0, offsetY) as Phaser.Tilemaps.TilemapLayer | null;
+    decoBack?.setDepth(-15);
+
+    const ground = this.map.createLayer("ground", allTilesets, 0, offsetY) as Phaser.Tilemaps.TilemapLayer | null;
     if (!ground) throw new Error('Fase 1 (Tiled): camada "ground" ausente no mapa');
     // -1 (não 0) é o índice de "vazio" nos Tiles internos do Phaser 4 - ver
     // README "Correções e decisões de v0.2.0": excluir só [0] deixa passar
@@ -101,13 +146,19 @@ export class TiledLevelRuntime {
     ground.setDepth(0);
     this.groundLayer = ground;
 
-    const hazards = this.map.createLayer("hazards", tileset, 0, offsetY) as Phaser.Tilemaps.TilemapLayer | null;
+    const hazards = this.map.createLayer("hazards", allTilesets, 0, offsetY) as Phaser.Tilemaps.TilemapLayer | null;
     if (hazards) {
       hazards.setDepth(1);
+      // Mecanismo antigo (v0.2.0), mantido como fallback morto - este mapa
+      // não tem nenhum tile com a propriedade `hazard`, então isto vira um
+      // no-op inofensivo (ver nota da classe acima).
       this.classifyHazardTiles(hazards, ground);
       hazards.setCollisionByProperty({ hazard: true });
     }
     this.hazardsLayer = hazards;
+
+    const deco = this.map.createLayer("deco", allTilesets, 0, offsetY) as Phaser.Tilemaps.TilemapLayer | null;
+    deco?.setDepth(2);
 
     this.lengthPx = this.map.widthInPixels;
     this.fallDeathY = offsetY + this.map.heightInPixels + 150;
@@ -138,6 +189,7 @@ export class TiledLevelRuntime {
 
     this.buildCredits();
     this.buildCheckpoints();
+    this.buildObjectHazards(byType("hazard"), offsetY);
   }
 
   private propString(o: Phaser.Types.Tilemaps.TiledObject | undefined, name: string): string | undefined {
@@ -201,12 +253,44 @@ export class TiledLevelRuntime {
     // Mesmo visual usado no nível desenhado à mão (`LevelRuntime.ts`) -
     // `checkpoint` ainda não está formalizado no contrato (§6), mas já
     // aparece no mapa com `id`, então segue a mesma convenção X-threshold.
-    const groundSurfaceY = TILED_FASE1_OFFSET_Y + 16 * 16;
+    // Linha do chão principal atualizada na v0.4.0 (era 16, agora 21 -
+    // ver `TiledFase1.TILED_FASE1_OFFSET_Y`).
+    const groundSurfaceY = TILED_FASE1_OFFSET_Y + 21 * 16;
     for (const cp of this.checkpoints) {
       this.scene.add
         .rectangle(cp.x, groundSurfaceY - 40, 30, 100, 0x36e2ff, 0.25)
         .setStrokeStyle(2, 0x36e2ff)
         .setDepth(2);
+    }
+  }
+
+  /**
+   * v0.4.0 - hazards de verdade como objeto (contrato §5.3), no lugar do
+   * mecanismo velho por propriedade de tile (`classifyHazardTiles`, morto
+   * neste mapa - ver nota da classe). Cada objeto `hazard` da layer
+   * `objects` vira uma zona física invisível (`scene.add.zone` + corpo
+   * estático) do tamanho exato do retângulo desenhado no Tiled; o overlap
+   * com o jogador é registrado em `registerPhysics()`, junto com o resto
+   * da física, não aqui (aqui só cria as zonas - a ordem de criação não
+   * pode depender de quando o `Player` existe, que só é instanciado depois
+   * deste construtor rodar, em `GameScene.createTiled()`).
+   */
+  private buildObjectHazards(hazardObjs: Phaser.Types.Tilemaps.TiledObject[], offsetY: number): void {
+    for (const o of hazardObjs) {
+      const kind = this.propString(o, "kind");
+      const x = o.x ?? 0;
+      const y = (o.y ?? 0) + offsetY;
+      const w = o.width ?? 16;
+      const h = o.height ?? 16;
+      // Tiled dá x/y do CANTO superior-esquerdo do retângulo; a zone usa centro.
+      const zone = this.scene.add.zone(x + w / 2, y + h / 2, w, h);
+      this.scene.physics.add.existing(zone, true); // true = corpo estático
+      // `kind` desconhecido (fora do contrato §5.3 e de `electric_wire`,
+      // novo na v0.4.0) cai em "floor" por segurança - morte instantânea é
+      // o comportamento mais chamativo/óbvio de testar do que deixar um
+      // hazard sem nenhum efeito passar despercebido em playtest.
+      const behavior: HazardBehavior = kind ? (HAZARD_KIND_BEHAVIOR[kind] ?? "floor") : "floor";
+      this.hazardZones.push({ zone, behavior, kind: kind ?? "?" });
     }
   }
 
@@ -227,6 +311,15 @@ export class TiledLevelRuntime {
         if (kind === "overhead") {
           if (player.getState() !== "sliding") player.kill();
         } else if (kind === "floor") {
+          player.kill();
+        }
+      });
+    }
+    for (const hz of this.hazardZones) {
+      this.scene.physics.add.overlap(player.sprite, hz.zone, () => {
+        if (hz.behavior === "overhead") {
+          if (player.getState() !== "sliding") player.kill();
+        } else {
           player.kill();
         }
       });

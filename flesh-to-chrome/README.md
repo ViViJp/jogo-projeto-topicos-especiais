@@ -7,6 +7,41 @@ Stack conforme a Seção 22 do GDD: **TypeScript + Phaser `^4.2.1` + Parcel**.
 
 ## Changelog
 
+- **v0.4.0** — troca do blockout da Fase 1 por um mapa Tiled novo/mais
+  completo, encontrado dentro do `.rar` do projeto pai enviado
+  (`jogo-projeto-topicos-especiais.rar`) a pedido explícito ("verifica se
+  existe um outro mapa... implemente ele... mexer apenas se existir uma
+  outra versão do mapa") - confirmado que é de fato uma versão diferente
+  (1050×28 tiles, era 720×20) antes de tocar em qualquer coisa. Mudanças:
+  (1) **mapa novo integrado** - duas elevações de chão, plataformas
+  opcionais de risco, e agora dois tilesets no mesmo mapa (`tileset-sewer`
+  pro chão/primeiro plano, como antes, e `crystal-cave-tiles`, novo, só
+  pro pano de fundo distante da caverna). (2) **hazards por objeto de
+  verdade** - o mapa antigo nunca teve nenhum objeto real da classe
+  `hazard` (só um `hazard=true` nos tiles, mecanismo velho da v0.2.0); este
+  segue o contrato (§5.3) com objetos `hazard`/`kind` na layer `objects` -
+  poços de água tóxica (já existiam) e um tipo novo, `electric_wire`
+  (fios na altura da cabeça, exigindo passar deslizando por baixo - **não
+  documentado no contrato**, comportamento inferido pela geometria do
+  objeto e testado explicitamente, ver "Correções e decisões de v0.4.0").
+  (3) **altura do pulo (`-640`) mantida sem alteração**, mas revalidada do
+  zero no mapa novo - não só pelo script de coluna, mas por playthrough
+  completo no motor de física real (chegou até a Clínica sem nenhuma
+  morte) mais rastreamento frame a frame da trajetória nos dois pontos
+  mais arriscados do mapa (o degrau de subida de elevação e uma zona de
+  teto baixo que só se passa deslizando). (4) **pose de agachamento/slide
+  conferida contra o mapa novo e contra o `electric_wire`** especificamente
+  - testado que correr por baixo do fio sem deslizar mata e que deslizar
+  passa ileso, nas duas ocorrências do hazard no mapa; os 4 poços de água
+  tóxica também testados individualmente (todos matam ao toque). (5)
+  **"sombra"** - fundo calibrado por luminância na v0.3.2 (`#000010`)
+  mantido sem remedir (conferido que a layer `background` do mapa novo
+  nunca sobrepõe onde o personagem realmente passa) e reconfirmado
+  visualmente com screenshots novos, correndo e deslizando sobre o
+  terreno novo. Ver "Correções e decisões de v0.4.0" para o detalhe de
+  cada validação, incluindo uma observação de level design registrada (não
+  corrigida silenciosamente) sobre degraus que exigem pulo no meio do
+  percurso normal.
 - **v0.3.2** — segunda rodada no mesmo par de ajustes da v0.3.1, depois de
   feedback dizendo que "tudo continua igual" mesmo após aquela entrega.
   Investigação completa antes de mexer em qualquer valor (ver "Correções e
@@ -225,9 +260,10 @@ Testado com Node 22 / npm 10. O build de produção foi verificado tanto por
 `tsc --noEmit` quanto rodando a build final num Chromium headless (boot do
 Phaser, navegação de menu, corrida, pulo, slide, morte e reinício do
 checkpoint — sem erros de console). A partir da v0.3.0, a Fase 1 (mapa
-Tiled real) tem validação adicional: dois percursos completos do spawn
-até a Clínica de George sem nenhuma morte — ver "Correções e decisões de
-v0.3.0".
+Tiled real) tem validação adicional: percursos completos do spawn até a
+Clínica de George sem nenhuma morte, incluindo o mapa atual (v0.4.0) e
+seus hazards por objeto testados individualmente — ver "Correções e
+decisões de v0.4.0" e "Correções e decisões de v0.3.0".
 
 ## Controles (Seção 19.1 do GDD)
 
@@ -431,6 +467,118 @@ seguro segundo os cálculos acima, chegou até a Clínica de George sem
 nenhuma morte. Também foi validado separadamente que soltar o botão de
 slide bem depois do mínimo (300ms) faz Alex levantar em menos de um
 frame perceptível (~50ms), em vez dos ~550ms de antes.
+
+### Correções e decisões de v0.4.0
+
+**Contexto:** pedido explícito de verificar se o `.rar` do projeto pai
+(`jogo-projeto-topicos-especiais.rar`, enviado junto com uma cópia
+idêntica do `TILED_PHASER_CONTRACT1.md`) continha outra versão do mapa da
+Fase 1 e, só nesse caso, integrá-la - com atenção a três pontos
+específicos (altura do pulo, animação de agachamento/slide, sombra) e a
+instrução explícita de não mexer em mais nada além disso se não houvesse
+mapa novo. Primeiro passo foi justamente essa verificação: `md5sum` e
+dimensões do JSON (`public/assets/maps/esgoto/fase-1.json` dentro do rar)
+contra o mapa em uso - diferentes (1050×28 contra 720×20, hashes
+diferentes), então a integração prosseguiu.
+
+**Estrutura do mapa novo.** Duas elevações de chão (uma "profunda" no
+trecho inicial, a principal depois de um degrau), plataformas opcionais
+elevadas pra rota de risco, e dois tilesets: `tileset-sewer` (chão/
+primeiro plano - note que o `name` interno do tileset mudou de `"sewer"`
+pra `"tileset-sewer"` nesta exportação, conferido lendo o JSON em vez de
+assumir, por causa do aviso do contrato §8 sobre nomes variarem por
+exportação) e `crystal-cave-tiles` (novo, só na layer `background`).
+`TiledLevelRuntime` agora carrega os dois tilesets e passa um array pro
+`createLayer` de cada layer (a API do Phaser aceita isso quando uma layer
+pode ter tiles de mais de um tileset). O deslocamento vertical do mapa
+(`TILED_FASE1_OFFSET_Y`) foi recalculado porque a linha do chão principal
+mudou de 16 (mapa antigo) pra 21 (mapa novo) no grid - conferido que nada
+fica cortado no viewport de 720px com o novo valor (pano de fundo cai em
+y=224-400, fundo do mapa em y≈656).
+
+**Hazards - mudança de mecanismo, não só de conteúdo.** O mapa antigo
+nunca teve um objeto real da classe `hazard`; usava só uma propriedade
+`hazard=true` nos tiles da layer `hazards` (mecanismo antigo, v0.2.0,
+puramente visual sem objeto de colisão dedicado). O mapa novo segue o
+contrato à risca (§5.3): objetos de verdade na layer `objects`, classe
+`hazard`, com uma propriedade `kind`. Dois tipos usados: `toxic_water`
+(4 poços, já existia como conceito) e `electric_wire` (2 fios, tipo novo
+neste mapa). `TiledLevelRuntime.buildObjectHazards()` cria uma
+`Phaser.GameObjects.Zone` estática por objeto e registra overlap contra o
+jogador; o comportamento por `kind` é decidido por um mapa
+(`HAZARD_KIND_BEHAVIOR`): `toxic_water` mata em qualquer estado
+(`"floor"`), `electric_wire` só mata fora do estado `sliding` (`"overhead"`).
+
+**A inferência do `electric_wire` - sinalizada porque não está no
+contrato.** O contrato documenta a classe `hazard`/propriedade `kind` em
+geral, mas `electric_wire` como valor específico não aparece nele - é um
+tipo novo que só existe neste mapa. A inferência de comportamento
+("mata, exceto deslizando por baixo") veio da geometria do objeto no
+JSON: 32×16px, posicionado ~16px acima da superfície do chão principal -
+ou seja, na altura da cabeça de Alex parado/correndo, mas acima do teto
+da hitbox reduzida do slide (`PLAYER_SLIDE_SIZE`) - e do contexto do
+`levelDesign.md` do projeto (fios/obstáculos baixos pedindo pra abaixar).
+Como isso é uma decisão de implementação e não algo confirmado no
+documento oficial, fica registrado aqui explicitamente em vez de
+silenciosamente assumido como certo - se o level designer documentar um
+comportamento diferente pro `electric_wire` no contrato, é só trocar a
+entrada em `HAZARD_KIND_BEHAVIOR`.
+
+**Validação de pulo (`-640` mantido) - playthrough completo, não só o
+script de coluna.** O script de "distância de coluna" (desde a v0.3.0)
+continua útil pra iteração rápida, mas desde o incidente da v0.3.2 (ver
+abaixo) não é mais tratado como validação final sozinho. Neste mapa: (1)
+**bot de playthrough completo** (Playwright dirigindo o motor de física
+real, gatilho de pulo por detecção de vão + um gatilho reativo novo -
+"se estiver no chão, correndo, e o X não avançar em 350ms, pula" - pra
+não precisar mapear manualmente cada obstáculo do mapa de 1050 tiles)
+percorreu o mapa inteiro e chegou até a Clínica sem nenhuma morte. (2) O
+gatilho reativo disparou em 6 pontos (x ≈ 1091, 1763, 1939, 2163, 2659,
+3475) - investigados individualmente lendo a layer `ground` ao redor de
+cada X: em todos os 6, é o mesmo padrão, um degrau real subindo da linha
+21 (chão principal) pra uma linha mais alta (16-18, ou seja 48-80px de
+altura), não uma plataforma flutuante nem nada anômalo. É o comportamento
+esperado de um jogador de verdade nesse tipo de degrau (bater na parede e
+pular pra subir no patamar), não um sintoma de física quebrada - por isso
+o "gatilho reativo" está descrito aqui como observação de design válida,
+não como muleta escondendo um problema. (3) Os dois trechos mais
+arriscados do mapa foram rastreados quadro a quadro à parte (posição
+`body.top`/`body.bottom` reais do corpo físico, não só a posição final):
+o degrau de subida de elevação (~x=845-1058) é limpo pelo pulo `-640` sem
+raspar em nenhuma parede, e a zona de teto baixo (~x=1060-1245, plataforma
+opcional a 32px de altura) só é passável deslizando - confirmado com uma
+folga real de só ~2px entre o topo do corpo agachado e o teto, funcional
+mas apertada (registrado como dado de nivelamento, útil se o level design
+quiser dar mais folga numa próxima revisão).
+
+**Hazards testados de verdade, um por um.** Além do playthrough completo
+(que naturalmente pula por cima dos vãos onde os hazards ficam, sem
+tocar neles - os poços de água tóxica e os fios ficam exatamente nos
+vãos que o mapa já exige pular), cada hazard foi testado isoladamente
+teleportando o personagem pra logo antes de cada objeto e conferindo o
+resultado real no motor de física: os 4 poços de `toxic_water` matam ao
+toque em todos os casos; os 2 `electric_wire` matam se o personagem
+estiver correndo/parado (não deslizando) e são passáveis ilesos segurando
+o slide durante a travessia - nos dois casos, nas duas ocorrências de
+cada hazard no mapa.
+
+**"Sombra" - fundo mantido, não remedido, mas reconfirmado.** O valor
+calibrado por luminância na v0.3.2 (`#000010`) continua o mesmo: a layer
+`background` do mapa novo (tileset `crystal-cave-tiles`) só cobre as
+linhas 0-11 do grid, e o personagem nunca chega perto dessas linhas
+(ele transita nas linhas 16-26) - ou seja, é sempre a cor de câmera, não
+um tile do pano de fundo novo, que fica atrás dele nos trechos onde
+realmente passa, a mesma situação de antes. Reconfirmado visualmente com
+screenshots novos de gameplay real no terreno novo (correndo e
+deslizando, não só o boot inicial) - contraste da silhueta contra o fundo
+segue nítido.
+
+**Antes de finalizar:** removido o hook de debug temporário em `main.ts`
+(`window.__game`, usado pra inspecionar o jogo via Playwright durante a
+validação) - conferido com `git diff --stat` que o arquivo final é
+idêntico ao da v0.3.2 nesse ponto. Rebuild limpo (`dist/` e
+`.parcel-cache` apagados e reconstruídos do zero) e checado headless mais
+uma vez antes do empacotamento final.
 
 ### Correções e decisões de v0.3.2
 
