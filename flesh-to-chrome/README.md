@@ -57,16 +57,17 @@ seguintes:
   narrativo — ver `src/scenes/EndingScene.ts`).
 - Todas as cenas da Seção 22.2 existem no código (`Boot`, `Menu`, `Game`,
   `Clinic`, `Ending`, `Multiplayer`), inclusive as que ainda são stubs.
-- Zero assets externos: toda a arte é placeholder gerado em runtime
-  (`src/utils/PlaceholderTextures.ts`), como pede o Nível 1 do escopo
-  (Seção 7.4). Basta trocar por spritesheets reais quando a arte
-  (Seção 23.1) estiver pronta — física e colisão não mudam.
+- **Alex** (LPC) + **áudio** (BGM/SFX) estão integrados; BGM é global
+  (uma faixa entre Menu / Fase / Clínica / restart). Placeholders ainda
+  cobrem parte dos hazards/UI (`PlaceholderTextures.ts`).
 
 ## Como rodar
 
 Este diretório é o **único jogo** do repositório (a raiz só encaminha para cá).
 
 ```bash
+# preferível na raiz: npm run sync-assets && npm run dev
+
 # a partir de flesh-to-chrome/
 npm install
 npm run dev      # servidor de desenvolvimento com hot reload
@@ -76,6 +77,9 @@ npm start        # mesma coisa, abrindo o navegador automaticamente
 # ou a partir da raiz do repo:
 # npm run dev
 ```
+
+Assets: editar em `../public/assets/`. `npm run sync-assets` espelha **só**
+áudio + alex-flesh — **não toca mapas**.
 
 Outros comandos:
 
@@ -93,6 +97,7 @@ checkpoint — sem erros de console).
 
 | Ação | Teclas |
 | --- | --- |
+| Mover | A / D ou ← / → |
 | Pulo / Salto duplo | Espaço, W, ↑ |
 | Slide | S, ↓ |
 | Ataque | J, clique esquerdo |
@@ -100,6 +105,9 @@ checkpoint — sem erros de console).
 | Dash | K, Shift |
 | Pausa / voltar | Esc |
 | Confirmar | Enter |
+
+> Corrida automática do GDD fica desligada (`AUTO_RUN = false` em
+> `GameConfig.ts`). Para religar o auto-runner, mude para `true`.
 
 ## Arquitetura
 
@@ -117,13 +125,12 @@ src/
 
 ### Sobre o formato de nível
 
-O GDD define Tiled/JSON como ferramenta de level design (Seção 7.1), mas
-nenhum `.tmj` foi fornecido pela equipe de design ainda. Por isso este
-protótipo usa um formato próprio (`src/levels/LevelTypes.ts`) — mais
-simples, mas com a mesma função. Quando a equipe de level design exportar
-mapas reais do Tiled, o caminho recomendado é escrever um
-`TiledLevelAdapter` que traduza o `.tmj` exportado para este mesmo
-`LevelData`, sem precisar tocar em `Player`, nos sistemas ou nas cenas.
+O GDD define Tiled/JSON como ferramenta de level design (Seção 7.1). Os
+mapas existem em `../public/assets/maps/` (incl. `fase-1.tmj` do Victor).
+Este protótipo ainda joga a Fase 1 via LevelBuilder (`src/levels/phase1.ts`);
+integrar o `.tmj` no Phaser é responsabilidade do Motoca. Quando isso
+acontecer, o caminho recomendado é um adapter Tiled → `LevelData` (ou
+runtime dedicado), sem mexer em `Player`/sistemas.
 
 As fases atuais (`src/levels/phase1.ts`, `phase2Intro.ts`) são descritas
 com um `LevelBuilder` sequencial (chão, gaps, obstáculos aéreos, créditos,

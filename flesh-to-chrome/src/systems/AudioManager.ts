@@ -1,6 +1,5 @@
-/// <reference path="./parcel-url.d.ts" />
 /**
- * AudioManager — SFX/BGM via URLs do Parcel (issues #11–#14)
+ * AudioManager — BGM global único + SFX por cena (issue 7).
  */
 import Phaser from "phaser";
 import { BGM_URLS, SFX_URLS } from "../assets/AssetUrls";
@@ -49,15 +48,32 @@ const PHASE_BGM: Record<string, string> = {
   fase5: BGM.fase5,
 };
 
+const ALL_BGM_KEYS = BGM_URLS.map(([key]) => key);
+const REGISTRY_KEY = "ftc:audio";
+
 export class AudioManager {
+  /** Estado de BGM compartilhado entre cenas / restarts. */
+  private static currentBgmKey: string | null = null;
+
   private scene: Phaser.Scene;
-  private currentBgmKey: string | null = null;
   muted = false;
   sfxVolume = 0.55;
   bgmVolume = 0.32;
 
-  constructor(scene: Phaser.Scene) {
+  private constructor(scene: Phaser.Scene) {
     this.scene = scene;
+  }
+
+  /** Uma fachada por game; reutiliza o mesmo estado de BGM. */
+  static forScene(scene: Phaser.Scene): AudioManager {
+    let am = scene.game.registry.get(REGISTRY_KEY) as AudioManager | undefined;
+    if (!am) {
+      am = new AudioManager(scene);
+      scene.game.registry.set(REGISTRY_KEY, am);
+    } else {
+      am.scene = scene;
+    }
+    return am;
   }
 
   static preload(scene: Phaser.Scene): void {
@@ -65,7 +81,6 @@ export class AudioManager {
     for (const [key, url] of BGM_URLS) scene.load.audio(key, url);
   }
 
-  /** Browsers block audio until a user gesture — call on first click/key. */
   unlock(): void {
     try {
       this.scene.sound.unlock();
@@ -95,47 +110,42 @@ export class AudioManager {
     }
   }
 
-  playBgm(key: string, opts: { loop?: boolean; fadeMs?: number } = {}): void {
+  playBgm(key: string, opts: { loop?: boolean } = {}): void {
     const loop = opts.loop ?? true;
-    const fadeMs = opts.fadeMs ?? 400;
     if (!key || this.muted) return;
     this.unlock();
     if (!this.scene.cache.audio.exists(key)) {
       console.warn(`[audio] BGM missing: ${key}`);
       return;
     }
-    if (this.currentBgmKey === key) return;
 
-    const prev = this.currentBgmKey ? this.scene.sound.get(this.currentBgmKey) : null;
-    if (prev?.isPlaying) {
-      this.scene.tweens.add({
-        targets: prev,
-        volume: 0,
-        duration: fadeMs,
-        onComplete: () => prev.stop(),
-      });
+    if (AudioManager.currentBgmKey === key) {
+      const playing = this.scene.sound.getAllPlaying().some((s) => s.key === key);
+      if (playing) return;
     }
 
-    this.currentBgmKey = key;
-    const track = this.scene.sound.add(key, { loop, volume: 0 });
+    this.stopAllBgmImmediate();
+    AudioManager.currentBgmKey = key;
+    const track = this.scene.sound.add(key, { loop, volume: this.bgmVolume });
     track.play();
-    this.scene.tweens.add({ targets: track, volume: this.bgmVolume, duration: fadeMs });
   }
 
   playPhaseBgm(phaseId: string): void {
     this.playBgm(PHASE_BGM[phaseId] ?? BGM.fase1);
   }
 
-  stopBgm(fadeMs = 300): void {
-    if (!this.currentBgmKey) return;
-    const track = this.scene.sound.get(this.currentBgmKey);
-    this.currentBgmKey = null;
-    if (!track) return;
-    this.scene.tweens.add({
-      targets: track,
-      volume: 0,
-      duration: fadeMs,
-      onComplete: () => track.stop(),
-    });
+  stopBgm(_fadeMs = 150): void {
+    this.stopAllBgmImmediate();
+  }
+
+  /** Para TODAS as BGMs conhecidas — evita acumulação após restart. */
+  stopAllBgmImmediate(): void {
+    for (const key of ALL_BGM_KEYS) {
+      for (const track of this.scene.sound.getAll(key)) {
+        track.stop();
+        track.destroy();
+      }
+    }
+    AudioManager.currentBgmKey = null;
   }
 }
