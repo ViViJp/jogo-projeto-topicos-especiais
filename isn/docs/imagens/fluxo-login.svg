@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="420" viewBox="0 0 640 420">
+  <rect width="640" height="420" fill="#f7f7f7"/>
+  <text x="20" y="28" font-family="Arial,sans-serif" font-size="15" fill="#222">Fluxo: login ’ save</text>
+
+  <rect x="240" y="45" width="140" height="36" rx="18" fill="#ddd" stroke="#333"/>
+  <text x="275" y="68" font-family="Arial,sans-serif" font-size="12">Abre o site</text>
+
+  <rect x="240" y="100" width="140" height="36" rx="4" fill="#cfe8ff" stroke="#333"/>
+  <text x="275" y="123" font-family="Arial,sans-serif" font-size="12">Menu</text>
+
+  <rect x="240" y="155" width="140" height="40" rx="4" fill="#fff9c4" stroke="#333"/>
+  <text x="255" y="180" font-family="Arial,sans-serif" font-size="11">Quer salvar?</text>
+
+  <rect x="40" y="230" width="120" height="36" rx="4" fill="#eee" stroke="#333"/>
+  <text x="55" y="253" font-family="Arial,sans-serif" font-size="11">Joga sem conta</text>
+
+  <rect x="240" y="230" width="140" height="36" rx="4" fill="#ffe0b2" stroke="#333"/>
+  <text x="255" y="253" font-family="Arial,sans-serif" font-size="11">Login Google</text>
+
+  <rect x="240" y="290" width="140" height="36" rx="4" fill="#e8f5e9" stroke="#333"/>
+  <text x="250" y="313" font-family="Arial,sans-serif" font-size="11">Carrega / cria save</text>
+
+  <rect x="240" y="350" width="140" height="36" rx="18" fill="#ddd" stroke="#333"/>
+  <text x="265" y="373" font-family="Arial,sans-serif" font-size="12">Campanha</text>
+
+  <line x1="310" y1="81" x2="310" y2="100" stroke="#333"/>
+  <line x1="310" y1="136" x2="310" y2="155" stroke="#333"/>
+  <line x1="240" y1="175" x2="160" y2="248" stroke="#333"/>
+  <line x1="310" y1="195" x2="310" y2="230" stroke="#333"/>
+  <line x1="310" y1="266" x2="310" y2="290" stroke="#333"/>
+  <line x1="310" y1="326" x2="310" y2="350" stroke="#333"/>
+</svg>

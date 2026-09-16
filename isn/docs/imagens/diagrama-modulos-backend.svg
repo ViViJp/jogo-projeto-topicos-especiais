@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="320" viewBox="0 0 720 320">
+  <rect width="720" height="320" fill="#f7f7f7"/>
+  <text x="20" y="28" font-family="Arial,sans-serif" font-size="16" fill="#222">Módulos do backend</text>
+
+  <rect x="30" y="130" width="120" height="50" rx="6" fill="#cfe8ff" stroke="#333"/>
+  <text x="50" y="160" font-family="Arial,sans-serif" font-size="12">Frontend</text>
+
+  <rect x="200" y="50" width="300" height="220" fill="none" stroke="#666" stroke-dasharray="4 3"/>
+  <text x="220" y="70" font-family="Arial,sans-serif" font-size="12" fill="#444">Backend</text>
+
+  <rect x="230" y="90" width="110" height="36" rx="4" fill="#ffe0b2" stroke="#333"/>
+  <text x="255" y="113" font-family="Arial,sans-serif" font-size="12">Auth</text>
+
+  <rect x="360" y="90" width="110" height="36" rx="4" fill="#ffe0b2" stroke="#333"/>
+  <text x="385" y="113" font-family="Arial,sans-serif" font-size="12">Save</text>
+
+  <rect x="230" y="145" width="110" height="36" rx="4" fill="#ffe0b2" stroke="#333"/>
+  <text x="245" y="168" font-family="Arial,sans-serif" font-size="12">Game API</text>
+
+  <rect x="360" y="145" width="110" height="36" rx="4" fill="#ffe0b2" stroke="#333"/>
+  <text x="380" y="168" font-family="Arial,sans-serif" font-size="12">E-mail</text>
+
+  <rect x="290" y="200" width="120" height="36" rx="4" fill="#ffe0b2" stroke="#333"/>
+  <text x="315" y="223" font-family="Arial,sans-serif" font-size="12">Auditoria</text>
+
+  <rect x="560" y="80" width="120" height="40" rx="6" fill="#e8f5e9" stroke="#333"/>
+  <text x="590" y="105" font-family="Arial,sans-serif" font-size="12">Banco</text>
+
+  <rect x="560" y="150" width="120" height="40" rx="6" fill="#f3e5f5" stroke="#333"/>
+  <text x="580" y="175" font-family="Arial,sans-serif" font-size="12">Google</text>
+
+  <rect x="560" y="220" width="120" height="40" rx="6" fill="#fff9c4" stroke="#333"/>
+  <text x="595" y="245" font-family="Arial,sans-serif" font-size="12">SES</text>
+
+  <line x1="150" y1="155" x2="230" y2="110" stroke="#333"/>
+  <line x1="150" y1="155" x2="360" y2="110" stroke="#333"/>
+  <line x1="150" y1="155" x2="230" y2="163" stroke="#333"/>
+</svg>
