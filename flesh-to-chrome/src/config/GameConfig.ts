@@ -13,9 +13,9 @@ export const BASE_RUN_SPEED = 320; // px/s, provisório
 
 /**
  * `false` = Alex só anda com A/D (ou ←/→). Câmera segue o personagem.
- * `true` = auto-runner do GDD §14.1 (corre sozinho para a direita).
+ * `true` = auto-runner do GDD §14.1 (corre sozinho para a direita, sem parar).
  */
-export const AUTO_RUN = false;
+export const AUTO_RUN = true;
 
 export const GRAVITY_Y = 1600;
 
