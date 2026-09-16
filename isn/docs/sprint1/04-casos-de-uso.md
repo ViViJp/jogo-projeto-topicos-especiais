@@ -76,13 +76,13 @@ Projeto: Flesh to Chrome
 
 ---
 
-## UC05 — Clínica / aceitar implante
+## UC05 — Clínica / receber implante
 
 - **Ator:** Jogador (idealmente autenticado pra persistir)
 - **Pré-condição:** acabou de concluir Fase 1, 2, 3 ou 4
 - **Fluxo principal:**
   1. Jogo abre cena da clínica (George Vektor)
-  2. Jogador aceita o procedimento
+  2. O procedimento acontece (não há escolha de recusar)
   3. Implante correspondente é marcado no estado do jogo
   4. Habilidade nova é liberada
   5. Se autenticado, save é atualizado (UC04)
@@ -123,9 +123,25 @@ Projeto: Flesh to Chrome
 - **Pré-condição:** autenticado; eventos já registrados
 - **Fluxo principal:**
   1. Usuário (ou admin) solicita histórico de operações críticas
-  2. Backend filtra e devolve lista (login, saves, escolha do Portão, etc.)
+  2. Backend filtra e devolve lista (login, saves, escolha do Portão, partida multiplayer, etc.)
   3. Interface mostra os registros
 - **Obs.:** na prática da disciplina, o importante é **existir o registro**; a tela de consulta pode ser simples (até endpoint documentado + listagem básica)
+
+---
+
+## UC09 — Jogar multiplayer competitivo
+
+- **Ator:** Jogador
+- **Pré-condição:** autenticado
+- **Fluxo principal:**
+  1. No menu, escolhe modo multiplayer
+  2. Cria ou entra em uma sala/partida
+  3. Quando há 2 jogadores prontos, a corrida começa
+  4. Cada um joga a pista (tempo + créditos da partida)
+  5. Backend registra resultado / ranking da corrida
+  6. Sistema mostra vencedor
+- **Regras:** não mexe no save da campanha nem nos finais
+- **Alternativo:** sala incompleta / desconexão → partida cancela ou declara WO (a gente define na implementação)
 
 ---
 
@@ -146,5 +162,6 @@ flowchart TB
   jogador --> UC06
   jogador --> UC07
   jogador --> UC08
+  jogador --> UC09
   sistema --> UC07
 ```

@@ -61,14 +61,15 @@ Eles detalham o jogo + como a gente cumpre a lista da disciplina no nosso contex
 | --- | --- |
 | RF13 | O jogo deve ser um auto-runner 2D: Alex corre automaticamente; o jogador controla pulo e slide desde a Fase 1. |
 | RF14 | A campanha de ascensão deve ter 5 fases (setores) em Glitch City. |
-| RF15 | Ao concluir as Fases 1–4, o jogador deve acessar a clínica e poder aceitar um implante. |
+| RF15 | Ao concluir as Fases 1–4, o jogador deve passar pela clínica e receber o implante correspondente (sem opção de recusar). |
 | RF16 | Os implantes devem seguir a ordem: pernas (salto duplo), braços (ataque), olhos (scan), propulsores (dash). |
-| RF17 | Cada implante aceito deve liberar a habilidade correspondente e ficar registrado no save. |
+| RF17 | Cada implante deve liberar a habilidade correspondente e ficar registrado no save. |
 | RF18 | Perigos letais devem matar em 1 hit e reiniciar do último checkpoint. |
 | RF19 | O jogador deve poder coletar créditos; checkpoint consolida a pontuação da campanha. |
 | RF20 | Na Fase 5 (Portão), o jogador deve escolher entre Final Chrome (aceitar) ou iniciar a descida (recusar). |
 | RF21 | O save autenticado deve guardar no mínimo: fase/setor, implantes, créditos consolidados e caminho escolhido. |
-| RF22 | Multiplayer competitivo é secundário: só entra se o núcleo (campanha + save + requisitos de nuvem) estiver ok. |
+| RF22 | O sistema deve oferecer multiplayer competitivo (corrida com 2 jogadores autenticados). |
+| RF23 | O multiplayer deve registrar resultado/ranking da partida sem alterar o save da campanha. |
 
 Obs.: números de balanceamento / level design o Victor ainda pode ajustar nas regras de negócio e no GDD.
 

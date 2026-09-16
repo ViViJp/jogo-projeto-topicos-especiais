@@ -52,13 +52,13 @@ Se no futuro existir loja de skin:
 ## 5. Clínica e implantes
 
 1. Ao concluir as Fases 1–4, Alex passa pela clínica do George Vektor.
-2. Aceitar o implante é necessário pra liberar a habilidade e seguir a campanha como desenhado.
+2. O implante **não é opcional**: o procedimento acontece e a campanha segue. O jogador não escolhe “sim/não”.
 3. Ordem fixa:
    - Fase 1 → pernas → salto duplo  
    - Fase 2 → braços → ataque/quebra  
    - Fase 3 → olhos → scan  
    - Fase 4 → propulsores → dash  
-4. Implante aceito fica registrado no save e altera o visual/moveset.
+4. Implante fica registrado no save e altera o visual/moveset.
 
 ---
 
@@ -73,17 +73,19 @@ Se no futuro existir loja de skin:
 
 ---
 
-## 7. Multiplayer (secundário)
+## 7. Multiplayer
 
-1. Não altera save da campanha nem finais.
-2. É uma corrida separada (tempo + créditos da partida).
-3. Só entra no escopo se o núcleo (campanha + save + requisitos de nuvem) estiver ok.
+1. Modo separado da campanha: corrida competitiva (dois jogadores).
+2. Exige login (pra identificar quem jogou e gravar resultado da partida).
+3. Resultado combina tempo e créditos da partida.
+4. **Não** altera save da campanha, implantes nem finais.
+5. Backend mantém sala/partida e pode guardar ranking simples da corrida.
 
 ---
 
 ## 8. Auditoria e comunicação
 
-1. Operações críticas devem gerar registro: login, logout, criação/atualização de save, escolha do Portão, (e compra cosmética se existir).
+1. Operações críticas devem gerar registro: login, logout, criação/atualização de save, escolha do Portão, resultado de partida multiplayer (e compra cosmética se existir).
 2. O sistema pode enviar e-mail/notificação (ex.: boas-vindas após primeiro login, ou aviso de progresso relevante).
 3. Logs de auditoria servem pra análise posterior, não pra gameplay.
 

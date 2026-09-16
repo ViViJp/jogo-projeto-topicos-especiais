@@ -56,28 +56,49 @@ flowchart TD
 
 ---
 
-## 3. Clínica → implante → habilidade
+## 3. Clínica → implante → habilidade (sem escolha)
+
+O jogador **não escolhe** se coloca o implante. Depois da fase 1–4 o procedimento acontece e a habilidade é liberada.
 
 ```mermaid
 flowchart TD
   fimFase([Concluiu fase 1-4]) --> clinica[Cena da clinica]
-  clinica --> aceita{Aceita implante?}
-  aceita -->|Sim| marca[Marca implante no estado]
+  clinica --> marca[Implante instalado]
   marca --> libera[Libera habilidade nova]
   libera --> auth{Jogador autenticado?}
   auth -->|Sim| save[Salva no backend]
   save --> audit[Registra na auditoria]
   audit --> proxima[Segue pra proxima fase]
   auth -->|Nao| proxima
-  aceita -->|Nao| bloqueio[Fica sem a habilidade / campanha incompleta]
-  bloqueio --> nota[Regra final de recusa pode ser ajustada no GDD]
 ```
 
 ![Fluxo clínica](../imagens/fluxo-clinica.png)
 
 ---
 
-## 4. Deploy em produção (alto nível)
+## 4. Multiplayer competitivo
+
+```mermaid
+flowchart TD
+  menu([Menu multiplayer]) --> login{Autenticado?}
+  login -->|Nao| auth[Faz login]
+  auth --> sala
+  login -->|Sim| sala[Cria ou entra na sala]
+  sala --> prontos{2 jogadores prontos?}
+  prontos -->|Nao| espera[Aguarda / cancela]
+  espera --> sala
+  prontos -->|Sim| corrida[Corrida tempo + creditos]
+  corrida --> resultado[Calcula vencedor]
+  resultado --> rank[Grava ranking da partida]
+  rank --> fim([Volta ao menu])
+  rank -.-> saveCampanha[Nao altera save da campanha]
+```
+
+![Fluxo multiplayer](../imagens/fluxo-multiplayer.png)
+
+---
+
+## 5. Deploy em produção (alto nível)
 
 ```mermaid
 flowchart TD

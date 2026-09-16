@@ -3,22 +3,23 @@
 Projeto: Flesh to Chrome  
 Sprint 1 — visão de arquitetura (ainda pode mudar na implementação)
 
-As figuras estão em PNG em [`../imagens/`](../imagens/) (abrimos direto no GitHub/Preview). Também tem o Mermaid abaixo pra quem quiser editar fácil.
+As figuras estão em PNG em [`../imagens/`](../imagens/). Também tem Mermaid pra editar fácil.
 
 ---
 
 ## 1. Visão geral — cliente, servidor e nuvem
 
-O browser baixa o frontend e fala com a API. A API usa banco, OAuth e serviço de e-mail. Em produção isso vive na AWS.
+O browser baixa o frontend e fala com a API. A API cuida de save da campanha, multiplayer/salas, OAuth e e-mail.
 
 ```mermaid
 flowchart LR
   usuario[Usuario]
   browser[Browser_Frontend_Phaser]
   api[Backend_API_REST]
-  db[(Banco_de_dados)]
+  db[(Banco_save_ranking)]
   oauth[Provedor_OAuth_Google]
   email[Email_notificacoes]
+  mp[Multiplayer_salas]
   static[Hospedagem_estatica]
 
   usuario --> browser
@@ -27,6 +28,7 @@ flowchart LR
   api --> db
   api --> oauth
   api --> email
+  api --> mp
 ```
 
 ![Visão geral](../imagens/diagrama-visao-geral.png)
@@ -35,18 +37,18 @@ flowchart LR
 
 ## 2. Módulos do backend
 
-Separação bem direta do que a API precisa ter pra atender a disciplina + o jogo:
-
 ```mermaid
 flowchart TB
   fe[Frontend_Phaser]
 
   subgraph backend [Backend]
     auth[Auth_OAuth]
-    save[Save_progresso]
+    save[Save_campanha]
     game[Game_progress_API]
     notify[Email_notificacoes]
     audit[Auditoria]
+    multi[Multiplayer]
+    rank[Ranking_partida]
   end
 
   db[(Banco)]
@@ -56,26 +58,30 @@ flowchart TB
   fe --> auth
   fe --> save
   fe --> game
+  fe --> multi
   auth --> google
   auth --> db
   save --> db
   game --> db
+  multi --> db
+  multi --> rank
   save --> audit
   auth --> audit
   game --> audit
+  multi --> audit
   notify --> mailer
   auth --> notify
 ```
 
 ![Módulos do backend](../imagens/diagrama-modulos-backend.png)
 
-Resumo do que cada bloco faz:
-
 | Módulo | Função |
 | --- | --- |
 | Auth | login/logout com Google, sessão/token |
 | Save | grava/lê progresso da campanha |
-| Game progress | endpoints ligados a estado do jogo (fase, implante, Portão) |
+| Game progress | fase, implante, Portão |
+| Multiplayer | salas / partida 1v1 |
+| Ranking | resultado da corrida multiplayer |
 | E-mail | boas-vindas e avisos |
 | Auditoria | log de operações críticas |
 
@@ -107,10 +113,10 @@ flowchart TB
 ![Ambientes](../imagens/diagrama-ambientes.png)
 
 - **Dev:** pra testar sem gastar / sem quebrar produção.  
-- **Prod:** domínio público, subida automática com CI/CD + IaC (Pulumi), região padrão da disciplina `sa-east-1`.
+- **Prod:** domínio público, subida automática com CI/CD + IaC (Pulumi), região `sa-east-1`.
 
 ---
 
 ## Observação
 
-Isso é diagrama de blocos da Sprint 1. Nomes exatos de serviços AWS (S3, CloudFront, ECS, RDS, etc.) a gente fecha quando for montar o Pulumi de verdade.
+Sprint 1 = diagrama de blocos. Nomes exatos de serviços AWS a gente fecha no Pulumi depois.
