@@ -3,7 +3,7 @@
 Projeto: Flesh to Chrome  
 Sprint 1 — visão de arquitetura (ainda pode mudar na implementação)
 
-As figuras em Mermaid renderizam no GitHub. Versões estáticas (pra colar no relatório se precisar) estão em [`../imagens/`](../imagens/).
+As figuras estão em PNG em [`../imagens/`](../imagens/) (abrimos direto no GitHub/Preview). Também tem o Mermaid abaixo pra quem quiser editar fácil.
 
 ---
 
@@ -29,7 +29,7 @@ flowchart LR
   api --> email
 ```
 
-![Visão geral](../imagens/diagrama-visao-geral.svg)
+![Visão geral](../imagens/diagrama-visao-geral.png)
 
 ---
 
@@ -67,7 +67,7 @@ flowchart TB
   auth --> notify
 ```
 
-![Módulos do backend](../imagens/diagrama-modulos-backend.svg)
+![Módulos do backend](../imagens/diagrama-modulos-backend.png)
 
 Resumo do que cada bloco faz:
 
@@ -104,7 +104,7 @@ flowchart TB
   cloudFE --> cloudAPI --> cloudDB
 ```
 
-![Ambientes](../imagens/diagrama-ambientes.svg)
+![Ambientes](../imagens/diagrama-ambientes.png)
 
 - **Dev:** pra testar sem gastar / sem quebrar produção.  
 - **Prod:** domínio público, subida automática com CI/CD + IaC (Pulumi), região padrão da disciplina `sa-east-1`.

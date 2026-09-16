@@ -27,7 +27,7 @@ flowchart TD
   campanha --> fimOk([Pronto pra jogar])
 ```
 
-![Fluxo login](../imagens/fluxo-login.svg)
+![Fluxo login](../imagens/fluxo-login.png)
 
 ---
 
@@ -52,7 +52,7 @@ flowchart TD
   fimFase -->|Sim| clinicaOuProximo([Clinica ou Portao])
 ```
 
-![Fluxo gameplay](../imagens/fluxo-gameplay.svg)
+![Fluxo gameplay](../imagens/fluxo-gameplay.png)
 
 ---
 
@@ -73,7 +73,7 @@ flowchart TD
   bloqueio --> nota[Regra final de recusa pode ser ajustada no GDD]
 ```
 
-![Fluxo clínica](../imagens/fluxo-clinica.svg)
+![Fluxo clínica](../imagens/fluxo-clinica.png)
 
 ---
 
@@ -92,6 +92,6 @@ flowchart TD
   domain --> prod([Producao no ar])
 ```
 
-![Fluxo deploy](../imagens/fluxo-deploy.svg)
+![Fluxo deploy](../imagens/fluxo-deploy.png)
 
 Esse fluxo é o alvo da disciplina (CI/CD + IaC). Na Sprint 1 a gente só especifica; a implementação vem depois.
