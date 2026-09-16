@@ -22,7 +22,7 @@ export class MenuScene extends Phaser.Scene {
 
   create(): void {
     this.cameras.main.setBackgroundColor(0x05050a);
-    const audio = new AudioManager(this);
+    const audio = AudioManager.forScene(this);
     audio.unlock();
     // BGM só depois do primeiro clique/tecla (autoplay policy)
     const startMusic = () => {
@@ -122,6 +122,7 @@ export class MenuScene extends Phaser.Scene {
   private continueGame(): void {
     const save = SaveState.load();
     const data = save.get();
+    AudioManager.forScene(this).stopBgm();
     this.scene.start("GameScene", {
       phaseId: data.currentPhaseId,
       checkpointX: data.checkpoint.x,
@@ -137,6 +138,7 @@ export class MenuScene extends Phaser.Scene {
       return;
     }
     SaveState.newGame();
+    AudioManager.forScene(this).stopBgm();
     this.scene.start("GameScene", { phaseId: "fase1" } as GameSceneData);
   }
 
@@ -160,6 +162,7 @@ export class MenuScene extends Phaser.Scene {
     const onConfirm = () => {
       cleanup();
       SaveState.newGame();
+      AudioManager.forScene(this).stopBgm();
       this.scene.start("GameScene", { phaseId: "fase1" } as GameSceneData);
     };
     const onCancel = () => {

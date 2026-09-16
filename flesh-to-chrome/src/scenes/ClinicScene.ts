@@ -30,7 +30,7 @@ export class ClinicScene extends Phaser.Scene {
 
   create(): void {
     this.cameras.main.setBackgroundColor(0x120a1a);
-    const audio = new AudioManager(this);
+    const audio = AudioManager.forScene(this);
     audio.playBgm(BGM.clinic);
     audio.sfx(SFX.clinicTools);
 
@@ -84,6 +84,7 @@ export class ClinicScene extends Phaser.Scene {
     this.tweens.add({ targets: prompt, alpha: 0.3, yoyo: true, repeat: -1, duration: 700 });
 
     const proceed = () => {
+      audio.stopBgm();
       if (!this.data$.nextPhaseId) {
         this.scene.start("EndingScene", { ...this.data$, abilities: newAbilities });
         return;

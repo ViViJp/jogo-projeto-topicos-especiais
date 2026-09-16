@@ -8,8 +8,14 @@
 export const SCREEN_WIDTH = 1280;
 export const SCREEN_HEIGHT = 720;
 
-/** Seção 14.1 - Corrida automática: velocidade-base fixa em todas as fases. */
+/** Seção 14.1 - velocidade base (auto-run ou movimento manual). */
 export const BASE_RUN_SPEED = 320; // px/s, provisório
+
+/**
+ * `false` = Alex só anda com A/D (ou ←/→). Câmera segue o personagem.
+ * `true` = auto-runner do GDD §14.1 (corre sozinho para a direita, sem parar).
+ */
+export const AUTO_RUN = true;
 
 export const GRAVITY_Y = 1600;
 

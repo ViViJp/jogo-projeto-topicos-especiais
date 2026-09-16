@@ -1,44 +1,32 @@
 # Mapas Tiled — Flesh to Chrome
 
-Gerados a partir de `levelDesign.md` + GDD §16 (draft jogável; editável no Tiled).
+**Edite só aqui:** `public/assets/maps/`  
+O sync de runtime (`npm run sync-assets`) **não** copia mapas.
 
 ## Arquivos
 
-| Fase | Setor | Mapa | Tile |
+| Fase | Setor | Arquivo | Tile |
 | --- | --- | --- | --- |
-| 1 | Esgoto | `esgoto/fase-1.json` | 16×16 |
+| 1 | Esgoto | `esgoto/fase-1.json` + **`fase-1.tmj`** (LD) | 16×16 |
 | 2 | Industrial | `industrial/fase-2.json` | 32×32 |
 | 3 | Meio Urbano | `meio-urbano/fase-3.json` | 32×32 |
 | 4 | Corporativo | `corporativo/fase-4.json` | 32×32 |
 | 5 | Topo | `topo/fase-5.json` | 32×32 |
 
-## Camadas (todas as fases)
+## Abrir no Tiled
 
-- `deco` — decoração / teto
-- `ground` — colisão, plataformas, gaps
-- `hazards` — canos, prensas, barricadas (tiles)
-- `objects` — spawn, checkpoint, créditos, inimigos, clínica, Portão
+1. https://www.mapeditor.org/
+2. File → Open → `public/assets/maps/<setor>/fase-N.json` ou `fase-1.tmj`
+3. Salve na raiz (`public/assets/`)
+
+Packs: [`../LINKS-VICTOR.md`](../LINKS-VICTOR.md)
 
 ## Regenerar
 
-```bash
-python3 scripts/generate_tiled_maps.py          # todas
-python3 scripts/generate_tiled_maps.py --fase 3 # uma fase
-```
+Scripts `scripts/generate_*.py` são drafts opcionais.  
+**Não** rode por cima do `fase-1.tmj` / mapas editados à mão.
 
-## Abrir no Tiled
+## Phaser
 
-1. Instale https://www.mapeditor.org/
-2. **File → Open** → `public/assets/maps/<setor>/fase-N.json`
-3. Edite e salve
-
-## Phaser (Vitor)
-
-```js
-this.load.tilemapTiledJSON('fase-1', 'assets/maps/esgoto/fase-1.json');
-this.load.image('sewer', 'assets/tiles/esgoto/tiles/tilesetSewer.png');
-const map = this.make.tilemap({ key: 'fase-1' });
-```
-
-Object types úteis: `spawn`, `checkpoint`, `credit`, `clinic`, `enemy`,
-`hazard`, `breakable`, `scan_reveal`, `gate`, `ending_choice`, `phase_end`.
+Integração do `.tmj` no jogo = Motoca (`flesh-to-chrome/src/`).  
+Hoje a Fase 1 jogável ainda usa LevelBuilder (`src/levels/phase1.ts`).

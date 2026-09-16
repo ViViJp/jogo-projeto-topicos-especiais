@@ -16,6 +16,13 @@ export const ALEX = {
   hurt: "alex-hurt",
 } as const;
 
+/**
+ * O sheet LPC NÃO tem crouch/crawl de platformer — só walk/sit/jump/etc.
+ * Sit parece “cadeira invisível”. Até existir arte de agachar, usamos
+ * scaleY a partir dos pés (origem 0.5,1) + animação de walk.
+ */
+export const SLIDE_VISUAL_SCALE_Y = PLAYER_SLIDE_SIZE.height / PLAYER_SIZE.height;
+
 export function lpcFrameRange(row: number, count: number): number[] {
   const start = row * LPC.COLS;
   return Phaser.Utils.Array.NumberArray(start, start + count - 1) as number[];
@@ -57,11 +64,10 @@ export function createAlexAnims(scene: Phaser.Scene): boolean {
 
 /**
  * Corpo em pé: hitbox ancorada na base do frame (origem dos pés = 0.5, 1).
- * Não usa setDisplaySize — isso descasa body × sprite e afunda no chão.
  */
 export function applyStandBody(sprite: Phaser.Physics.Arcade.Sprite): void {
   sprite.setScale(1);
-  sprite.setCrop(); // limpa crop do slide
+  sprite.setCrop();
   const body = sprite.body as Phaser.Physics.Arcade.Body;
   body.setSize(PLAYER_SIZE.width, PLAYER_SIZE.height);
   const ox = (LPC.FRAME - PLAYER_SIZE.width) / 2;
@@ -70,18 +76,20 @@ export function applyStandBody(sprite: Phaser.Physics.Arcade.Sprite): void {
 }
 
 /**
- * Slide/agachar: mantém o frame 64×64 e a origem nos pés; só reduz o
- * corpo físico ancorado embaixo. Visual: crop do topo (parece agachado)
- * sem mover Y no mundo.
+ * Agachar provisório: comprime o sprite a partir dos pés (scaleY) e reduz
+ * a hitbox. Continua o frame/anim de walk — sem sit e sem crop de cabeça.
+ * Body size é compensado porque o Arcade multiplica size × scale.
  */
 export function applySlideBody(sprite: Phaser.Physics.Arcade.Sprite): void {
-  sprite.setScale(1);
-  const cropTop = LPC.FRAME - PLAYER_SLIDE_SIZE.height;
-  sprite.setCrop(0, cropTop, LPC.FRAME, PLAYER_SLIDE_SIZE.height);
+  sprite.setCrop();
+  const sy = SLIDE_VISUAL_SCALE_Y;
+  sprite.setScale(1, sy);
 
   const body = sprite.body as Phaser.Physics.Arcade.Body;
-  body.setSize(PLAYER_SLIDE_SIZE.width, PLAYER_SLIDE_SIZE.height);
-  const ox = (LPC.FRAME - PLAYER_SLIDE_SIZE.width) / 2;
-  const oy = LPC.FRAME - PLAYER_SLIDE_SIZE.height;
+  const bodyH = Math.round(PLAYER_SLIDE_SIZE.height / sy);
+  const bodyW = PLAYER_SLIDE_SIZE.width;
+  body.setSize(bodyW, bodyH);
+  const ox = (LPC.FRAME - bodyW) / 2;
+  const oy = LPC.FRAME - bodyH;
   body.setOffset(ox, oy);
 }

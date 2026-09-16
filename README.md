@@ -2,37 +2,51 @@
 
 Auto-runner 2D cyberpunk (projeto acadêmico). **Há um único jogo** neste repositório.
 
-## Como rodar (única entrada)
+## Como rodar
 
 ```bash
-cd flesh-to-chrome
-npm install
+# na raiz (sincroniza áudio/Alex e sobe o jogo):
+npm run sync-assets
 npm run dev
+
+# ou:
+cd flesh-to-chrome && npm install && npm run dev
 ```
 
-Stack oficial (GDD §22): **TypeScript + Phaser 4 + Parcel** em [`flesh-to-chrome/`](flesh-to-chrome/).
+Stack: **TypeScript + Phaser 4 + Parcel** em [`flesh-to-chrome/`](flesh-to-chrome/).
 
-Na raiz, `npm run dev` / `npm run build` apenas encaminham para essa pasta.
-
-## Papéis do time
+## Papéis
 
 | Pessoa | Foco |
 | --- | --- |
-| **João Pedro** | Arte 2D / UI / áudio → `public/assets/` (+ cópia usada pelo protótipo em `flesh-to-chrome/public/assets/`) |
-| **Victor Blum** | Game / level design → mapas Tiled em `public/assets/maps/` |
-| **Vitor Nascimento (Motoca)** | Phaser / integração → código em `flesh-to-chrome/src/` (carregar tilemaps, física, cenas) |
+| **João Pedro** | Arte / UI / áudio → `public/assets/` |
+| **Victor Blum** | Level design → `public/assets/maps/` |
+| **Motoca** | Phaser → `flesh-to-chrome/src/` |
 
-## Assets
+## Assets (fonte única)
 
-- Sprites, tiles, áudio, mapas: [`public/assets/`](public/assets/)
-- Mapa Fase 1 (blockout Victor): [`public/assets/maps/esgoto/fase-1.tmj`](public/assets/maps/esgoto/fase-1.tmj)
-- Integração Phaser do mapa: issue [#15](https://github.com/ViViJp/jogo-projeto-topicos-especiais/issues/15) (Motoca)
-- Docs: [`gdd.md`](gdd.md), [`levelDesign.md`](levelDesign.md), [`Cyberpunk.md`](Cyberpunk.md)
+| Editar | Cópia de runtime (Parcel) |
+| --- | --- |
+| **`public/assets/`** | `flesh-to-chrome/public/assets/` (só áudio + alex-flesh) |
 
-## O que **não** é o jogo
+```bash
+npm run sync-assets
+```
 
-A pasta `src/` na raiz (Vite + Phaser 3) foi **removida** — era um segundo protótipo paralelo. Não recriar um app jogável na raiz.
+**Mapas NÃO entram no sync** — Victor edita só em `public/assets/maps/`.
 
-## Referências
+Links de packs: [`public/assets/LINKS-VICTOR.md`](public/assets/LINKS-VICTOR.md)
 
-Direção: GDD + estética **cyberpunk** (ascensão social / Glitch City). Level design e playtest de pulos usam o mapa do Victor integrado no `flesh-to-chrome` (responsabilidade do Motoca).
+## Mapas
+
+- Fases 1–5: `public/assets/maps/<setor>/fase-N.json`
+- LD Fase 1 (Victor): [`public/assets/maps/esgoto/fase-1.tmj`](public/assets/maps/esgoto/fase-1.tmj)
+- O protótipo jogável atual usa LevelBuilder em `flesh-to-chrome/src/levels/` até o Motoca integrar o `.tmj`
+
+## Estado
+
+- Alex (LPC) + áudio (BGM/SFX) integrados
+- BGM global: uma música por vez entre Menu / Fase / Clínica / restart
+- Placeholders ainda em parte dos hazards/UI
+
+Docs: [`gdd.md`](gdd.md) · [`levelDesign.md`](levelDesign.md) · [`flesh-to-chrome/README.md`](flesh-to-chrome/README.md)

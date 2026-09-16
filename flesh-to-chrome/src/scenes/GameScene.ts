@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { SCREEN_WIDTH, SCREEN_HEIGHT, CAMERA, GRAVITY_Y } from "../config/GameConfig";
+import { SCREEN_WIDTH, SCREEN_HEIGHT, CAMERA, GRAVITY_Y, AUTO_RUN } from "../config/GameConfig";
 import { AbilityState, createInitialAbilityState } from "../systems/AbilityState";
 import { InputManager } from "../systems/InputManager";
 import { CreditsSystem } from "../systems/CreditsSystem";
@@ -55,7 +55,7 @@ export class GameScene extends Phaser.Scene {
 
   create(): void {
     generatePlaceholderTextures(this);
-    this.audio = new AudioManager(this);
+    this.audio = AudioManager.forScene(this);
     this.audio.unlock();
     this.audio.playPhaseBgm(this.data$.phaseId);
 
@@ -100,9 +100,17 @@ export class GameScene extends Phaser.Scene {
     });
 
     this.updateHud();
-    this.hud.flashPrompt(level.name, 1800);
+    this.hud.flashPrompt(
+      AUTO_RUN ? level.name : `${level.name}  ·  A/D mover  ·  Espaço pular  ·  S agachar`,
+      2200
+    );
 
     this.cameras.main.setBounds(0, 0, level.length + SCREEN_WIDTH, SCREEN_HEIGHT);
+    // Segue Alex em X e Y (lerp) — evita “câmera travada” em gaps mais baixos.
+    this.cameras.main.startFollow(this.player.sprite, true, 0.14, 0.1);
+    this.cameras.main.setDeadzone(SCREEN_WIDTH * 0.2, CAMERA.deadzoneHeight);
+    // Mais espaço à frente quando olha pra direita (GDD §22.4 ~35%).
+    this.cameras.main.setFollowOffset(-(SCREEN_WIDTH * (0.5 - CAMERA.playerScreenRatioX)), 0);
   }
 
   private phaseConsolidatedValue(): number {
@@ -250,14 +258,6 @@ export class GameScene extends Phaser.Scene {
 
     this.player.update(delta);
     this.runtime.update(this.player);
-
-    const level = LEVELS[this.data$.phaseId];
-    const targetScrollX = Phaser.Math.Clamp(
-      this.player.sprite.x - SCREEN_WIDTH * CAMERA.playerScreenRatioX,
-      0,
-      Math.max(0, level.length - SCREEN_WIDTH)
-    );
-    this.cameras.main.scrollX = targetScrollX;
 
     this.input$.postUpdate();
   }
