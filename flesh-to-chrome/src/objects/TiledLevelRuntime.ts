@@ -185,18 +185,24 @@ export class TiledLevelRuntime {
 
     for (const o of byType("checkpoint")) {
       const id = this.propString(o, "id") ?? o.name ?? `checkpoint-${o.id}`;
-      // v0.4.0 bugfix: guardar também o Y do objeto (com offsetY aplicado).
-      // O mapa v0.4.0 tem duas elevações de chão (a "profunda" do spawn e a
-      // "principal" depois do degrau) - o checkpoint real (`checkpoint_01`,
-      // x=2864, y=256 no JSON) fica na elevação principal, bem mais alto na
-      // tela que o spawn (y=371 no JSON). Antes desta correção, o runtime só
-      // guardava o X e o respawn sempre usava `spawn.y` (calibrado pra
-      // elevação profunda) - no mapa antigo (uma elevação só) isso nunca dava
-      // problema, mas aqui fazia o personagem reaparecer ~80px ABAIXO do chão
-      // de verdade da elevação principal, direto num vão sem fundo, e cair
-      // até `fallDeathY`/morrer/reaparecer no mesmo lugar quebrado de novo -
-      // um loop de queda que parecia infinito. Ver `GameScene.handleCheckpoint`.
-      this.checkpoints.push({ id, x: o.x ?? 0, y: (o.y ?? 0) + offsetY });
+      const x = o.x ?? 0;
+      // v0.4.1 bugfix (2ª rodada): a v0.4.0 corrigiu a queda infinita usando
+      // o Y AUTORADO do objeto `checkpoint` no Tiled (`(o.y ?? 0) + offsetY`)
+      // - só que esse valor não é confiável: é só onde o level designer
+      // clicou pra colocar o marcador, não necessariamente a superfície real
+      // do chão. Conferido no mapa real: `checkpoint_01` tem y=256 (linha 16,
+      // tela y=480), mas o chão de verdade na coluna x=2864 do próprio
+      // objeto está na linha 21 (tela y=560) - 80px mais abaixo. Resultado:
+      // o personagem reaparecia flutuando 80px acima do chão e caía até
+      // pousar - visualmente "checkpoint flutuante, personagem cai" (bem
+      // menor que a queda infinita original, mas ainda um bug real).
+      //
+      // Corrigido de vez lendo a altura do chão DIRETO da layer `ground`
+      // (mesma fonte de verdade que a física usa pra colisão) na coluna X
+      // do checkpoint, em vez de confiar em qualquer coordenada Y autorada
+      // no editor - `groundSurfaceYAt()` abaixo. Reaproveitado também pelo
+      // marcador visual (`buildCheckpoints()`), que tinha o mesmo problema.
+      this.checkpoints.push({ id, x, y: this.groundSurfaceYAt(x, ground, offsetY) });
     }
 
     this.buildCredits();
@@ -242,6 +248,32 @@ export class TiledLevelRuntime {
     }
   }
 
+  /**
+   * Y (mundo, já com `offsetY`) da superfície de chão real na coluna do X
+   * dado - lê direto da layer `ground` (a mesma fonte usada pra colisão
+   * física, `setCollisionByExclusion`), em vez de confiar em qualquer
+   * coordenada Y autorada num objeto do Tiled. Motivo: objetos de marcação
+   * (como `checkpoint`) podem estar posicionados um pouco acima/abaixo da
+   * superfície de verdade no editor - inofensivo pra um marcador puramente
+   * visual, mas errado pra decidir onde o personagem deve pisar ao
+   * reaparecer (bug corrigido na v0.4.1, 2ª rodada - ver o loop de
+   * `checkpoint` acima). Varre de cima pra baixo e para no primeiro tile
+   * não-vazio da coluna (mesma técnica de `classifyHazardTiles`).
+   */
+  private groundSurfaceYAt(worldX: number, groundLayer: Phaser.Tilemaps.TilemapLayer, offsetY: number): number {
+    const col = Math.floor(worldX / this.map.tileWidth);
+    for (let row = 0; row < this.map.height; row++) {
+      const tile = groundLayer.getTileAt(col, row);
+      if (tile && tile.index !== -1) {
+        return offsetY + row * this.map.tileHeight;
+      }
+    }
+    // Coluna sem nenhum chão (ex.: X cai bem em cima de um vão) - não
+    // deveria acontecer com um checkpoint de verdade, mas cai pro Y do
+    // spawn em vez de travar/retornar algo indefinido.
+    return this.spawn.y;
+  }
+
   private buildCredits(): void {
     for (const c of this.credits) {
       const sprite = this.scene.physics.add.sprite(c.x, c.y, TEX.credit);
@@ -266,14 +298,14 @@ export class TiledLevelRuntime {
     // `checkpoint` ainda não está formalizado no contrato (§6), mas já
     // aparece no mapa com `id`, então segue a mesma convenção X-threshold.
     //
-    // v0.4.0 bugfix: antes, o retângulo do marcador usava uma constante de
-    // chão fixa (linha 21, a elevação "profunda" do spawn) pra QUALQUER
-    // checkpoint - correto no mapa antigo (uma elevação só), mas errado
-    // aqui: o checkpoint real do mapa v0.4.0 fica na elevação "principal"
-    // (linha 16, ~80px mais alto na tela). Agora usa `cp.y`, o Y de verdade
-    // do objeto do Tiled (já com `offsetY` aplicado) - mesmo valor usado
-    // pelo respawn (`GameScene.handleCheckpoint`), então o marcador visual e
-    // o ponto de respawn sempre concordam, em qualquer elevação futura.
+    // v0.4.0/v0.4.1 bugfix: o marcador (e o respawn) já passaram por duas
+    // rodadas de correção - primeiro usava uma constante de chão fixa
+    // (linha 21) pra QUALQUER checkpoint, depois passou a confiar no Y
+    // autorado do objeto Tiled (também impreciso, ~80px de erro no
+    // checkpoint real do mapa). Agora `cp.y` vem de `groundSurfaceYAt()`,
+    // lendo a altura real da layer `ground` - a mesma fonte que a física
+    // usa pra colisão, então o marcador visual e o ponto de respawn sempre
+    // concordam com o chão de verdade, em qualquer elevação.
     for (const cp of this.checkpoints) {
       this.scene.add
         .rectangle(cp.x, cp.y - 40, 30, 100, 0x36e2ff, 0.25)

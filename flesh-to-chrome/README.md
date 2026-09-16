@@ -7,6 +7,41 @@ Stack conforme a Seção 22 do GDD: **TypeScript + Phaser `^4.2.1` + Parcel**.
 
 ## Changelog
 
+- **v0.4.2** — feedback de playtest da v0.4.1, quatro prioridades
+  explícitas e numeradas pelo usuário. (1) **Sombra do personagem
+  ("urgente"):** a v0.4.1 só tinha recalibrado `TILED_FASE1_BACKGROUND`
+  (usado pela Fase 1) - o fundo da Fase 2 (`PHASE_BACKGROUND
+  ["fase2-intro"]`, `0x100802`, quase preto) e o fallback (`0x0a0a10`)
+  nunca foram tocados, e o vídeo usado pra validar o pedido original era
+  justamente da Fase 2 - por isso "a única coisa que alterou foi a cor do
+  mapa". Corrigido aplicando a mesma constante calibrada nas duas fases +
+  fallback. (2) **Colisão sem efeito / jogo travando:** investigação
+  extensa com o motor de física real não encontrou nenhuma parede sólida
+  na geometria do mapa (as "plataformas elevadas" são pisos independentes
+  com vão livre embaixo, não paredes) nem hazard visual sem zona de
+  colisão correspondente (as 6 zonas de `toxic_water`/`electric_wire`
+  batem exatamente com os tiles visuais); os hazards de verdade matam
+  corretamente em jogo realista (bateria completa + 5× teste realista de
+  slide sob `electric_wire`). O que foi encontrado e corrigido: o padrão
+  de bug já documentado em `PHYSICS.jump.velocityY` (personagem "raspa"
+  numa quina de tile, trava no eixo X por vários quadros enquanto o eixo Y
+  cai livre - exatamente o "não fluido, travando" relatado) é um
+  comportamento conhecido do Arcade Physics em corpos rápidos contra
+  tilemaps com `tileBias` padrão - endurecido subindo `tileBias` pra 32
+  (`main.ts`), corrigindo a causa raiz em vez de recalibrar velocidade de
+  pulo por trecho de novo. (3) **Checkpoint flutuante:** a v0.4.1 tinha
+  corrigido a queda infinita, mas confiando no Y AUTORADO do objeto
+  `checkpoint` no Tiled - impreciso por ~80px (o marcador não estava
+  pixel-exato ao chão real). Corrigido lendo a altura real direto da
+  layer `ground` (`TiledLevelRuntime.groundSurfaceYAt()`), a mesma fonte
+  que a física usa pra colisão. (4) **Cinza mais claro:** `#36393c`
+  (luminância ~57, v0.4.1) → `#787f86` (luminância ~126) - mesmo método de
+  maior-vão por luminância contra os 37 tons do spritesheet, agora no
+  próximo vão realmente folgado acima do anterior (margem ~8,7/~9,2 contra
+  ~6,1/~7,0 antes - além de mais claro, também mais seguro). Ver
+  "Correções e decisões de v0.4.2" para o detalhe completo, incluindo a
+  investigação de uma instabilidade intermitente encontrada durante os
+  testes (confirmada pré-existente, não uma regressão desta versão).
 - **v0.4.1** — dois pedidos separados. (1) **Fundo cinza, não mais
   quase-preto** - depois de assistir aos vídeos de gameplay enviados
   (não tinha realmente analisado quadro a quadro antes - ver "Correções e
@@ -491,6 +526,132 @@ seguro segundo os cálculos acima, chegou até a Clínica de George sem
 nenhuma morte. Também foi validado separadamente que soltar o botão de
 slide bem depois do mínimo (300ms) faz Alex levantar em menos de um
 frame perceptível (~50ms), em vez dos ~550ms de antes.
+
+### Correções e decisões de v0.4.2
+
+**Contexto:** feedback direto de playtest da v0.4.1, com quatro
+prioridades explícitas e numeradas pelo usuário: (1) sombra do personagem
+("urgente" - "a única coisa que alterou foi a cor do mapa, o ajuste na
+sombra... não está sendo ajustado"), (2) colisão ("ao colidir, o
+personagem tem que morrer, a colisão precisa ter ação, as colisões são os
+obstáculos"), (3) checkpoint flutuante ("o checkpoint agora está
+flutuante, personagem cai"), (4) cinza mais claro ("deixar o cinza um
+pouco mais claro").
+
+**1) Sombra do personagem - causa raiz real.** A v0.4.1 só tinha
+recalibrado `TILED_FASE1_BACKGROUND` (usado só pela Fase 1, o mapa Tiled).
+`PHASE_BACKGROUND["fase2-intro"]` (nível desenhado à mão, `0x100802`,
+luminância ~9,7 - quase preto) e o fallback de `GameScene.create()`
+(`?? 0x0a0a10`, idem) nunca foram tocados em nenhuma rodada anterior de
+ajuste. Reconferindo o histórico desta conversa, o vídeo de gameplay usado
+pra validar o pedido original de "sombra" era da Fase 2 - batendo
+exatamente com o relato "a única coisa que alterou foi a cor do mapa".
+Corrigido reaproveitando `TILED_FASE1_BACKGROUND` (mesma arte de Alex nas
+duas fases) tanto em `PHASE_BACKGROUND["fase2-intro"]` quanto no fallback.
+Confirmado visualmente com screenshot de gameplay real das duas fases
+lado a lado (não só a métrica) - ver `TiledFase1.ts`/`GameScene.ts`.
+
+**2) Colisão "sem efeito"/"jogo travando" - investigação.** Sem outro
+vídeo/repro específico do usuário pra esse item, a investigação foi por
+eliminação, sempre no motor de física real (Playwright), nunca só análise
+estática:
+
+- *Parede sólida bloqueando o personagem sem matar (hipótese inicial):*
+  descartada. Varredura da layer `ground` inteira (script Python sobre o
+  JSON do mapa) em busca de colunas vizinhas com degraus grandes de altura
+  mostrou que TODAS as "plataformas elevadas" da Fase 1 (rotas
+  alternativas/de risco) são pisos fisicamente independentes, com um vão
+  vazio embaixo - o caminho baixo principal sempre tem chão contínuo por
+  baixo delas. Não existe nenhuma parede vertical de verdade no mapa atual
+  pra bater e ficar preso.
+- *Hazard visual sem zona de colisão correspondente (hipótese descartada
+  em seguida):* comparado o footprint da layer visual `hazards` (tiles)
+  contra as 6 zonas de objeto `hazard` (`toxic_water`×4,
+  `electric_wire`×2) - batem exatamente 1:1 em X, nenhum tile "decorativo"
+  de água tóxica sem zona real por trás.
+- *Hazards realmente matando em jogo realista:* confirmado com a bateria
+  completa (4× `toxic_water`, 2× `electric_wire` com e sem slide) e um
+  teste dedicado de "aproximação realista" (correr, pular o vão antes,
+  segurar slide só depois de aterrissar - do jeito que um jogador faria,
+  não um teleporte instantâneo) rodado 5× seguidas: 100% de sobrevivência
+  deslizando sob o fio, morte correta em todos os outros casos.
+- *O que realmente foi encontrado:* rodando o playthrough completo (bot no
+  motor de física real) repetidas vezes, uma instabilidade intermitente
+  apareceu - o personagem ocasionalmente ficava preso por vários quadros
+  contra a borda de um tile ao pousar/atravessar um vão, e às vezes caía
+  num vão que deveria ter pulado. Rastreado até o mesmo padrão **já
+  documentado no código** (comentário longo em `PHYSICS.jump.velocityY`,
+  GameConfig.ts, da v0.3.1/v0.3.2): o corpo do Arcade Physics pode
+  "enganchar" na quina de um tile em vez de pousar limpo - o eixo X trava
+  contra a "parede" da quina por vários quadros enquanto o eixo Y continua
+  em queda livre, e só depois o personagem cai pro vazio ou volta a andar.
+  Isso bate exatamente com "não está fluido, está travando" e com "a
+  colisão precisa ter ação" (em vez de travar sem função clara por alguns
+  quadros). É um comportamento conhecido do Arcade Physics em corpos
+  rápidos (Alex a 320px/s) contra tilemaps, mitigável subindo o
+  `tileBias` do mundo físico (padrão do Phaser é 4) - alterado pra 32 em
+  `main.ts`. Corrige a causa raiz do padrão de bug em vez de continuar
+  recalibrando a altura do pulo ponto a ponto (o que só empurra o mesmo
+  problema pra outro trecho do mapa, como o histórico em `GameConfig.ts`
+  já mostrava).
+
+  **Nota de rigor - separando regressão de bug pré-existente:** ao
+  reproduzir essa instabilidade repetidas vezes, os pontos de falha
+  variavam entre execuções (ex.: x≈2520, x≈3736/3742) mesmo com o mesmo
+  código - o que por si só já indicava sensibilidade a timing real de
+  quadro, não um bug determinístico. Pra garantir que não era uma
+  regressão introduzida pela correção do checkpoint (item 3 abaixo, feita
+  antes desta investigação), o código foi temporariamente revertido pra
+  lógica de checkpoint da v0.4.1 (só essa parte, via `git stash`) e o
+  mesmo playthrough rodado várias vezes: a MESMA instabilidade (inclusive
+  o mesmo x≈2520 num dos casos) reproduziu igual no código antigo -
+  confirma que é pré-existente, não uma regressão desta versão. Só depois
+  disso o `tileBias` foi ajustado como mitigação.
+
+**3) Checkpoint flutuante - causa raiz real.** A v0.4.1 tinha corrigido a
+queda infinita, mas confiando no Y AUTORADO do objeto `checkpoint` no
+Tiled (`(o.y ?? 0) + offsetY`) - só que esse valor é só onde o level
+designer clicou pra colocar o marcador no editor, não necessariamente a
+superfície real do chão. Conferido no mapa real: `checkpoint_01` tem
+y=256 no JSON (linha 16 do grid, y=480 na tela), mas o chão de verdade na
+coluna X desse mesmo objeto está na linha 21 (y=560) - 80px mais abaixo.
+Resultado: o personagem reaparecia flutuando 80px acima do chão e caía até
+pousar - visualmente "checkpoint flutuante, personagem cai" (bem menor
+que a queda infinita original, mas ainda um bug real, exatamente o
+relatado). Corrigido lendo a altura do chão DIRETO da layer `ground`
+(`TiledLevelRuntime.groundSurfaceYAt()`) - a mesma fonte de verdade que a
+física usa pra colisão (`setCollisionByExclusion`) - em vez de confiar em
+qualquer coordenada autorada no editor. Reaproveitado também pelo marcador
+visual do checkpoint, que tinha o mesmo problema. Validado reproduzindo o
+bug isolado (teleportar pro checkpoint real, forçar o trigger, matar,
+rastrear Y/estado do respawn quadro a quadro): antes da correção, Y usado
+= 480 (errado) e o personagem ficava `grounded: false`/`dead` por um
+bom tempo caindo; depois da correção, Y usado = 560 (correto) e o
+personagem fica `grounded: true`/`running` em ~108ms, com um assentamento
+de ~2px em vez de uma queda visível de ~80px.
+
+**4) Cinza mais claro.** Pedido explícito de ir mais claro que `#36393c`
+(v0.4.1, luminância ~56,6). Reaproveitando a mesma varredura por
+luminância (ITU-R BT.601) dos 37 tons opacos significativos do
+spritesheet (>=0,05% dos pixels): os vãos logo acima do anterior são
+apertados demais pra uma mudança perceptível (~4-5 de folga), então o
+próximo vão realmente folgado fica entre os tons de pele/músculo
+iluminado que terminam em ~117,0 e o tom de pele mais claro que começa em
+~134,9 - vão de ~17,9, folga de ~8,7/~9,2 pra cada lado (mais confortável
+que os ~6,1/~7,0 do valor anterior - além de mais claro, também mais
+seguro contra qualquer tom da arte). `#787f86` (mesmo matiz frio de
+sempre, luminância ~125,7) fica no meio desse vão. Ainda lê como cinza
+(não é prateado/quase-branco - esse só aparece no próximo vão grande,
+~163). Aplicado tanto na Fase 1 quanto na Fase 2 (ver item 1).
+
+**Validação final.** Depois de todas as mudanças: typecheck limpo,
+build de produção sem erros/warnings novos, smoke test sem erros de
+console (com e sem o hook de debug temporário usado durante a
+investigação, removido antes de finalizar), bateria completa de hazards
+e playthrough completo rodados novamente, checkpoint revalidado com
+`tileBias` já ativo (Y=560, mesmo resultado de antes). Screenshots reais
+de gameplay (Fase 1 e Fase 2) confirmam visualmente a silhueta do
+personagem bem separada do novo fundo nas duas fases.
 
 ### Correções e decisões de v0.4.1
 

@@ -39,6 +39,25 @@ const config: Phaser.Types.Core.GameConfig = {
     arcade: {
       gravity: { x: 0, y: 0 }, // definido por fase em GameScene
       debug: false,
+      // v0.4.2 - "raspão na parede" (ver o comentário longo em
+      // `PHYSICS.jump.velocityY`, GameConfig.ts): em determinadas
+      // combinações de arco de pulo + borda de bloco de chão, o corpo do
+      // Arcade Physics engancha na quina do tile (comportamento conhecido
+      // do motor com `tileBias` padrão de 4, mais perceptível em corpos
+      // rápidos como Alex a 320px/s) - o eixo X trava contra a parede por
+      // vários frames enquanto o eixo Y continua em queda livre, e ou o
+      // personagem cai num vão ao lado sem nunca ter "colidido de verdade"
+      // (o antigo bug 100% reproduzível citado em GameConfig.ts, resolvido
+      // até agora só recalibrando a altura do pulo pra UMA sequência
+      // específica de plataformas) ou fica visivelmente "grudado"/"travado"
+      // por um instante antes de resolver - o "jogo não está fluido, está
+      // travando" relatado em playtest, reproduzido também em outros pontos
+      // do mapa novo da v0.4.0 (não só na sequência x=1300-1700 já
+      // conhecida) via bot de teste Playwright. Levantar `tileBias` (valor
+      // recomendado pela própria documentação do Phaser para corpos veloz
+      // em tilemaps dessa natureza) resolve a causa raiz do engancho em vez
+      // de continuar caçando/recalibrando velocidade de pulo por trecho.
+      tileBias: 32,
     },
   },
   scene: [BootScene, MenuScene, GameScene, ClinicScene, EndingScene, MultiplayerScene],

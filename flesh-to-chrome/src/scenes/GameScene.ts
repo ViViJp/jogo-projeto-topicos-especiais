@@ -54,13 +54,21 @@ export interface GameSceneData {
  * deslocadas o suficiente (medido contra os tons mais escuros do
  * spritesheet) para nenhum tom da arte coincidir com o fundo.
  *
- * `fase1` usa o mesmo valor de `TILED_FASE1_BACKGROUND` (v0.3.0, mapa Tiled
- * real) - mantido aqui também para o caso (não usado hoje) de a Fase 1
- * cair de volta no formato desenhado à mão.
+ * v0.4.2 bugfix: `fase2-intro` tinha o próprio valor fixo (`0x100802`,
+ * luminância ~9,7 - quase preto) NUNCA recalibrado nas rodadas anteriores
+ * de ajuste de sombra (v0.4.1 só mexeu em `TILED_FASE1_BACKGROUND`) - e o
+ * vídeo de gameplay usado pra validar o pedido "sombra desagradável" era
+ * justamente da Fase 2. Resultado: pra quem jogou a Fase 2, o fundo
+ * realmente não mudava nada entre versões, batendo com o relato "a única
+ * coisa que alterou foi a cor do mapa". Corrigido reaproveitando a mesma
+ * constante calibrada por luminância de `TILED_FASE1_BACKGROUND` (mesma
+ * arte de Alex nas duas fases, então o mesmo valor vale) - e o fallback
+ * (linha abaixo, `?? 0x0a0a10`) também foi trocado por segurança, mesmo
+ * sem nenhuma fase caindo nele hoje.
  */
 const PHASE_BACKGROUND: Record<string, number> = {
   fase1: TILED_FASE1_BACKGROUND,
-  "fase2-intro": 0x100802,
+  "fase2-intro": TILED_FASE1_BACKGROUND,
 };
 
 /**
@@ -154,7 +162,7 @@ export class GameScene extends Phaser.Scene {
     generatePlaceholderTextures(this);
 
     this.physics.world.gravity.y = GRAVITY_Y;
-    this.cameras.main.setBackgroundColor(PHASE_BACKGROUND[this.data$.phaseId] ?? 0x0a0a10);
+    this.cameras.main.setBackgroundColor(PHASE_BACKGROUND[this.data$.phaseId] ?? TILED_FASE1_BACKGROUND);
 
     this.save = SaveState.load();
     this.input$ = new InputManager(this);

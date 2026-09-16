@@ -86,12 +86,45 @@ export const TILED_FASE1_MAP_DATA: any = fase1Map;
  * visualmente (screenshot de gameplay real, não só a métrica) - ver
  * "Correções e decisões de v0.4.1".
  *
+ * v0.4.2 - feedback do playtest da v0.4.1: "a única coisa que alterou foi a
+ * cor do mapa, o ajuste na sombra do personagem que foi solicitado não está
+ * sendo ajustado" + prioridade #4 explícita ("deixar o cinza um pouco mais
+ * claro"). Duas causas problema, não uma:
+ *
+ *  1. O vídeo de gameplay usado pra validar a v0.4.1 era da FASE 2 (nível
+ *     desenhado à mão, `phase2Intro.ts`), não da Fase 1 - e o fundo da Fase 2
+ *     (`PHASE_BACKGROUND["fase2-intro"]` em `GameScene.ts`, `0x100802`,
+ *     luminância ~9,7) nunca tinha sido recalibrado, só o valor usado aqui
+ *     (`TILED_FASE1_BACKGROUND`). Ou seja: pra quem jogou a Fase 2, o fundo
+ *     realmente não mudou nada - dava exatamente a impressão relatada.
+ *     Corrigido reaproveitando esta MESMA constante calibrada por luminância
+ *     em `PHASE_BACKGROUND` (Fase 1 e Fase 2 usam a mesma arte de Alex, então
+ *     o mesmo valor vale pras duas), e também no fallback (`?? 0x0a0a10`,
+ *     idem quase-preto, nunca usado hoje mas corrigido por segurança caso
+ *     uma fase futura caia nele sem entrada própria no mapa).
+ *  2. Pedido explícito de ir mais claro ainda a partir do `#36393c`
+ *     (luminância ~56,6, vão de ~57 entre os tons 50,5/63,6 do spritesheet -
+ *     ver histórico abaixo). Reaproveitando a mesma varredura por luminância
+ *     dos 37 tons opacos significativos (>=0,05% dos pixels) do spritesheet,
+ *     o próximo vão realmente folgado acima desse (não os vãos apertados de
+ *     ~4-5 logo em seguida, que dariam uma mudança quase imperceptível) fica
+ *     entre os tons de pele/músculo iluminado que terminam em ~117,0 e o
+ *     tom de pele mais claro que começa em ~134,9 - vão de ~17,9, folga de
+ *     ~8,7/~9,2 pra cada lado (bem mais confortável que a folga de ~6,1/~7,0
+ *     do valor anterior). `#787f86` (mesmo matiz frio de sempre, luminância
+ *     ~125,7) fica no meio desse vão - perceptivelmente mais claro que
+ *     `#36393c`, continua lendo como cinza (não é prateado/quase-branco,
+ *     esse só apareceria no próximo vão grande, ~163), e ainda assim melhora
+ *     a margem de segurança de contraste em vez de piorar.
+ *
  * Histórico: v0.2.1 (`#0a1410`) → v0.3.1 (`#000345`, media distância de
  * COR/matiz, métrica errada pra tons escuros) → v0.3.2 (`#000010`, primeira
  * vez calibrando por luminância, mas indo pro extremo escuro) → v0.4.1
- * (cinza, luminância intermediária, por pedido explícito).
+ * (`#36393c`, cinza, luminância intermediária, por pedido explícito, mas só
+ * aplicado na Fase 1) → v0.4.2 (`#787f86`, mais claro ainda, e aplicado
+ * também na Fase 2 + fallback).
  */
-export const TILED_FASE1_BACKGROUND = 0x36393c;
+export const TILED_FASE1_BACKGROUND = 0x787f86;
 /**
  * Reconferido na v0.4.0 pro mapa novo: a layer `background` (tileset
  * `crystal-cave-tiles`) só cobre as linhas 0-11 do grid (pano de fundo
