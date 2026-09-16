@@ -21,6 +21,7 @@ export interface TiledCreditObj {
 export interface TiledCheckpointObj {
   id: string;
   x: number;
+  y: number;
 }
 
 /** `hazard.kind` conhecidos (contrato §5.3 + `electric_wire`, novo na v0.4.0 - ver nota em `buildObjectHazards`). */
@@ -112,7 +113,7 @@ export class TiledLevelRuntime {
     private consolidatedThisPhase: Set<string>,
     private callbacks: {
       onCreditCollected: (id: string, value: number) => void;
-      onCheckpoint: (id: string, x: number) => void;
+      onCheckpoint: (id: string, x: number, y: number) => void;
       onEndGate: (destination: string) => void;
     }
   ) {
@@ -184,7 +185,18 @@ export class TiledLevelRuntime {
 
     for (const o of byType("checkpoint")) {
       const id = this.propString(o, "id") ?? o.name ?? `checkpoint-${o.id}`;
-      this.checkpoints.push({ id, x: o.x ?? 0 });
+      // v0.4.0 bugfix: guardar também o Y do objeto (com offsetY aplicado).
+      // O mapa v0.4.0 tem duas elevações de chão (a "profunda" do spawn e a
+      // "principal" depois do degrau) - o checkpoint real (`checkpoint_01`,
+      // x=2864, y=256 no JSON) fica na elevação principal, bem mais alto na
+      // tela que o spawn (y=371 no JSON). Antes desta correção, o runtime só
+      // guardava o X e o respawn sempre usava `spawn.y` (calibrado pra
+      // elevação profunda) - no mapa antigo (uma elevação só) isso nunca dava
+      // problema, mas aqui fazia o personagem reaparecer ~80px ABAIXO do chão
+      // de verdade da elevação principal, direto num vão sem fundo, e cair
+      // até `fallDeathY`/morrer/reaparecer no mesmo lugar quebrado de novo -
+      // um loop de queda que parecia infinito. Ver `GameScene.handleCheckpoint`.
+      this.checkpoints.push({ id, x: o.x ?? 0, y: (o.y ?? 0) + offsetY });
     }
 
     this.buildCredits();
@@ -253,12 +265,18 @@ export class TiledLevelRuntime {
     // Mesmo visual usado no nível desenhado à mão (`LevelRuntime.ts`) -
     // `checkpoint` ainda não está formalizado no contrato (§6), mas já
     // aparece no mapa com `id`, então segue a mesma convenção X-threshold.
-    // Linha do chão principal atualizada na v0.4.0 (era 16, agora 21 -
-    // ver `TiledFase1.TILED_FASE1_OFFSET_Y`).
-    const groundSurfaceY = TILED_FASE1_OFFSET_Y + 21 * 16;
+    //
+    // v0.4.0 bugfix: antes, o retângulo do marcador usava uma constante de
+    // chão fixa (linha 21, a elevação "profunda" do spawn) pra QUALQUER
+    // checkpoint - correto no mapa antigo (uma elevação só), mas errado
+    // aqui: o checkpoint real do mapa v0.4.0 fica na elevação "principal"
+    // (linha 16, ~80px mais alto na tela). Agora usa `cp.y`, o Y de verdade
+    // do objeto do Tiled (já com `offsetY` aplicado) - mesmo valor usado
+    // pelo respawn (`GameScene.handleCheckpoint`), então o marcador visual e
+    // o ponto de respawn sempre concordam, em qualquer elevação futura.
     for (const cp of this.checkpoints) {
       this.scene.add
-        .rectangle(cp.x, groundSurfaceY - 40, 30, 100, 0x36e2ff, 0.25)
+        .rectangle(cp.x, cp.y - 40, 30, 100, 0x36e2ff, 0.25)
         .setStrokeStyle(2, 0x36e2ff)
         .setDepth(2);
     }
@@ -346,7 +364,7 @@ export class TiledLevelRuntime {
       if (this.checkpointTriggered.has(cp.id)) continue;
       if (Math.abs(px - cp.x) < 26) {
         this.checkpointTriggered.add(cp.id);
-        this.callbacks.onCheckpoint(cp.id, cp.x);
+        this.callbacks.onCheckpoint(cp.id, cp.x, cp.y);
       }
     }
 

@@ -23,6 +23,18 @@ import { ALEX_TEXTURE_KEY, ALEX_SHEET_CONFIG } from "../utils/AlexSprite";
 export interface GameSceneData {
   phaseId: string;
   checkpointX?: number;
+  /**
+   * v0.4.0 bugfix: o mapa novo da Fase 1 tem duas elevações de chão
+   * (a "profunda" do spawn e a "principal" depois do degrau). Antes só o X
+   * do checkpoint era guardado, e o respawn sempre usava o Y do spawn
+   * inicial (calibrado pra elevação profunda) - se o checkpoint ficasse na
+   * elevação principal (mais alto na tela, como o único checkpoint real do
+   * mapa fica), o personagem reaparecia ~80px abaixo do chão de verdade,
+   * direto num vão sem fundo, e entrava num loop de queda/morte/respawn no
+   * mesmo lugar quebrado (parecia "cair infinitamente"). Ver
+   * `TiledLevelRuntime.ts` e `handleCheckpoint`/`handlePlayerDeath` abaixo.
+   */
+  checkpointY?: number;
   consolidatedCreditIds?: string[];
   wallet?: number;
   abilities?: AbilityState;
@@ -87,6 +99,7 @@ export class GameScene extends Phaser.Scene {
     this.data$ = {
       phaseId: data.phaseId,
       checkpointX: data.checkpointX ?? 0,
+      checkpointY: data.checkpointY ?? 0,
       consolidatedCreditIds: data.consolidatedCreditIds ?? [],
       wallet: data.wallet ?? 0,
       abilities: data.abilities ?? createInitialAbilityState(),
@@ -163,14 +176,15 @@ export class GameScene extends Phaser.Scene {
   private createTiled(): void {
     const runtime = new TiledLevelRuntime(this, new Set(this.data$.consolidatedCreditIds), {
       onCreditCollected: (id, value) => this.handleCreditCollected(id, value),
-      onCheckpoint: (_id, x) => this.handleCheckpoint(x),
+      onCheckpoint: (_id, x, y) => this.handleCheckpoint(x, y),
       onEndGate: (destination) => this.handleEndGate(destination),
     });
     this.tiledRuntime = runtime;
     this.levelLengthPx = runtime.lengthPx;
 
     const spawnX = this.data$.checkpointX > 0 ? this.data$.checkpointX : runtime.spawn.x;
-    this.player = new Player(this, spawnX, runtime.spawn.y, this.data$.abilities, this.input$, {
+    const spawnY = this.data$.checkpointX > 0 ? this.data$.checkpointY : runtime.spawn.y;
+    this.player = new Player(this, spawnX, spawnY, this.data$.abilities, this.input$, {
       onDeath: () => this.handlePlayerDeath(),
       onScanPulse: (active) => this.handleScanPulse(active),
     });
@@ -185,14 +199,18 @@ export class GameScene extends Phaser.Scene {
     this.levelLengthPx = level.length;
 
     const spawnX = this.data$.checkpointX > 0 ? this.data$.checkpointX : level.playerSpawnX;
-    this.player = new Player(this, spawnX, level.groundY, this.data$.abilities, this.input$, {
+    // Nível desenhado à mão tem uma elevação só - checkpointY (quando vem de
+    // um checkpoint de verdade) sempre bate com level.groundY de qualquer
+    // forma, mas usa a mesma lógica do path Tiled por consistência.
+    const spawnY = this.data$.checkpointX > 0 ? this.data$.checkpointY : level.groundY;
+    this.player = new Player(this, spawnX, spawnY, this.data$.abilities, this.input$, {
       onDeath: () => this.handlePlayerDeath(),
       onScanPulse: (active) => this.handleScanPulse(active),
     });
 
     const runtime = new LevelRuntime(this, level, new Set(this.data$.consolidatedCreditIds), {
       onCreditCollected: (id, value) => this.handleCreditCollected(id, value),
-      onCheckpoint: (_id, x) => this.handleCheckpoint(x),
+      onCheckpoint: (_id, x, y) => this.handleCheckpoint(x, y),
       onEndGate: () => this.handleEndGate(),
     });
     this.legacyRuntime = runtime;
@@ -242,10 +260,11 @@ export class GameScene extends Phaser.Scene {
     this.updateHud();
   }
 
-  private handleCheckpoint(x: number): void {
+  private handleCheckpoint(x: number, y: number): void {
     this.credits.consolidate();
-    this.save.updateCheckpoint(x, this.credits.getConsolidatedIds(), this.credits.getTotal());
+    this.save.updateCheckpoint(x, y, this.credits.getConsolidatedIds(), this.credits.getTotal());
     this.data$.checkpointX = x;
+    this.data$.checkpointY = y;
     this.updateHud();
     this.hud.flashPrompt("Checkpoint alcançado — créditos consolidados");
   }
@@ -258,7 +277,12 @@ export class GameScene extends Phaser.Scene {
    */
   private handleEndGate(destinationOverride?: string): void {
     this.credits.consolidate();
-    this.save.updateCheckpoint(this.player.sprite.x, this.credits.getConsolidatedIds(), this.credits.getTotal());
+    this.save.updateCheckpoint(
+      this.player.sprite.x,
+      this.player.sprite.y,
+      this.credits.getConsolidatedIds(),
+      this.credits.getTotal()
+    );
     this.updateHud();
 
     const nextPhaseId = getNextPhaseId(this.data$.phaseId);
@@ -290,6 +314,7 @@ export class GameScene extends Phaser.Scene {
       this.scene.restart({
         phaseId: this.data$.phaseId,
         checkpointX: this.data$.checkpointX,
+        checkpointY: this.data$.checkpointY,
         consolidatedCreditIds: this.credits.getConsolidatedIds(),
         wallet: this.credits.getTotal(),
         abilities: this.data$.abilities,
@@ -350,6 +375,7 @@ export class GameScene extends Phaser.Scene {
         this.scene.restart({
           phaseId: this.data$.phaseId,
           checkpointX: this.data$.checkpointX,
+          checkpointY: this.data$.checkpointY,
           consolidatedCreditIds: this.credits.getConsolidatedIds(),
           wallet: this.credits.getTotal(),
           abilities: this.data$.abilities,

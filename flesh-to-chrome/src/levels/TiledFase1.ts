@@ -54,38 +54,44 @@ export const TILED_FASE1_TILESET2_NAME = "crystal-cave-tiles";
 export const TILED_FASE1_MAP_DATA: any = fase1Map;
 
 /**
- * Recalibrado pela TERCEIRA vez na v0.3.2 - v0.3.1 (`#000345`) media
- * "distância de cor" (distância euclidiana em RGB) contra os tons do
- * spritesheet e escolhia a MAIOR distância mínima, mas isso mede
- * principalmente diferença de MATIZ (hue), não diferença de LUMINÂNCIA
- * (brilho percebido) - e contraste visual, sobretudo entre duas cores bem
- * escuras, é dominado por luminância, não por matiz (o olho humano
- * distingue muito pior tons escuros entre si do que tons claros - lei de
- * Weber). `#000345` tinha distância de cor 51 contra a calça (`#101414`),
- * mas as DUAS cores têm luminância baixíssima e quase igual (~9,6 vs
- * ~18,8 - gap de só 8,5 num intervalo de 0-255), por isso continuava
- * "sumindo" apesar da distância de cor parecer alta no papel.
+ * v0.4.1 - trocado de "quase preto" pra cinza por pedido explícito ("quero
+ * um fundo acinzentado, não preto"), depois de confirmar a causa real do
+ * problema de contraste assistindo aos vídeos de gameplay enviados (não só
+ * a métrica isolada): a calça/bota de Alex já são desenhadas quase pretas
+ * na própria arte (`#200c0d`, luminância ~18,1 - ver histórico abaixo), e
+ * ~9,7% de todos os pixels do sprite usam esse tom. Contra um fundo
+ * também quase preto (`#000010`, v0.3.2, luminância ~1,8), a calça vira
+ * uma mancha escura quase sem contorno - dava a impressão de "sombra"
+ * mesmo com o gap de luminância já perto do teto teórico pra um fundo
+ * ESCURO. Só dá pra abrir mais gap indo mais claro, não mais escuro -
+ * exatamente o que foi pedido.
  *
- * Medido de novo (script em `bg_search_v032_final.py`, luminância
- * ITU-R BT.601: 0,299R+0,587G+0,114B) contra TODOS os tons opacos
- * significativos do spritesheet (>=0,05% dos pixels - descarta ruído de
- * poucos pixels, tipo um brilho de pupila). O resultado: os tons de
- * sombreado da própria arte (cabelo, calça, coturno) formam um degradê
- * praticamente contínuo de luminância ~18 a ~50 - não há "brecha" de
- * luminância nesse meio para o fundo ocupar sem ficar perto de algum tom
- * real da arte. A única forma de abrir um gap de luminância bem maior
- * sem abandonar um fundo escuro/atmosférico (o que exigiria subir a
- * luminância pra ~70+, i.e. cinza médio - destoante do clima do jogo) é
- * ir MAIS ESCURO que o tom mais escuro da arte (~18,1), não tentar ficar
- * "ao lado" dele só mudando o matiz. `#000010` (quase preto, com um
- * traço mínimo de azul pra não ficar um preto absoluto/"buraco") dá gap
- * de luminância de ~16,3 contra o pior tom - quase o dobro do `#000345`
- * (8,5), e o mais perto do teto teórico (~18,1, só alcançável com preto
- * puro `#000000`, descartado por colidir exatamente com uns poucos
- * pixels de contorno pretos puros da arte, irrelevantes em área mas
- * ficariam com distância de cor zero).
+ * Recalibrado com o mesmo método por luminância (ITU-R BT.601,
+ * `0,299R+0,587G+0,114B`) contra os 37 tons opacos significativos do
+ * spritesheet (>=0,05% dos pixels), mas agora maximizando a MENOR
+ * distância em qualquer direção (não só pra baixo) dentro de uma faixa
+ * de cinza escuro/médio plausível (luminância 40-160 - fora disso já não
+ * lê como "cinza" pro clima do jogo: abaixo de ~40 continua perto demais
+ * de preto, acima de ~160 vira um cinza claro/prateado, destoante do tom
+ * sombrio do esgoto). Maior "vão" nessa faixa: entre os tons de sombreado
+ * mais escuros (que terminam em ~50,5) e o próximo grupo de tons de
+ * pele/músculo em sombra (que começa em ~63,6) - ponto médio ~57.
+ * `#36393c` (cinza levemente frio, luminância ~56,6) fica bem no meio
+ * desse vão: gap de ~6,1 contra o tom mais próximo abaixo e ~7,0 contra o
+ * mais próximo acima - bem mais apertado que o gap unidirecional de
+ * ~16,3 que dava pra abrir indo pra preto absoluto, mas sem escolha
+ * melhor dentro da restrição de ser visivelmente cinza (o próximo vão
+ * grande de verdade só aparece em luminância ~126, que já lê como cinza
+ * médio/claro, mais aceso do que parece pedido aqui). Confirmado
+ * visualmente (screenshot de gameplay real, não só a métrica) - ver
+ * "Correções e decisões de v0.4.1".
+ *
+ * Histórico: v0.2.1 (`#0a1410`) → v0.3.1 (`#000345`, media distância de
+ * COR/matiz, métrica errada pra tons escuros) → v0.3.2 (`#000010`, primeira
+ * vez calibrando por luminância, mas indo pro extremo escuro) → v0.4.1
+ * (cinza, luminância intermediária, por pedido explícito).
  */
-export const TILED_FASE1_BACKGROUND = 0x000010;
+export const TILED_FASE1_BACKGROUND = 0x36393c;
 /**
  * Reconferido na v0.4.0 pro mapa novo: a layer `background` (tileset
  * `crystal-cave-tiles`) só cobre as linhas 0-11 do grid (pano de fundo

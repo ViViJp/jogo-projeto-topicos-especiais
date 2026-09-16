@@ -7,6 +7,30 @@ Stack conforme a Seção 22 do GDD: **TypeScript + Phaser `^4.2.1` + Parcel**.
 
 ## Changelog
 
+- **v0.4.1** — dois pedidos separados. (1) **Fundo cinza, não mais
+  quase-preto** - depois de assistir aos vídeos de gameplay enviados
+  (não tinha realmente analisado quadro a quadro antes - ver "Correções e
+  decisões de v0.4.1"), ficou claro que o problema de "sombra" nunca foi
+  só a cor de fundo: a calça/bota de Alex já são desenhadas quase pretas
+  na própria arte (`#200c0d`, luminância ~18) e cobrem ~9,7% do sprite -
+  contra um fundo também quase preto (`#000010`, v0.3.2), a perna
+  praticamente some. Só dava pra abrir mais distância indo mais CLARO, não
+  mais escuro - exatamente o pedido do usuário. Novo fundo `#36393c`
+  (cinza levemente frio, luminância ~57), recalibrado pelo mesmo método
+  de luminância mas maximizando a menor distância nos DOIS sentidos (não
+  só pra baixo) dentro de uma faixa que ainda lê como "cinza" pro clima
+  do jogo. (2) **Bug do checkpoint corrigido: personagem caía
+  infinitamente ao reaparecer.** Causa: o runtime só guardava o X do
+  checkpoint, nunca o Y - inofensivo no mapa antigo (uma elevação de chão
+  só), mas quebrado no mapa da v0.4.0 (duas elevações): o único checkpoint
+  real do mapa fica na elevação "principal" (~80px mais alto na tela que
+  a elevação "profunda" do spawn), então o respawn sempre reaparecia
+  Alex abaixo do chão de verdade, direto num vão sem fundo - um loop de
+  queda/morte/respawn no mesmo lugar quebrado. Corrigido guardando e
+  usando o Y de cada checkpoint (`TiledCheckpointObj.y`, `GameSceneData.
+  checkpointY`, `SaveData.checkpoint.y` - aditivo, não quebra saves
+  antigos nem o formato documentado na Seção 20.1). Ver "Correções e
+  decisões de v0.4.1" pro detalhe completo dos dois.
 - **v0.4.0** — troca do blockout da Fase 1 por um mapa Tiled novo/mais
   completo, encontrado dentro do `.rar` do projeto pai enviado
   (`jogo-projeto-topicos-especiais.rar`) a pedido explícito ("verifica se
@@ -467,6 +491,119 @@ seguro segundo os cálculos acima, chegou até a Clínica de George sem
 nenhuma morte. Também foi validado separadamente que soltar o botão de
 slide bem depois do mínimo (300ms) faz Alex levantar em menos de um
 frame perceptível (~50ms), em vez dos ~550ms de antes.
+
+### Correções e decisões de v0.4.1
+
+**Contexto:** dois pedidos diretos, sem relação técnica entre si. (1)
+"ainda continua com problema da sombra... me explique a causa antes de
+mexer... conseguiu verificar com os vídeos que enviei?" - resposta
+honesta: não, não tinha analisado os vídeos quadro a quadro antes; fiz
+isso primeiro, expliquei a causa real antes de tocar em qualquer código
+(ver a mensagem anterior desta conversa), e só depois de aprovação
+("quero um fundo acinzentado, não preto") entrei em código. (2) "existe
+um problema no checkpoint, o personagem está caindo infinitamente."
+
+**Fundo cinza.** A causa raiz (detalhada na resposta em texto, não
+repetida aqui por completo) é que a calça/bota de Alex já são quase
+pretas na arte original (`#200c0d`, luminância ~18,1, ~9,7% de todos os
+pixels opacos do sprite) - contra qualquer fundo também quase preto, essa
+parte do personagem vira uma mancha sem contorno, e nenhuma recalibração
+de fundo ESCURO resolve isso de verdade (o gap de luminância pra baixo já
+estava perto do teto teórico desde a v0.3.2). O pedido de ir pra cinza é
+na prática a correção certa: só dá pra abrir mais distância indo mais
+CLARO que a calça, não mais escuro.
+
+Recalibrado com o mesmo método de luminância (ITU-R BT.601) contra os 37
+tons opacos significativos do spritesheet (>=0,05% dos pixels), mas desta
+vez maximizando a menor distância em QUALQUER direção (pra cima ou pra
+baixo), restrito a uma faixa de luminância 40-160 que ainda lê como
+"cinza" (abaixo disso continua perto demais de preto; acima vira cinza
+claro/prateado, destoante do esgoto sombrio). O maior "vão" nessa faixa
+fica entre o fim dos tons de sombreado mais escuros (~50,5) e o início do
+próximo grupo, tons de pele/músculo em sombra (~63,6) - ponto médio ~57.
+Escolhido `#36393c` (cinza levemente frio, luminância ~56,6): gap de
+~6,1 pra baixo e ~7,0 pra cima contra os tons mais próximos - bem mais
+apertado que os ~16,3 que dava pra abrir indo pra preto absoluto (v0.3.2),
+mas é o melhor gap disponível dentro da restrição de realmente parecer
+cinza (o próximo vão de verdade só aparece em luminância ~126, que já é
+um cinza médio/claro demais pro que parece ter sido pedido). Confirmado
+visualmente com screenshot de gameplay real: a calça/bota agora têm
+silhueta nitidamente separada do fundo.
+
+**Bug do checkpoint - queda infinita ao reaparecer.** Reproduzido e
+diagnosticado com o motor de física real (Playwright), não só lendo
+código: teleportar o personagem pro checkpoint real do mapa
+(`checkpoint_01`, x=2864, y=256 no JSON - elevação "principal", linha 16
+do grid) e forçar uma morte mostrava o respawn reaparecendo em y=480 (X
+certo, mas por causa do bug, ANTES da correção, em y errado - ver
+próximo parágrafo) e caindo até ser resgatado por um hazard ou pelo
+`fallDeathY`, morrendo nesse mesmo lugar quebrado de novo, num ciclo que
+não se resolvia sozinho - exatamente "caindo infinitamente" do ponto de
+vista de quem está jogando.
+
+Causa: `TiledLevelRuntime`/`LevelRuntime` só guardavam o X de cada
+checkpoint (`TiledCheckpointObj { id, x }`), e todo respawn em
+`GameScene` (`createTiled`/`createLegacy`, os dois `scene.restart()` de
+morte/pausa, e `MenuScene.continueGame()` via save) sempre usava o Y do
+SPAWN inicial da fase, nunca o Y do checkpoint específico. No mapa
+desenhado à mão e no mapa antigo da Fase 1 (uma elevação de chão só) isso
+nunca importava, porque todo ponto do nível tinha o mesmo Y de chão. O
+mapa da v0.4.0 tem duas elevações (a "profunda" do spawn e a "principal"
+depois do degrau, ~80px mais alto na tela), e o único checkpoint real do
+mapa fica na elevação principal - então o respawn reaparecia Alex ~80px
+abaixo do chão de verdade daquele ponto, direto num vão sem fundo.
+
+Corrigido guardando o Y de cada checkpoint (do objeto Tiled, já com
+`offsetY` aplicado - o mesmo valor real usado pra desenhar o marcador
+visual do checkpoint, que por sinal tinha o mesmo bug: usava uma
+constante fixa de chão em vez do Y de verdade do objeto, então o
+retângulo ficava flutuando no lugar errado também) e usando esse Y em
+TODO ponto que hoje usa X: `GameSceneData.checkpointY`, os dois
+`scene.restart()`, `SaveData.checkpoint.y` (persistido - `SaveState.
+updateCheckpoint` agora recebe Y), e `MenuScene.continueGame()` lendo o
+save. O nível desenhado à mão (`LevelRuntime`) também foi atualizado pra
+mesma assinatura de callback (`onCheckpoint(id, x, y)`), passando sempre
+`level.groundY` - sem mudança de comportamento ali (elevação única), só
+consistência de tipo entre os dois formatos de nível.
+
+Cuidado extra com o save persistido: `checkpoint.y` é um campo ADITIVO no
+`SaveData` (Seção 20.1) - um save salvo antes desta versão não tem esse
+campo, e `SaveState.load()` foi ajustado pra não deixar isso virar
+`undefined` no objeto mesclado (cairia pra `0`, que é o comportamento
+antigo/seguro: `checkpointX/Y <= 0` sempre volta pro spawn da fase, nunca
+pra um checkpoint quebrado).
+
+**Validação.** Reproduzido o bug isolado (teleportar pro checkpoint real,
+matar, rastrear Y/velocidade/estado do respawn quadro a quadro) - antes
+da correção não foi possível reproduzir sem reverter o código (a correção
+já estava sendo aplicada durante a investigação), mas o teste confirma o
+comportamento correto pós-fix: respawn em y=480 (o Y de verdade do
+checkpoint), personagem fica `grounded`/`running` em ~1,4s sem nunca
+ultrapassar a superfície real do chão - sem queda descontrolada. Rodado
+de novo o playthrough completo da Fase 1 (bot no motor de física real,
+gap-jump + fallback reativo) e a bateria dos 6 hazards individuais
+(4× `toxic_water`, 2× `electric_wire`) depois das duas mudanças: mesmo
+resultado de antes (chega à Clínica sem morte, todos os hazards reagem
+como esperado) - confirma que nem a mudança de fundo nem a de checkpoint
+afetaram física, colisão ou o comportamento dos hazards.
+
+Nota de rigor metodológico: durante essa bateria, um teste isolado de
+`electric_wire_01` com slide (que teleporta o personagem já parado bem
+perto do fio, em vez de fazê-lo pular o vão de `toxic_water_02` antes)
+morreu de forma intermitente - investigado a fundo (rastreamento
+quadro a quadro de posição/hitbox/estado) e confirmado que é um artefato
+desse método de teste específico, não um bug real: teleportar direto
+"em pé" já na altura do chão faz o motor de física levar alguns quadros
+pra reconhecer que o personagem está no chão (`grounded`), e só depois
+disso o slide consegue ativar (`handleSlide` exige estado `running`,
+que só existe depois de aterrissar de verdade) - nesse intervalo curto
+o personagem ainda está com a hitbox de pé, e o fio fica bem perto o
+suficiente do ponto de teleporte pra esse intervalo ocasionalmente não
+terminar a tempo. Uma abordagem de teste mais realista (pular o vão de
+verdade a partir de antes dele, como um jogador faria, e segurar slide
+durante a aproximação) passou consistentemente em 5 execuções seguidas -
+confirma que isso não acontece em jogo real, só nesse teste sintético
+específico.
 
 ### Correções e decisões de v0.4.0
 

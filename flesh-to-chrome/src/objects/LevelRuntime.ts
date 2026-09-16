@@ -36,7 +36,7 @@ export class LevelRuntime {
     private consolidatedThisPhase: Set<string>,
     private callbacks: {
       onCreditCollected: (id: string, value: number) => void;
-      onCheckpoint: (id: string, x: number) => void;
+      onCheckpoint: (id: string, x: number, y: number) => void;
       onEndGate: () => void;
     }
   ) {
@@ -142,7 +142,11 @@ export class LevelRuntime {
       if (cp.triggered) continue;
       if (Math.abs(px - cp.x) < 26) {
         cp.triggered = true;
-        this.callbacks.onCheckpoint(cp.id, cp.x);
+        // Nível desenhado à mão tem uma elevação de chão só (`level.groundY`),
+        // então o Y do checkpoint é sempre o mesmo - mas o callback agora
+        // exige Y explícito pra bater com o formato Tiled (v0.4.0 bugfix de
+        // respawn na Fase 1 - ver `TiledLevelRuntime.ts`/`GameScene.ts`).
+        this.callbacks.onCheckpoint(cp.id, cp.x, this.level.groundY);
       }
     }
 

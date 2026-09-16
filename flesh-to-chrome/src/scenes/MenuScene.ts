@@ -97,6 +97,7 @@ export class MenuScene extends Phaser.Scene {
     this.scene.start("GameScene", {
       phaseId: data.currentPhaseId,
       checkpointX: data.checkpoint.x,
+      checkpointY: data.checkpoint.y,
       consolidatedCreditIds: data.checkpoint.consolidatedCreditIds,
       wallet: data.wallet,
       abilities: data.abilities,
