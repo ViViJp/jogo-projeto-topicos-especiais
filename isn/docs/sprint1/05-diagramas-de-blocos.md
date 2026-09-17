@@ -2,12 +2,17 @@
 
 Projeto: **Flesh to Chrome** — especificação da Sprint 1.
 
+<<<<<<< HEAD
 Fonte única: [`../diagramas.json`](../diagramas.json). Mermaid e SVG abaixo são gerados por `python3 isn/scripts/gerar_diagramas.py` a partir da raiz do repositório. Não editar as versões geradas separadamente.
+=======
+As figuras estão em PNG em [`../imagens/`](../imagens/). Também tem Mermaid pra editar fácil.
+>>>>>>> refs/remotes/origin/docs/isn-sprint1
 
 Os diagramas descrevem o sistema planejado, não comprovam implementação. Propostas e decisões pendentes têm rótulo Dxx e/ou traço pontilhado; ver [registro de decisões](07-decisoes-pendentes.md).
 
 ## 1. AWS — microsserviços e serviços gerenciados
 
+<<<<<<< HEAD
 Arquitetura de referência: implantação e dados próprios para Conta, Campanha, Partidas, Comunicações e Auditoria. Blocos com múltiplas tabelas são agrupamentos visuais, não banco compartilhado entre serviços. Cada domínio acessa apenas seus dados. Tempo real é candidato D04. Conta AWS ainda não criada; Free Tier e orçamento no documento 12. Route 53 resolve nomes para os destinos; suas setas são registros DNS, não passagem de tráfego HTTP. ACM fornece certificados. api.* e ws.* são nomes propostos (D08/D04); detalhes e custos no documento 12, seção 3.1.
 
 ```mermaid
@@ -70,6 +75,20 @@ flowchart TD
   classDef pending fill:#fff7ed,stroke:#b45309,stroke-dasharray:5 4
   class ws pending
 ```
+=======
+O browser baixa o frontend e fala com a API. A API cuida de save da campanha, multiplayer/salas, OAuth e e-mail.
+
+```mermaid
+flowchart LR
+  usuario[Usuario]
+  browser[Browser_Frontend_Phaser]
+  api[Backend_API_REST]
+  db[(Banco_save_ranking)]
+  oauth[Provedor_OAuth_Google]
+  email[Email_notificacoes]
+  mp[Multiplayer_salas]
+  static[Hospedagem_estatica]
+>>>>>>> refs/remotes/origin/docs/isn-sprint1
 
 ![AWS — microsserviços e serviços gerenciados](../imagens/diagrama-aws-microsservicos.svg)
 
@@ -141,6 +160,7 @@ flowchart TD
   browser -->|"save local"| local
   browser -.->|"tempo real"| multi
   api --> db
+<<<<<<< HEAD
   api -->|"autenticação"| google
   api -.->|"eventos"| notify
   api -->|"operações críticas"| audit
@@ -151,9 +171,18 @@ flowchart TD
 ```
 
 ![Visão geral — jogo, serviços e nuvem](../imagens/diagrama-visao-geral.svg)
+=======
+  api --> oauth
+  api --> email
+  api --> mp
+```
+
+![Visão geral](../imagens/diagrama-visao-geral.png)
+>>>>>>> refs/remotes/origin/docs/isn-sprint1
 
 ## 4. Microsserviços do backend e seus dados
 
+<<<<<<< HEAD
 Cada serviço tem Lambda(s), IAM role, pacote e tabela próprios, com implantação independente. As conexões de eventos representam outbox/publicação por filas, detalhadas no diagrama AWS de eventos. Não há leitura direta da tabela de outro serviço. Identidade e e-mail são terceirizados para Cognito/Google e SES.
 
 ```mermaid
@@ -196,6 +225,61 @@ flowchart TD
 ## 5. Ambientes e implantação
 
 Pulumi mantém base e serviços independentes por ambiente. Dev local é padrão; dev em nuvem é temporário e isolado de produção. AWS gerenciada/Lambda/DynamoDB são a base; conta ainda não criada, com elegibilidade, capacidade e orçamento em D08/D09. Não provisionar compute ocioso como requisito de microsserviços. Base DNS/HTTPS compartilhada via Route 53 e ACM; subdomínios de dev não exigem nova zona pública.
+=======
+## 2. Módulos do backend
+
+```mermaid
+flowchart TB
+  fe[Frontend_Phaser]
+
+  subgraph backend [Backend]
+    auth[Auth_OAuth]
+    save[Save_campanha]
+    game[Game_progress_API]
+    notify[Email_notificacoes]
+    audit[Auditoria]
+    multi[Multiplayer]
+    rank[Ranking_partida]
+  end
+
+  db[(Banco)]
+  google[Google]
+  mailer[SES_ou_similar]
+
+  fe --> auth
+  fe --> save
+  fe --> game
+  fe --> multi
+  auth --> google
+  auth --> db
+  save --> db
+  game --> db
+  multi --> db
+  multi --> rank
+  save --> audit
+  auth --> audit
+  game --> audit
+  multi --> audit
+  notify --> mailer
+  auth --> notify
+```
+
+![Módulos do backend](../imagens/diagrama-modulos-backend.png)
+
+| Módulo | Função |
+| --- | --- |
+| Auth | login/logout com Google, sessão/token |
+| Save | grava/lê progresso da campanha |
+| Game progress | fase, implante, Portão |
+| Multiplayer | salas / partida 1v1 |
+| Ranking | resultado da corrida multiplayer |
+| E-mail | boas-vindas e avisos |
+| Auditoria | log de operações críticas |
+
+---
+
+## 3. Ambientes: desenvolvimento × produção
+>>>>>>> refs/remotes/origin/docs/isn-sprint1
 
 ```mermaid
 flowchart TD
@@ -223,9 +307,16 @@ flowchart TD
   class devcloud pending
 ```
 
+<<<<<<< HEAD
 ![Ambientes e implantação](../imagens/diagrama-ambientes.svg)
 
 ## 6. Entrada por teclado e gamepad físico
+=======
+![Ambientes](../imagens/diagrama-ambientes.png)
+
+- **Dev:** pra testar sem gastar / sem quebrar produção.  
+- **Prod:** domínio público, subida automática com CI/CD + IaC (Pulumi), região `sa-east-1`.
+>>>>>>> refs/remotes/origin/docs/isn-sprint1
 
 Controle físico é escopo confirmado. Botões, compatibilidade, vários controles e desconexão estão em D01/D02. Não existe celular remoto neste desenho. Teclado continua disponível e ambos usam as mesmas restrições do gameplay.
 
@@ -250,6 +341,7 @@ flowchart TD
   class detect,netgame pending
 ```
 
+<<<<<<< HEAD
 ![Entrada por teclado e gamepad físico](../imagens/diagrama-entrada.svg)
 
 ## 7. Multiplayer — salas, sincronização e resultado
@@ -313,3 +405,6 @@ flowchart TD
 ```
 
 ![Modelo lógico — cardinalidades e separação de dados](../imagens/diagrama-dados.svg)
+=======
+Sprint 1 = diagrama de blocos. Nomes exatos de serviços AWS a gente fecha no Pulumi depois.
+>>>>>>> refs/remotes/origin/docs/isn-sprint1

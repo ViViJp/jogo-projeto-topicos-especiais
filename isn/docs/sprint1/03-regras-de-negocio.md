@@ -77,7 +77,18 @@ A campanha inclui aceitação consciente de Alex na narrativa e transformação 
 - Reinício é permitido apenas na fase atual. Não há replay livre de fases concluídas; as exceções narrativas são descida, retry especial e retorno ao Portão.
 - A corrida multiplayer não pausa. Perder o gamepad não deve ser confundido com desconectar da partida; proposta de fallback em D02.
 
+<<<<<<< HEAD
 ## RN08 — Multiplayer
+=======
+1. Ao concluir as Fases 1–4, Alex passa pela clínica do George Vektor.
+2. O implante **não é opcional**: o procedimento acontece e a campanha segue. O jogador não escolhe “sim/não”.
+3. Ordem fixa:
+   - Fase 1 → pernas → salto duplo  
+   - Fase 2 → braços → ataque/quebra  
+   - Fase 3 → olhos → scan  
+   - Fase 4 → propulsores → dash  
+4. Implante fica registrado no save e altera o visual/moveset.
+>>>>>>> refs/remotes/origin/docs/isn-sprint1
 
 Modo incluído no escopo ISN pelo ZIP RF22/RF23; desenvolvimento após o núcleo narrativo conforme GDD §24.5. O ZIP resolve login, salas e persistência do resultado; D03/D04 mantêm somente os detalhes ainda não definidos.
 
@@ -97,9 +108,19 @@ Modo incluído no escopo ISN pelo ZIP RF22/RF23; desenvolvimento após o núcleo
 
 ## RN09 — Cosméticos opcionais
 
+<<<<<<< HEAD
 Somente após estabilização do escopo prioritário. Loja no Menu Principal, sem HUB. Separar pontuação total e saldo gastável. Skins não alteram habilidades, hitbox, dificuldade ou finais. Novo Jogo não remove desbloqueios. Vitrine em reais usa somente pagamento simulado; não há gateway real, compra de vidas ou de implantes. Créditos não compram skins da vitrine representativa. Ver GDD §25.
 
 ## RN10 — Auditoria, comunicação e operação (extensão ISN)
+=======
+## 7. Multiplayer
+
+1. Modo separado da campanha: corrida competitiva (dois jogadores).
+2. Exige login (pra identificar quem jogou e gravar resultado da partida).
+3. Resultado combina tempo e créditos da partida.
+4. **Não** altera save da campanha, implantes nem finais.
+5. Backend mantém sala/partida e pode guardar ranking simples da corrida.
+>>>>>>> refs/remotes/origin/docs/isn-sprint1
 
 Catálogo inicial obrigatório para operações processadas pelo backend:
 
@@ -113,7 +134,13 @@ Catálogo inicial obrigatório para operações processadas pelo backend:
 | Entrada/saída e encerramento de partida | Partida, participante autenticado, resultado/classificação, DNF ou desconexão |
 | Compra simulada, se implementada | Cosmético e tipo de transação, separado da campanha |
 
+<<<<<<< HEAD
 Auditoria é persistente, consultável por autorização e não serve como armazenamento do gameplay. Ações locais de visitante não podem ser comprovadas pelo servidor; seu envio posterior é importação declarada, não evento online verificado. Escopo da auditoria offline e retenção estão em D06. Não registrar cada frame ou pressionamento como operação crítica.
+=======
+1. Operações críticas devem gerar registro: login, logout, criação/atualização de save, escolha do Portão, resultado de partida multiplayer (e compra cosmética se existir).
+2. O sistema pode enviar e-mail/notificação (ex.: boas-vindas após primeiro login, ou aviso de progresso relevante).
+3. Logs de auditoria servem pra análise posterior, não pra gameplay.
+>>>>>>> refs/remotes/origin/docs/isn-sprint1
 
 Proposta D07: primeiro cadastro gera e-mail de boas-vindas e notificação no jogo; conclusão de campanha gera notificação no jogo. Falha no provedor de e-mail não bloqueia login, save ou partida. Repetição de login não repete boas-vindas; retentativas usam uma chave do evento para evitar duplicação.
 

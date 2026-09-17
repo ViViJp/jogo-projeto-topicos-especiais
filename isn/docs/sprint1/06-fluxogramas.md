@@ -40,7 +40,11 @@ flowchart TD
   class resolve,send pending
 ```
 
+<<<<<<< HEAD
 ![Login, save local e comunicações](../imagens/fluxo-login.svg)
+=======
+![Fluxo login](../imagens/fluxo-login.png)
+>>>>>>> refs/remotes/origin/docs/isn-sprint1
 
 ## 2. Loop da fase e persistência
 
@@ -76,10 +80,15 @@ flowchart TD
   finish -->|"sim"| next
 ```
 
+<<<<<<< HEAD
 ![Loop da fase e persistência](../imagens/fluxo-gameplay.svg)
+=======
+![Fluxo gameplay](../imagens/fluxo-gameplay.png)
+>>>>>>> refs/remotes/origin/docs/isn-sprint1
 
 ## 3. Clínica, implante e próxima fase
 
+<<<<<<< HEAD
 ZIP RF15 e UC05 esclarecem que o procedimento acontece sem escolha de aceitar/recusar. Aceitação de Alex é narrativa. Save local permanece conforme GDD; sincronização em nuvem só para autenticado, sem bloquear gameplay por falha de rede.
 
 ```mermaid
@@ -106,10 +115,55 @@ flowchart TD
 ```
 
 ![Clínica, implante e próxima fase](../imagens/fluxo-clinica.svg)
+=======
+## 3. Clínica → implante → habilidade (sem escolha)
+
+O jogador **não escolhe** se coloca o implante. Depois da fase 1–4 o procedimento acontece e a habilidade é liberada.
+
+```mermaid
+flowchart TD
+  fimFase([Concluiu fase 1-4]) --> clinica[Cena da clinica]
+  clinica --> marca[Implante instalado]
+  marca --> libera[Libera habilidade nova]
+  libera --> auth{Jogador autenticado?}
+  auth -->|Sim| save[Salva no backend]
+  save --> audit[Registra na auditoria]
+  audit --> proxima[Segue pra proxima fase]
+  auth -->|Nao| proxima
+```
+
+![Fluxo clínica](../imagens/fluxo-clinica.png)
+>>>>>>> refs/remotes/origin/docs/isn-sprint1
 
 ## 4. Campanha completa e finais
 
+<<<<<<< HEAD
 A descida usa a ordem e o retry do fluxo específico. Snapshot pré-Portão permanece separado; restauração integral permite repetir a escolha. Corpo de Hollow é o estado preservado na quebra, sem novas retiradas.
+=======
+## 4. Multiplayer competitivo
+
+```mermaid
+flowchart TD
+  menu([Menu multiplayer]) --> login{Autenticado?}
+  login -->|Nao| auth[Faz login]
+  auth --> sala
+  login -->|Sim| sala[Cria ou entra na sala]
+  sala --> prontos{2 jogadores prontos?}
+  prontos -->|Nao| espera[Aguarda / cancela]
+  espera --> sala
+  prontos -->|Sim| corrida[Corrida tempo + creditos]
+  corrida --> resultado[Calcula vencedor]
+  resultado --> rank[Grava ranking da partida]
+  rank --> fim([Volta ao menu])
+  rank -.-> saveCampanha[Nao altera save da campanha]
+```
+
+![Fluxo multiplayer](../imagens/fluxo-multiplayer.png)
+
+---
+
+## 5. Deploy em produção (alto nível)
+>>>>>>> refs/remotes/origin/docs/isn-sprint1
 
 ```mermaid
 flowchart TD
@@ -142,7 +196,11 @@ flowchart TD
   menu -->|"Novo Jogo confirmado"| start
 ```
 
+<<<<<<< HEAD
 ![Campanha completa e finais](../imagens/fluxo-campanha.svg)
+=======
+![Fluxo deploy](../imagens/fluxo-deploy.png)
+>>>>>>> refs/remotes/origin/docs/isn-sprint1
 
 ## 5. Descida — memória, retry e retirada
 
