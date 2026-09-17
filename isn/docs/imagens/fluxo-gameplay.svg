@@ -1,33 +1,59 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="640" height="400" viewBox="0 0 640 400">
-  <rect width="640" height="400" fill="#f7f7f7"/>
-  <text x="20" y="28" font-family="Arial,sans-serif" font-size="15" fill="#222">Fluxo: loop da fase</text>
-
-  <rect x="240" y="45" width="140" height="32" rx="16" fill="#ddd" stroke="#333"/>
-  <text x="270" y="66" font-family="Arial,sans-serif" font-size="12">Inicia fase</text>
-
-  <rect x="240" y="95" width="140" height="32" rx="4" fill="#cfe8ff" stroke="#333"/>
-  <text x="265" y="116" font-family="Arial,sans-serif" font-size="12">Corre sozinho</text>
-
-  <rect x="240" y="145" width="140" height="36" rx="4" fill="#fff9c4" stroke="#333"/>
-  <text x="255" y="168" font-family="Arial,sans-serif" font-size="11">Obst�culo?</text>
-
-  <rect x="40" y="210" width="140" height="36" rx="4" fill="#ffcdd2" stroke="#333"/>
-  <text x="70" y="233" font-family="Arial,sans-serif" font-size="11">Morte � checkpoint</text>
-
-  <rect x="240" y="210" width="140" height="36" rx="4" fill="#e8f5e9" stroke="#333"/>
-  <text x="255" y="233" font-family="Arial,sans-serif" font-size="11">A��o correta</text>
-
-  <rect x="240" y="270" width="140" height="36" rx="4" fill="#ffe0b2" stroke="#333"/>
-  <text x="250" y="293" font-family="Arial,sans-serif" font-size="11">Checkpoint / cr�ditos</text>
-
-  <rect x="240" y="340" width="140" height="32" rx="16" fill="#ddd" stroke="#333"/>
-  <text x="250" y="361" font-family="Arial,sans-serif" font-size="11">Cl�nica ou Port�o</text>
-
-  <line x1="310" y1="77" x2="310" y2="95" stroke="#333"/>
-  <line x1="310" y1="127" x2="310" y2="145" stroke="#333"/>
-  <line x1="240" y1="163" x2="180" y2="228" stroke="#333"/>
-  <line x1="310" y1="181" x2="310" y2="210" stroke="#333"/>
-  <line x1="310" y1="246" x2="310" y2="270" stroke="#333"/>
-  <line x1="310" y1="306" x2="310" y2="340" stroke="#333"/>
-  <path d="M110 210 V120 H240" fill="none" stroke="#333"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="1540" height="1520" viewBox="0 0 1540 1520" role="img" aria-labelledby="title desc">
+<title id="title">Loop da fase e persistência</title>
+<desc id="desc">Diagrama gerado da mesma fonte do bloco Mermaid. Laranja e tracejado indicam propostas ou decisões pendentes.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#52657c"/></marker></defs>
+<rect width="1540" height="1520" fill="#ffffff"/>
+<text x="32" y="40" font-family="sans-serif" font-size="25" font-weight="700" fill="#10253f">Loop da fase e persistência</text>
+<text x="32" y="70" font-family="sans-serif" font-size="16" fill="#52657c">Flesh to Chrome · Sprint 1 · Propostas/pendências em laranja e tracejado</text>
+<polyline points="690,214 690,316" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,404 690,484" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="532,550 418,550" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="260,594 260,696" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="260,784 260,812 1470,812 1470,288 690,288 690,316" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,616 690,674" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="848,740 962,740" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1120,806 1120,834 100,834 100,478 260,478 260,506" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1120,806 1120,835 690,835 690,864" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,806 690,864" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="848,930 962,930" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1120,974 1120,1014 690,1014 690,1054" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,996 690,1054" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,1186 690,1214 70,1214 70,288 690,288 690,316" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,1186 690,1266" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<text x="475" y="538" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">sim</text>
+<text x="738" y="645" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">não</text>
+<text x="905" y="728" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">sim</text>
+<text x="610" y="826" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">não</text>
+<text x="905" y="826" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">sim</text>
+<text x="738" y="835" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">não</text>
+<text x="905" y="918" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">sim</text>
+<text x="738" y="1025" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">não</text>
+<text x="380" y="1206" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">não</text>
+<text x="738" y="1226" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">sim</text>
+<rect x="532" y="126" width="316" height="88" rx="38" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="176" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Iniciar / retomar fase</text>
+<rect x="532" y="316" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="366" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Correr e processar ações / coleta</text>
+<polygon points="690,484 848,550 690,616 532,550" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="556" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Colisão letal?</text>
+<rect x="102" y="506" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="260" y="546" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Morrer: descartar créditos</text>
+<text x="260" y="566" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">transitórios</text>
+<rect x="102" y="696" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="260" y="736" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Retomar início ou checkpoint;</text>
+<text x="260" y="756" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">ocultar scan</text>
+<polygon points="690,674 848,740 690,806 532,740" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="746" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Preso em quebrável?</text>
+<polygon points="1120,674 1278,740 1120,806 962,740" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="1120" y="746" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Atacou na janela?</text>
+<polygon points="690,864 848,930 690,996 532,930" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="936" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Ativou checkpoint?</text>
+<rect x="962" y="886" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="1120" y="926" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Consolidar, salvar e retomar</text>
+<text x="1120" y="946" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">corrida</text>
+<polygon points="690,1054 848,1120 690,1186 532,1120" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="1126" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Fim da fase?</text>
+<rect x="532" y="1266" width="316" height="88" rx="38" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="1306" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Consolidar restante; clínica,</text>
+<text x="690" y="1326" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Portão ou descida</text>
 </svg>

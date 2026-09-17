@@ -1,0 +1,3158 @@
+[
+  {
+    "file": "diagrama-aws-microsservicos",
+    "title": "AWS — microsserviços e serviços gerenciados",
+    "intro": "Arquitetura de referência: implantação e dados próprios para Conta, Campanha, Partidas, Comunicações e Auditoria. Blocos com múltiplas tabelas são agrupamentos visuais, não banco compartilhado entre serviços. Cada domínio acessa apenas seus dados. Tempo real é candidato D04. Conta AWS ainda não criada; Free Tier e orçamento no documento 12. Route 53 resolve nomes para os destinos; suas setas são registros DNS, não passagem de tráfego HTTP. ACM fornece certificados. api.* e ws.* são nomes propostos (D08/D04); detalhes e custos no documento 12, seção 3.1.",
+    "group": "architecture",
+    "nodes": [
+      {
+        "id": "browser",
+        "label": "Navegador Phaser + teclado/gamepad",
+        "col": 1,
+        "row": 0,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "s3",
+        "label": "S3 privado: frontend e assets",
+        "col": 0,
+        "row": 0,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "google",
+        "label": "Google: identidade externa",
+        "col": 2,
+        "row": 0,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "cdn",
+        "label": "CloudFront: CDN",
+        "col": 0,
+        "row": 1,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "cognito",
+        "label": "Cognito Lite: login social",
+        "col": 2,
+        "row": 1,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "http",
+        "label": "API Gateway HTTP + JWT",
+        "col": 1,
+        "row": 2,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "ws",
+        "label": "API Gateway WebSocket — D04",
+        "col": 2,
+        "row": 2,
+        "shape": "box",
+        "pending": true
+      },
+      {
+        "id": "account",
+        "label": "Lambda Conta",
+        "col": 0,
+        "row": 3,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "campaign",
+        "label": "Lambda Campanha",
+        "col": 1,
+        "row": 3,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "match",
+        "label": "Lambdas Partidas",
+        "col": 2,
+        "row": 3,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "accountdb",
+        "label": "DynamoDB accounts + outbox",
+        "col": 0,
+        "row": 4,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "savedb",
+        "label": "DynamoDB campaigns + outbox",
+        "col": 1,
+        "row": 4,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "matchdb",
+        "label": "DynamoDB matches + outbox",
+        "col": 2,
+        "row": 4,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "events",
+        "label": "Streams + publicadores por domínio",
+        "col": 1,
+        "row": 5,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "auditq",
+        "label": "SQS Auditoria + DLQ",
+        "col": 0,
+        "row": 6,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "comq",
+        "label": "SQS Comunicações + DLQ",
+        "col": 2,
+        "row": 6,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "audit",
+        "label": "Lambda Auditoria",
+        "col": 0,
+        "row": 7,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "com",
+        "label": "Lambda Comunicações",
+        "col": 2,
+        "row": 7,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "auditdb",
+        "label": "DynamoDB audit",
+        "col": 0,
+        "row": 8,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "comdb",
+        "label": "DynamoDB communications",
+        "col": 2,
+        "row": 8,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "ses",
+        "label": "SES: e-mail transacional",
+        "col": 2,
+        "row": 9,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "ops",
+        "label": "CloudWatch + IAM + Pulumi/CI",
+        "col": 1,
+        "row": 9,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "dns",
+        "label": "Route 53: DNS público do domínio",
+        "col": 1,
+        "row": 1,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "acm",
+        "label": "ACM: certificados HTTPS",
+        "col": 0,
+        "row": 2,
+        "shape": "box",
+        "pending": false
+      }
+    ],
+    "edges": [
+      {
+        "source": "browser",
+        "target": "cdn",
+        "label": "carrega jogo",
+        "pending": false
+      },
+      {
+        "source": "cdn",
+        "target": "s3",
+        "label": "origem privada",
+        "pending": false
+      },
+      {
+        "source": "browser",
+        "target": "cognito",
+        "label": "login",
+        "pending": false
+      },
+      {
+        "source": "cognito",
+        "target": "google",
+        "label": "federação",
+        "pending": false
+      },
+      {
+        "source": "browser",
+        "target": "http",
+        "label": "REST / JWT",
+        "pending": false
+      },
+      {
+        "source": "browser",
+        "target": "ws",
+        "label": "tempo real",
+        "pending": true
+      },
+      {
+        "source": "http",
+        "target": "account",
+        "label": "/me, /auth",
+        "pending": false
+      },
+      {
+        "source": "http",
+        "target": "campaign",
+        "label": "/me/campaign",
+        "pending": false
+      },
+      {
+        "source": "http",
+        "target": "match",
+        "label": "/matches",
+        "pending": false
+      },
+      {
+        "source": "ws",
+        "target": "match",
+        "label": "mensagens",
+        "pending": true
+      },
+      {
+        "source": "account",
+        "target": "accountdb",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "campaign",
+        "target": "savedb",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "match",
+        "target": "matchdb",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "accountdb",
+        "target": "events",
+        "label": "outbox",
+        "pending": false
+      },
+      {
+        "source": "savedb",
+        "target": "events",
+        "label": "outbox",
+        "pending": false
+      },
+      {
+        "source": "matchdb",
+        "target": "events",
+        "label": "outbox",
+        "pending": false
+      },
+      {
+        "source": "events",
+        "target": "auditq",
+        "label": "eventos críticos",
+        "pending": false
+      },
+      {
+        "source": "events",
+        "target": "comq",
+        "label": "gatilhos",
+        "pending": false
+      },
+      {
+        "source": "auditq",
+        "target": "audit",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "comq",
+        "target": "com",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "audit",
+        "target": "auditdb",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "com",
+        "target": "comdb",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "com",
+        "target": "ses",
+        "label": "envio",
+        "pending": false
+      },
+      {
+        "source": "http",
+        "target": "audit",
+        "label": "consulta própria",
+        "pending": false
+      },
+      {
+        "source": "http",
+        "target": "com",
+        "label": "notificações",
+        "pending": false
+      },
+      {
+        "source": "browser",
+        "target": "dns",
+        "label": "resolução DNS",
+        "pending": false
+      },
+      {
+        "source": "dns",
+        "target": "cdn",
+        "label": "Alias do site",
+        "pending": false
+      },
+      {
+        "source": "dns",
+        "target": "http",
+        "label": "Alias api.* proposto",
+        "pending": false
+      },
+      {
+        "source": "dns",
+        "target": "ws",
+        "label": "ws.* se adotado",
+        "pending": true
+      },
+      {
+        "source": "acm",
+        "target": "cdn",
+        "label": "TLS / us-east-1",
+        "pending": false
+      },
+      {
+        "source": "acm",
+        "target": "http",
+        "label": "TLS regional",
+        "pending": false
+      }
+    ]
+  },
+  {
+    "file": "diagrama-aws-eventos",
+    "title": "AWS — eventos, auditoria e notificações",
+    "intro": "Fluxo proposto por serviço produtor: mudança e outbox na mesma transação. Streams ativa publicador; SQS e consumidores permitem retentativas. Destinos deduplicam eventId; falhas repetidas vão para DLQ. Outbox preservada permite reconciliar publicação perdida. SES não bloqueia save e Streams não substitui armazenamento permanente.",
+    "group": "architecture",
+    "nodes": [
+      {
+        "id": "request",
+        "label": "Operação crítica validada",
+        "col": 1,
+        "row": 0,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "domain",
+        "label": "Lambda do domínio produtor",
+        "col": 1,
+        "row": 1,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "db",
+        "label": "DynamoDB próprio: estado + outbox",
+        "col": 1,
+        "row": 2,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "reply",
+        "label": "Responder após transação durável",
+        "col": 0,
+        "row": 3,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "stream",
+        "label": "DynamoDB Streams",
+        "col": 1,
+        "row": 3,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "pub",
+        "label": "Publicador Lambda do domínio",
+        "col": 1,
+        "row": 4,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "auditq",
+        "label": "SQS Auditoria",
+        "col": 0,
+        "row": 5,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "comq",
+        "label": "SQS Comunicações",
+        "col": 2,
+        "row": 5,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "audit",
+        "label": "Consumidor Auditoria",
+        "col": 0,
+        "row": 6,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "com",
+        "label": "Consumidor Comunicações",
+        "col": 2,
+        "row": 6,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "auditdb",
+        "label": "DynamoDB audit: eventId único",
+        "col": 0,
+        "row": 7,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "comdb",
+        "label": "DynamoDB communications: notificação e entrega",
+        "col": 2,
+        "row": 7,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "dlqa",
+        "label": "DLQ Auditoria: alarme e reprocessamento",
+        "col": 0,
+        "row": 8,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "dlqc",
+        "label": "DLQ Comunicações: alarme e reprocessamento",
+        "col": 2,
+        "row": 8,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "ses",
+        "label": "SES: envio por evento",
+        "col": 2,
+        "row": 9,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "recover",
+        "label": "Reconciliação da outbox pendente",
+        "col": 1,
+        "row": 9,
+        "shape": "box",
+        "pending": false
+      }
+    ],
+    "edges": [
+      {
+        "source": "request",
+        "target": "domain",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "domain",
+        "target": "db",
+        "label": "transação",
+        "pending": false
+      },
+      {
+        "source": "db",
+        "target": "reply",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "db",
+        "target": "stream",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "stream",
+        "target": "pub",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "pub",
+        "target": "auditq",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "pub",
+        "target": "comq",
+        "label": "se houver gatilho",
+        "pending": false
+      },
+      {
+        "source": "pub",
+        "target": "db",
+        "label": "confirmar publicação",
+        "pending": false
+      },
+      {
+        "source": "auditq",
+        "target": "audit",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "comq",
+        "target": "com",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "audit",
+        "target": "auditdb",
+        "label": "idempotente",
+        "pending": false
+      },
+      {
+        "source": "com",
+        "target": "comdb",
+        "label": "idempotente",
+        "pending": false
+      },
+      {
+        "source": "com",
+        "target": "ses",
+        "label": "envio controlado",
+        "pending": false
+      },
+      {
+        "source": "auditq",
+        "target": "dlqa",
+        "label": "tentativas esgotadas",
+        "pending": false
+      },
+      {
+        "source": "comq",
+        "target": "dlqc",
+        "label": "tentativas esgotadas",
+        "pending": false
+      },
+      {
+        "source": "recover",
+        "target": "pub",
+        "label": "republicar eventId",
+        "pending": false
+      }
+    ]
+  },
+  {
+    "file": "diagrama-visao-geral",
+    "title": "Visão geral — jogo, serviços e nuvem",
+    "intro": "Visão de contexto; detalhamento físico nos diagramas AWS. Conta, Campanha, Partidas, Auditoria e Comunicações são microsserviços independentes em Lambda, com tabelas DynamoDB próprias. S3/CloudFront entregam o jogo; Cognito/Google autenticam. Sincronização multiplayer continua sujeita à prova D04.",
+    "nodes": [
+      {
+        "id": "teclado",
+        "label": "Teclado",
+        "col": 0,
+        "row": 0,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "pad",
+        "label": "Gamepad físico — D01/D02",
+        "col": 1,
+        "row": 0,
+        "shape": "box",
+        "pending": true
+      },
+      {
+        "id": "static",
+        "label": "S3 + CloudFront: frontend",
+        "col": 2,
+        "row": 0,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "input",
+        "label": "Ações de entrada comuns",
+        "col": 0,
+        "row": 1,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "browser",
+        "label": "Navegador: Phaser",
+        "col": 1,
+        "row": 1,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "api",
+        "label": "Microsserviços via HTTP API",
+        "col": 2,
+        "row": 1,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "local",
+        "label": "Save local / localStorage",
+        "col": 0,
+        "row": 2,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "multi",
+        "label": "Multiplayer: salas e resultados",
+        "col": 1,
+        "row": 2,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "db",
+        "label": "DynamoDB: tabelas por serviço",
+        "col": 2,
+        "row": 2,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "google",
+        "label": "Cognito + Google",
+        "col": 2,
+        "row": 3,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "notify",
+        "label": "Comunicações + SES — D07",
+        "col": 1,
+        "row": 3,
+        "shape": "box",
+        "pending": true
+      },
+      {
+        "id": "audit",
+        "label": "Auditoria persistente",
+        "col": 0,
+        "row": 3,
+        "shape": "box",
+        "pending": false
+      }
+    ],
+    "edges": [
+      {
+        "source": "teclado",
+        "target": "input",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "pad",
+        "target": "input",
+        "label": "mesmas ações",
+        "pending": true
+      },
+      {
+        "source": "input",
+        "target": "browser",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "browser",
+        "target": "static",
+        "label": "carrega",
+        "pending": false
+      },
+      {
+        "source": "browser",
+        "target": "api",
+        "label": "HTTPS",
+        "pending": false
+      },
+      {
+        "source": "browser",
+        "target": "local",
+        "label": "save local",
+        "pending": false
+      },
+      {
+        "source": "browser",
+        "target": "multi",
+        "label": "tempo real",
+        "pending": true
+      },
+      {
+        "source": "api",
+        "target": "db",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "api",
+        "target": "google",
+        "label": "autenticação",
+        "pending": false
+      },
+      {
+        "source": "api",
+        "target": "notify",
+        "label": "eventos",
+        "pending": true
+      },
+      {
+        "source": "api",
+        "target": "audit",
+        "label": "operações críticas",
+        "pending": false
+      },
+      {
+        "source": "api",
+        "target": "multi",
+        "label": "salas / consulta",
+        "pending": false
+      },
+      {
+        "source": "multi",
+        "target": "db",
+        "label": "grava resultado",
+        "pending": false
+      }
+    ],
+    "group": "architecture"
+  },
+  {
+    "file": "diagrama-modulos-backend",
+    "title": "Microsserviços do backend e seus dados",
+    "intro": "Cada serviço tem Lambda(s), IAM role, pacote e tabela próprios, com implantação independente. As conexões de eventos representam outbox/publicação por filas, detalhadas no diagrama AWS de eventos. Não há leitura direta da tabela de outro serviço. Identidade e e-mail são terceirizados para Cognito/Google e SES.",
+    "group": "architecture",
+    "nodes": [
+      {
+        "id": "api",
+        "label": "API Gateway: rotas REST",
+        "col": 1,
+        "row": 0,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "auth",
+        "label": "Conta / Lambda",
+        "col": 0,
+        "row": 1,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "save",
+        "label": "Campanha / Lambda",
+        "col": 1,
+        "row": 1,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "match",
+        "label": "Partidas / Lambdas",
+        "col": 2,
+        "row": 1,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "accounts",
+        "label": "DynamoDB accounts",
+        "col": 0,
+        "row": 2,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "saves",
+        "label": "DynamoDB campaigns",
+        "col": 1,
+        "row": 2,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "matches",
+        "label": "DynamoDB matches",
+        "col": 2,
+        "row": 2,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "events",
+        "label": "Outbox / eventos duráveis",
+        "col": 1,
+        "row": 3,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "audit",
+        "label": "Auditoria / Lambda",
+        "col": 0,
+        "row": 4,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "notify",
+        "label": "Comunicações / Lambda",
+        "col": 2,
+        "row": 4,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "logs",
+        "label": "DynamoDB audit",
+        "col": 0,
+        "row": 5,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "messages",
+        "label": "DynamoDB communications",
+        "col": 2,
+        "row": 5,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "cognito",
+        "label": "Cognito + Google",
+        "col": 0,
+        "row": 0,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "ses",
+        "label": "Amazon SES",
+        "col": 2,
+        "row": 6,
+        "shape": "box",
+        "pending": false
+      }
+    ],
+    "edges": [
+      {
+        "source": "api",
+        "target": "auth",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "api",
+        "target": "save",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "api",
+        "target": "match",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "auth",
+        "target": "cognito",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "auth",
+        "target": "accounts",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "save",
+        "target": "saves",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "match",
+        "target": "matches",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "accounts",
+        "target": "events",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "saves",
+        "target": "events",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "matches",
+        "target": "events",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "events",
+        "target": "audit",
+        "label": "SQS",
+        "pending": false
+      },
+      {
+        "source": "events",
+        "target": "notify",
+        "label": "SQS",
+        "pending": false
+      },
+      {
+        "source": "audit",
+        "target": "logs",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "notify",
+        "target": "messages",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "notify",
+        "target": "ses",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "api",
+        "target": "audit",
+        "label": "consulta",
+        "pending": false
+      },
+      {
+        "source": "api",
+        "target": "notify",
+        "label": "notificações",
+        "pending": false
+      }
+    ]
+  },
+  {
+    "file": "diagrama-ambientes",
+    "title": "Ambientes e implantação",
+    "intro": "Pulumi mantém base e serviços independentes por ambiente. Dev local é padrão; dev em nuvem é temporário e isolado de produção. AWS gerenciada/Lambda/DynamoDB são a base; conta ainda não criada, com elegibilidade, capacidade e orçamento em D08/D09. Não provisionar compute ocioso como requisito de microsserviços. Base DNS/HTTPS compartilhada via Route 53 e ACM; subdomínios de dev não exigem nova zona pública.",
+    "nodes": [
+      {
+        "id": "git",
+        "label": "Repositório Git",
+        "col": 1,
+        "row": 0,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "dev",
+        "label": "Desenvolvimento local",
+        "col": 0,
+        "row": 1,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "ci",
+        "label": "CI: validação e build",
+        "col": 1,
+        "row": 1,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "iac",
+        "label": "Pulumi / stacks isoladas",
+        "col": 1,
+        "row": 2,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "devcloud",
+        "label": "Dev em nuvem — se utilizado",
+        "col": 0,
+        "row": 3,
+        "shape": "box",
+        "pending": true
+      },
+      {
+        "id": "prod",
+        "label": "Produção AWS",
+        "col": 2,
+        "row": 3,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "devdb",
+        "label": "Dados e credenciais de dev",
+        "col": 0,
+        "row": 4,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "domain",
+        "label": "nihil-legere-possum.lat",
+        "col": 2,
+        "row": 4,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "proddb",
+        "label": "Dados e credenciais de prod",
+        "col": 1,
+        "row": 4,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "dns",
+        "label": "Route 53 + ACM: nomes e HTTPS",
+        "col": 2,
+        "row": 2,
+        "shape": "box",
+        "pending": false
+      }
+    ],
+    "edges": [
+      {
+        "source": "git",
+        "target": "dev",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "git",
+        "target": "ci",
+        "label": "branch de deploy",
+        "pending": false
+      },
+      {
+        "source": "ci",
+        "target": "iac",
+        "label": "checks aprovados",
+        "pending": false
+      },
+      {
+        "source": "iac",
+        "target": "devcloud",
+        "label": "D08",
+        "pending": true
+      },
+      {
+        "source": "iac",
+        "target": "prod",
+        "label": "publicação automática",
+        "pending": false
+      },
+      {
+        "source": "devcloud",
+        "target": "devdb",
+        "label": "isolamento",
+        "pending": true
+      },
+      {
+        "source": "prod",
+        "target": "domain",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "prod",
+        "target": "proddb",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "iac",
+        "target": "dns",
+        "label": "configuração via IaC",
+        "pending": false
+      },
+      {
+        "source": "dns",
+        "target": "domain",
+        "label": "domínio público",
+        "pending": false
+      }
+    ],
+    "group": "architecture"
+  },
+  {
+    "file": "diagrama-entrada",
+    "title": "Entrada por teclado e gamepad físico",
+    "intro": "Controle físico é escopo confirmado. Botões, compatibilidade, vários controles e desconexão estão em D01/D02. Não existe celular remoto neste desenho. Teclado continua disponível e ambos usam as mesmas restrições do gameplay.",
+    "nodes": [
+      {
+        "id": "keyboard",
+        "label": "Teclado",
+        "col": 0,
+        "row": 0,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "pad",
+        "label": "Controle físico",
+        "col": 2,
+        "row": 0,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "detect",
+        "label": "Detecção/adaptação — D01",
+        "col": 2,
+        "row": 1,
+        "shape": "box",
+        "pending": true
+      },
+      {
+        "id": "actions",
+        "label": "Ações comuns: pular, slide, ataque, scan, dash, menus",
+        "col": 1,
+        "row": 2,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "rules",
+        "label": "Implantes, cooldowns e bloqueios",
+        "col": 1,
+        "row": 3,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "localgame",
+        "label": "Campanha / simulação local",
+        "col": 0,
+        "row": 4,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "netgame",
+        "label": "Multiplayer: entrada para sincronização — D04",
+        "col": 2,
+        "row": 4,
+        "shape": "box",
+        "pending": true
+      },
+      {
+        "id": "menu",
+        "label": "Menu: confirmar, voltar e navegar",
+        "col": 0,
+        "row": 3,
+        "shape": "box",
+        "pending": false
+      }
+    ],
+    "edges": [
+      {
+        "source": "keyboard",
+        "target": "actions",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "pad",
+        "target": "detect",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "detect",
+        "target": "actions",
+        "label": "mapeamento pendente",
+        "pending": true
+      },
+      {
+        "source": "actions",
+        "target": "rules",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "actions",
+        "target": "menu",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "rules",
+        "target": "localgame",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "rules",
+        "target": "netgame",
+        "label": "mesmas ações",
+        "pending": true
+      }
+    ],
+    "group": "architecture"
+  },
+  {
+    "file": "diagrama-multiplayer",
+    "title": "Multiplayer — salas, sincronização e resultado",
+    "intro": "ZIP RF22/RF23 e UC09 confirmam dois jogadores autenticados, criação/entrada em sala e resultado/classificação da corrida gravados. Dois navegadores são a topologia proposta. D03 ainda cobre descoberta/compartilhamento da sala e visibilidade/retenção; D04 cobre protocolo e autoridade. Ranking global não está definido. Implementação de referência: API Gateway HTTP para salas, Lambda Partidas e DynamoDB próprio para resultados. API Gateway WebSocket é candidato a validar em custo/latência; não enviar cada frame como save/auditoria. Ver documento 12.",
+    "nodes": [
+      {
+        "id": "p1",
+        "label": "Jogador 1 autenticado: teclado/gamepad",
+        "col": 0,
+        "row": 0,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "p2",
+        "label": "Jogador 2 autenticado: teclado/gamepad",
+        "col": 2,
+        "row": 0,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "c1",
+        "label": "Cliente 1 / Phaser",
+        "col": 0,
+        "row": 1,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "c2",
+        "label": "Cliente 2 / Phaser",
+        "col": 2,
+        "row": 1,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "rest",
+        "label": "REST: salas, entrada e prontidão",
+        "col": 1,
+        "row": 2,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "realtime",
+        "label": "API Gateway WebSocket — D04",
+        "col": 1,
+        "row": 3,
+        "shape": "box",
+        "pending": true
+      },
+      {
+        "id": "authority",
+        "label": "Lambda Partidas: validação — D04",
+        "col": 1,
+        "row": 4,
+        "shape": "box",
+        "pending": true
+      },
+      {
+        "id": "events",
+        "label": "Auditoria: entrada, saída e resultado",
+        "col": 0,
+        "row": 5,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "history",
+        "label": "DynamoDB matches: resultado",
+        "col": 2,
+        "row": 5,
+        "shape": "box",
+        "pending": false
+      }
+    ],
+    "edges": [
+      {
+        "source": "p1",
+        "target": "c1",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "p2",
+        "target": "c2",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "c1",
+        "target": "rest",
+        "label": "HTTPS / sessão",
+        "pending": false
+      },
+      {
+        "source": "c2",
+        "target": "rest",
+        "label": "HTTPS / sessão",
+        "pending": false
+      },
+      {
+        "source": "c1",
+        "target": "realtime",
+        "label": "ações/estado",
+        "pending": true
+      },
+      {
+        "source": "c2",
+        "target": "realtime",
+        "label": "ações/estado",
+        "pending": true
+      },
+      {
+        "source": "rest",
+        "target": "authority",
+        "label": "participantes",
+        "pending": true
+      },
+      {
+        "source": "realtime",
+        "target": "authority",
+        "label": "sincronização",
+        "pending": true
+      },
+      {
+        "source": "authority",
+        "target": "events",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "authority",
+        "target": "history",
+        "label": "gravação no backend",
+        "pending": false
+      }
+    ],
+    "group": "architecture"
+  },
+  {
+    "file": "diagrama-dados",
+    "title": "Modelo lógico — cardinalidades e separação de dados",
+    "intro": "Detalhes dos campos no documento 08. O ZIP confirma sala/partida, participantes autenticados e resultado persistido; formato dos dados é proposta de modelagem. Cosméticos são opcionais D11. Snapshot não é segundo slot. D03 cobre visibilidade/retenção dos resultados, não sua existência. O mapeamento físico agora usa tabelas DynamoDB por microsserviço, conforme documentos 08/12; linhas de relação não autorizam acesso cruzado entre serviços.",
+    "nodes": [
+      {
+        "id": "user",
+        "label": "Usuário",
+        "col": 1,
+        "row": 0,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "campaign",
+        "label": "Campanha ativa",
+        "col": 0,
+        "row": 1,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "notice",
+        "label": "Notificação no jogo — D07",
+        "col": 1,
+        "row": 1,
+        "shape": "box",
+        "pending": true
+      },
+      {
+        "id": "email",
+        "label": "Entrega de e-mail — D07",
+        "col": 2,
+        "row": 1,
+        "shape": "box",
+        "pending": true
+      },
+      {
+        "id": "snapshot",
+        "label": "Snapshot pré-Portão",
+        "col": 0,
+        "row": 2,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "audit",
+        "label": "Evento de auditoria",
+        "col": 1,
+        "row": 2,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "participant",
+        "label": "Participante autenticado",
+        "col": 2,
+        "row": 2,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "state",
+        "label": "Estado: créditos, implantes, memórias, retry e final",
+        "col": 0,
+        "row": 3,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "skin",
+        "label": "Cosmético desbloqueado — D11",
+        "col": 1,
+        "row": 3,
+        "shape": "box",
+        "pending": true
+      },
+      {
+        "id": "match",
+        "label": "Partida / resultado e classificação",
+        "col": 2,
+        "row": 3,
+        "shape": "box",
+        "pending": false
+      }
+    ],
+    "edges": [
+      {
+        "source": "user",
+        "target": "campaign",
+        "label": "1 : 0..1",
+        "pending": false
+      },
+      {
+        "source": "user",
+        "target": "notice",
+        "label": "1 : N",
+        "pending": true
+      },
+      {
+        "source": "user",
+        "target": "email",
+        "label": "1 : N",
+        "pending": true
+      },
+      {
+        "source": "campaign",
+        "target": "snapshot",
+        "label": "1 : 0..1",
+        "pending": false
+      },
+      {
+        "source": "campaign",
+        "target": "state",
+        "label": "contém",
+        "pending": false
+      },
+      {
+        "source": "user",
+        "target": "audit",
+        "label": "1 : N",
+        "pending": false
+      },
+      {
+        "source": "user",
+        "target": "participant",
+        "label": "1 : N",
+        "pending": false
+      },
+      {
+        "source": "match",
+        "target": "participant",
+        "label": "2 prontos para iniciar",
+        "pending": false
+      },
+      {
+        "source": "user",
+        "target": "skin",
+        "label": "1 : N opcional",
+        "pending": true
+      }
+    ],
+    "group": "architecture"
+  },
+  {
+    "file": "fluxo-login",
+    "title": "Login, save local e comunicações",
+    "intro": "Primeiro cadastro, e não ausência de save, dispara boas-vindas. Login não é necessário para persistência local. D05 define reconciliação; envio de comunicação é independente e não bloqueia carregar a campanha.",
+    "nodes": [
+      {
+        "id": "start",
+        "label": "Abrir site / menu",
+        "col": 1,
+        "row": 0,
+        "shape": "end",
+        "pending": false
+      },
+      {
+        "id": "login",
+        "label": "Entrar na conta?",
+        "col": 1,
+        "row": 1,
+        "shape": "decision",
+        "pending": false
+      },
+      {
+        "id": "local",
+        "label": "Carregar ou criar save local",
+        "col": 0,
+        "row": 2,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "provider",
+        "label": "Autenticar: Cognito + Google",
+        "col": 2,
+        "row": 2,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "ok",
+        "label": "Login válido?",
+        "col": 2,
+        "row": 3,
+        "shape": "decision",
+        "pending": false
+      },
+      {
+        "id": "account",
+        "label": "Identificar conta e auditar",
+        "col": 1,
+        "row": 4,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "first",
+        "label": "Primeiro cadastro?",
+        "col": 0,
+        "row": 5,
+        "shape": "decision",
+        "pending": false
+      },
+      {
+        "id": "resolve",
+        "label": "Comparar saves local e remoto — D05",
+        "col": 2,
+        "row": 5,
+        "shape": "box",
+        "pending": true
+      },
+      {
+        "id": "send",
+        "label": "Solicitar e-mail + notificação sem bloquear — D07",
+        "col": 0,
+        "row": 6,
+        "shape": "box",
+        "pending": true
+      },
+      {
+        "id": "play",
+        "label": "Continuar campanha",
+        "col": 1,
+        "row": 7,
+        "shape": "end",
+        "pending": false
+      },
+      {
+        "id": "commDone",
+        "label": "Fim da tarefa de comunicação",
+        "col": 0,
+        "row": 7,
+        "shape": "end",
+        "pending": false
+      }
+    ],
+    "edges": [
+      {
+        "source": "start",
+        "target": "login",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "login",
+        "target": "local",
+        "label": "não",
+        "pending": false
+      },
+      {
+        "source": "local",
+        "target": "play",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "login",
+        "target": "provider",
+        "label": "sim",
+        "pending": false
+      },
+      {
+        "source": "provider",
+        "target": "ok",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "ok",
+        "target": "start",
+        "label": "cancelou / erro",
+        "pending": false
+      },
+      {
+        "source": "ok",
+        "target": "account",
+        "label": "sim",
+        "pending": false
+      },
+      {
+        "source": "account",
+        "target": "first",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "account",
+        "target": "resolve",
+        "label": "carregar",
+        "pending": true
+      },
+      {
+        "source": "first",
+        "target": "send",
+        "label": "sim",
+        "pending": true
+      },
+      {
+        "source": "resolve",
+        "target": "play",
+        "label": "após reconciliação",
+        "pending": true
+      },
+      {
+        "source": "first",
+        "target": "commDone",
+        "label": "não",
+        "pending": false
+      },
+      {
+        "source": "send",
+        "target": "commDone",
+        "label": "",
+        "pending": true
+      }
+    ],
+    "group": "flow"
+  },
+  {
+    "file": "fluxo-gameplay",
+    "title": "Loop da fase e persistência",
+    "intro": "Checkpoint e fim de fase são avaliados mesmo sem obstáculos. Na campanha, créditos não consolidados se perdem na morte; o modo multiplayer usa a regra própria RN08. A descida não contém créditos comuns. Após morte, scan do trecho volta a oculto.",
+    "nodes": [
+      {
+        "id": "start",
+        "label": "Iniciar / retomar fase",
+        "col": 1,
+        "row": 0,
+        "shape": "end",
+        "pending": false
+      },
+      {
+        "id": "run",
+        "label": "Correr e processar ações / coleta",
+        "col": 1,
+        "row": 1,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "lethal",
+        "label": "Colisão letal?",
+        "col": 1,
+        "row": 2,
+        "shape": "decision",
+        "pending": false
+      },
+      {
+        "id": "death",
+        "label": "Morrer: descartar créditos transitórios",
+        "col": 0,
+        "row": 2,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "restore",
+        "label": "Retomar início ou checkpoint; ocultar scan",
+        "col": 0,
+        "row": 3,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "break",
+        "label": "Preso em quebrável?",
+        "col": 1,
+        "row": 3,
+        "shape": "decision",
+        "pending": false
+      },
+      {
+        "id": "attack",
+        "label": "Atacou na janela?",
+        "col": 2,
+        "row": 3,
+        "shape": "decision",
+        "pending": false
+      },
+      {
+        "id": "check",
+        "label": "Ativou checkpoint?",
+        "col": 1,
+        "row": 4,
+        "shape": "decision",
+        "pending": false
+      },
+      {
+        "id": "save",
+        "label": "Consolidar, salvar e retomar corrida",
+        "col": 2,
+        "row": 4,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "finish",
+        "label": "Fim da fase?",
+        "col": 1,
+        "row": 5,
+        "shape": "decision",
+        "pending": false
+      },
+      {
+        "id": "next",
+        "label": "Consolidar restante; clínica, Portão ou descida",
+        "col": 1,
+        "row": 6,
+        "shape": "end",
+        "pending": false
+      }
+    ],
+    "edges": [
+      {
+        "source": "start",
+        "target": "run",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "run",
+        "target": "lethal",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "lethal",
+        "target": "death",
+        "label": "sim",
+        "pending": false
+      },
+      {
+        "source": "death",
+        "target": "restore",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "restore",
+        "target": "run",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "lethal",
+        "target": "break",
+        "label": "não",
+        "pending": false
+      },
+      {
+        "source": "break",
+        "target": "attack",
+        "label": "sim",
+        "pending": false
+      },
+      {
+        "source": "attack",
+        "target": "death",
+        "label": "não",
+        "pending": false
+      },
+      {
+        "source": "attack",
+        "target": "check",
+        "label": "sim",
+        "pending": false
+      },
+      {
+        "source": "break",
+        "target": "check",
+        "label": "não",
+        "pending": false
+      },
+      {
+        "source": "check",
+        "target": "save",
+        "label": "sim",
+        "pending": false
+      },
+      {
+        "source": "save",
+        "target": "finish",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "check",
+        "target": "finish",
+        "label": "não",
+        "pending": false
+      },
+      {
+        "source": "finish",
+        "target": "run",
+        "label": "não",
+        "pending": false
+      },
+      {
+        "source": "finish",
+        "target": "next",
+        "label": "sim",
+        "pending": false
+      }
+    ],
+    "group": "flow"
+  },
+  {
+    "file": "fluxo-clinica",
+    "title": "Clínica, implante e próxima fase",
+    "intro": "ZIP RF15 e UC05 esclarecem que o procedimento acontece sem escolha de aceitar/recusar. Aceitação de Alex é narrativa. Save local permanece conforme GDD; sincronização em nuvem só para autenticado, sem bloquear gameplay por falha de rede.",
+    "nodes": [
+      {
+        "id": "start",
+        "label": "Concluir Fase 1–4",
+        "col": 1,
+        "row": 0,
+        "shape": "end",
+        "pending": false
+      },
+      {
+        "id": "scene",
+        "label": "George: procedimento sem escolha sim/não",
+        "col": 1,
+        "row": 1,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "implant",
+        "label": "Instalar implante da fase",
+        "col": 1,
+        "row": 2,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "ability",
+        "label": "Atualizar corpo e habilidade",
+        "col": 1,
+        "row": 3,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "local",
+        "label": "Salvar localmente",
+        "col": 1,
+        "row": 4,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "auth",
+        "label": "Autenticado?",
+        "col": 1,
+        "row": 5,
+        "shape": "decision",
+        "pending": false
+      },
+      {
+        "id": "sync",
+        "label": "Sincronizar e auditar no backend",
+        "col": 2,
+        "row": 6,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "next",
+        "label": "Seguir para próxima fase",
+        "col": 1,
+        "row": 7,
+        "shape": "end",
+        "pending": false
+      },
+      {
+        "id": "error",
+        "label": "Falha: manter local e informar pendência",
+        "col": 0,
+        "row": 6,
+        "shape": "box",
+        "pending": false
+      }
+    ],
+    "edges": [
+      {
+        "source": "start",
+        "target": "scene",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "scene",
+        "target": "implant",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "implant",
+        "target": "ability",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "ability",
+        "target": "local",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "local",
+        "target": "auth",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "auth",
+        "target": "sync",
+        "label": "sim",
+        "pending": false
+      },
+      {
+        "source": "auth",
+        "target": "next",
+        "label": "não",
+        "pending": false
+      },
+      {
+        "source": "sync",
+        "target": "next",
+        "label": "sucesso",
+        "pending": false
+      },
+      {
+        "source": "sync",
+        "target": "error",
+        "label": "erro",
+        "pending": false
+      },
+      {
+        "source": "error",
+        "target": "next",
+        "label": "",
+        "pending": false
+      }
+    ],
+    "group": "flow"
+  },
+  {
+    "file": "fluxo-campanha",
+    "title": "Campanha completa e finais",
+    "intro": "A descida usa a ordem e o retry do fluxo específico. Snapshot pré-Portão permanece separado; restauração integral permite repetir a escolha. Corpo de Hollow é o estado preservado na quebra, sem novas retiradas.",
+    "nodes": [
+      {
+        "id": "start",
+        "label": "Novo Jogo confirmado / prólogo",
+        "col": 1,
+        "row": 0,
+        "shape": "end",
+        "pending": false
+      },
+      {
+        "id": "sectors",
+        "label": "Fases 1–4 e clínicas em ordem",
+        "col": 1,
+        "row": 1,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "top",
+        "label": "Fase 5 — Topo",
+        "col": 1,
+        "row": 2,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "snap",
+        "label": "Salvar snapshot pré-Portão",
+        "col": 1,
+        "row": 3,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "gate",
+        "label": "Aceitar conversão?",
+        "col": 1,
+        "row": 4,
+        "shape": "decision",
+        "pending": false
+      },
+      {
+        "id": "chrome",
+        "label": "Chrome: encontro físico com pai",
+        "col": 0,
+        "row": 5,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "descent",
+        "label": "Recusar: D1–D4 / memórias e ReForge",
+        "col": 2,
+        "row": 5,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "chain",
+        "label": "Cadeia completa?",
+        "col": 2,
+        "row": 6,
+        "shape": "decision",
+        "pending": false
+      },
+      {
+        "id": "flesh",
+        "label": "Flesh: humano bioprintado / família",
+        "col": 2,
+        "row": 7,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "hollow",
+        "label": "Hollow: corpo preservado / transições / família",
+        "col": 1,
+        "row": 7,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "menu",
+        "label": "Créditos e menu pós-final",
+        "col": 0,
+        "row": 8,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "restore",
+        "label": "Continuar do Portão: restaurar snapshot",
+        "col": 1,
+        "row": 9,
+        "shape": "box",
+        "pending": false
+      }
+    ],
+    "edges": [
+      {
+        "source": "start",
+        "target": "sectors",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "sectors",
+        "target": "top",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "top",
+        "target": "snap",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "snap",
+        "target": "gate",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "gate",
+        "target": "chrome",
+        "label": "sim",
+        "pending": false
+      },
+      {
+        "source": "gate",
+        "target": "descent",
+        "label": "não",
+        "pending": false
+      },
+      {
+        "source": "descent",
+        "target": "chain",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "chain",
+        "target": "flesh",
+        "label": "sim",
+        "pending": false
+      },
+      {
+        "source": "chain",
+        "target": "hollow",
+        "label": "quebrou",
+        "pending": false
+      },
+      {
+        "source": "chrome",
+        "target": "menu",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "flesh",
+        "target": "menu",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "hollow",
+        "target": "menu",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "menu",
+        "target": "restore",
+        "label": "continuar",
+        "pending": false
+      },
+      {
+        "source": "restore",
+        "target": "gate",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "menu",
+        "target": "start",
+        "label": "Novo Jogo confirmado",
+        "pending": false
+      }
+    ],
+    "group": "flow"
+  },
+  {
+    "file": "fluxo-descida",
+    "title": "Descida — memória, retry e retirada",
+    "intro": "D1 Topo/propulsores → D2 Corporativo/olhos → D3 Urbano/braços → D4 Industrial/pernas. Apenas a conclusão do setor sem memória aciona a falha especial. Morte/reinício durante tentativa seguem RN03/RN06, sem consumir retry. D10 define persistência da memória antes do procedimento.",
+    "nodes": [
+      {
+        "id": "start",
+        "label": "Entrar no setor D1–D4",
+        "col": 1,
+        "row": 0,
+        "shape": "end",
+        "pending": false
+      },
+      {
+        "id": "play",
+        "label": "Percorrer setor / procurar memória",
+        "col": 1,
+        "row": 1,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "found",
+        "label": "Recuperou memória?",
+        "col": 1,
+        "row": 2,
+        "shape": "decision",
+        "pending": false
+      },
+      {
+        "id": "endstage",
+        "label": "Concluiu sem memória?",
+        "col": 0,
+        "row": 3,
+        "shape": "decision",
+        "pending": false
+      },
+      {
+        "id": "first",
+        "label": "Retry disponível?",
+        "col": 0,
+        "row": 4,
+        "shape": "decision",
+        "pending": false
+      },
+      {
+        "id": "accept",
+        "label": "Aceita repetir?",
+        "col": 0,
+        "row": 5,
+        "shape": "decision",
+        "pending": false
+      },
+      {
+        "id": "retry",
+        "label": "Registrar retry usado; reiniciar setor",
+        "col": 0,
+        "row": 6,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "george",
+        "label": "Primeira retirada: George recusa ajudar",
+        "col": 2,
+        "row": 3,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "reforge",
+        "label": "ReForge: retirar implante e bioprintar",
+        "col": 2,
+        "row": 4,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "persist",
+        "label": "Salvar retirada, corpo e habilidade",
+        "col": 2,
+        "row": 5,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "last",
+        "label": "Quatro retiradas?",
+        "col": 2,
+        "row": 6,
+        "shape": "decision",
+        "pending": false
+      },
+      {
+        "id": "flesh",
+        "label": "Epílogo Flesh",
+        "col": 2,
+        "row": 7,
+        "shape": "end",
+        "pending": false
+      },
+      {
+        "id": "hollow",
+        "label": "Quebrar cadeia: preservar corpo e seguir Hollow",
+        "col": 0,
+        "row": 8,
+        "shape": "end",
+        "pending": false
+      }
+    ],
+    "edges": [
+      {
+        "source": "start",
+        "target": "play",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "play",
+        "target": "found",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "found",
+        "target": "endstage",
+        "label": "não",
+        "pending": false
+      },
+      {
+        "source": "endstage",
+        "target": "play",
+        "label": "não",
+        "pending": false
+      },
+      {
+        "source": "endstage",
+        "target": "first",
+        "label": "sim",
+        "pending": false
+      },
+      {
+        "source": "first",
+        "target": "accept",
+        "label": "sim",
+        "pending": false
+      },
+      {
+        "source": "first",
+        "target": "hollow",
+        "label": "não",
+        "pending": false
+      },
+      {
+        "source": "accept",
+        "target": "retry",
+        "label": "sim",
+        "pending": false
+      },
+      {
+        "source": "accept",
+        "target": "hollow",
+        "label": "não",
+        "pending": false
+      },
+      {
+        "source": "retry",
+        "target": "play",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "found",
+        "target": "george",
+        "label": "sim / primeira",
+        "pending": false
+      },
+      {
+        "source": "found",
+        "target": "reforge",
+        "label": "sim / demais",
+        "pending": false
+      },
+      {
+        "source": "george",
+        "target": "reforge",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "reforge",
+        "target": "persist",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "persist",
+        "target": "last",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "last",
+        "target": "flesh",
+        "label": "sim",
+        "pending": false
+      },
+      {
+        "source": "last",
+        "target": "start",
+        "label": "não / próximo setor",
+        "pending": false
+      }
+    ],
+    "group": "flow"
+  },
+  {
+    "file": "fluxo-multiplayer",
+    "title": "Partida multiplayer e resultado",
+    "intro": "Login dos dois participantes, criação/entrada em sala e resultado/classificação persistidos são definidos pelo ZIP. D03 cobre a descoberta da sala; D04 cobre protocolo e casos de cancelamento/desconexão. Durante a janela única de 20 s, o segundo continua sujeito a morte, checkpoint e desconexão. Resultado não altera campanha nem define ranking global.",
+    "nodes": [
+      {
+        "id": "start",
+        "label": "Dois jogadores prontos?",
+        "col": 1,
+        "row": 4,
+        "shape": "decision",
+        "pending": false
+      },
+      {
+        "id": "race",
+        "label": "Processar corrida e sincronizar — D04",
+        "col": 1,
+        "row": 6,
+        "shape": "box",
+        "pending": true
+      },
+      {
+        "id": "drop",
+        "label": "Desconexão de rede?",
+        "col": 1,
+        "row": 7,
+        "shape": "decision",
+        "pending": false
+      },
+      {
+        "id": "win",
+        "label": "Vitória do adversário; exceções D04",
+        "col": 0,
+        "row": 8,
+        "shape": "box",
+        "pending": true
+      },
+      {
+        "id": "dead",
+        "label": "Jogador morreu?",
+        "col": 1,
+        "row": 8,
+        "shape": "decision",
+        "pending": false
+      },
+      {
+        "id": "respawn",
+        "label": "Início/checkpoint; manter tempo e créditos",
+        "col": 2,
+        "row": 8,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "first",
+        "label": "Primeiro terminou?",
+        "col": 1,
+        "row": 9,
+        "shape": "decision",
+        "pending": false
+      },
+      {
+        "id": "window",
+        "label": "Abrir janela de 20 s",
+        "col": 1,
+        "row": 10,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "second",
+        "label": "Segundo terminou no prazo?",
+        "col": 1,
+        "row": 11,
+        "shape": "decision",
+        "pending": false
+      },
+      {
+        "id": "dnf",
+        "label": "DNF para segundo / primeiro vence",
+        "col": 0,
+        "row": 12,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "score",
+        "label": "Comparar tempo ajustado; aplicar desempate",
+        "col": 2,
+        "row": 12,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "result",
+        "label": "Gravar classificação e auditar no backend",
+        "col": 1,
+        "row": 13,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "launch",
+        "label": "Largada simultânea",
+        "col": 1,
+        "row": 5,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "menu",
+        "label": "Menu multiplayer",
+        "col": 1,
+        "row": 0,
+        "shape": "end",
+        "pending": false
+      },
+      {
+        "id": "auth",
+        "label": "Autenticado?",
+        "col": 1,
+        "row": 1,
+        "shape": "decision",
+        "pending": false
+      },
+      {
+        "id": "login",
+        "label": "Entrar com provedor externo",
+        "col": 0,
+        "row": 2,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "valid",
+        "label": "Login concluído?",
+        "col": 0,
+        "row": 3,
+        "shape": "decision",
+        "pending": false
+      },
+      {
+        "id": "room",
+        "label": "Criar ou entrar em sala",
+        "col": 1,
+        "row": 3,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "wait",
+        "label": "Aguardar / cancelar — D04",
+        "col": 2,
+        "row": 4,
+        "shape": "box",
+        "pending": true
+      },
+      {
+        "id": "cancel",
+        "label": "Retornar ao menu sem entrar",
+        "col": 0,
+        "row": 4,
+        "shape": "end",
+        "pending": false
+      },
+      {
+        "id": "show",
+        "label": "Exibir vencedor / resultado",
+        "col": 1,
+        "row": 14,
+        "shape": "end",
+        "pending": false
+      }
+    ],
+    "edges": [
+      {
+        "source": "start",
+        "target": "launch",
+        "label": "sim",
+        "pending": false
+      },
+      {
+        "source": "race",
+        "target": "drop",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "drop",
+        "target": "win",
+        "label": "sim",
+        "pending": false
+      },
+      {
+        "source": "win",
+        "target": "result",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "drop",
+        "target": "dead",
+        "label": "não",
+        "pending": false
+      },
+      {
+        "source": "dead",
+        "target": "respawn",
+        "label": "sim",
+        "pending": false
+      },
+      {
+        "source": "respawn",
+        "target": "first",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "dead",
+        "target": "first",
+        "label": "não",
+        "pending": false
+      },
+      {
+        "source": "first",
+        "target": "race",
+        "label": "não",
+        "pending": false
+      },
+      {
+        "source": "first",
+        "target": "window",
+        "label": "sim",
+        "pending": false
+      },
+      {
+        "source": "window",
+        "target": "second",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "second",
+        "target": "dnf",
+        "label": "não",
+        "pending": false
+      },
+      {
+        "source": "second",
+        "target": "score",
+        "label": "sim",
+        "pending": false
+      },
+      {
+        "source": "dnf",
+        "target": "result",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "score",
+        "target": "result",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "launch",
+        "target": "race",
+        "label": "",
+        "pending": true
+      },
+      {
+        "source": "menu",
+        "target": "auth",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "auth",
+        "target": "login",
+        "label": "não",
+        "pending": false
+      },
+      {
+        "source": "auth",
+        "target": "room",
+        "label": "sim",
+        "pending": false
+      },
+      {
+        "source": "login",
+        "target": "valid",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "valid",
+        "target": "room",
+        "label": "sim",
+        "pending": false
+      },
+      {
+        "source": "valid",
+        "target": "cancel",
+        "label": "cancelou / erro",
+        "pending": false
+      },
+      {
+        "source": "room",
+        "target": "start",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "start",
+        "target": "wait",
+        "label": "não",
+        "pending": true
+      },
+      {
+        "source": "wait",
+        "target": "start",
+        "label": "aguardar",
+        "pending": true
+      },
+      {
+        "source": "wait",
+        "target": "menu",
+        "label": "cancelar",
+        "pending": true
+      },
+      {
+        "source": "result",
+        "target": "show",
+        "label": "",
+        "pending": false
+      }
+    ],
+    "group": "flow"
+  },
+  {
+    "file": "fluxo-gamepad",
+    "title": "Gamepad físico — conexão e perda de dispositivo",
+    "intro": "D01 define mapeamento/hardware; D02 propõe pausa automática na campanha. A desconexão física não declara derrota multiplayer: o jogador pode continuar pelo teclado e a partida não pausa.",
+    "nodes": [
+      {
+        "id": "start",
+        "label": "Abrir jogo / conectar controle",
+        "col": 1,
+        "row": 0,
+        "shape": "end",
+        "pending": false
+      },
+      {
+        "id": "detect",
+        "label": "Controle reconhecido?",
+        "col": 1,
+        "row": 1,
+        "shape": "decision",
+        "pending": false
+      },
+      {
+        "id": "keyboard",
+        "label": "Informar e manter teclado",
+        "col": 0,
+        "row": 2,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "map",
+        "label": "Mapear ações — D01",
+        "col": 2,
+        "row": 2,
+        "shape": "box",
+        "pending": true
+      },
+      {
+        "id": "play",
+        "label": "Jogar / navegar menus",
+        "col": 1,
+        "row": 3,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "lost",
+        "label": "Controle desconectou?",
+        "col": 1,
+        "row": 4,
+        "shape": "decision",
+        "pending": false
+      },
+      {
+        "id": "mode",
+        "label": "Está na campanha?",
+        "col": 1,
+        "row": 5,
+        "shape": "decision",
+        "pending": false
+      },
+      {
+        "id": "pause",
+        "label": "Proposta D02: pausar e informar fallback",
+        "col": 0,
+        "row": 6,
+        "shape": "box",
+        "pending": true
+      },
+      {
+        "id": "continue",
+        "label": "Multiplayer continua; informar teclado",
+        "col": 2,
+        "row": 6,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "resume",
+        "label": "Reconectar / usar teclado e retomar",
+        "col": 0,
+        "row": 7,
+        "shape": "box",
+        "pending": true
+      }
+    ],
+    "edges": [
+      {
+        "source": "start",
+        "target": "detect",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "detect",
+        "target": "keyboard",
+        "label": "não",
+        "pending": false
+      },
+      {
+        "source": "detect",
+        "target": "map",
+        "label": "sim",
+        "pending": true
+      },
+      {
+        "source": "keyboard",
+        "target": "play",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "map",
+        "target": "play",
+        "label": "mesmas ações",
+        "pending": true
+      },
+      {
+        "source": "play",
+        "target": "lost",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "lost",
+        "target": "play",
+        "label": "não",
+        "pending": false
+      },
+      {
+        "source": "lost",
+        "target": "mode",
+        "label": "sim",
+        "pending": false
+      },
+      {
+        "source": "mode",
+        "target": "pause",
+        "label": "sim",
+        "pending": true
+      },
+      {
+        "source": "mode",
+        "target": "continue",
+        "label": "não",
+        "pending": false
+      },
+      {
+        "source": "pause",
+        "target": "resume",
+        "label": "D02",
+        "pending": true
+      },
+      {
+        "source": "resume",
+        "target": "play",
+        "label": "D02",
+        "pending": true
+      },
+      {
+        "source": "continue",
+        "target": "play",
+        "label": "",
+        "pending": false
+      }
+    ],
+    "group": "flow"
+  },
+  {
+    "file": "fluxo-deploy",
+    "title": "Publicação automática de produção",
+    "intro": "Pipeline publica serviços alterados de forma independente; base compartilhada e contratos versionados em Pulumi. Dev em nuvem usa stack própria. A seleção de Lambda e serviços gerenciados reduz compute permanente; implantação depende de quotas/plano/custos confirmados para a conta ainda não criada. Pulumi gerencia zona/registros Route 53 e certificados ACM na base. A verificação pós-deploy inclui resolução DNS e HTTPS; nameservers dependem da delegação inicial no registrador.",
+    "nodes": [
+      {
+        "id": "push",
+        "label": "Push na branch de produção",
+        "col": 1,
+        "row": 0,
+        "shape": "end",
+        "pending": false
+      },
+      {
+        "id": "ci",
+        "label": "CI: checks e build",
+        "col": 1,
+        "row": 1,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "ok",
+        "label": "Validação passou?",
+        "col": 1,
+        "row": 2,
+        "shape": "decision",
+        "pending": false
+      },
+      {
+        "id": "fix",
+        "label": "Corrigir e enviar novo commit",
+        "col": 0,
+        "row": 2,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "iac",
+        "label": "Aplicar Pulumi na stack de produção",
+        "col": 1,
+        "row": 3,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "publish",
+        "label": "Publicar frontend / serviços alterados",
+        "col": 1,
+        "row": 4,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "health",
+        "label": "Verificação pós-deploy passou?",
+        "col": 1,
+        "row": 5,
+        "shape": "decision",
+        "pending": false
+      },
+      {
+        "id": "prod",
+        "label": "Produção disponível no domínio",
+        "col": 2,
+        "row": 6,
+        "shape": "end",
+        "pending": false
+      },
+      {
+        "id": "fail",
+        "label": "Sinalizar falha; recuperar versão conforme estratégia",
+        "col": 0,
+        "row": 6,
+        "shape": "box",
+        "pending": false
+      }
+    ],
+    "edges": [
+      {
+        "source": "push",
+        "target": "ci",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "ci",
+        "target": "ok",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "ok",
+        "target": "fix",
+        "label": "não",
+        "pending": false
+      },
+      {
+        "source": "fix",
+        "target": "ci",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "ok",
+        "target": "iac",
+        "label": "sim",
+        "pending": false
+      },
+      {
+        "source": "iac",
+        "target": "publish",
+        "label": "sucesso",
+        "pending": false
+      },
+      {
+        "source": "iac",
+        "target": "fail",
+        "label": "erro",
+        "pending": false
+      },
+      {
+        "source": "publish",
+        "target": "health",
+        "label": "sucesso",
+        "pending": false
+      },
+      {
+        "source": "publish",
+        "target": "fail",
+        "label": "erro",
+        "pending": false
+      },
+      {
+        "source": "health",
+        "target": "prod",
+        "label": "sim",
+        "pending": false
+      },
+      {
+        "source": "health",
+        "target": "fail",
+        "label": "não",
+        "pending": false
+      }
+    ],
+    "group": "flow"
+  }
+]

@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1540" height="1330" viewBox="0 0 1540 1330" role="img" aria-labelledby="title desc">
+<title id="title">Multiplayer — salas, sincronização e resultado</title>
+<desc id="desc">Diagrama gerado da mesma fonte do bloco Mermaid. Laranja e tracejado indicam propostas ou decisões pendentes.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#52657c"/></marker></defs>
+<rect width="1540" height="1330" fill="#ffffff"/>
+<text x="32" y="40" font-family="sans-serif" font-size="25" font-weight="700" fill="#10253f">Multiplayer — salas, sincronização e resultado</text>
+<text x="32" y="70" font-family="sans-serif" font-size="16" fill="#52657c">Flesh to Chrome · Sprint 1 · Propostas/pendências em laranja e tracejado</text>
+<polyline points="260,214 260,316" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1120,214 1120,316" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="260,404 260,455 690,455 690,506" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1120,404 1120,455 690,455 690,506" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="260,404 260,432 1470,432 1470,668 690,668 690,696" fill="none" stroke="#52657c" stroke-width="1.7" stroke-dasharray="7 5" marker-end="url(#arrow)"/>
+<polyline points="1120,404 1120,440 80,440 80,660 690,660 690,696" fill="none" stroke="#52657c" stroke-width="1.7" stroke-dasharray="7 5" marker-end="url(#arrow)"/>
+<polyline points="690,594 690,614 1450,614 1450,866 690,866 690,886" fill="none" stroke="#52657c" stroke-width="1.7" stroke-dasharray="7 5" marker-end="url(#arrow)"/>
+<polyline points="690,784 690,886" fill="none" stroke="#52657c" stroke-width="1.7" stroke-dasharray="7 5" marker-end="url(#arrow)"/>
+<polyline points="690,974 690,1025 260,1025 260,1076" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,974 690,1025 1120,1025 1120,1076" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<text x="475" y="446" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">HTTPS / sessão</text>
+<text x="905" y="446" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">HTTPS / sessão</text>
+<text x="865" y="424" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">ações/estado</text>
+<text x="600" y="432" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">ações/estado</text>
+<text x="1070" y="606" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">participantes</text>
+<text x="738" y="835" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">sincronização</text>
+<text x="905" y="1016" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">gravação no backend</text>
+<rect x="102" y="126" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="260" y="166" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Jogador 1 autenticado:</text>
+<text x="260" y="186" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">teclado/gamepad</text>
+<rect x="962" y="126" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="1120" y="166" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Jogador 2 autenticado:</text>
+<text x="1120" y="186" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">teclado/gamepad</text>
+<rect x="102" y="316" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="260" y="366" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Cliente 1 / Phaser</text>
+<rect x="962" y="316" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="1120" y="366" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Cliente 2 / Phaser</text>
+<rect x="532" y="506" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="556" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">REST: salas, entrada e prontidão</text>
+<rect x="532" y="696" width="316" height="88" rx="12" fill="#fff7ed" stroke="#b45309" stroke-width="2" stroke-dasharray="6 4"/>
+<text x="690" y="746" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">API Gateway WebSocket — D04</text>
+<rect x="532" y="886" width="316" height="88" rx="12" fill="#fff7ed" stroke="#b45309" stroke-width="2" stroke-dasharray="6 4"/>
+<text x="690" y="936" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Lambda Partidas: validação — D04</text>
+<rect x="102" y="1076" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="260" y="1116" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Auditoria: entrada, saída e</text>
+<text x="260" y="1136" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">resultado</text>
+<rect x="962" y="1076" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="1120" y="1126" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">DynamoDB matches: resultado</text>
+</svg>

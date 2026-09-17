@@ -1,0 +1,113 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1540" height="2090" viewBox="0 0 1540 2090" role="img" aria-labelledby="title desc">
+<title id="title">AWS — microsserviços e serviços gerenciados</title>
+<desc id="desc">Diagrama gerado da mesma fonte do bloco Mermaid. Laranja e tracejado indicam propostas ou decisões pendentes.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#52657c"/></marker></defs>
+<rect width="1540" height="2090" fill="#ffffff"/>
+<text x="32" y="40" font-family="sans-serif" font-size="25" font-weight="700" fill="#10253f">AWS — microsserviços e serviços gerenciados</text>
+<text x="32" y="70" font-family="sans-serif" font-size="16" fill="#52657c">Flesh to Chrome · Sprint 1 · Propostas/pendências em laranja e tracejado</text>
+<polyline points="690,214 690,265 260,265 260,316" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="260,404 260,432 40,432 40,98 260,98 260,126" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,214 690,265 1120,265 1120,316" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1120,404 1120,424 60,424 60,106 1120,106 1120,126" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,214 690,242 1470,242 1470,478 690,478 690,506" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,214 690,250 1460,250 1460,470 1120,470 1120,506" fill="none" stroke="#52657c" stroke-width="1.7" stroke-dasharray="7 5" marker-end="url(#arrow)"/>
+<polyline points="690,594 690,645 260,645 260,696" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,594 690,696" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,594 690,645 1120,645 1120,696" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1120,594 1120,696" fill="none" stroke="#52657c" stroke-width="1.7" stroke-dasharray="7 5" marker-end="url(#arrow)"/>
+<polyline points="260,784 260,886" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,784 690,886" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1120,784 1120,886" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="260,974 260,1025 690,1025 690,1076" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,974 690,1076" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1120,974 1120,1025 690,1025 690,1076" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,1164 690,1215 260,1215 260,1266" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,1164 690,1215 1120,1215 1120,1266" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="260,1354 260,1456" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1120,1354 1120,1456" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="260,1544 260,1646" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1120,1544 1120,1646" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1120,1544 1120,1572 1470,1572 1470,1808 1120,1808 1120,1836" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,594 690,630 80,630 80,1420 260,1420 260,1456" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,594 690,614 1450,614 1450,1436 1120,1436 1120,1456" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,214 690,316" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="532,360 418,360" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,404 690,506" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,404 690,455 1120,455 1120,506" fill="none" stroke="#52657c" stroke-width="1.7" stroke-dasharray="7 5" marker-end="url(#arrow)"/>
+<polyline points="260,594 260,630 50,630 50,280 260,280 260,316" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="418,550 532,550" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<text x="475" y="256" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">carrega jogo</text>
+<text x="150" y="424" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">origem privada</text>
+<text x="905" y="256" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">login</text>
+<text x="590" y="416" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">federação</text>
+<text x="1080" y="234" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">REST / JWT</text>
+<text x="1075" y="242" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">tempo real</text>
+<text x="475" y="636" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">/me, /auth</text>
+<text x="738" y="645" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">/me/campaign</text>
+<text x="905" y="636" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">/matches</text>
+<text x="1168" y="645" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">mensagens</text>
+<text x="475" y="1016" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">outbox</text>
+<text x="738" y="1025" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">outbox</text>
+<text x="905" y="1016" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">outbox</text>
+<text x="475" y="1206" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">eventos críticos</text>
+<text x="905" y="1206" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">gatilhos</text>
+<text x="1295" y="1564" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">envio</text>
+<text x="385" y="622" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">consulta própria</text>
+<text x="1070" y="606" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">notificações</text>
+<text x="738" y="265" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">resolução DNS</text>
+<text x="475" y="348" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">Alias do site</text>
+<text x="738" y="455" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">Alias api.* proposto</text>
+<text x="905" y="446" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">ws.* se adotado</text>
+<text x="155" y="622" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">TLS / us-east-1</text>
+<text x="475" y="538" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">TLS regional</text>
+<rect x="532" y="126" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="166" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Navegador Phaser +</text>
+<text x="690" y="186" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">teclado/gamepad</text>
+<rect x="102" y="126" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="260" y="176" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">S3 privado: frontend e assets</text>
+<rect x="962" y="126" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="1120" y="176" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Google: identidade externa</text>
+<rect x="102" y="316" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="260" y="366" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">CloudFront: CDN</text>
+<rect x="962" y="316" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="1120" y="366" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Cognito Lite: login social</text>
+<rect x="532" y="506" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="556" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">API Gateway HTTP + JWT</text>
+<rect x="962" y="506" width="316" height="88" rx="12" fill="#fff7ed" stroke="#b45309" stroke-width="2" stroke-dasharray="6 4"/>
+<text x="1120" y="556" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">API Gateway WebSocket — D04</text>
+<rect x="102" y="696" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="260" y="746" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Lambda Conta</text>
+<rect x="532" y="696" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="746" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Lambda Campanha</text>
+<rect x="962" y="696" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="1120" y="746" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Lambdas Partidas</text>
+<rect x="102" y="886" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="260" y="936" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">DynamoDB accounts + outbox</text>
+<rect x="532" y="886" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="936" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">DynamoDB campaigns + outbox</text>
+<rect x="962" y="886" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="1120" y="936" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">DynamoDB matches + outbox</text>
+<rect x="532" y="1076" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="1116" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Streams + publicadores por</text>
+<text x="690" y="1136" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">domínio</text>
+<rect x="102" y="1266" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="260" y="1316" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">SQS Auditoria + DLQ</text>
+<rect x="962" y="1266" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="1120" y="1316" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">SQS Comunicações + DLQ</text>
+<rect x="102" y="1456" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="260" y="1506" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Lambda Auditoria</text>
+<rect x="962" y="1456" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="1120" y="1506" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Lambda Comunicações</text>
+<rect x="102" y="1646" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="260" y="1696" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">DynamoDB audit</text>
+<rect x="962" y="1646" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="1120" y="1696" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">DynamoDB communications</text>
+<rect x="962" y="1836" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="1120" y="1886" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">SES: e-mail transacional</text>
+<rect x="532" y="1836" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="1886" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">CloudWatch + IAM + Pulumi/CI</text>
+<rect x="532" y="316" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="366" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Route 53: DNS público do domínio</text>
+<rect x="102" y="506" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="260" y="556" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">ACM: certificados HTTPS</text>
+</svg>

@@ -1,36 +1,55 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="720" height="280" viewBox="0 0 720 280">
-  <rect width="720" height="280" fill="#f7f7f7"/>
-  <text x="20" y="28" font-family="Arial,sans-serif" font-size="16" fill="#222">Flesh to Chrome  vis�o geral</text>
-
-  <rect x="30" y="70" width="100" height="50" rx="6" fill="#ddd" stroke="#333"/>
-  <text x="50" y="100" font-family="Arial,sans-serif" font-size="13">Usu�rio</text>
-
-  <rect x="170" y="70" width="130" height="50" rx="6" fill="#cfe8ff" stroke="#333"/>
-  <text x="185" y="92" font-family="Arial,sans-serif" font-size="12">Browser</text>
-  <text x="185" y="108" font-family="Arial,sans-serif" font-size="12">Frontend Phaser</text>
-
-  <rect x="350" y="70" width="120" height="50" rx="6" fill="#ffe0b2" stroke="#333"/>
-  <text x="365" y="92" font-family="Arial,sans-serif" font-size="12">Backend</text>
-  <text x="365" y="108" font-family="Arial,sans-serif" font-size="12">API REST</text>
-
-  <rect x="520" y="40" width="160" height="40" rx="6" fill="#e8f5e9" stroke="#333"/>
-  <text x="545" y="65" font-family="Arial,sans-serif" font-size="12">Banco de dados</text>
-
-  <rect x="520" y="100" width="160" height="40" rx="6" fill="#f3e5f5" stroke="#333"/>
-  <text x="540" y="125" font-family="Arial,sans-serif" font-size="12">OAuth (Google)</text>
-
-  <rect x="520" y="160" width="160" height="40" rx="6" fill="#fff9c4" stroke="#333"/>
-  <text x="545" y="185" font-family="Arial,sans-serif" font-size="12">E-mail / notify</text>
-
-  <rect x="170" y="180" width="130" height="40" rx="6" fill="#cfe8ff" stroke="#333"/>
-  <text x="185" y="205" font-family="Arial,sans-serif" font-size="12">Static (HTML/JS)</text>
-
-  <line x1="130" y1="95" x2="170" y2="95" stroke="#333" marker-end="url(#a)"/>
-  <line x1="300" y1="95" x2="350" y2="95" stroke="#333"/>
-  <line x1="470" y1="85" x2="520" y2="60" stroke="#333"/>
-  <line x1="470" y1="95" x2="520" y2="120" stroke="#333"/>
-  <line x1="470" y1="105" x2="520" y2="180" stroke="#333"/>
-  <line x1="235" y1="120" x2="235" y2="180" stroke="#333"/>
-
-  <text x="20" y="255" font-family="Arial,sans-serif" font-size="11" fill="#555">nihil-legere-possum.lat  Sprint 1</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="1540" height="950" viewBox="0 0 1540 950" role="img" aria-labelledby="title desc">
+<title id="title">Visão geral — jogo, serviços e nuvem</title>
+<desc id="desc">Diagrama gerado da mesma fonte do bloco Mermaid. Laranja e tracejado indicam propostas ou decisões pendentes.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#52657c"/></marker></defs>
+<rect width="1540" height="950" fill="#ffffff"/>
+<text x="32" y="40" font-family="sans-serif" font-size="25" font-weight="700" fill="#10253f">Visão geral — jogo, serviços e nuvem</text>
+<text x="32" y="70" font-family="sans-serif" font-size="16" fill="#52657c">Flesh to Chrome · Sprint 1 · Propostas/pendências em laranja e tracejado</text>
+<polyline points="260,214 260,316" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,214 690,265 260,265 260,316" fill="none" stroke="#52657c" stroke-width="1.7" stroke-dasharray="7 5" marker-end="url(#arrow)"/>
+<polyline points="418,360 532,360" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,404 690,424 1480,424 1480,106 1120,106 1120,126" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="848,360 962,360" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,404 690,455 260,455 260,506" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,404 690,506" fill="none" stroke="#52657c" stroke-width="1.7" stroke-dasharray="7 5" marker-end="url(#arrow)"/>
+<polyline points="1120,404 1120,506" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1120,404 1120,440 1430,440 1430,660 1120,660 1120,696" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1120,404 1120,424 30,424 30,676 690,676 690,696" fill="none" stroke="#52657c" stroke-width="1.7" stroke-dasharray="7 5" marker-end="url(#arrow)"/>
+<polyline points="1120,404 1120,432 40,432 40,668 260,668 260,696" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1120,404 1120,455 690,455 690,506" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="848,550 962,550" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<text x="475" y="256" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">mesmas ações</text>
+<text x="1085" y="416" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">carrega</text>
+<text x="905" y="348" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">HTTPS</text>
+<text x="475" y="446" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">save local</text>
+<text x="738" y="455" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">tempo real</text>
+<text x="1275" y="432" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">autenticação</text>
+<text x="575" y="416" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">eventos</text>
+<text x="580" y="424" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">operações críticas</text>
+<text x="905" y="446" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">salas / consulta</text>
+<text x="905" y="538" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">grava resultado</text>
+<rect x="102" y="126" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="260" y="176" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Teclado</text>
+<rect x="532" y="126" width="316" height="88" rx="12" fill="#fff7ed" stroke="#b45309" stroke-width="2" stroke-dasharray="6 4"/>
+<text x="690" y="176" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Gamepad físico — D01/D02</text>
+<rect x="962" y="126" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="1120" y="176" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">S3 + CloudFront: frontend</text>
+<rect x="102" y="316" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="260" y="366" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Ações de entrada comuns</text>
+<rect x="532" y="316" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="366" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Navegador: Phaser</text>
+<rect x="962" y="316" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="1120" y="366" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Microsserviços via HTTP API</text>
+<rect x="102" y="506" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="260" y="556" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Save local / localStorage</text>
+<rect x="532" y="506" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="556" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Multiplayer: salas e resultados</text>
+<rect x="962" y="506" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="1120" y="556" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">DynamoDB: tabelas por serviço</text>
+<rect x="962" y="696" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="1120" y="746" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Cognito + Google</text>
+<rect x="532" y="696" width="316" height="88" rx="12" fill="#fff7ed" stroke="#b45309" stroke-width="2" stroke-dasharray="6 4"/>
+<text x="690" y="746" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Comunicações + SES — D07</text>
+<rect x="102" y="696" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="260" y="746" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Auditoria persistente</text>
 </svg>

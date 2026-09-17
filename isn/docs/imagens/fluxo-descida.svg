@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1540" height="1900" viewBox="0 0 1540 1900" role="img" aria-labelledby="title desc">
+<title id="title">Descida — memória, retry e retirada</title>
+<desc id="desc">Diagrama gerado da mesma fonte do bloco Mermaid. Laranja e tracejado indicam propostas ou decisões pendentes.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#52657c"/></marker></defs>
+<rect width="1540" height="1900" fill="#ffffff"/>
+<text x="32" y="40" font-family="sans-serif" font-size="25" font-weight="700" fill="#10253f">Descida — memória, retry e retirada</text>
+<text x="32" y="70" font-family="sans-serif" font-size="16" fill="#52657c">Flesh to Chrome · Sprint 1 · Propostas/pendências em laranja e tracejado</text>
+<polyline points="690,214 690,316" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,404 690,484" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,616 690,645 260,645 260,674" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="260,806 260,826 1480,826 1480,296 690,296 690,316" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="260,806 260,864" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="260,996 260,1054" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="260,996 260,1016 1450,1016 1450,1626 260,1626 260,1646" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="260,1186 260,1266" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="260,1186 260,1222 1430,1222 1430,1610 260,1610 260,1646" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="260,1354 260,1374 1510,1374 1510,296 690,296 690,316" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,616 690,656 1120,656 1120,696" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,616 690,652 1490,652 1490,850 1120,850 1120,886" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1120,784 1120,886" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1120,974 1120,1076" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1120,1164 1120,1244" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1120,1376 1120,1456" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1120,1376 1120,1404 100,1404 100,98 690,98 690,126" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<text x="475" y="636" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">não</text>
+<text x="870" y="818" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">não</text>
+<text x="308" y="835" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">sim</text>
+<text x="308" y="1025" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">sim</text>
+<text x="855" y="1008" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">não</text>
+<text x="308" y="1226" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">sim</text>
+<text x="845" y="1214" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">não</text>
+<text x="905" y="647" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">sim / primeira</text>
+<text x="1090" y="644" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">sim / demais</text>
+<text x="1168" y="1416" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">sim</text>
+<text x="610" y="1396" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">não / próximo setor</text>
+<rect x="532" y="126" width="316" height="88" rx="38" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="176" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Entrar no setor D1–D4</text>
+<rect x="532" y="316" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="356" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Percorrer setor / procurar</text>
+<text x="690" y="376" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">memória</text>
+<polygon points="690,484 848,550 690,616 532,550" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="556" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Recuperou memória?</text>
+<polygon points="260,674 418,740 260,806 102,740" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="260" y="746" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Concluiu sem memória?</text>
+<polygon points="260,864 418,930 260,996 102,930" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="260" y="936" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Retry disponível?</text>
+<polygon points="260,1054 418,1120 260,1186 102,1120" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="260" y="1126" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Aceita repetir?</text>
+<rect x="102" y="1266" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="260" y="1306" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Registrar retry usado; reiniciar</text>
+<text x="260" y="1326" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">setor</text>
+<rect x="962" y="696" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="1120" y="736" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Primeira retirada: George recusa</text>
+<text x="1120" y="756" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">ajudar</text>
+<rect x="962" y="886" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="1120" y="926" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">ReForge: retirar implante e</text>
+<text x="1120" y="946" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">bioprintar</text>
+<rect x="962" y="1076" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="1120" y="1116" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Salvar retirada, corpo e</text>
+<text x="1120" y="1136" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">habilidade</text>
+<polygon points="1120,1244 1278,1310 1120,1376 962,1310" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="1120" y="1316" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Quatro retiradas?</text>
+<rect x="962" y="1456" width="316" height="88" rx="38" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="1120" y="1506" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Epílogo Flesh</text>
+<rect x="102" y="1646" width="316" height="88" rx="38" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="260" y="1686" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Quebrar cadeia: preservar corpo e</text>
+<text x="260" y="1706" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">seguir Hollow</text>
+</svg>

@@ -1,25 +1,45 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="720" height="280" viewBox="0 0 720 280">
-  <rect width="720" height="280" fill="#f7f7f7"/>
-  <text x="20" y="28" font-family="Arial,sans-serif" font-size="16" fill="#222">Ambientes: desenvolvimento � produ��o</text>
-
-  <rect x="30" y="55" width="280" height="180" fill="none" stroke="#666" stroke-dasharray="4 3"/>
-  <text x="40" y="75" font-family="Arial,sans-serif" font-size="13" fill="#444">Desenvolvimento</text>
-  <rect x="55" y="95" width="100" height="36" rx="4" fill="#cfe8ff" stroke="#333"/>
-  <text x="70" y="118" font-family="Arial,sans-serif" font-size="11">Front local</text>
-  <rect x="175" y="95" width="100" height="36" rx="4" fill="#ffe0b2" stroke="#333"/>
-  <text x="195" y="118" font-family="Arial,sans-serif" font-size="11">API dev</text>
-  <rect x="115" y="160" width="100" height="36" rx="4" fill="#e8f5e9" stroke="#333"/>
-  <text x="140" y="183" font-family="Arial,sans-serif" font-size="11">DB dev</text>
-
-  <rect x="380" y="55" width="300" height="180" fill="none" stroke="#666" stroke-dasharray="4 3"/>
-  <text x="390" y="75" font-family="Arial,sans-serif" font-size="13" fill="#444">Produ��o</text>
-  <rect x="400" y="95" width="120" height="36" rx="4" fill="#cfe8ff" stroke="#333"/>
-  <text x="410" y="118" font-family="Arial,sans-serif" font-size="11">Front nuvem</text>
-  <rect x="540" y="95" width="110" height="36" rx="4" fill="#ffe0b2" stroke="#333"/>
-  <text x="555" y="118" font-family="Arial,sans-serif" font-size="11">API prod</text>
-  <rect x="470" y="160" width="120" height="36" rx="4" fill="#e8f5e9" stroke="#333"/>
-  <text x="495" y="183" font-family="Arial,sans-serif" font-size="11">DB prod</text>
-  <text x="400" y="220" font-family="Arial,sans-serif" font-size="11" fill="#555">nihil-legere-possum.lat</text>
-
-  <text x="250" y="265" font-family="Arial,sans-serif" font-size="11" fill="#555">Git � CI/CD + Pulumi � produ��o</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="1540" height="1140" viewBox="0 0 1540 1140" role="img" aria-labelledby="title desc">
+<title id="title">Ambientes e implantação</title>
+<desc id="desc">Diagrama gerado da mesma fonte do bloco Mermaid. Laranja e tracejado indicam propostas ou decisões pendentes.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#52657c"/></marker></defs>
+<rect width="1540" height="1140" fill="#ffffff"/>
+<text x="32" y="40" font-family="sans-serif" font-size="25" font-weight="700" fill="#10253f">Ambientes e implantação</text>
+<text x="32" y="70" font-family="sans-serif" font-size="16" fill="#52657c">Flesh to Chrome · Sprint 1 · Propostas/pendências em laranja e tracejado</text>
+<polyline points="690,214 690,265 260,265 260,316" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,214 690,316" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,404 690,506" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,594 690,645 260,645 260,696" fill="none" stroke="#52657c" stroke-width="1.7" stroke-dasharray="7 5" marker-end="url(#arrow)"/>
+<polyline points="690,594 690,645 1120,645 1120,696" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="260,784 260,886" fill="none" stroke="#52657c" stroke-width="1.7" stroke-dasharray="7 5" marker-end="url(#arrow)"/>
+<polyline points="1120,784 1120,886" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1120,784 1120,835 690,835 690,886" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="848,550 962,550" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1120,594 1120,614 1510,614 1510,866 1120,866 1120,886" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<text x="738" y="265" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">branch de deploy</text>
+<text x="738" y="455" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">checks aprovados</text>
+<text x="475" y="636" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">D08</text>
+<text x="905" y="636" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">publicação automática</text>
+<text x="308" y="835" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">isolamento</text>
+<text x="905" y="538" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">configuração via IaC</text>
+<text x="1315" y="606" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">domínio público</text>
+<rect x="532" y="126" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="176" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Repositório Git</text>
+<rect x="102" y="316" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="260" y="366" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Desenvolvimento local</text>
+<rect x="532" y="316" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="366" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">CI: validação e build</text>
+<rect x="532" y="506" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="556" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Pulumi / stacks isoladas</text>
+<rect x="102" y="696" width="316" height="88" rx="12" fill="#fff7ed" stroke="#b45309" stroke-width="2" stroke-dasharray="6 4"/>
+<text x="260" y="746" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Dev em nuvem — se utilizado</text>
+<rect x="962" y="696" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="1120" y="746" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Produção AWS</text>
+<rect x="102" y="886" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="260" y="936" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Dados e credenciais de dev</text>
+<rect x="962" y="886" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="1120" y="936" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">nihil-legere-possum.lat</text>
+<rect x="532" y="886" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="936" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Dados e credenciais de prod</text>
+<rect x="962" y="506" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="1120" y="556" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Route 53 + ACM: nomes e HTTPS</text>
 </svg>

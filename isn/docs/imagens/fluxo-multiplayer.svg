@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1540" height="3040" viewBox="0 0 1540 3040" role="img" aria-labelledby="title desc">
+<title id="title">Partida multiplayer e resultado</title>
+<desc id="desc">Diagrama gerado da mesma fonte do bloco Mermaid. Laranja e tracejado indicam propostas ou decisões pendentes.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#52657c"/></marker></defs>
+<rect width="1540" height="3040" fill="#ffffff"/>
+<text x="32" y="40" font-family="sans-serif" font-size="25" font-weight="700" fill="#10253f">Partida multiplayer e resultado</text>
+<text x="32" y="70" font-family="sans-serif" font-size="16" fill="#52657c">Flesh to Chrome · Sprint 1 · Propostas/pendências em laranja e tracejado</text>
+<polyline points="690,996 690,1076" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,1354 690,1434" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,1566 690,1606 260,1606 260,1646" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="260,1734 260,1754 1480,1754 1480,2576 690,2576 690,2596" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,1566 690,1624" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="848,1690 962,1690" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1120,1734 1120,1774 690,1774 690,1814" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,1756 690,1814" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,1946 690,1982 110,1982 110,1230 690,1230 690,1266" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,1946 690,2026" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,2114 690,2194" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,2326 690,2366 260,2366 260,2406" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,2326 690,2366 1120,2366 1120,2406" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="260,2494 260,2545 690,2545 690,2596" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1120,2494 1120,2545 690,2545 690,2596" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,1164 690,1266" fill="none" stroke="#52657c" stroke-width="1.7" stroke-dasharray="7 5" marker-end="url(#arrow)"/>
+<polyline points="690,214 690,294" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,426 690,466 260,466 260,506" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,426 690,446 1510,446 1510,676 690,676 690,696" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="260,594 260,674" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="418,740 532,740" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="260,806 260,886" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,784 690,864" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="848,930 962,930" fill="none" stroke="#52657c" stroke-width="1.7" stroke-dasharray="7 5" marker-end="url(#arrow)"/>
+<polyline points="962,930 848,930" fill="none" stroke="#52657c" stroke-width="1.7" stroke-dasharray="7 5" marker-end="url(#arrow)"/>
+<polyline points="1120,974 1120,1002 100,1002 100,98 690,98 690,126" fill="none" stroke="#52657c" stroke-width="1.7" stroke-dasharray="7 5" marker-end="url(#arrow)"/>
+<polyline points="690,2684 690,2786" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<text x="738" y="1036" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">sim</text>
+<text x="475" y="1597" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">sim</text>
+<text x="738" y="1595" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">não</text>
+<text x="905" y="1678" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">sim</text>
+<text x="738" y="1785" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">não</text>
+<text x="400" y="1974" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">não</text>
+<text x="738" y="1986" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">sim</text>
+<text x="475" y="2357" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">não</text>
+<text x="905" y="2357" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">sim</text>
+<text x="475" y="457" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">não</text>
+<text x="1100" y="438" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">sim</text>
+<text x="475" y="728" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">sim</text>
+<text x="308" y="846" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">cancelou / erro</text>
+<text x="905" y="918" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">não</text>
+<text x="905" y="918" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">aguardar</text>
+<text x="610" y="994" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">cancelar</text>
+<polygon points="690,864 848,930 690,996 532,930" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="926" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Dois jogadores</text>
+<text x="690" y="946" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">prontos?</text>
+<rect x="532" y="1266" width="316" height="88" rx="12" fill="#fff7ed" stroke="#b45309" stroke-width="2" stroke-dasharray="6 4"/>
+<text x="690" y="1306" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Processar corrida e sincronizar —</text>
+<text x="690" y="1326" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">D04</text>
+<polygon points="690,1434 848,1500 690,1566 532,1500" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="1506" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Desconexão de rede?</text>
+<rect x="102" y="1646" width="316" height="88" rx="12" fill="#fff7ed" stroke="#b45309" stroke-width="2" stroke-dasharray="6 4"/>
+<text x="260" y="1686" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Vitória do adversário; exceções</text>
+<text x="260" y="1706" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">D04</text>
+<polygon points="690,1624 848,1690 690,1756 532,1690" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="1696" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Jogador morreu?</text>
+<rect x="962" y="1646" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="1120" y="1686" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Início/checkpoint; manter tempo e</text>
+<text x="1120" y="1706" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">créditos</text>
+<polygon points="690,1814 848,1880 690,1946 532,1880" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="1886" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Primeiro terminou?</text>
+<rect x="532" y="2026" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="2076" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Abrir janela de 20 s</text>
+<polygon points="690,2194 848,2260 690,2326 532,2260" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="2256" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Segundo terminou no</text>
+<text x="690" y="2276" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">prazo?</text>
+<rect x="102" y="2406" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="260" y="2456" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">DNF para segundo / primeiro vence</text>
+<rect x="962" y="2406" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="1120" y="2446" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Comparar tempo ajustado; aplicar</text>
+<text x="1120" y="2466" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">desempate</text>
+<rect x="532" y="2596" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="2636" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Gravar classificação e auditar no</text>
+<text x="690" y="2656" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">backend</text>
+<rect x="532" y="1076" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="1126" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Largada simultânea</text>
+<rect x="532" y="126" width="316" height="88" rx="38" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="176" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Menu multiplayer</text>
+<polygon points="690,294 848,360 690,426 532,360" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="366" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Autenticado?</text>
+<rect x="102" y="506" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="260" y="556" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Entrar com provedor externo</text>
+<polygon points="260,674 418,740 260,806 102,740" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="260" y="746" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Login concluído?</text>
+<rect x="532" y="696" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="746" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Criar ou entrar em sala</text>
+<rect x="962" y="886" width="316" height="88" rx="12" fill="#fff7ed" stroke="#b45309" stroke-width="2" stroke-dasharray="6 4"/>
+<text x="1120" y="936" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Aguardar / cancelar — D04</text>
+<rect x="102" y="886" width="316" height="88" rx="38" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="260" y="936" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Retornar ao menu sem entrar</text>
+<rect x="532" y="2786" width="316" height="88" rx="38" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="2836" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Exibir vencedor / resultado</text>
+</svg>

@@ -1,32 +1,53 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="640" height="420" viewBox="0 0 640 420">
-  <rect width="640" height="420" fill="#f7f7f7"/>
-  <text x="20" y="28" font-family="Arial,sans-serif" font-size="15" fill="#222">Fluxo: login � save</text>
-
-  <rect x="240" y="45" width="140" height="36" rx="18" fill="#ddd" stroke="#333"/>
-  <text x="275" y="68" font-family="Arial,sans-serif" font-size="12">Abre o site</text>
-
-  <rect x="240" y="100" width="140" height="36" rx="4" fill="#cfe8ff" stroke="#333"/>
-  <text x="275" y="123" font-family="Arial,sans-serif" font-size="12">Menu</text>
-
-  <rect x="240" y="155" width="140" height="40" rx="4" fill="#fff9c4" stroke="#333"/>
-  <text x="255" y="180" font-family="Arial,sans-serif" font-size="11">Quer salvar?</text>
-
-  <rect x="40" y="230" width="120" height="36" rx="4" fill="#eee" stroke="#333"/>
-  <text x="55" y="253" font-family="Arial,sans-serif" font-size="11">Joga sem conta</text>
-
-  <rect x="240" y="230" width="140" height="36" rx="4" fill="#ffe0b2" stroke="#333"/>
-  <text x="255" y="253" font-family="Arial,sans-serif" font-size="11">Login Google</text>
-
-  <rect x="240" y="290" width="140" height="36" rx="4" fill="#e8f5e9" stroke="#333"/>
-  <text x="250" y="313" font-family="Arial,sans-serif" font-size="11">Carrega / cria save</text>
-
-  <rect x="240" y="350" width="140" height="36" rx="18" fill="#ddd" stroke="#333"/>
-  <text x="265" y="373" font-family="Arial,sans-serif" font-size="12">Campanha</text>
-
-  <line x1="310" y1="81" x2="310" y2="100" stroke="#333"/>
-  <line x1="310" y1="136" x2="310" y2="155" stroke="#333"/>
-  <line x1="240" y1="175" x2="160" y2="248" stroke="#333"/>
-  <line x1="310" y1="195" x2="310" y2="230" stroke="#333"/>
-  <line x1="310" y1="266" x2="310" y2="290" stroke="#333"/>
-  <line x1="310" y1="326" x2="310" y2="350" stroke="#333"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="1540" height="1710" viewBox="0 0 1540 1710" role="img" aria-labelledby="title desc">
+<title id="title">Login, save local e comunicações</title>
+<desc id="desc">Diagrama gerado da mesma fonte do bloco Mermaid. Laranja e tracejado indicam propostas ou decisões pendentes.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#52657c"/></marker></defs>
+<rect width="1540" height="1710" fill="#ffffff"/>
+<text x="32" y="40" font-family="sans-serif" font-size="25" font-weight="700" fill="#10253f">Login, save local e comunicações</text>
+<text x="32" y="70" font-family="sans-serif" font-size="16" fill="#52657c">Flesh to Chrome · Sprint 1 · Propostas/pendências em laranja e tracejado</text>
+<polyline points="690,214 690,294" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,426 690,466 260,466 260,506" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="260,594 260,630 1490,630 1490,1420 690,1420 690,1456" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,426 690,466 1120,466 1120,506" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1120,594 1120,674" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1120,806 1120,842 80,842 80,90 690,90 690,126" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1120,806 1120,846 690,846 690,886" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,974 690,1014 260,1014 260,1054" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,974 690,1025 1120,1025 1120,1076" fill="none" stroke="#52657c" stroke-width="1.7" stroke-dasharray="7 5" marker-end="url(#arrow)"/>
+<polyline points="260,1186 260,1266" fill="none" stroke="#52657c" stroke-width="1.7" stroke-dasharray="7 5" marker-end="url(#arrow)"/>
+<polyline points="1120,1164 1120,1192 40,1192 40,1428 690,1428 690,1456" fill="none" stroke="#52657c" stroke-width="1.7" stroke-dasharray="7 5" marker-end="url(#arrow)"/>
+<polyline points="260,1186 260,1222 1490,1222 1490,1420 260,1420 260,1456" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="260,1354 260,1456" fill="none" stroke="#52657c" stroke-width="1.7" stroke-dasharray="7 5" marker-end="url(#arrow)"/>
+<text x="475" y="457" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">não</text>
+<text x="905" y="457" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">sim</text>
+<text x="600" y="834" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">cancelou / erro</text>
+<text x="905" y="837" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">sim</text>
+<text x="905" y="1016" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">carregar</text>
+<text x="308" y="1226" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">sim</text>
+<text x="580" y="1184" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">após reconciliação</text>
+<text x="875" y="1214" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">não</text>
+<rect x="532" y="126" width="316" height="88" rx="38" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="176" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Abrir site / menu</text>
+<polygon points="690,294 848,360 690,426 532,360" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="366" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Entrar na conta?</text>
+<rect x="102" y="506" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="260" y="556" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Carregar ou criar save local</text>
+<rect x="962" y="506" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="1120" y="556" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Autenticar: Cognito + Google</text>
+<polygon points="1120,674 1278,740 1120,806 962,740" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="1120" y="746" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Login válido?</text>
+<rect x="532" y="886" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="936" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Identificar conta e auditar</text>
+<polygon points="260,1054 418,1120 260,1186 102,1120" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="260" y="1126" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Primeiro cadastro?</text>
+<rect x="962" y="1076" width="316" height="88" rx="12" fill="#fff7ed" stroke="#b45309" stroke-width="2" stroke-dasharray="6 4"/>
+<text x="1120" y="1116" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Comparar saves local e remoto —</text>
+<text x="1120" y="1136" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">D05</text>
+<rect x="102" y="1266" width="316" height="88" rx="12" fill="#fff7ed" stroke="#b45309" stroke-width="2" stroke-dasharray="6 4"/>
+<text x="260" y="1306" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Solicitar e-mail + notificação</text>
+<text x="260" y="1326" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">sem bloquear — D07</text>
+<rect x="532" y="1456" width="316" height="88" rx="38" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="1506" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Continuar campanha</text>
+<rect x="102" y="1456" width="316" height="88" rx="38" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="260" y="1506" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Fim da tarefa de comunicação</text>
 </svg>

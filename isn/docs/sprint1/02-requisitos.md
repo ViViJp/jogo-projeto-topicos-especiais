@@ -1,22 +1,10 @@
 # Requisitos funcionais e não funcionais
 
-**Projeto:** Flesh to Chrome  
-**Sprint 1:** só documentação (a implementação desses itens vem nas próximas sprints)
+Esta especificação mantém os requisitos da disciplina e acrescenta os requisitos do produto. **Documentado não significa implementado.** Critérios numéricos novos são propostas de validação, identificadas em [D09](07-decisoes-pendentes.md).
 
----
+## Requisitos funcionais da disciplina
 
-## Importante
-
-Os requisitos abaixo **não são inventados pelo nosso time**.  
-São a lista oficial da disciplina (`requisitos.md` do repositório ISN): **todo projeto** precisa atender.
-
-O Flesh to Chrome é o *tema* do sistema. A arquitetura (frontend web + backend na nuvem + auth + banco + etc.) existe pra **cumprir** essa lista.
-
----
-
-## Requisitos funcionais (disciplina)
-
-Lista do professor:
+A numeração abaixo corresponde a RF-ISN-01 até RF-ISN-12.
 
 1. O sistema deve ser uma aplicação cliente-servidor sobre plataforma Web.
 2. O sistema deve ter aplicação a ser executada no navegador do cliente, o *frontend*, cujo código deve ser descarregado sob demanda.
@@ -31,55 +19,60 @@ Lista do professor:
 11. O sistema deve ser implantado em nuvem, em qualquer cenário, com o uso de IaC.
 12. O sistema deve ser implantado automaticamente em ambiente de produção com o uso de CI/CD.
 
-### Como o Flesh to Chrome pretende atender (visão da Sprint 1)
-
-| # | Como encaixa no nosso projeto |
+| ID | Aplicação e evidência de especificação |
 | --- | --- |
-| 1 | Site + API: cliente no browser, servidor na AWS. |
-| 2 | Jogo Phaser (HTML/JS) servido sob demanda em `nihil-legere-possum.lat`. |
-| 3 | Backend REST (Node) na nuvem respondendo login, save, etc. |
-| 4 | Vamos documentar a API REST (endpoints de auth, save, auditoria…). |
-| 5 | Login com provedor externo (ex.: Google; Apple se der). |
-| 6 | Banco com dados de usuário e save da campanha. |
-| 7 | Docs de modelagem/arquitetura (esta pasta `docs/` + próximas entregas). |
-| 8 | E-mail/notificação (ex.: boas-vindas após primeiro login). |
-| 9 | Log de operações críticas (login, save, escolha do Portão…). |
-| 10 | Ambiente de desenvolvimento e de produção. |
-| 11 | Implantação com IaC (Pulumi, como a disciplina usa). |
-| 12 | Produção sobe com CI/CD. |
+| RF-ISN-01 | Navegador e backend separados; diagrama de visão geral. |
+| RF-ISN-02 | HTML/JS/assets carregados sob demanda; UC01. |
+| RF-ISN-03 | Microsserviços Lambda/API Gateway e serviços gerenciados AWS no documento 12; quotas/plano/custos em D08. |
+| RF-ISN-04 | [Contrato REST inicial](09-api-rest.md), incluindo autenticação, dados e erros. |
+| RF-ISN-05 | Cognito federado com Google para autenticação; autorização por proprietário no backend; RN01, UC02/04/08. |
+| RF-ISN-06 | Conta, campanha, notificações e auditoria; [modelo de dados](08-modelagem-de-dados.md). |
+| RF-ISN-07 | Modelo lógico, dicionário de dados e [arquitetura](05-diagramas-de-blocos.md). |
+| RF-ISN-08 | E-mail e notificação dentro do jogo como canais distintos; UC07, proposta D07. |
+| RF-ISN-09 | Catálogo de eventos críticos e persistência de auditoria; RN10. |
+| RF-ISN-10 | Desenvolvimento local e produção separados; recursos dev em nuvem, quando usados, isolados de prod. |
+| RF-ISN-11 | Todo recurso implantado na nuvem, em dev ou prod, definido em Pulumi. |
+| RF-ISN-12 | Pipeline de produção: validação, build, IaC, publicação e verificação. |
 
----
+## Requisitos funcionais do produto
 
-## Requisitos não funcionais (disciplina)
+| ID | O sistema deve… | Referência / aceite documental |
+| --- | --- | --- |
+| RF-J01 | Executar corrida automática com pulo/slide, hazards e ações compatíveis com o estado atual. | RN02; GDD §14; UC03. |
+| RF-J02 | Percorrer cinco setores e conceder quatro implantes em ordem fixa, alterando visual e habilidades. | RN04; UC05. |
+| RF-J03 | Consolidar créditos por ID em checkpoint/fim de fase e evitar duplicação. | RN03; UC03/09. |
+| RF-J04 | Manter um save local, continuar do checkpoint e confirmar a substituição por Novo Jogo. | RN01/03; UC04/09. |
+| RF-J05 | Oferecer save vinculado à conta e acesso somente aos dados do próprio usuário. | UC02/04; D05 para conflito entre cópias. |
+| RF-J06 | Salvar o estado pré-Portão e oferecer Chrome ou descida, além de retorno ao Portão após finais. | RN05/06; UC06/12. |
+| RF-J07 | Implementar quatro memórias, retry especial, retirada sequencial e perda de habilidades por bioprinting. | RN06; UC10/11. |
+| RF-J08 | Concluir Flesh ou Hollow conforme o estado da cadeia, com aparência e epílogo correspondentes. | RN06; UC10/12. |
+| RF-J09 | Exibir prólogo, arco de George, pai/propagandas e cenas dos finais. | GDD §§15–18; UC05/06/10/12. |
+| RF-J10 | Permitir pausa e reinício da fase atual na campanha, sem seleção livre de fases concluídas. | RN07; UC09. |
+| RF-J11 | Oferecer corrida multiplayer para dois jogadores autenticados, com criação/entrada em salas mantidas pelo backend e regras independentes da campanha. | ZIP RF22 e UC09; RN08; UC13; acesso às salas e sincronização em D03/D04. |
+| RF-J12 | Aceitar gamepad físico no navegador para ações de jogo e navegação de menus. | UC14; inclusão solicitada; mapeamento/compatibilidade D01. |
+| RF-J13 | Se a loja opcional for implementada, preservar cosméticos fora do save e usar apenas compras cosméticas/simuladas. | RN09; UC15; não é requisito do núcleo. |
+| RF-J14 | Registrar no backend resultado/classificação da corrida e exibir o vencedor, sem alterar campanha, implantes ou finais. | ZIP RF23 e UC09; RN08; UC13; ranking global não está definido. |
 
-Lista do professor:
+Os IDs do ZIP (RF01–RF23) são relacionados aos desta revisão em [10-rastreabilidade.md](10-rastreabilidade.md). Login no multiplayer, salas e resultado persistido deixaram de ser hipóteses. O cronograma segue a campanha antes do multiplayer, sem retirar o modo do escopo ISN.
+
+## Requisitos não funcionais da disciplina
 
 1. O sistema deve ter boa responsividade.
 2. O sistema deve rodar com baixa latência.
 3. O sistema deve rodar com custo mínimo de operação.
 
-### Como pensamos isso no projeto
+## Critérios de validação propostos
 
-| # | Aplicação no Flesh to Chrome |
-| --- | --- |
-| 1 | Interface e jogo usáveis no desktop (alvo principal do runner). |
-| 2 | Login/save pela API sem travar a sessão de jogo. |
-| 3 | Preferir serviços baratos / sob demanda na AWS; região `sa-east-1`. |
+Os valores abaixo são metas iniciais para discussão, não medições da build nem exigências numéricas do professor.
 
----
+| ID | Critério | Como verificar |
+| --- | --- | --- |
+| RNF01 — responsividade | Resolução lógica 1280 × 720, escala proporcional, HUD/menus legíveis e sem cortes; teclado e gamepad nas ações previstas. | Validar viewports 1280 × 720, 1366 × 768 e 1920 × 1080 em Chrome/Chromium e Firefox desktop. Mobile/touch continuam fora do escopo. |
+| RNF02 — gameplay | Meta proposta de 60 FPS no equipamento de referência; chamadas de save/e-mail não bloqueiam a simulação. | Registrar frame times em uma fase completa com rede lenta e indisponível; equipamento e tolerância em D09. |
+| RNF03 — API | Meta proposta de p95 ≤ 500 ms para leitura/gravação de save, com 10 usuários simultâneos, excluindo redirecionamento ao provedor externo. | Medir do cliente até a resposta, registrando região, rede, tamanho do payload e eventuais cold starts. |
+| RNF04 — multiplayer | Medir RTT, perda de mensagens, divergência entre clientes e atraso de ações; resultado deve obedecer RN08. | Limiares e frequência de sincronização dependem de D04/D09; não declarar baixa latência atendida antes disso. |
+| RNF05 — custo | Usar arquitetura serverless/gerenciada do documento 12 e estimar custo bruto, créditos e franquias separadamente; definir teto antes de provisionar. | Planilha/estimativa por carga e alarmes de orçamento; teto e carga em D08/D09. Região `sa-east-1` é previsão, não comprovação de menor custo. |
+| RNF07 — microsserviços e escala | Separar implantação, IAM, contratos e dados de Conta, Campanha, Partidas, Comunicações e Auditoria; usar serviços AWS gerenciados. | Validar que pico/falha de um domínio não exige publicar os demais; testar concorrência, filas, throttling e recuperação. Documento 12; sem pressupor escala gratuita ilimitada. |
+| RNF06 — integridade e acesso | Rejeitar acesso a save alheio e atualizações conflitantes; não duplicar créditos consolidados ou resultado de partida. | Cenários de autorização, reenvio e versões concorrentes descritos nos contratos. |
 
-## Contexto do nosso sistema (não é requisito do professor)
-
-Isso aqui é só pra explicar **o que** o sistema faz. Não substitui a lista de cima.
-
-- Jogo: auto-runner cyberpunk *Flesh to Chrome* (Alex, Glitch City, implantes, Portão).
-- Domínio de produção: `nihil-legere-possum.lat`.
-- Stack prevista: Phaser (frontend) + API Node + banco + OAuth + AWS/Pulumi.
-- Detalhes de gameplay (fases, créditos, clínica, finais) estão nas regras de negócio e no GDD; o Victor ainda pode ajustar.
-
----
-
-## Sobre esta entrega
-
-Na Sprint 1 a gente **especifica** (resumo, requisitos, regras, casos de uso, diagramas, fluxogramas).  
-Cumprir de fato cada item da lista do professor (código, IaC, CI/CD, e-mail…) é trabalho das sprints seguintes.
+O [registro de decisões](07-decisoes-pendentes.md) separa critérios propostos das regras já estabelecidas no GDD.

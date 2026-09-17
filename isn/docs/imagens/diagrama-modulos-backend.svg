@@ -1,38 +1,57 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="720" height="320" viewBox="0 0 720 320">
-  <rect width="720" height="320" fill="#f7f7f7"/>
-  <text x="20" y="28" font-family="Arial,sans-serif" font-size="16" fill="#222">M�dulos do backend</text>
-
-  <rect x="30" y="130" width="120" height="50" rx="6" fill="#cfe8ff" stroke="#333"/>
-  <text x="50" y="160" font-family="Arial,sans-serif" font-size="12">Frontend</text>
-
-  <rect x="200" y="50" width="300" height="220" fill="none" stroke="#666" stroke-dasharray="4 3"/>
-  <text x="220" y="70" font-family="Arial,sans-serif" font-size="12" fill="#444">Backend</text>
-
-  <rect x="230" y="90" width="110" height="36" rx="4" fill="#ffe0b2" stroke="#333"/>
-  <text x="255" y="113" font-family="Arial,sans-serif" font-size="12">Auth</text>
-
-  <rect x="360" y="90" width="110" height="36" rx="4" fill="#ffe0b2" stroke="#333"/>
-  <text x="385" y="113" font-family="Arial,sans-serif" font-size="12">Save</text>
-
-  <rect x="230" y="145" width="110" height="36" rx="4" fill="#ffe0b2" stroke="#333"/>
-  <text x="245" y="168" font-family="Arial,sans-serif" font-size="12">Game API</text>
-
-  <rect x="360" y="145" width="110" height="36" rx="4" fill="#ffe0b2" stroke="#333"/>
-  <text x="380" y="168" font-family="Arial,sans-serif" font-size="12">E-mail</text>
-
-  <rect x="290" y="200" width="120" height="36" rx="4" fill="#ffe0b2" stroke="#333"/>
-  <text x="315" y="223" font-family="Arial,sans-serif" font-size="12">Auditoria</text>
-
-  <rect x="560" y="80" width="120" height="40" rx="6" fill="#e8f5e9" stroke="#333"/>
-  <text x="590" y="105" font-family="Arial,sans-serif" font-size="12">Banco</text>
-
-  <rect x="560" y="150" width="120" height="40" rx="6" fill="#f3e5f5" stroke="#333"/>
-  <text x="580" y="175" font-family="Arial,sans-serif" font-size="12">Google</text>
-
-  <rect x="560" y="220" width="120" height="40" rx="6" fill="#fff9c4" stroke="#333"/>
-  <text x="595" y="245" font-family="Arial,sans-serif" font-size="12">SES</text>
-
-  <line x1="150" y1="155" x2="230" y2="110" stroke="#333"/>
-  <line x1="150" y1="155" x2="360" y2="110" stroke="#333"/>
-  <line x1="150" y1="155" x2="230" y2="163" stroke="#333"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="1540" height="1520" viewBox="0 0 1540 1520" role="img" aria-labelledby="title desc">
+<title id="title">Microsserviços do backend e seus dados</title>
+<desc id="desc">Diagrama gerado da mesma fonte do bloco Mermaid. Laranja e tracejado indicam propostas ou decisões pendentes.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#52657c"/></marker></defs>
+<rect width="1540" height="1520" fill="#ffffff"/>
+<text x="32" y="40" font-family="sans-serif" font-size="25" font-weight="700" fill="#10253f">Microsserviços do backend e seus dados</text>
+<text x="32" y="70" font-family="sans-serif" font-size="16" fill="#52657c">Flesh to Chrome · Sprint 1 · Propostas/pendências em laranja e tracejado</text>
+<polyline points="690,214 690,265 260,265 260,316" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,214 690,316" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,214 690,265 1120,265 1120,316" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="260,404 260,424 60,424 60,106 260,106 260,126" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="260,404 260,506" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,404 690,506" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1120,404 1120,506" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="260,594 260,645 690,645 690,696" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,594 690,696" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1120,594 1120,645 690,645 690,696" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,784 690,835 260,835 260,886" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,784 690,835 1120,835 1120,886" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="260,974 260,1076" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1120,974 1120,1076" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1120,974 1120,1010 1460,1010 1460,1230 1120,1230 1120,1266" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,214 690,234 90,234 90,866 260,866 260,886" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,214 690,242 1440,242 1440,858 1120,858 1120,886" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<text x="475" y="826" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">SQS</text>
+<text x="905" y="826" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">SQS</text>
+<text x="390" y="226" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">consulta</text>
+<text x="1065" y="234" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">notificações</text>
+<rect x="532" y="126" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="176" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">API Gateway: rotas REST</text>
+<rect x="102" y="316" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="260" y="366" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Conta / Lambda</text>
+<rect x="532" y="316" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="366" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Campanha / Lambda</text>
+<rect x="962" y="316" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="1120" y="366" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Partidas / Lambdas</text>
+<rect x="102" y="506" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="260" y="556" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">DynamoDB accounts</text>
+<rect x="532" y="506" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="556" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">DynamoDB campaigns</text>
+<rect x="962" y="506" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="1120" y="556" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">DynamoDB matches</text>
+<rect x="532" y="696" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="746" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Outbox / eventos duráveis</text>
+<rect x="102" y="886" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="260" y="936" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Auditoria / Lambda</text>
+<rect x="962" y="886" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="1120" y="936" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Comunicações / Lambda</text>
+<rect x="102" y="1076" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="260" y="1126" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">DynamoDB audit</text>
+<rect x="962" y="1076" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="1120" y="1126" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">DynamoDB communications</text>
+<rect x="102" y="126" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="260" y="176" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Cognito + Google</text>
+<rect x="962" y="1266" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="1120" y="1316" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Amazon SES</text>
 </svg>
