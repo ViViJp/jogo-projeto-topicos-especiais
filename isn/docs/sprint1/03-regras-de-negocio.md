@@ -1,6 +1,6 @@
 # Regras de negócio
 
-Referências: [GDD 1.0.0](../../../gdd.md) e especificação ISN do [ZIP reconciliado](11-reconciliacao-zip.md). RN01–RN09 distinguem regras do jogo e extensões ISN. Novas escolhas técnicas ficam em [decisões pendentes](07-decisoes-pendentes.md), sem reabrir decisões fechadas pelo GDD.
+Referências: [GDD 1.0.0](../../../gdd.md) e especificação ISN aprovada. RN01–RN09 distinguem regras do jogo e extensões ISN. Novas escolhas técnicas ficam em [decisões pendentes](07-decisoes-pendentes.md), sem reabrir decisões fechadas pelo GDD.
 
 ## RN01 — Conta, save e autorização
 
@@ -9,7 +9,7 @@ Referências: [GDD 1.0.0](../../../gdd.md) e especificação ISN do [ZIP reconci
 - Persistir fase, checkpoint, carteira, IDs de créditos consolidados, implantes atuais, ramo narrativo, estado da descida, fragmentos, retry especial, finais e snapshot pré-Portão. O estado corporal deve ser reconstruível após recarregar.
 - Checkpoint ativado leva o Continue ao checkpoint; sem checkpoint, ao início da fase. Créditos não consolidados são descartados na retomada.
 - Novo Jogo exige confirmação antes de substituir a campanha e zerar carteira/progresso. Não cria outro slot. Cosméticos opcionais permanecem separados.
-- Login não deve sobrescrever silenciosamente uma campanha local ou remota. Conflito/importação e troca de conta seguem a proposta D05; detalhes da sincronização não vêm do GDD.
+- Login não deve sobrescrever silenciosamente uma campanha local ou remota. D05 foi aprovada: comparar cópias, exigir escolha explícita em conflito/importação e controlar revisão contra concorrência. Cache separado por conta e visitante; logout/troca de conta não transfere progresso nem desbloqueios. Cancelar a escolha preserva as cópias; não mesclar créditos, memórias ou ramos automaticamente. A cópia visitante permanece separada após importação confirmada, sem criar slots adicionais na conta.
 
 ## RN02 — Movimento e ações
 
@@ -21,7 +21,7 @@ Referências: [GDD 1.0.0](../../../gdd.md) e especificação ISN do [ZIP reconci
 - Scan manual funciona no chão/no ar sem parar a corrida; pulso inicial de 0,75 s, sem sobreposição. Revela rotas, paredes falsas e armadilhas até sair do trecho. Morte oculta novamente os elementos.
 - Dash funciona no chão/no ar, inclusive em queda; não concede invencibilidade; cooldown inicial de 2 s com feedback sonoro. Durante dash não há pulo, slide, ataque ou scan.
 - Valores de movimento e combate permanecem sujeitos aos playtests do GDD §26. A matriz completa de compatibilidade é a do GDD §14.11.
-- Teclado e gamepad físico devem gerar as mesmas ações e respeitar as mesmas restrições; gamepad não acrescenta poderes, aceleração ou vantagens. Mapeamento e comportamento ao desconectar estão em D01/D02.
+- Teclado e gamepad físico devem gerar as mesmas ações e respeitar as mesmas restrições; gamepad não acrescenta poderes, aceleração ou vantagens. Mapeamento/compatibilidade permanecem em D01; desconexão segue D02 aprovada e RN07.
 
 ## RN03 — Créditos, morte e checkpoints
 
@@ -42,7 +42,7 @@ Referências: [GDD 1.0.0](../../../gdd.md) e especificação ISN do [ZIP reconci
 | 3 — Meio Urbano | Olhos | Scan |
 | 4 — Corporativo | Propulsores | Dash |
 
-A campanha inclui aceitação consciente de Alex na narrativa e transformação visual. O ZIP esclarece a interface: o procedimento acontece sem opção de aceitar/recusar. Não há decisão sim/não do jogador nem ramo alternativo por recusar os quatro implantes. A recusa narrativa de George acontece na descida, quando Alex pede a remoção. O Topo exige domínio do conjunto e termina no Portão.
+A campanha inclui aceitação consciente de Alex na narrativa e transformação visual. Na interface, o procedimento acontece sem opção de aceitar/recusar. Não há decisão sim/não do jogador nem ramo alternativo por recusar os quatro implantes. A recusa narrativa de George acontece na descida, quando Alex pede a remoção. O Topo exige domínio do conjunto e termina no Portão.
 
 ## RN05 — Portão e Chrome
 
@@ -67,7 +67,11 @@ A campanha inclui aceitação consciente de Alex na narrativa e transformação 
 - Na unidade Industrial, o rosto do pai aparece como holograma/interface, não encontro físico.
 - Concluir um setor sem memória oferece uma única repetição especial daquele setor. Aceitar reinicia do começo com a cadeia ativa; recusar ou concluir novamente sem a memória quebra a cadeia.
 - Reinício manual durante a tentativa permanece disponível e não consome o retry especial por si só. Morte também não equivale a concluir o setor sem memória.
-- Recuperação da memória e retirada são eventos distintos: guardar ambos para não repetir nem pular um procedimento após recarregar. O ponto exato de consolidação da memória em morte/checkpoint é uma lacuna do GDD registrada em D10.
+- D10 aprovada: a memória coletada fica pendente até concluir a retirada do implante correspondente. Morrer, reiniciar manualmente a fase ou sair do jogo antes disso apaga somente essa memória pendente e torna o glitch novamente coletável; o jogador precisa recuperá-lo de novo. Checkpoint não consolida memória.
+- Retirada, bioprinting, perda da habilidade e consolidação da memória são persistidos juntos. Depois do procedimento, mortes não apagam aquela memória nem restauram o implante. Memórias consolidadas em fases anteriores permanecem. Salvar uma coleta pendente não a torna consolidada.
+- A perda por morte, reinício manual ou saída não consome retry especial nem quebra a cadeia por si só; a progressão derivada da coleta perdida precisa ser recalculada. Memórias consolidadas também sobrevivem a reinício da fase e saída/retorno na campanha atual: Novo Jogo e restauração integral pré-Portão mantêm suas regras.
+- Ao carregar a campanha após saída, limpar qualquer memória pendente presente na cópia local/remota antes de retomar o percurso. Não depender apenas do evento de fechamento do navegador; salvar uma coleta não pode contornar a perda na saída. Pausar dentro da mesma sessão não equivale a sair do jogo.
+- D12 aprovada: todas as memórias ficam após o último checkpoint e antes da área de retirada do implante. Não há checkpoint posterior à memória antes da retirada; a ordem do percurso permite recoleta ao voltar do checkpoint. Validar essa disposição nos mapas sem alterar as regras de retorno.
 - Cadeia quebrada implica Hollow: futuros glitches desaparecem, cessam as retiradas e o corpo preserva exatamente os implantes restantes. Transições/cutscenes abreviam os setores restantes e conduzem ao epílogo.
 - Quatro retiradas levam ao Flesh: retorno humano à família, com marcas do bioprinting. Hollow retorna com implantes restantes e incapacidade emocional de reconexão.
 
@@ -75,26 +79,16 @@ A campanha inclui aceitação consciente de Alex na narrativa e transformação 
 
 - Pausa da campanha congela movimento, física, obstáculos, inimigos, animações relevantes e cooldown de dash.
 - Reinício é permitido apenas na fase atual. Não há replay livre de fases concluídas; as exceções narrativas são descida, retry especial e retorno ao Portão.
-- A corrida multiplayer não pausa. Perder o gamepad não deve ser confundido com desconectar da partida; proposta de fallback em D02.
+- D02 aprovada: ao perder o gamepad na campanha, pausar automaticamente e avisar que o teclado está disponível. Reconectar não retoma sozinho; o jogador escolhe retomar pelo controle ou teclado.
+- A corrida multiplayer continua sem pausa, com aviso e alternativa pelo teclado. Perder o gamepad não representa queda de rede nem derrota automática.
 
-<<<<<<< HEAD
 ## RN08 — Multiplayer
-=======
-1. Ao concluir as Fases 1–4, Alex passa pela clínica do George Vektor.
-2. O implante **não é opcional**: o procedimento acontece e a campanha segue. O jogador não escolhe “sim/não”.
-3. Ordem fixa:
-   - Fase 1 → pernas → salto duplo  
-   - Fase 2 → braços → ataque/quebra  
-   - Fase 3 → olhos → scan  
-   - Fase 4 → propulsores → dash  
-4. Implante fica registrado no save e altera o visual/moveset.
->>>>>>> refs/remotes/origin/docs/isn-sprint1
 
-Modo incluído no escopo ISN pelo ZIP RF22/RF23; desenvolvimento após o núcleo narrativo conforme GDD §24.5. O ZIP resolve login, salas e persistência do resultado; D03/D04 mantêm somente os detalhes ainda não definidos.
+Modo incluído no escopo ISN, com desenvolvimento após o núcleo narrativo conforme GDD §24.5. Login, salas e resultado persistido são requisitos definidos; D03 aprova o modelo de salas, enquanto D04 mantém validações de sincronização e desconexão.
 
 - Exige dois jogadores autenticados. Visitante deve concluir login antes de criar/entrar em sala ou participar da corrida.
-- Backend mantém sala/partida; o jogador cria ou entra em uma sala e a largada exige dois participantes prontos. Código, convite ou descoberta pública ainda não foram escolhidos (D03).
-- Backend registra resultado/classificação de cada corrida e o sistema mostra o vencedor. Isso não estabelece ranking global, temporadas ou placar público; visibilidade e retenção estão em D03.
+- Backend mantém sala/partida; o jogador cria ou entra em uma sala e a largada exige dois participantes prontos. D03 aprovada: sala privada por código/link, validade de 10 min antes da largada e uma sala/partida ativa por conta; busca pública fica para evolução. Modelo e regras definidos no [documento 14](14-salas-e-notificacoes.md), aprovados para implementação.
+- Backend registra resultado/classificação de cada corrida e o sistema mostra o vencedor. Isso não estabelece ranking global, temporadas ou placar público; D03 define histórico privado de 30 dias, visível somente aos participantes.
 
 - Dois jogadores, pista própria, sem colisão entre jogadores e sem PvP, quatro implantes disponíveis, duração-alvo aproximada de 120 s e checkpoint central.
 - Créditos começam em zero, são individuais e exclusivos da partida. Coleta não remove o item do adversário. Após morte, créditos permanecem e não reaparecem para quem já os coletou.
@@ -102,25 +96,19 @@ Modo incluído no escopo ISN pelo ZIP RF22/RF23; desenvolvimento após o núcleo
 - Tempo ajustado = tempo bruto − bônus de créditos. Valores iniciais: 20 créditos, 0,5 s por crédito e bônus máximo de 10 s; sujeitos a playtest.
 - Quando o primeiro termina, abrir janela de 20 s para o segundo. Se ambos terminarem, comparar tempos ajustados; se o segundo não terminar no prazo, recebe DNF. Terminar primeiro não garante vitória.
 - Desempate: mais créditos, depois menor tempo bruto, depois empate.
-- Desconexão durante a corrida concede vitória ao adversário. Detecção, quedas simultâneas e abandono antes da largada estão em D04.
+- Desconexão durante a corrida concede vitória ao adversário. Detecção, quedas simultâneas, falha de infraestrutura e abandono antes da largada estão em D04. Heartbeat evita inatividade do transporte; não garante ausência de queda nem autoriza retornar à corrida perdida. Renovação planejada de conexão ocorre no lobby. Ver [estudo de transportes](13-transporte-multiplayer.md); duração-alvo de 120 s não estabelece um limite máximo quando ninguém termina.
 - Scan é individual. Não há pausa nem alteração do save, da carteira ou dos finais da campanha.
 - Teclado/gamepad são alternativas de entrada; não é obrigatório possuir dois gamepads para uma partida entre dois navegadores, conforme arquitetura proposta.
 
 ## RN09 — Cosméticos opcionais
 
-<<<<<<< HEAD
 Somente após estabilização do escopo prioritário. Loja no Menu Principal, sem HUB. Separar pontuação total e saldo gastável. Skins não alteram habilidades, hitbox, dificuldade ou finais. Novo Jogo não remove desbloqueios. Vitrine em reais usa somente pagamento simulado; não há gateway real, compra de vidas ou de implantes. Créditos não compram skins da vitrine representativa. Ver GDD §25.
 
-## RN10 — Auditoria, comunicação e operação (extensão ISN)
-=======
-## 7. Multiplayer
+D11 aprovada: toda compra concluída fica vinculada e salva na conta autenticada e os desbloqueios são sincronizados entre dispositivos. Novo Jogo, restauração pré-Portão, conflito de save e troca de dispositivo não removem aquisições. Trocar de conta carrega apenas os itens da nova conta; não transfere propriedade. Visitante deve autenticar para concluir uma aquisição.
 
-1. Modo separado da campanha: corrida competitiva (dois jogadores).
-2. Exige login (pra identificar quem jogou e gravar resultado da partida).
-3. Resultado combina tempo e créditos da partida.
-4. **Não** altera save da campanha, implantes nem finais.
-5. Backend mantém sala/partida e pode guardar ranking simples da corrida.
->>>>>>> refs/remotes/origin/docs/isn-sprint1
+Confirmação de compra exige registro durável no backend; erro de rede não deve anunciar compra concluída. Repetir a mesma solicitação não cobra nem desbloqueia duas vezes. Desbloqueios já salvos podem ser representados no cache da respectiva conta; editar/importar campanha não concede itens. A loja continua opcional e sem pagamento real.
+
+## RN10 — Auditoria, comunicação e operação (extensão ISN)
 
 Catálogo inicial obrigatório para operações processadas pelo backend:
 
@@ -129,19 +117,13 @@ Catálogo inicial obrigatório para operações processadas pelo backend:
 | Login/logout | Provedor e resultado; nunca token, senha ou credencial |
 | Criação, sincronização e reinício de campanha | ID da campanha, revisão anterior/nova e tipo da alteração |
 | Checkpoint e consolidação | Fase/checkpoint e referência da revisão salva |
-| Implante, Portão, memória, retirada, retry e final | Tipo da transição e revisão salva; contemplar também restauração pré-Portão |
+| Implante, Portão, memória, retirada, retry e final | Tipo da transição e revisão salva; memória recuperada, perda da pendente e consolidação na retirada; contemplar restauração pré-Portão |
 | Acesso negado ou conflito de versão | Recurso e motivo, sem conteúdo privado de outro usuário |
 | Entrada/saída e encerramento de partida | Partida, participante autenticado, resultado/classificação, DNF ou desconexão |
 | Compra simulada, se implementada | Cosmético e tipo de transação, separado da campanha |
 
-<<<<<<< HEAD
 Auditoria é persistente, consultável por autorização e não serve como armazenamento do gameplay. Ações locais de visitante não podem ser comprovadas pelo servidor; seu envio posterior é importação declarada, não evento online verificado. Escopo da auditoria offline e retenção estão em D06. Não registrar cada frame ou pressionamento como operação crítica.
-=======
-1. Operações críticas devem gerar registro: login, logout, criação/atualização de save, escolha do Portão, resultado de partida multiplayer (e compra cosmética se existir).
-2. O sistema pode enviar e-mail/notificação (ex.: boas-vindas após primeiro login, ou aviso de progresso relevante).
-3. Logs de auditoria servem pra análise posterior, não pra gameplay.
->>>>>>> refs/remotes/origin/docs/isn-sprint1
 
-Proposta D07: primeiro cadastro gera e-mail de boas-vindas e notificação no jogo; conclusão de campanha gera notificação no jogo. Falha no provedor de e-mail não bloqueia login, save ou partida. Repetição de login não repete boas-vindas; retentativas usam uma chave do evento para evitar duplicação.
+D07 aprovada: central de notificações por conta com categorias, lidas/não lidas e preferências. Primeiro cadastro, marcos consolidados da campanha, resultados e compras opcionais geram avisos no jogo; e-mail apenas para boas-vindas e final se habilitado. Compra cosmética gera confirmação somente no jogo, sem e-mail. Não enviar a cada morte/checkpoint/coleta. Matriz de eventos, retenção e custo no [documento 14](14-salas-e-notificacoes.md). Falha no provedor de e-mail não bloqueia login, save ou partida. Repetição de login não repete boas-vindas; retentativas usam uma chave do evento para evitar duplicação.
 
 Ambientes mantêm dados e credenciais separados. Qualquer implantação em nuvem usa Pulumi; produção é publicada automaticamente por CI/CD. A base agora é microsserviços Lambda com tabelas DynamoDB próprias, Cognito, S3/CloudFront, SQS, SES e CloudWatch, conforme documento 12. Conta ainda não criada; quotas, elegibilidade Free Tier, região final e orçamento permanecem D08/D09. Eventos críticos usam registro durável no serviço produtor e projeção assíncrona em Auditoria; indisponibilidade de e-mail não bloqueia save.

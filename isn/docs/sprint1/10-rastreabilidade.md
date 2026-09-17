@@ -9,11 +9,11 @@ Esta matriz relaciona requisitos, regras, casos e diagramas. **Cobertura documen
 | RF-ISN-01 cliente-servidor | UC01/04 | Visão geral e módulos | D08 |
 | RF-ISN-02 frontend sob demanda | UC01 | Hospedagem no diagrama geral | — |
 | RF-ISN-03 backend nuvem | RN10 | Arquitetura, ambientes | D08 |
-| RF-ISN-04 REST | UC02/04/07/08/13 | Contrato 09-api-rest.md | D03–D08 |
-| RF-ISN-05 autenticação/autorização | RN01; UC02/04/08 | Conta, proprietário e erros de API | D03/D06 |
-| RF-ISN-06 banco | RN01/10; UC04 | Modelo 08 e diagrama de dados | D05/D08 |
-| RF-ISN-07 modelo/arquitetura | RN01/08/10 | Documentos 05 e 08 | D03–D08 |
-| RF-ISN-08 e-mail/notificações | RN10; UC07 | Dois canais no modelo/fluxo de login | D07 |
+| RF-ISN-04 REST | UC02/04/07/08/13 | Contrato 09-api-rest.md | D04/D06/D08 |
+| RF-ISN-05 autenticação/autorização | RN01; UC02/04/08 | Conta, proprietário e erros de API | D06 |
+| RF-ISN-06 banco | RN01/10; UC04 | Modelo 08 e diagrama de dados | D05 aprovada; D08 pendente |
+| RF-ISN-07 modelo/arquitetura | RN01/08/10 | Documentos 05 e 08 | D04/D06/D08 |
+| RF-ISN-08 e-mail/notificações | RN10; UC07 | Central, e-mails seletivos e feedback; D07 aprovada | D08: liberação SES |
 | RF-ISN-09 operações críticas | RN10; UC08 | Catálogo de eventos, banco e API | D06 |
 | RF-ISN-10 dev/prod | RN10 | Diagrama de ambientes | D08 |
 | RF-ISN-11 IaC | RN10 | Pulumi para toda implantação em nuvem | D08 |
@@ -30,15 +30,15 @@ Esta matriz relaciona requisitos, regras, casos e diagramas. **Cobertura documen
 | Setores e implantes — §§14/16 | RF-J02 | RN04; UC05 | Clínica e campanha; corpo/implantes |
 | Créditos/checkpoints/anti-farming — §14.4/14.12 | RF-J03 | RN03; UC03/09 | Loop; IDs consolidados |
 | Save único, local e Novo Jogo — §20 | RF-J04 | RN01; UC04/09 | Login; campanha/snapshot |
-| Sincronização por conta — extensão ISN | RF-J05 | RN01; UC02/04 | Nuvem; revisão/proprietário; D05 |
+| Sincronização por conta — extensão ISN | RF-J05 | RN01; UC02/04 | Nuvem; escolha explícita, revisão e cache por conta; D05 aprovada |
 | Portão e repetição dos finais — §18 | RF-J06 | RN05; UC06/12 | Campanha; snapshot pré-Portão |
-| Glitches/retirada/bioprinting — §§15/18 | RF-J07 | RN06; UC10/11 | Descida; memórias/retiradas/retry; D10 |
+| Glitches/retirada/bioprinting — §§15/18 | RF-J07 | RN06; UC10/11 | Descida; perda por morte/reinício/saída antes da retirada e consolidação no procedimento; D10/D12 aprovadas; memória após último checkpoint |
 | Flesh/Hollow/epílogo — §18 | RF-J08 | RN06; UC10/12 | Campanha/descida; estado corporal |
 | Prólogo, pai, George — §15 | RF-J09 | RN04–06; UC05/06/10/12 | Campanha/descida; cenas narrativas |
 | Pausa/reinício/replay restrito — §19 | RF-J10 | RN07; UC09 | Gameplay/gamepad; continuidade |
-| Multiplayer — GDD §21 + ZIP RF22/RF23 e UC09 | RF-J11/14 | RN08; UC13 | Login obrigatório, salas e resultado persistido; D03 parcialmente resolvida, D04 pendente |
-| Gamepad físico — solicitação desta revisão | RF-J12 | RN02/07; UC14 | Entrada e fluxo gamepad; D01/D02 |
-| Loja e cosméticos — §25, opcionais | RF-J13 | RN09; UC15 | Entidade separada; D11 |
+| Multiplayer — GDD §21 e requisitos ISN | RF-J11/14 | RN08; UC13 | Login obrigatório, salas e resultado persistido; D03 aprovada, D04 pendente |
+| Gamepad físico — solicitação desta revisão | RF-J12 | RN02/07; UC14 | Entrada e fluxo gamepad; D02 aprovada, D01 pendente |
+| Loja e cosméticos — §25, opcionais | RF-J13 | RN09; UC15 | Aquisições sincronizadas por conta (D11 aprovada); cronograma opcional |
 
 ## Cobertura da entrega solicitada
 
@@ -47,32 +47,45 @@ Esta matriz relaciona requisitos, regras, casos e diagramas. **Cobertura documen
 - Casos de uso: documento 04.
 - Diagramas: documento 05, com visão geral, backend, ambientes, entrada, multiplayer e dados.
 - Fluxogramas: documento 06, com login, gameplay, clínica, campanha, descida, multiplayer, gamepad e deploy.
-- Complementos de especificação: decisões 07, modelagem 08, API 09, esta matriz, comparação ZIP 11 e arquitetura AWS/custos 12.
+- Complementos de especificação: decisões 07, modelagem 08, API 09, esta matriz, arquitetura AWS/custos 12, estudo de transporte 13 e modelo de salas/notificações 14.
 - Diretriz de microsserviços: RNF07, cinco serviços com tabelas/IAM/implantação próprios; diagramas AWS de blocos e eventos, documento 12.
-- D08 parcialmente resolvida pela seleção de serviços gerenciados; conta ainda não criada, elegibilidade e limites devem ser confirmados. D04 permanece condicionado a prova de sincronização multiplayer.
+- D08 parcialmente resolvida pela seleção de serviços gerenciados; conta ainda não criada, elegibilidade e limites devem ser confirmados. D04 permanece condicionado a prova de sincronização multiplayer; documento 13 compara MQTT/WebTransport/WebSocket, recomenda WSS e distingue timeout do serviço, heartbeat e derrota por desconexão.
 
-Resultado/classificação por corrida é requisito confirmado no ZIP. Não há compromisso de implementar skins, chat, ranking global, pagamentos reais, app mobile ou controle remoto por celular como parte do núcleo. O que foi acrescentado como proposta técnica está identificado para revisão, sem alterar silenciosamente o GDD.
+Resultado/classificação por corrida é requisito do sistema. Não há compromisso de implementar skins, chat, ranking global, pagamentos reais, app mobile ou controle remoto por celular como parte do núcleo. O que foi acrescentado como proposta técnica está identificado para revisão, sem alterar silenciosamente o GDD.
 
-## Correspondência com os IDs da versão ZIP
+## Cobertura consolidada
 
-Os IDs atuais foram preservados para não quebrar referências desta revisão. No ZIP, UC09 é multiplayer; nesta documentação, seu equivalente é **UC13**. UC09 atual trata pausa/reinício/Novo Jogo.
+Os identificadores atuais são a referência da documentação. UC13 trata multiplayer; UC09 trata pausa, reinício e Novo Jogo.
 
-| IDs no ZIP | IDs / conteúdo nesta revisão |
+| Área | Requisitos e conteúdo |
 | --- | --- |
-| RF01–RF06 | RF-ISN-01–06; domínio no resumo e UC01; login/save nos RF-J04/05 |
-| RF07 | RF-J04/05; persistência local mantida pelo GDD §20; divergência registrada no documento 11 |
-| RF08–RF12 | RF-ISN-08–12; RN10, comunicações, auditoria e ambientes |
-| RF13 | RF-J01 |
-| RF14–RF17 | RF-J02; clínica sem decisão sim/não confirmada |
-| RF18–RF19 | RF-J01/03; RN02/03 |
-| RF20 | RF-J06 |
-| RF21 | RF-J04/05 e modelo completo de campanha |
-| RF22 | RF-J11; login dos dois jogadores e salas confirmados |
-| RF23 | RF-J14; resultado/classificação persistidos, separados da campanha |
-| RNF01 e RNF04 | RNF01 atual: responsividade/resolução desktop |
-| RNF02 | RNF02–04 atuais: gameplay, API e multiplayer |
-| RNF03 | RNF05 atual: custo |
-
-Fontes e critérios da integração estão em [11-reconciliacao-zip.md](11-reconciliacao-zip.md). O ZIP não traz novas decisões de gamepad ou mudança no GDD.
+| Web, nuvem e identidade | RF-ISN-01–06; domínio no resumo/UC01; login e save RF-J04/05 |
+| Persistência e operação | Save local RF-J04/05 conforme GDD §20; comunicações/auditoria/ambientes RF-ISN-08–12 e RN10 |
+| Gameplay e progressão | RF-J01/02/03; clínica sem escolha sim/não, movimento, implantes e créditos |
+| Campanha e finais | RF-J04/05/06; modelo completo de campanha e estado pré-Portão |
+| Multiplayer | RF-J11/14; login dos dois participantes, salas privadas e resultado persistido separado da campanha |
+| Qualidade | RNF01: responsividade desktop; RNF02–04: gameplay, API e multiplayer; RNF05: custo |
 
 DNS e HTTPS: Route 53 + ACM constam no diagrama AWS e no documento 12, seção 3.1. A zona pode ser associada ao plano CloudFront conforme elegibilidade; registrador/delegação e nomes dos subdomínios ficam em D08.
+
+## Cenários de aceite das decisões de 17/09/2026
+
+Especificação para a implementação futura, não testes executados nesta revisão documental.
+
+| Decisão | Cenário | Resultado esperado |
+| --- | --- | --- |
+| D02 | Desconectar controle durante campanha; reconectar | Física/cooldowns pausam; aviso e teclado disponíveis; retomada só por ação do jogador. |
+| D02 | Desconectar controle durante corrida multiplayer | Corrida continua; aviso/teclado; não registrar derrota por queda de periférico. |
+| D05 | Login com cópias divergentes; cancelar; depois escolher uma | Nenhuma sobrescrita ao cancelar; escolha explícita respeita revisão e proprietário, sem união automática. |
+| D05 | Trocar da conta A para B com alterações locais pendentes | Nenhum save, aquisição ou envio de A é associado a B; visitante continua separado. |
+| D10 | Coletar memória e morrer, reiniciar ou sair antes da retirada | Perder pendente, permitir recoleta; checkpoint não a protege e carregamento não a restaura. |
+| D10 | Retirar implante; depois morrer, reiniciar ou sair | Preservar memória consolidada, corpo e retirada; não exigir nova coleta nem repetir procedimento. |
+| D10 | Memória D1 consolidada e D2 pendente; morrer | Manter D1, perder somente D2; morte não consome retry nem quebra cadeia por si só. |
+| D11 | Comprar na conta A; abrir em outro dispositivo; criar Novo Jogo | Item disponível na mesma conta e preservado pelo reset; conta B não o recebe. |
+| D11 | Repetir solicitação de compra após resposta perdida | Uma aquisição e um débito, quando aplicável; confirmação recuperável sem duplicação. |
+
+D12 aprovada: todos os glitches ficam após o último checkpoint e antes da área de retirada; verificar essa ordem nos mapas. A revisão não altera posição de checkpoint nem código do jogo.
+
+D03/D07 aprovadas: modelo, experiência, retenção e estimativas no [documento 14](14-salas-e-notificacoes.md). Compra cosmética notifica somente no jogo; e-mail é excluído desse evento.
+
+Aceite D07: concluir compra cosmética gera confirmação no jogo e nenhuma solicitação de envio SES, independentemente das preferências de e-mail.

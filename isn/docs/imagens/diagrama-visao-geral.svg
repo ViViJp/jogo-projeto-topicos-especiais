@@ -14,7 +14,7 @@
 <polyline points="690,404 690,506" fill="none" stroke="#52657c" stroke-width="1.7" stroke-dasharray="7 5" marker-end="url(#arrow)"/>
 <polyline points="1120,404 1120,506" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
 <polyline points="1120,404 1120,440 1430,440 1430,660 1120,660 1120,696" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
-<polyline points="1120,404 1120,424 30,424 30,676 690,676 690,696" fill="none" stroke="#52657c" stroke-width="1.7" stroke-dasharray="7 5" marker-end="url(#arrow)"/>
+<polyline points="1120,404 1120,424 30,424 30,676 690,676 690,696" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
 <polyline points="1120,404 1120,432 40,432 40,668 260,668 260,696" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
 <polyline points="1120,404 1120,455 690,455 690,506" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
 <polyline points="848,550 962,550" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
@@ -31,7 +31,7 @@
 <rect x="102" y="126" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
 <text x="260" y="176" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Teclado</text>
 <rect x="532" y="126" width="316" height="88" rx="12" fill="#fff7ed" stroke="#b45309" stroke-width="2" stroke-dasharray="6 4"/>
-<text x="690" y="176" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Gamepad físico — D01/D02</text>
+<text x="690" y="176" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Gamepad físico — D01</text>
 <rect x="962" y="126" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
 <text x="1120" y="176" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">S3 + CloudFront: frontend</text>
 <rect x="102" y="316" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
@@ -48,8 +48,8 @@
 <text x="1120" y="556" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">DynamoDB: tabelas por serviço</text>
 <rect x="962" y="696" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
 <text x="1120" y="746" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Cognito + Google</text>
-<rect x="532" y="696" width="316" height="88" rx="12" fill="#fff7ed" stroke="#b45309" stroke-width="2" stroke-dasharray="6 4"/>
-<text x="690" y="746" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Comunicações + SES — D07</text>
+<rect x="532" y="696" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="746" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Comunicações + SES</text>
 <rect x="102" y="696" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
 <text x="260" y="746" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Auditoria persistente</text>
 </svg>

@@ -24,7 +24,7 @@ O [diagrama de blocos AWS](../imagens/diagrama-aws-microsservicos.svg) mostra en
 
 Os cinco serviços têm pacotes e IAM roles próprios e podem escalar/publicar separadamente. Partidas possui handlers REST e WebSocket dentro do mesmo domínio; resultado/classificação não exige outro microsserviço só para calcular uma fórmula. Publicadores de eventos são componentes dos serviços produtores.
 
-Nenhum serviço consulta ou altera diretamente a tabela de outro. Referências como `userId` são identificadores; dados necessários de outro domínio chegam por contrato/evento. Não criar joins entre serviços. Eventuais cosméticos continuam fora do núcleo até D11.
+Nenhum serviço consulta ou altera diretamente a tabela de outro. Referências como `userId` são identificadores; dados necessários de outro domínio chegam por contrato/evento. Não criar joins entre serviços. Cosméticos continuam opcionais, mas a sincronização por conta foi aprovada em D11. Proposta técnica: o serviço Campanha possui aquisições em itens próprios por conta na tabela `campaigns`, fora do estado/reset da campanha, permitindo transação de saldo, desbloqueio e outbox. Isso não muda propriedade ao escolher/importar save. Ver documentos 08/09; não há novo serviço obrigatório nem gateway de pagamento real.
 
 ## 3. Serviços AWS selecionados como base
 
@@ -41,6 +41,7 @@ Nenhum serviço consulta ou altera diretamente a tabela de outro. Referências c
 | E-mail | SES à la carte | Envio transacional; verificar domínio e solicitar saída do sandbox antes de atender destinatários não verificados. |
 | Notificações no jogo | Serviço Comunicações + DynamoDB; consulta por REST ao abrir menu/evento relevante | Sem push do navegador ou polling de alta frequência como dependência inicial. |
 | Tempo real multiplayer | API Gateway WebSocket + Lambdas Partidas — **candidato D04** | Gerenciamento terceirizado de conexões; validar custo/latência antes de fechar transporte. |
+| Feedback de e-mail — D07 aprovada | SES → SNS Standard → SQS de feedback → Lambda Comunicações | Entrega/bounce/reclamação e supressão; componente aprovado, sem SMS ou assinatura SNS por e-mail. Documento 14. |
 | Logs e métricas | CloudWatch, com retenção explícita e sem log de cada frame | Diagnóstico operacional; não substitui eventos de auditoria do produto. |
 | Implantação | Pulumi + pipeline CI/CD com credenciais temporárias via federação OIDC | Recursos na AWS definidos em IaC; publicar apenas serviços alterados e dependências necessárias. |
 
@@ -100,9 +101,11 @@ Campanha, IDs consolidados e snapshot pré-Portão não devem crescer sem limite
 
 ## 6. Multiplayer: caminho de validação
 
+A comparação de MQTT, WebTransport e WebSocket está no [estudo de transportes](13-transporte-multiplayer.md). **WebSocket seguro (WSS) é recomendado para o primeiro protótipo**; API Gateway/Lambda continua condicionado à prova de custo, latência e autoridade D04. MQTT no navegador normalmente também usa WSS; WebTransport não elimina timeouts. Nenhum dos dois foi acrescentado como serviço obrigatório.
+
 O desenho inicial usa dois navegadores, com simulação visual local e mensagens compactas de ações/marcos. Backend controla sala, participantes, relógio de referência e resultado conforme GDD; a validação suficiente de tempo, créditos e trajetória ainda pertence a D04. Relatos do cliente não são prova de resultado legítimo.
 
-API Gateway WebSocket é candidato para conexão e entrega de mensagens; Lambda processa eventos curtos, não hospeda uma simulação contínua por partida nem mantém a conexão aberta em memória. Não usar estado global de uma instância Lambda como única verdade compartilhada. Os limites oficiais incluem integração de até 29 s e conexão de até 2 h. [Quotas WebSocket](https://docs.aws.amazon.com/apigateway/latest/developerguide/apigateway-execution-service-websocket-limits-table.html).
+API Gateway WebSocket é candidato para conexão e entrega de mensagens; Lambda processa eventos curtos, não hospeda uma simulação contínua por partida nem mantém a conexão aberta em memória. Não usar estado global de uma instância Lambda como única verdade compartilhada. Os limites oficiais são 10 min de inatividade, 2 h de duração da conexão e até 29 s por integração. São limites distintos do serviço, não um timeout universal do protocolo. Heartbeat de aplicação trata inatividade, mas não estende as 2 h. Renovar no lobby/antes da largada; duração máxima da corrida, detecção de queda e falhas de infraestrutura precisam ser fechadas em D04. Os 120 s do GDD são duração-alvo, não teto. [Quotas WebSocket](https://docs.aws.amazon.com/apigateway/latest/developerguide/apigateway-execution-service-websocket-limits-table.html).
 
 No HTTP usar JWT authorizer. No WebSocket usar autorização no `$connect` e validar vínculo/permissão nos handlers de mensagem. A AWS só aplica o Lambda authorizer WebSocket na conexão. Proposta: ticket curto de uso único, emitido via REST autenticada, para o navegador abrir o socket sem expor token duradouro na URL; contrato detalhado em D04. [Autorização WebSocket](https://docs.aws.amazon.com/apigateway/latest/developerguide/apigateway-websocket-api-lambda-auth.html).
 
@@ -115,7 +118,9 @@ No HTTP usar JWT authorizer. No WebSocket usar autorização no `$connect` e val
 
 Para 100 partidas de 120 s, a 2 mensagens/s: **48 mil entradas + 48 mil saídas = 96 mil mensagens**, com cerca de 400 minutos de conexão. A 60 mensagens/s seriam **2,88 milhões de mensagens**. Lambda, leituras de estado e logs têm custos adicionais. O API Gateway cobra mensagens e minutos de conexão; conferir preço regional e benefício aplicável à conta, sem presumir que ofertas legadas de 12 meses se apliquem à nova conta. [Preços API Gateway](https://aws.amazon.com/api-gateway/pricing/).
 
-Testar primeiro 2–5 mensagens/s com interpolação, latência observada, divergência e correção do resultado. Só adotar se a experiência e as regras forem preservadas. Caso seja necessária simulação autoritativa contínua, reavaliar **somente o componente de tempo real** para um processo de jogo dedicado, por exemplo ECS/Fargate, com estimativa de custo própria. Isso não faz parte do perfil gratuito inicial nem fica provisionado preventivamente. Não usar SQS para sincronizar pulo/colisão em tempo real.
+Comparar snapshots a 2, 5, 10 e 20 Hz com interpolação, latência observada, divergência e correção do resultado; ações/marcos são enviados prontamente e contados à parte. 2–5 Hz é hipótese de economia, não frequência aprovada nem taxa de todos os eventos. Medir heartbeat, detecção de queda, fila de envio e custo da presença conforme documento 13. Só adotar se a experiência e as regras forem preservadas. Caso seja necessária simulação autoritativa contínua, reavaliar **somente o componente de tempo real** para um processo de jogo dedicado, por exemplo ECS/Fargate, com estimativa de custo própria. Isso não faz parte do perfil gratuito inicial nem fica provisionado preventivamente. Não usar SQS para sincronizar pulo/colisão em tempo real.
+
+D03 aprova salas privadas por código/link com consulta direta na tabela Partidas, sem diretório público ou servidor permanente de lobby; histórico privado de 30 dias e parâmetros definidos. D07 aprova central de notificações, preferências e e-mails para boas-vindas/finais opcionais, com SNS/SQS para feedback SES; compras notificam apenas no jogo. Modelo, retenção e estimativa no [documento 14](14-salas-e-notificacoes.md).
 
 ## 7. Free Tier para a conta que será criada
 
@@ -134,6 +139,8 @@ A conta ainda não existe. O plano inicial pretendido é Free Plan para desenvol
 | CloudWatch, domínio e armazenamento complementar | Dependem de uso, modalidade e cobertura do plano | Incluir logs, alarmes, S3 e renovação de domínio no orçamento; nenhum deles some por usar Lambda. |
 
 O plano CloudFront Free não cobre toda a aplicação nem elimina custos do API Gateway. A AWS informa que ultrapassar muito a franquia do plano pode reduzir desempenho de distribuição; não tratar ausência de excedente financeiro como escala ilimitada com desempenho garantido. [Condições CloudFront](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/flat-rate-pricing-plan.html).
+
+Para custo de envio, confirmar plano SES: a página atual informa Essentials para novas contas desde julho de 2026 (US$ 0,16/1.000 envios) e opção à la carte (US$ 0,10/1.000), sem incluir dados/extras. D07 aprovada usa envio simples à la carte; não presumir esse plano como padrão. [Preços SES](https://aws.amazon.com/ses/pricing/).
 
 SES inicia em sandbox: envio apenas para endereços/domínios verificados ou simulador, até 200 mensagens/24 h e 1 mensagem/s. Isso permite testes; enviar boas-vindas a qualquer jogador exige aprovação de saída do sandbox e remetente verificado. [Sandbox SES](https://docs.aws.amazon.com/ses/latest/dg/request-production-access.html).
 
@@ -157,8 +164,8 @@ CI pode usar o executor já disponível no repositório, sem manter servidor Jen
 ## 10. Decisões remanescentes
 
 - D08 parcialmente resolvida: AWS gerenciada/serverless e serviços base definidos; confirmar conta, elegibilidade, região final, plano CloudFront e associação da zona DNS, registrador/delegação do domínio, capacidade/quotas e integração IaC.
-- D04: testar WebSocket/Lambda para a corrida e fechar autoridade, ritmo de mensagens e desconexão.
-- D07: SES é provedor previsto; gatilhos, retentativas e liberação de produção permanecem pendentes.
-- D09: teto de custo, carga e metas finais. D01/D02/D05/D06/D10/D11 seguem no registro próprio.
+- D04: WebSocket recomendado para protótipo pelo documento 13; testar hospedagem API Gateway/Lambda, autoridade, ritmo de mensagens, presença, duração máxima da corrida e desconexão. Não presumir reconexão com retorno após derrota.
+- D03/D07 aprovadas: salas privadas, canais, retenção e feedback SES/SNS no documento 14; compras sem e-mail. Implementação, medições e liberação SES ainda precisam ser executadas.
+- D09: teto de custo, carga e metas finais. D02/D05/D10 foram aprovadas; D11 tem sincronização por conta aprovada e cronograma opcional pendente. D12 foi aprovada: memória após último checkpoint e antes da retirada. D01/D06 continuam pendentes.
 
 As fontes oficiais foram consultadas nesta revisão. Preços e condições devem ser revalidados no momento de criação da conta e antes da implantação; esta documentação não substitui a fatura/estimativa regional da AWS.

@@ -8,7 +8,7 @@ Os diagramas descrevem o sistema planejado, não comprovam implementação. Prop
 
 ## 1. Login, save local e comunicações
 
-Primeiro cadastro, e não ausência de save, dispara boas-vindas. Login não é necessário para persistência local. D05 define reconciliação; envio de comunicação é independente e não bloqueia carregar a campanha.
+D05 aprovada: comparar saves e exigir escolha explícita em conflito/importação, com revisão e cache isolado por conta. Cancelar preserva cópias; visitante permanece separado após importação. Troca de conta não transfere envios nem cosméticos. Ao continuar após saída, memória pendente é descartada (D10). Primeiro cadastro dispara comunicação D07 sem bloquear a campanha.
 
 ```mermaid
 flowchart TD
@@ -19,9 +19,9 @@ flowchart TD
   ok{"Login válido?"}
   account["Identificar conta e auditar"]
   first{"Primeiro cadastro?"}
-  resolve["Comparar saves local e remoto — D05"]
-  send["Solicitar e-mail + notificação sem bloquear — D07"]
-  play(["Continuar campanha"])
+  resolve["Comparar cópias / confirmar escolha"]
+  send["Solicitar e-mail + notificação sem bloquear"]
+  play(["Descartar memória pendente da sessão anterior; continuar"])
   commDone(["Fim da tarefa de comunicação"])
   start --> login
   login -->|"não"| local
@@ -31,20 +31,14 @@ flowchart TD
   ok -->|"cancelou / erro"| start
   ok -->|"sim"| account
   account --> first
-  account -.->|"carregar"| resolve
-  first -.->|"sim"| send
-  resolve -.->|"após reconciliação"| play
+  account -->|"carregar"| resolve
+  first -->|"sim"| send
+  resolve -->|"após reconciliação"| play
   first -->|"não"| commDone
-  send -.-> commDone
-  classDef pending fill:#fff7ed,stroke:#b45309,stroke-dasharray:5 4
-  class resolve,send pending
+  send --> commDone
 ```
 
-<<<<<<< HEAD
 ![Login, save local e comunicações](../imagens/fluxo-login.svg)
-=======
-![Fluxo login](../imagens/fluxo-login.png)
->>>>>>> refs/remotes/origin/docs/isn-sprint1
 
 ## 2. Loop da fase e persistência
 
@@ -80,16 +74,11 @@ flowchart TD
   finish -->|"sim"| next
 ```
 
-<<<<<<< HEAD
 ![Loop da fase e persistência](../imagens/fluxo-gameplay.svg)
-=======
-![Fluxo gameplay](../imagens/fluxo-gameplay.png)
->>>>>>> refs/remotes/origin/docs/isn-sprint1
 
 ## 3. Clínica, implante e próxima fase
 
-<<<<<<< HEAD
-ZIP RF15 e UC05 esclarecem que o procedimento acontece sem escolha de aceitar/recusar. Aceitação de Alex é narrativa. Save local permanece conforme GDD; sincronização em nuvem só para autenticado, sem bloquear gameplay por falha de rede.
+O procedimento acontece sem escolha de aceitar/recusar. Aceitação de Alex é narrativa. Save local permanece conforme GDD; sincronização em nuvem só para autenticado, sem bloquear gameplay por falha de rede.
 
 ```mermaid
 flowchart TD
@@ -115,55 +104,10 @@ flowchart TD
 ```
 
 ![Clínica, implante e próxima fase](../imagens/fluxo-clinica.svg)
-=======
-## 3. Clínica → implante → habilidade (sem escolha)
-
-O jogador **não escolhe** se coloca o implante. Depois da fase 1–4 o procedimento acontece e a habilidade é liberada.
-
-```mermaid
-flowchart TD
-  fimFase([Concluiu fase 1-4]) --> clinica[Cena da clinica]
-  clinica --> marca[Implante instalado]
-  marca --> libera[Libera habilidade nova]
-  libera --> auth{Jogador autenticado?}
-  auth -->|Sim| save[Salva no backend]
-  save --> audit[Registra na auditoria]
-  audit --> proxima[Segue pra proxima fase]
-  auth -->|Nao| proxima
-```
-
-![Fluxo clínica](../imagens/fluxo-clinica.png)
->>>>>>> refs/remotes/origin/docs/isn-sprint1
 
 ## 4. Campanha completa e finais
 
-<<<<<<< HEAD
 A descida usa a ordem e o retry do fluxo específico. Snapshot pré-Portão permanece separado; restauração integral permite repetir a escolha. Corpo de Hollow é o estado preservado na quebra, sem novas retiradas.
-=======
-## 4. Multiplayer competitivo
-
-```mermaid
-flowchart TD
-  menu([Menu multiplayer]) --> login{Autenticado?}
-  login -->|Nao| auth[Faz login]
-  auth --> sala
-  login -->|Sim| sala[Cria ou entra na sala]
-  sala --> prontos{2 jogadores prontos?}
-  prontos -->|Nao| espera[Aguarda / cancela]
-  espera --> sala
-  prontos -->|Sim| corrida[Corrida tempo + creditos]
-  corrida --> resultado[Calcula vencedor]
-  resultado --> rank[Grava ranking da partida]
-  rank --> fim([Volta ao menu])
-  rank -.-> saveCampanha[Nao altera save da campanha]
-```
-
-![Fluxo multiplayer](../imagens/fluxo-multiplayer.png)
-
----
-
-## 5. Deploy em produção (alto nível)
->>>>>>> refs/remotes/origin/docs/isn-sprint1
 
 ```mermaid
 flowchart TD
@@ -196,15 +140,11 @@ flowchart TD
   menu -->|"Novo Jogo confirmado"| start
 ```
 
-<<<<<<< HEAD
 ![Campanha completa e finais](../imagens/fluxo-campanha.svg)
-=======
-![Fluxo deploy](../imagens/fluxo-deploy.png)
->>>>>>> refs/remotes/origin/docs/isn-sprint1
 
 ## 5. Descida — memória, retry e retirada
 
-D1 Topo/propulsores → D2 Corporativo/olhos → D3 Urbano/braços → D4 Industrial/pernas. Apenas a conclusão do setor sem memória aciona a falha especial. Morte/reinício durante tentativa seguem RN03/RN06, sem consumir retry. D10 define persistência da memória antes do procedimento.
+D10 aprovada: memória fica pendente até a retirada do implante da fase. Morte, reinício manual ou saída antes disso apagam a pendente e exigem recoleta; checkpoint não consolida. Retirada consolida memória, corpo e perda de habilidade juntos; memórias anteriores sobrevivem. Morte/saída/reinício não consomem retry por si sós. Retorno segue RN01/RN03; D12 aprovada: todas as memórias após o último checkpoint e antes da área de retirada, permitindo recoleta. D1 Topo/propulsores → D2 Corporativo/olhos → D3 Urbano/braços → D4 Industrial/pernas. George recusa ajuda somente na primeira etapa.
 
 ```mermaid
 flowchart TD
@@ -214,15 +154,21 @@ flowchart TD
   endstage{"Concluiu sem memória?"}
   first{"Retry disponível?"}
   accept{"Aceita repetir?"}
-  retry["Registrar retry usado; reiniciar setor"]
-  george["Primeira retirada: George recusa ajudar"]
-  reforge["ReForge: retirar implante e bioprintar"]
-  persist["Salvar retirada, corpo e habilidade"]
+  retry["Registrar retry; reiniciar setor"]
+  hollow(["Quebrar cadeia; preservar corpo; Hollow"])
+  pending["Memória após último checkpoint; antes da retirada"]
+  travel["Percorrer caminho até a retirada"]
+  lost{"Morreu, reiniciou ou saiu?"}
+  clear["Perder pendente; manter consolidadas; recoleta ativa"]
+  resume["Retomar conforme RN01/RN03; sem consumir retry"]
+  arrived{"Chegou à retirada?"}
+  george["Na primeira etapa: George recusa; buscar ReForge"]
+  reforge["Retirar / bioprintar; consolidar memória e salvar"]
   last{"Quatro retiradas?"}
   flesh(["Epílogo Flesh"])
-  hollow(["Quebrar cadeia: preservar corpo e seguir Hollow"])
   start --> play
   play --> found
+  play -->|"morte / reinício / saída"| clear
   found -->|"não"| endstage
   endstage -->|"não"| play
   endstage -->|"sim"| first
@@ -231,11 +177,18 @@ flowchart TD
   accept -->|"sim"| retry
   accept -->|"não"| hollow
   retry --> play
-  found -->|"sim / primeira"| george
-  found -->|"sim / demais"| reforge
+  found -->|"sim"| pending
+  pending --> travel
+  travel --> lost
+  lost -->|"sim"| clear
+  clear -->|"ao retomar"| resume
+  resume --> play
+  lost -->|"não"| arrived
+  arrived -->|"não"| travel
+  arrived -->|"sim / primeira"| george
+  arrived -->|"sim / demais"| reforge
   george --> reforge
-  reforge --> persist
-  persist --> last
+  reforge --> last
   last -->|"sim"| flesh
   last -->|"não / próximo setor"| start
 ```
@@ -244,12 +197,12 @@ flowchart TD
 
 ## 6. Partida multiplayer e resultado
 
-Login dos dois participantes, criação/entrada em sala e resultado/classificação persistidos são definidos pelo ZIP. D03 cobre a descoberta da sala; D04 cobre protocolo e casos de cancelamento/desconexão. Durante a janela única de 20 s, o segundo continua sujeito a morte, checkpoint e desconexão. Resultado não altera campanha nem define ranking global.
+Dois jogadores autenticados, salas no backend e resultados persistidos. D03 aprovada: entrada por código/link privado e cancelamento da sala se alguém sair antes da largada. D04 cobre autoridade, transporte e detecção de queda. Durante a janela única de 20 s, o segundo continua sujeito a morte, checkpoint e desconexão. Resultado não altera campanha nem define ranking global. WSS recomendado para protótipo; conexão recente antes da largada. Não retomar corrida após derrota. Duração máxima sem chegada, queda simultânea e falha de infraestrutura continuam em D04. Documento 14 detalha o ingresso aprovado.
 
 ```mermaid
 flowchart TD
   start{"Dois jogadores prontos?"}
-  race["Processar corrida e sincronizar — D04"]
+  race["Corrida WSS: estado e presença — D04"]
   drop{"Desconexão de rede?"}
   win["Vitória do adversário; exceções D04"]
   dead{"Jogador morreu?"}
@@ -304,7 +257,7 @@ flowchart TD
 
 ## 7. Gamepad físico — conexão e perda de dispositivo
 
-D01 define mapeamento/hardware; D02 propõe pausa automática na campanha. A desconexão física não declara derrota multiplayer: o jogador pode continuar pelo teclado e a partida não pausa.
+D02 aprovada: desconexão pausa automaticamente a campanha e informa teclado disponível; retomada depende de ação do jogador, não apenas da reconexão. Multiplayer continua com aviso e alternativa pelo teclado. D01 ainda define mapeamento/hardware. Desconexão física não declara derrota de rede.
 
 ```mermaid
 flowchart TD
@@ -315,9 +268,9 @@ flowchart TD
   play["Jogar / navegar menus"]
   lost{"Controle desconectou?"}
   mode{"Está na campanha?"}
-  pause["Proposta D02: pausar e informar fallback"]
+  pause["Pausar campanha e informar teclado"]
   continue["Multiplayer continua; informar teclado"]
-  resume["Reconectar / usar teclado e retomar"]
+  resume["Controle ou teclado: retomar por ação do jogador"]
   start --> detect
   detect -->|"não"| keyboard
   detect -.->|"sim"| map
@@ -326,13 +279,13 @@ flowchart TD
   play --> lost
   lost -->|"não"| play
   lost -->|"sim"| mode
-  mode -.->|"sim"| pause
+  mode -->|"sim"| pause
   mode -->|"não"| continue
-  pause -.->|"D02"| resume
-  resume -.->|"D02"| play
+  pause --> resume
+  resume --> play
   continue --> play
   classDef pending fill:#fff7ed,stroke:#b45309,stroke-dasharray:5 4
-  class map,pause,resume pending
+  class map pending
 ```
 
 ![Gamepad físico — conexão e perda de dispositivo](../imagens/fluxo-gamepad.svg)
@@ -366,3 +319,82 @@ flowchart TD
 ```
 
 ![Publicação automática de produção](../imagens/fluxo-deploy.svg)
+
+## 9. Salas privadas — código e link (D03 aprovada)
+
+Modelo aprovado: convite aleatório de 10 caracteres, expiração de lobby em 10 min e uma partida ativa por conta. Código/link compartilham o mesmo convite; sem busca pública. Reserva da segunda vaga em transação. Saída antes da largada cancela a sala. TTL apenas limpa resíduos; duração/autoridade da corrida continuam em D04. Histórico privado de 30 dias. Documento 14.
+
+```mermaid
+flowchart TD
+  host(["Criador autenticado"])
+  create["REST: criar sala e convite"]
+  db["Partidas: sala, convite e vínculo ativo"]
+  share["Copiar código ou link; compartilhar"]
+  guest(["Convidado: abrir link ou digitar código"])
+  login["Autenticar e confirmar entrada"]
+  join["Resolver código por chave direta"]
+  valid{"Convite vigente e vaga livre?"}
+  deny(["Recusar sem expor sala privada"])
+  reserve["Reservar vaga e consumir convite atomicamente"]
+  lobby["Lobby privado: dois participantes"]
+  ready{"Dois prontos e conexão válida?"}
+  wait["Aguardar; tratar saída ou expiração"]
+  start(["Iniciar corrida pelo canal D04"])
+  host --> create
+  create --> db
+  db --> share
+  share -->|"convite"| guest
+  guest --> login
+  login --> join
+  join --> valid
+  valid -->|"não"| deny
+  valid -->|"sim"| reserve
+  reserve -->|"condições mantidas"| lobby
+  reserve -->|"vaga perdida"| deny
+  lobby --> ready
+  ready -->|"não"| wait
+  wait -->|"se ainda vigente"| lobby
+  ready -.->|"sim"| start
+  classDef pending fill:#fff7ed,stroke:#b45309,stroke-dasharray:5 4
+  class ready,start pending
+```
+
+![Salas privadas — código e link (D03 aprovada)](../imagens/fluxo-salas-convite.svg)
+
+## 10. Central e e-mail seletivo (D07 aprovada)
+
+D07 aprovada: central com categorias, leitura e preferências; sem polling contínuo nem avisos por frame. Compra gera confirmação apenas no jogo. SES envia boas-vindas e final habilitado; SNS Standard e SQS de feedback registram entrega/bounce/reclamação. Retenção de exibição não elimina prematuramente deduplicação. Modelo do documento 14 aprovado; implementação ainda não executada.
+
+```mermaid
+flowchart TD
+  event(["Evento de Conta, Campanha ou Partidas"])
+  queue["Outbox / publicador → SQS Comunicações"]
+  worker["Lambda: categoria, preferência e deduplicação"]
+  inbox["DynamoDB: central da conta"]
+  email{"Boas-vindas ou final habilitado?"}
+  read["REST: consultar e marcar leitura"]
+  skip(["Somente central"])
+  ses["SES: enviar e registrar correlação"]
+  end(["Menu: avisos e preferências"])
+  sns["SNS: entrega, bounce ou reclamação"]
+  feedback["SQS feedback → Lambda Comunicações"]
+  delivery["Atualizar entrega / suprimir endereço inválido"]
+  retry["Falha transitória: tentativas limitadas"]
+  dlq(["DLQ e alarme; reconciliar envio incerto"])
+  event --> queue
+  queue --> worker
+  worker --> inbox
+  worker --> email
+  inbox --> read
+  read --> end
+  email -->|"não"| skip
+  email -->|"sim"| ses
+  ses -->|"feedback assíncrono"| sns
+  sns --> feedback
+  feedback --> delivery
+  ses -->|"erro transitório"| retry
+  retry -->|"se elegível"| ses
+  retry -->|"limite / ambiguidade"| dlq
+```
+
+![Central e e-mail seletivo (D07 aprovada)](../imagens/fluxo-notificacoes.svg)

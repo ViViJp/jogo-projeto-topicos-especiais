@@ -28,7 +28,7 @@ A numeração abaixo corresponde a RF-ISN-01 até RF-ISN-12.
 | RF-ISN-05 | Cognito federado com Google para autenticação; autorização por proprietário no backend; RN01, UC02/04/08. |
 | RF-ISN-06 | Conta, campanha, notificações e auditoria; [modelo de dados](08-modelagem-de-dados.md). |
 | RF-ISN-07 | Modelo lógico, dicionário de dados e [arquitetura](05-diagramas-de-blocos.md). |
-| RF-ISN-08 | E-mail e notificação dentro do jogo como canais distintos; UC07, proposta D07. |
+| RF-ISN-08 | E-mail e notificação dentro do jogo como canais distintos; UC07, D07 aprovada; compra gera aviso apenas no jogo. |
 | RF-ISN-09 | Catálogo de eventos críticos e persistência de auditoria; RN10. |
 | RF-ISN-10 | Desenvolvimento local e produção separados; recursos dev em nuvem, quando usados, isolados de prod. |
 | RF-ISN-11 | Todo recurso implantado na nuvem, em dev ou prod, definido em Pulumi. |
@@ -42,18 +42,18 @@ A numeração abaixo corresponde a RF-ISN-01 até RF-ISN-12.
 | RF-J02 | Percorrer cinco setores e conceder quatro implantes em ordem fixa, alterando visual e habilidades. | RN04; UC05. |
 | RF-J03 | Consolidar créditos por ID em checkpoint/fim de fase e evitar duplicação. | RN03; UC03/09. |
 | RF-J04 | Manter um save local, continuar do checkpoint e confirmar a substituição por Novo Jogo. | RN01/03; UC04/09. |
-| RF-J05 | Oferecer save vinculado à conta e acesso somente aos dados do próprio usuário. | UC02/04; D05 para conflito entre cópias. |
+| RF-J05 | Oferecer save vinculado à conta e acesso somente aos dados do próprio usuário. | UC02/04; D05 aprovada: escolha explícita, revisão e isolamento de cache por conta. |
 | RF-J06 | Salvar o estado pré-Portão e oferecer Chrome ou descida, além de retorno ao Portão após finais. | RN05/06; UC06/12. |
-| RF-J07 | Implementar quatro memórias, retry especial, retirada sequencial e perda de habilidades por bioprinting. | RN06; UC10/11. |
+| RF-J07 | Implementar quatro memórias, retry especial e retirada sequencial; morte, reinício manual e saída perdem memória ainda não consolidada, e retirada consolida memória e remove habilidade. | RN06; UC10/11. |
 | RF-J08 | Concluir Flesh ou Hollow conforme o estado da cadeia, com aparência e epílogo correspondentes. | RN06; UC10/12. |
 | RF-J09 | Exibir prólogo, arco de George, pai/propagandas e cenas dos finais. | GDD §§15–18; UC05/06/10/12. |
 | RF-J10 | Permitir pausa e reinício da fase atual na campanha, sem seleção livre de fases concluídas. | RN07; UC09. |
-| RF-J11 | Oferecer corrida multiplayer para dois jogadores autenticados, com criação/entrada em salas mantidas pelo backend e regras independentes da campanha. | ZIP RF22 e UC09; RN08; UC13; acesso às salas e sincronização em D03/D04. |
-| RF-J12 | Aceitar gamepad físico no navegador para ações de jogo e navegação de menus. | UC14; inclusão solicitada; mapeamento/compatibilidade D01. |
-| RF-J13 | Se a loja opcional for implementada, preservar cosméticos fora do save e usar apenas compras cosméticas/simuladas. | RN09; UC15; não é requisito do núcleo. |
-| RF-J14 | Registrar no backend resultado/classificação da corrida e exibir o vencedor, sem alterar campanha, implantes ou finais. | ZIP RF23 e UC09; RN08; UC13; ranking global não está definido. |
+| RF-J11 | Oferecer corrida multiplayer para dois jogadores autenticados, com criação/entrada em salas mantidas pelo backend e regras independentes da campanha. | RN08; UC13; D03 aprovada para salas; sincronização em D04. |
+| RF-J12 | Aceitar gamepad físico no navegador para ações de jogo e navegação de menus. | UC14; D02 aprovada: queda do controle pausa campanha, não multiplayer; mapeamento/compatibilidade D01. |
+| RF-J13 | Se a loja opcional for implementada, salvar e sincronizar aquisições na conta compradora, separadas do save; usar apenas compras cosméticas/simuladas. | RN09; UC15; não é requisito do núcleo. |
+| RF-J14 | Registrar no backend resultado/classificação da corrida e exibir o vencedor, sem alterar campanha, implantes ou finais. | RN08; UC13; ranking global não está definido. |
 
-Os IDs do ZIP (RF01–RF23) são relacionados aos desta revisão em [10-rastreabilidade.md](10-rastreabilidade.md). Login no multiplayer, salas e resultado persistido deixaram de ser hipóteses. O cronograma segue a campanha antes do multiplayer, sem retirar o modo do escopo ISN.
+A [matriz de rastreabilidade](10-rastreabilidade.md) relaciona os requisitos aos casos e diagramas. Login no multiplayer, salas e resultado persistido são requisitos definidos. O cronograma segue a campanha antes do multiplayer, sem retirar o modo do escopo ISN.
 
 ## Requisitos não funcionais da disciplina
 
@@ -70,7 +70,7 @@ Os valores abaixo são metas iniciais para discussão, não medições da build 
 | RNF01 — responsividade | Resolução lógica 1280 × 720, escala proporcional, HUD/menus legíveis e sem cortes; teclado e gamepad nas ações previstas. | Validar viewports 1280 × 720, 1366 × 768 e 1920 × 1080 em Chrome/Chromium e Firefox desktop. Mobile/touch continuam fora do escopo. |
 | RNF02 — gameplay | Meta proposta de 60 FPS no equipamento de referência; chamadas de save/e-mail não bloqueiam a simulação. | Registrar frame times em uma fase completa com rede lenta e indisponível; equipamento e tolerância em D09. |
 | RNF03 — API | Meta proposta de p95 ≤ 500 ms para leitura/gravação de save, com 10 usuários simultâneos, excluindo redirecionamento ao provedor externo. | Medir do cliente até a resposta, registrando região, rede, tamanho do payload e eventuais cold starts. |
-| RNF04 — multiplayer | Medir RTT, perda de mensagens, divergência entre clientes e atraso de ações; resultado deve obedecer RN08. | Limiares e frequência de sincronização dependem de D04/D09; não declarar baixa latência atendida antes disso. |
+| RNF04 — multiplayer | Medir RTT, idade do estado, fila de envio, divergência, atraso de ações e detecção de queda; resultado deve obedecer RN08. | Comparar taxas de snapshots e testar inatividade, expiração, queda simultânea e suspensão da aba conforme documento 13. Limiares/carga seguem em D04/D09; não declarar baixa latência atendida antes das medições. |
 | RNF05 — custo | Usar arquitetura serverless/gerenciada do documento 12 e estimar custo bruto, créditos e franquias separadamente; definir teto antes de provisionar. | Planilha/estimativa por carga e alarmes de orçamento; teto e carga em D08/D09. Região `sa-east-1` é previsão, não comprovação de menor custo. |
 | RNF07 — microsserviços e escala | Separar implantação, IAM, contratos e dados de Conta, Campanha, Partidas, Comunicações e Auditoria; usar serviços AWS gerenciados. | Validar que pico/falha de um domínio não exige publicar os demais; testar concorrência, filas, throttling e recuperação. Documento 12; sem pressupor escala gratuita ilimitada. |
 | RNF06 — integridade e acesso | Rejeitar acesso a save alheio e atualizações conflitantes; não duplicar créditos consolidados ou resultado de partida. | Cenários de autorização, reenvio e versões concorrentes descritos nos contratos. |

@@ -74,7 +74,7 @@
 <rect x="532" y="506" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
 <text x="690" y="556" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">API Gateway HTTP + JWT</text>
 <rect x="962" y="506" width="316" height="88" rx="12" fill="#fff7ed" stroke="#b45309" stroke-width="2" stroke-dasharray="6 4"/>
-<text x="1120" y="556" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">API Gateway WebSocket — D04</text>
+<text x="1120" y="556" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">API Gateway WSS: protótipo — D04</text>
 <rect x="102" y="696" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
 <text x="260" y="746" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Lambda Conta</text>
 <rect x="532" y="696" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>

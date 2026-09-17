@@ -13,11 +13,11 @@
 <polyline points="1120,806 1120,842 80,842 80,90 690,90 690,126" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
 <polyline points="1120,806 1120,846 690,846 690,886" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
 <polyline points="690,974 690,1014 260,1014 260,1054" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
-<polyline points="690,974 690,1025 1120,1025 1120,1076" fill="none" stroke="#52657c" stroke-width="1.7" stroke-dasharray="7 5" marker-end="url(#arrow)"/>
-<polyline points="260,1186 260,1266" fill="none" stroke="#52657c" stroke-width="1.7" stroke-dasharray="7 5" marker-end="url(#arrow)"/>
-<polyline points="1120,1164 1120,1192 40,1192 40,1428 690,1428 690,1456" fill="none" stroke="#52657c" stroke-width="1.7" stroke-dasharray="7 5" marker-end="url(#arrow)"/>
+<polyline points="690,974 690,1025 1120,1025 1120,1076" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="260,1186 260,1266" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1120,1164 1120,1192 40,1192 40,1428 690,1428 690,1456" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
 <polyline points="260,1186 260,1222 1490,1222 1490,1420 260,1420 260,1456" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
-<polyline points="260,1354 260,1456" fill="none" stroke="#52657c" stroke-width="1.7" stroke-dasharray="7 5" marker-end="url(#arrow)"/>
+<polyline points="260,1354 260,1456" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
 <text x="475" y="457" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">não</text>
 <text x="905" y="457" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">sim</text>
 <text x="600" y="834" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">cancelou / erro</text>
@@ -40,14 +40,15 @@
 <text x="690" y="936" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Identificar conta e auditar</text>
 <polygon points="260,1054 418,1120 260,1186 102,1120" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
 <text x="260" y="1126" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Primeiro cadastro?</text>
-<rect x="962" y="1076" width="316" height="88" rx="12" fill="#fff7ed" stroke="#b45309" stroke-width="2" stroke-dasharray="6 4"/>
-<text x="1120" y="1116" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Comparar saves local e remoto —</text>
-<text x="1120" y="1136" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">D05</text>
-<rect x="102" y="1266" width="316" height="88" rx="12" fill="#fff7ed" stroke="#b45309" stroke-width="2" stroke-dasharray="6 4"/>
+<rect x="962" y="1076" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="1120" y="1116" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Comparar cópias / confirmar</text>
+<text x="1120" y="1136" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">escolha</text>
+<rect x="102" y="1266" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
 <text x="260" y="1306" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Solicitar e-mail + notificação</text>
-<text x="260" y="1326" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">sem bloquear — D07</text>
+<text x="260" y="1326" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">sem bloquear</text>
 <rect x="532" y="1456" width="316" height="88" rx="38" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
-<text x="690" y="1506" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Continuar campanha</text>
+<text x="690" y="1496" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Descartar memória pendente da</text>
+<text x="690" y="1516" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">sessão anterior; continuar</text>
 <rect x="102" y="1456" width="316" height="88" rx="38" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
 <text x="260" y="1506" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Fim da tarefa de comunicação</text>
 </svg>

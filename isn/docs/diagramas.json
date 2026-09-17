@@ -2,7 +2,7 @@
   {
     "file": "diagrama-aws-microsservicos",
     "title": "AWS — microsserviços e serviços gerenciados",
-    "intro": "Arquitetura de referência: implantação e dados próprios para Conta, Campanha, Partidas, Comunicações e Auditoria. Blocos com múltiplas tabelas são agrupamentos visuais, não banco compartilhado entre serviços. Cada domínio acessa apenas seus dados. Tempo real é candidato D04. Conta AWS ainda não criada; Free Tier e orçamento no documento 12. Route 53 resolve nomes para os destinos; suas setas são registros DNS, não passagem de tráfego HTTP. ACM fornece certificados. api.* e ws.* são nomes propostos (D08/D04); detalhes e custos no documento 12, seção 3.1.",
+    "intro": "Arquitetura de referência: implantação e dados próprios para Conta, Campanha, Partidas, Comunicações e Auditoria. Blocos com múltiplas tabelas são agrupamentos visuais, não banco compartilhado entre serviços. Cada domínio acessa apenas seus dados. Tempo real é candidato D04. Conta AWS ainda não criada; Free Tier e orçamento no documento 12. Route 53 resolve nomes para os destinos; suas setas são registros DNS, não passagem de tráfego HTTP. ACM fornece certificados. api.* e ws.* são nomes propostos (D08/D04); detalhes e custos no documento 12, seção 3.1. Documento 13 recomenda WSS para o protótipo; API Gateway/Lambda segue em validação. Heartbeat não estende o limite de 2 h; renovar no lobby. D03/D07 aprovadas: salas privadas por código/link, central de notificações e feedback SES/SNS/SQS no documento 14. Compra notifica apenas no jogo, sem e-mail.",
     "group": "architecture",
     "nodes": [
       {
@@ -55,7 +55,7 @@
       },
       {
         "id": "ws",
-        "label": "API Gateway WebSocket — D04",
+        "label": "API Gateway WSS: protótipo — D04",
         "col": 2,
         "row": 2,
         "shape": "box",
@@ -390,7 +390,7 @@
   {
     "file": "diagrama-aws-eventos",
     "title": "AWS — eventos, auditoria e notificações",
-    "intro": "Fluxo proposto por serviço produtor: mudança e outbox na mesma transação. Streams ativa publicador; SQS e consumidores permitem retentativas. Destinos deduplicam eventId; falhas repetidas vão para DLQ. Outbox preservada permite reconciliar publicação perdida. SES não bloqueia save e Streams não substitui armazenamento permanente.",
+    "intro": "Fluxo proposto por serviço produtor: mudança e outbox na mesma transação. Streams ativa publicador; SQS e consumidores permitem retentativas. Destinos deduplicam eventId; falhas repetidas vão para DLQ. Outbox preservada permite reconciliar publicação perdida. SES não bloqueia save e Streams não substitui armazenamento permanente. D07 aprovada no documento 14 define categorias/preferências e feedback de entrega SES via SNS/SQS, detalhado no fluxo de comunicações.",
     "group": "architecture",
     "nodes": [
       {
@@ -636,7 +636,7 @@
       },
       {
         "id": "pad",
-        "label": "Gamepad físico — D01/D02",
+        "label": "Gamepad físico — D01",
         "col": 1,
         "row": 0,
         "shape": "box",
@@ -708,11 +708,11 @@
       },
       {
         "id": "notify",
-        "label": "Comunicações + SES — D07",
+        "label": "Comunicações + SES",
         "col": 1,
         "row": 3,
         "shape": "box",
-        "pending": true
+        "pending": false
       },
       {
         "id": "audit",
@@ -782,7 +782,7 @@
         "source": "api",
         "target": "notify",
         "label": "eventos",
-        "pending": true
+        "pending": false
       },
       {
         "source": "api",
@@ -808,7 +808,7 @@
   {
     "file": "diagrama-modulos-backend",
     "title": "Microsserviços do backend e seus dados",
-    "intro": "Cada serviço tem Lambda(s), IAM role, pacote e tabela próprios, com implantação independente. As conexões de eventos representam outbox/publicação por filas, detalhadas no diagrama AWS de eventos. Não há leitura direta da tabela de outro serviço. Identidade e e-mail são terceirizados para Cognito/Google e SES.",
+    "intro": "Cada serviço tem Lambda(s), IAM role, pacote e tabela próprios, com implantação independente. As conexões de eventos representam outbox/publicação por filas, detalhadas no diagrama AWS de eventos. Não há leitura direta da tabela de outro serviço. Identidade e e-mail são terceirizados para Cognito/Google e SES. Se a loja for implementada, Campanha também mantém aquisições por conta em itens separados do save; débito/desbloqueio/outbox consistentes, sem acesso à tabela Conta (D11; documentos 08/09).",
     "group": "architecture",
     "nodes": [
       {
@@ -1182,7 +1182,7 @@
   {
     "file": "diagrama-entrada",
     "title": "Entrada por teclado e gamepad físico",
-    "intro": "Controle físico é escopo confirmado. Botões, compatibilidade, vários controles e desconexão estão em D01/D02. Não existe celular remoto neste desenho. Teclado continua disponível e ambos usam as mesmas restrições do gameplay.",
+    "intro": "Controle físico confirmado. D01 cobre botões, compatibilidade e vários controles. D02 aprovada: desconexão pausa campanha com retomada explícita pelo controle/teclado; multiplayer segue sem pausa e com aviso. Teclado e gamepad usam as mesmas restrições do gameplay; não existe celular remoto neste desenho.",
     "nodes": [
       {
         "id": "keyboard",
@@ -1298,7 +1298,7 @@
   {
     "file": "diagrama-multiplayer",
     "title": "Multiplayer — salas, sincronização e resultado",
-    "intro": "ZIP RF22/RF23 e UC09 confirmam dois jogadores autenticados, criação/entrada em sala e resultado/classificação da corrida gravados. Dois navegadores são a topologia proposta. D03 ainda cobre descoberta/compartilhamento da sala e visibilidade/retenção; D04 cobre protocolo e autoridade. Ranking global não está definido. Implementação de referência: API Gateway HTTP para salas, Lambda Partidas e DynamoDB próprio para resultados. API Gateway WebSocket é candidato a validar em custo/latência; não enviar cada frame como save/auditoria. Ver documento 12.",
+    "intro": "Dois navegadores com jogadores autenticados, criação/entrada em sala e resultado/classificação persistidos. D03 aprovada: código/link privado, convite de 10 min, uma partida ativa por conta, reserva atômica da segunda vaga e histórico privado de 30 dias. Cancelar sala se alguém sair antes da largada. Não há ranking global nem busca pública inicial. API Gateway HTTP, Lambda Partidas e DynamoDB próprio atendem salas/resultados. WSS é recomendado para o protótipo; API Gateway/Lambda, autoridade, presença e prazos de rede seguem em D04. Renovar conexão no lobby; não retomar corrida após derrota. Ver documentos 12–14.",
     "nodes": [
       {
         "id": "p1",
@@ -1342,7 +1342,7 @@
       },
       {
         "id": "realtime",
-        "label": "API Gateway WebSocket — D04",
+        "label": "API Gateway WSS: protótipo — D04",
         "col": 1,
         "row": 3,
         "shape": "box",
@@ -1371,6 +1371,14 @@
         "row": 5,
         "shape": "box",
         "pending": false
+      },
+      {
+        "id": "presence",
+        "label": "Partidas: presença e prazos — D04",
+        "col": 0,
+        "row": 4,
+        "shape": "box",
+        "pending": true
       }
     ],
     "edges": [
@@ -1433,6 +1441,36 @@
         "target": "history",
         "label": "gravação no backend",
         "pending": false
+      },
+      {
+        "source": "realtime",
+        "target": "presence",
+        "label": "sinais / queda",
+        "pending": true
+      },
+      {
+        "source": "presence",
+        "target": "authority",
+        "label": "avalia queda",
+        "pending": true
+      },
+      {
+        "source": "authority",
+        "target": "realtime",
+        "label": "estado / resultado",
+        "pending": true
+      },
+      {
+        "source": "realtime",
+        "target": "c1",
+        "label": "entrega",
+        "pending": true
+      },
+      {
+        "source": "realtime",
+        "target": "c2",
+        "label": "entrega",
+        "pending": true
       }
     ],
     "group": "architecture"
@@ -1440,7 +1478,7 @@
   {
     "file": "diagrama-dados",
     "title": "Modelo lógico — cardinalidades e separação de dados",
-    "intro": "Detalhes dos campos no documento 08. O ZIP confirma sala/partida, participantes autenticados e resultado persistido; formato dos dados é proposta de modelagem. Cosméticos são opcionais D11. Snapshot não é segundo slot. D03 cobre visibilidade/retenção dos resultados, não sua existência. O mapeamento físico agora usa tabelas DynamoDB por microsserviço, conforme documentos 08/12; linhas de relação não autorizam acesso cruzado entre serviços.",
+    "intro": "Detalhes no documento 08. D05 aprova isolamento por conta. D10 separa memória pendente e consolidada pela retirada. D11 aprova aquisições cosméticas por conta, independentes de campanha/snapshot/reset; loja continua opcional. Proposta física: itens de aquisições separados na tabela do serviço Campanha, para débito/desbloqueio/outbox consistentes. D03/D07 aprovadas: histórico privado e central por conta, ambos com 30 dias de exibição; deduplicação tem retenção própria. Implementação da loja permanece opcional. Compra não gera entrega de e-mail.",
     "nodes": [
       {
         "id": "user",
@@ -1460,19 +1498,19 @@
       },
       {
         "id": "notice",
-        "label": "Notificação no jogo — D07",
+        "label": "Notificação no jogo",
         "col": 1,
         "row": 1,
         "shape": "box",
-        "pending": true
+        "pending": false
       },
       {
         "id": "email",
-        "label": "Entrega de e-mail — D07",
+        "label": "Entrega de e-mail",
         "col": 2,
         "row": 1,
         "shape": "box",
-        "pending": true
+        "pending": false
       },
       {
         "id": "snapshot",
@@ -1500,7 +1538,7 @@
       },
       {
         "id": "state",
-        "label": "Estado: créditos, implantes, memórias, retry e final",
+        "label": "Estado: créditos, implantes, memórias pendentes/consolidadas, retry e final",
         "col": 0,
         "row": 3,
         "shape": "box",
@@ -1508,7 +1546,7 @@
       },
       {
         "id": "skin",
-        "label": "Cosmético desbloqueado — D11",
+        "label": "Cosmético da conta — loja opcional",
         "col": 1,
         "row": 3,
         "shape": "box",
@@ -1534,13 +1572,13 @@
         "source": "user",
         "target": "notice",
         "label": "1 : N",
-        "pending": true
+        "pending": false
       },
       {
         "source": "user",
         "target": "email",
         "label": "1 : N",
-        "pending": true
+        "pending": false
       },
       {
         "source": "campaign",
@@ -1584,7 +1622,7 @@
   {
     "file": "fluxo-login",
     "title": "Login, save local e comunicações",
-    "intro": "Primeiro cadastro, e não ausência de save, dispara boas-vindas. Login não é necessário para persistência local. D05 define reconciliação; envio de comunicação é independente e não bloqueia carregar a campanha.",
+    "intro": "D05 aprovada: comparar saves e exigir escolha explícita em conflito/importação, com revisão e cache isolado por conta. Cancelar preserva cópias; visitante permanece separado após importação. Troca de conta não transfere envios nem cosméticos. Ao continuar após saída, memória pendente é descartada (D10). Primeiro cadastro dispara comunicação D07 sem bloquear a campanha.",
     "nodes": [
       {
         "id": "start",
@@ -1644,23 +1682,23 @@
       },
       {
         "id": "resolve",
-        "label": "Comparar saves local e remoto — D05",
+        "label": "Comparar cópias / confirmar escolha",
         "col": 2,
         "row": 5,
         "shape": "box",
-        "pending": true
+        "pending": false
       },
       {
         "id": "send",
-        "label": "Solicitar e-mail + notificação sem bloquear — D07",
+        "label": "Solicitar e-mail + notificação sem bloquear",
         "col": 0,
         "row": 6,
         "shape": "box",
-        "pending": true
+        "pending": false
       },
       {
         "id": "play",
-        "label": "Continuar campanha",
+        "label": "Descartar memória pendente da sessão anterior; continuar",
         "col": 1,
         "row": 7,
         "shape": "end",
@@ -1728,19 +1766,19 @@
         "source": "account",
         "target": "resolve",
         "label": "carregar",
-        "pending": true
+        "pending": false
       },
       {
         "source": "first",
         "target": "send",
         "label": "sim",
-        "pending": true
+        "pending": false
       },
       {
         "source": "resolve",
         "target": "play",
         "label": "após reconciliação",
-        "pending": true
+        "pending": false
       },
       {
         "source": "first",
@@ -1752,7 +1790,7 @@
         "source": "send",
         "target": "commDone",
         "label": "",
-        "pending": true
+        "pending": false
       }
     ],
     "group": "flow"
@@ -1948,7 +1986,7 @@
   {
     "file": "fluxo-clinica",
     "title": "Clínica, implante e próxima fase",
-    "intro": "ZIP RF15 e UC05 esclarecem que o procedimento acontece sem escolha de aceitar/recusar. Aceitação de Alex é narrativa. Save local permanece conforme GDD; sincronização em nuvem só para autenticado, sem bloquear gameplay por falha de rede.",
+    "intro": "O procedimento acontece sem escolha de aceitar/recusar. Aceitação de Alex é narrativa. Save local permanece conforme GDD; sincronização em nuvem só para autenticado, sem bloquear gameplay por falha de rede.",
     "nodes": [
       {
         "id": "start",
@@ -2286,7 +2324,7 @@
   {
     "file": "fluxo-descida",
     "title": "Descida — memória, retry e retirada",
-    "intro": "D1 Topo/propulsores → D2 Corporativo/olhos → D3 Urbano/braços → D4 Industrial/pernas. Apenas a conclusão do setor sem memória aciona a falha especial. Morte/reinício durante tentativa seguem RN03/RN06, sem consumir retry. D10 define persistência da memória antes do procedimento.",
+    "intro": "D10 aprovada: memória fica pendente até a retirada do implante da fase. Morte, reinício manual ou saída antes disso apagam a pendente e exigem recoleta; checkpoint não consolida. Retirada consolida memória, corpo e perda de habilidade juntos; memórias anteriores sobrevivem. Morte/saída/reinício não consomem retry por si sós. Retorno segue RN01/RN03; D12 aprovada: todas as memórias após o último checkpoint e antes da área de retirada, permitindo recoleta. D1 Topo/propulsores → D2 Corporativo/olhos → D3 Urbano/braços → D4 Industrial/pernas. George recusa ajuda somente na primeira etapa.",
     "nodes": [
       {
         "id": "start",
@@ -2338,33 +2376,81 @@
       },
       {
         "id": "retry",
-        "label": "Registrar retry usado; reiniciar setor",
+        "label": "Registrar retry; reiniciar setor",
         "col": 0,
         "row": 6,
         "shape": "box",
         "pending": false
       },
       {
-        "id": "george",
-        "label": "Primeira retirada: George recusa ajudar",
+        "id": "hollow",
+        "label": "Quebrar cadeia; preservar corpo; Hollow",
+        "col": 0,
+        "row": 8,
+        "shape": "end",
+        "pending": false
+      },
+      {
+        "id": "pending",
+        "label": "Memória após último checkpoint; antes da retirada",
         "col": 2,
         "row": 3,
         "shape": "box",
         "pending": false
       },
       {
-        "id": "reforge",
-        "label": "ReForge: retirar implante e bioprintar",
+        "id": "travel",
+        "label": "Percorrer caminho até a retirada",
         "col": 2,
         "row": 4,
         "shape": "box",
         "pending": false
       },
       {
-        "id": "persist",
-        "label": "Salvar retirada, corpo e habilidade",
+        "id": "lost",
+        "label": "Morreu, reiniciou ou saiu?",
         "col": 2,
         "row": 5,
+        "shape": "decision",
+        "pending": false
+      },
+      {
+        "id": "clear",
+        "label": "Perder pendente; manter consolidadas; recoleta ativa",
+        "col": 1,
+        "row": 6,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "resume",
+        "label": "Retomar conforme RN01/RN03; sem consumir retry",
+        "col": 1,
+        "row": 7,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "arrived",
+        "label": "Chegou à retirada?",
+        "col": 2,
+        "row": 6,
+        "shape": "decision",
+        "pending": false
+      },
+      {
+        "id": "george",
+        "label": "Na primeira etapa: George recusa; buscar ReForge",
+        "col": 2,
+        "row": 7,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "reforge",
+        "label": "Retirar / bioprintar; consolidar memória e salvar",
+        "col": 2,
+        "row": 8,
         "shape": "box",
         "pending": false
       },
@@ -2372,7 +2458,7 @@
         "id": "last",
         "label": "Quatro retiradas?",
         "col": 2,
-        "row": 6,
+        "row": 9,
         "shape": "decision",
         "pending": false
       },
@@ -2380,15 +2466,7 @@
         "id": "flesh",
         "label": "Epílogo Flesh",
         "col": 2,
-        "row": 7,
-        "shape": "end",
-        "pending": false
-      },
-      {
-        "id": "hollow",
-        "label": "Quebrar cadeia: preservar corpo e seguir Hollow",
-        "col": 0,
-        "row": 8,
+        "row": 10,
         "shape": "end",
         "pending": false
       }
@@ -2404,6 +2482,12 @@
         "source": "play",
         "target": "found",
         "label": "",
+        "pending": false
+      },
+      {
+        "source": "play",
+        "target": "clear",
+        "label": "morte / reinício / saída",
         "pending": false
       },
       {
@@ -2456,12 +2540,60 @@
       },
       {
         "source": "found",
+        "target": "pending",
+        "label": "sim",
+        "pending": false
+      },
+      {
+        "source": "pending",
+        "target": "travel",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "travel",
+        "target": "lost",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "lost",
+        "target": "clear",
+        "label": "sim",
+        "pending": false
+      },
+      {
+        "source": "clear",
+        "target": "resume",
+        "label": "ao retomar",
+        "pending": false
+      },
+      {
+        "source": "resume",
+        "target": "play",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "lost",
+        "target": "arrived",
+        "label": "não",
+        "pending": false
+      },
+      {
+        "source": "arrived",
+        "target": "travel",
+        "label": "não",
+        "pending": false
+      },
+      {
+        "source": "arrived",
         "target": "george",
         "label": "sim / primeira",
         "pending": false
       },
       {
-        "source": "found",
+        "source": "arrived",
         "target": "reforge",
         "label": "sim / demais",
         "pending": false
@@ -2474,12 +2606,6 @@
       },
       {
         "source": "reforge",
-        "target": "persist",
-        "label": "",
-        "pending": false
-      },
-      {
-        "source": "persist",
         "target": "last",
         "label": "",
         "pending": false
@@ -2502,7 +2628,7 @@
   {
     "file": "fluxo-multiplayer",
     "title": "Partida multiplayer e resultado",
-    "intro": "Login dos dois participantes, criação/entrada em sala e resultado/classificação persistidos são definidos pelo ZIP. D03 cobre a descoberta da sala; D04 cobre protocolo e casos de cancelamento/desconexão. Durante a janela única de 20 s, o segundo continua sujeito a morte, checkpoint e desconexão. Resultado não altera campanha nem define ranking global.",
+    "intro": "Dois jogadores autenticados, salas no backend e resultados persistidos. D03 aprovada: entrada por código/link privado e cancelamento da sala se alguém sair antes da largada. D04 cobre autoridade, transporte e detecção de queda. Durante a janela única de 20 s, o segundo continua sujeito a morte, checkpoint e desconexão. Resultado não altera campanha nem define ranking global. WSS recomendado para protótipo; conexão recente antes da largada. Não retomar corrida após derrota. Duração máxima sem chegada, queda simultânea e falha de infraestrutura continuam em D04. Documento 14 detalha o ingresso aprovado.",
     "nodes": [
       {
         "id": "start",
@@ -2514,7 +2640,7 @@
       },
       {
         "id": "race",
-        "label": "Processar corrida e sincronizar — D04",
+        "label": "Corrida WSS: estado e presença — D04",
         "col": 1,
         "row": 6,
         "shape": "box",
@@ -2842,7 +2968,7 @@
   {
     "file": "fluxo-gamepad",
     "title": "Gamepad físico — conexão e perda de dispositivo",
-    "intro": "D01 define mapeamento/hardware; D02 propõe pausa automática na campanha. A desconexão física não declara derrota multiplayer: o jogador pode continuar pelo teclado e a partida não pausa.",
+    "intro": "D02 aprovada: desconexão pausa automaticamente a campanha e informa teclado disponível; retomada depende de ação do jogador, não apenas da reconexão. Multiplayer continua com aviso e alternativa pelo teclado. D01 ainda define mapeamento/hardware. Desconexão física não declara derrota de rede.",
     "nodes": [
       {
         "id": "start",
@@ -2902,11 +3028,11 @@
       },
       {
         "id": "pause",
-        "label": "Proposta D02: pausar e informar fallback",
+        "label": "Pausar campanha e informar teclado",
         "col": 0,
         "row": 6,
         "shape": "box",
-        "pending": true
+        "pending": false
       },
       {
         "id": "continue",
@@ -2918,11 +3044,11 @@
       },
       {
         "id": "resume",
-        "label": "Reconectar / usar teclado e retomar",
+        "label": "Controle ou teclado: retomar por ação do jogador",
         "col": 0,
         "row": 7,
         "shape": "box",
-        "pending": true
+        "pending": false
       }
     ],
     "edges": [
@@ -2978,7 +3104,7 @@
         "source": "mode",
         "target": "pause",
         "label": "sim",
-        "pending": true
+        "pending": false
       },
       {
         "source": "mode",
@@ -2989,14 +3115,14 @@
       {
         "source": "pause",
         "target": "resume",
-        "label": "D02",
-        "pending": true
+        "label": "",
+        "pending": false
       },
       {
         "source": "resume",
         "target": "play",
-        "label": "D02",
-        "pending": true
+        "label": "",
+        "pending": false
       },
       {
         "source": "continue",
@@ -3154,5 +3280,423 @@
       }
     ],
     "group": "flow"
+  },
+  {
+    "file": "fluxo-salas-convite",
+    "title": "Salas privadas — código e link (D03 aprovada)",
+    "group": "flow",
+    "intro": "Modelo aprovado: convite aleatório de 10 caracteres, expiração de lobby em 10 min e uma partida ativa por conta. Código/link compartilham o mesmo convite; sem busca pública. Reserva da segunda vaga em transação. Saída antes da largada cancela a sala. TTL apenas limpa resíduos; duração/autoridade da corrida continuam em D04. Histórico privado de 30 dias. Documento 14.",
+    "nodes": [
+      {
+        "id": "host",
+        "label": "Criador autenticado",
+        "col": 0,
+        "row": 0,
+        "shape": "end",
+        "pending": false
+      },
+      {
+        "id": "create",
+        "label": "REST: criar sala e convite",
+        "col": 0,
+        "row": 1,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "db",
+        "label": "Partidas: sala, convite e vínculo ativo",
+        "col": 0,
+        "row": 2,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "share",
+        "label": "Copiar código ou link; compartilhar",
+        "col": 0,
+        "row": 3,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "guest",
+        "label": "Convidado: abrir link ou digitar código",
+        "col": 2,
+        "row": 0,
+        "shape": "end",
+        "pending": false
+      },
+      {
+        "id": "login",
+        "label": "Autenticar e confirmar entrada",
+        "col": 2,
+        "row": 1,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "join",
+        "label": "Resolver código por chave direta",
+        "col": 2,
+        "row": 2,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "valid",
+        "label": "Convite vigente e vaga livre?",
+        "col": 2,
+        "row": 3,
+        "shape": "decision",
+        "pending": false
+      },
+      {
+        "id": "deny",
+        "label": "Recusar sem expor sala privada",
+        "col": 2,
+        "row": 4,
+        "shape": "end",
+        "pending": false
+      },
+      {
+        "id": "reserve",
+        "label": "Reservar vaga e consumir convite atomicamente",
+        "col": 1,
+        "row": 4,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "lobby",
+        "label": "Lobby privado: dois participantes",
+        "col": 1,
+        "row": 5,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "ready",
+        "label": "Dois prontos e conexão válida?",
+        "col": 1,
+        "row": 6,
+        "shape": "decision",
+        "pending": true
+      },
+      {
+        "id": "wait",
+        "label": "Aguardar; tratar saída ou expiração",
+        "col": 0,
+        "row": 7,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "start",
+        "label": "Iniciar corrida pelo canal D04",
+        "col": 2,
+        "row": 7,
+        "shape": "end",
+        "pending": true
+      }
+    ],
+    "edges": [
+      {
+        "source": "host",
+        "target": "create",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "create",
+        "target": "db",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "db",
+        "target": "share",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "share",
+        "target": "guest",
+        "label": "convite",
+        "pending": false
+      },
+      {
+        "source": "guest",
+        "target": "login",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "login",
+        "target": "join",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "join",
+        "target": "valid",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "valid",
+        "target": "deny",
+        "label": "não",
+        "pending": false
+      },
+      {
+        "source": "valid",
+        "target": "reserve",
+        "label": "sim",
+        "pending": false
+      },
+      {
+        "source": "reserve",
+        "target": "lobby",
+        "label": "condições mantidas",
+        "pending": false
+      },
+      {
+        "source": "reserve",
+        "target": "deny",
+        "label": "vaga perdida",
+        "pending": false
+      },
+      {
+        "source": "lobby",
+        "target": "ready",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "ready",
+        "target": "wait",
+        "label": "não",
+        "pending": false
+      },
+      {
+        "source": "wait",
+        "target": "lobby",
+        "label": "se ainda vigente",
+        "pending": false
+      },
+      {
+        "source": "ready",
+        "target": "start",
+        "label": "sim",
+        "pending": true
+      }
+    ]
+  },
+  {
+    "file": "fluxo-notificacoes",
+    "title": "Central e e-mail seletivo (D07 aprovada)",
+    "group": "flow",
+    "intro": "D07 aprovada: central com categorias, leitura e preferências; sem polling contínuo nem avisos por frame. Compra gera confirmação apenas no jogo. SES envia boas-vindas e final habilitado; SNS Standard e SQS de feedback registram entrega/bounce/reclamação. Retenção de exibição não elimina prematuramente deduplicação. Modelo do documento 14 aprovado; implementação ainda não executada.",
+    "nodes": [
+      {
+        "id": "event",
+        "label": "Evento de Conta, Campanha ou Partidas",
+        "col": 1,
+        "row": 0,
+        "shape": "end",
+        "pending": false
+      },
+      {
+        "id": "queue",
+        "label": "Outbox / publicador → SQS Comunicações",
+        "col": 1,
+        "row": 1,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "worker",
+        "label": "Lambda: categoria, preferência e deduplicação",
+        "col": 1,
+        "row": 2,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "inbox",
+        "label": "DynamoDB: central da conta",
+        "col": 0,
+        "row": 3,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "email",
+        "label": "Boas-vindas ou final habilitado?",
+        "col": 2,
+        "row": 3,
+        "shape": "decision",
+        "pending": false
+      },
+      {
+        "id": "read",
+        "label": "REST: consultar e marcar leitura",
+        "col": 0,
+        "row": 4,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "skip",
+        "label": "Somente central",
+        "col": 1,
+        "row": 4,
+        "shape": "end",
+        "pending": false
+      },
+      {
+        "id": "ses",
+        "label": "SES: enviar e registrar correlação",
+        "col": 2,
+        "row": 4,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "end",
+        "label": "Menu: avisos e preferências",
+        "col": 0,
+        "row": 5,
+        "shape": "end",
+        "pending": false
+      },
+      {
+        "id": "sns",
+        "label": "SNS: entrega, bounce ou reclamação",
+        "col": 2,
+        "row": 5,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "feedback",
+        "label": "SQS feedback → Lambda Comunicações",
+        "col": 2,
+        "row": 6,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "delivery",
+        "label": "Atualizar entrega / suprimir endereço inválido",
+        "col": 2,
+        "row": 7,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "retry",
+        "label": "Falha transitória: tentativas limitadas",
+        "col": 1,
+        "row": 6,
+        "shape": "box",
+        "pending": false
+      },
+      {
+        "id": "dlq",
+        "label": "DLQ e alarme; reconciliar envio incerto",
+        "col": 1,
+        "row": 7,
+        "shape": "end",
+        "pending": false
+      }
+    ],
+    "edges": [
+      {
+        "source": "event",
+        "target": "queue",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "queue",
+        "target": "worker",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "worker",
+        "target": "inbox",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "worker",
+        "target": "email",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "inbox",
+        "target": "read",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "read",
+        "target": "end",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "email",
+        "target": "skip",
+        "label": "não",
+        "pending": false
+      },
+      {
+        "source": "email",
+        "target": "ses",
+        "label": "sim",
+        "pending": false
+      },
+      {
+        "source": "ses",
+        "target": "sns",
+        "label": "feedback assíncrono",
+        "pending": false
+      },
+      {
+        "source": "sns",
+        "target": "feedback",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "feedback",
+        "target": "delivery",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "ses",
+        "target": "retry",
+        "label": "erro transitório",
+        "pending": false
+      },
+      {
+        "source": "retry",
+        "target": "ses",
+        "label": "se elegível",
+        "pending": false
+      },
+      {
+        "source": "retry",
+        "target": "dlq",
+        "label": "limite / ambiguidade",
+        "pending": false
+      }
+    ]
   }
 ]

@@ -52,7 +52,7 @@
 <text x="690" y="926" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Dois jogadores</text>
 <text x="690" y="946" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">prontos?</text>
 <rect x="532" y="1266" width="316" height="88" rx="12" fill="#fff7ed" stroke="#b45309" stroke-width="2" stroke-dasharray="6 4"/>
-<text x="690" y="1306" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Processar corrida e sincronizar —</text>
+<text x="690" y="1306" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Corrida WSS: estado e presença —</text>
 <text x="690" y="1326" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">D04</text>
 <polygon points="690,1434 848,1500 690,1566 532,1500" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
 <text x="690" y="1506" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Desconexão de rede?</text>

@@ -1,38 +1,52 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1540" height="1900" viewBox="0 0 1540 1900" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="1540" height="2280" viewBox="0 0 1540 2280" role="img" aria-labelledby="title desc">
 <title id="title">Descida — memória, retry e retirada</title>
 <desc id="desc">Diagrama gerado da mesma fonte do bloco Mermaid. Laranja e tracejado indicam propostas ou decisões pendentes.</desc>
 <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#52657c"/></marker></defs>
-<rect width="1540" height="1900" fill="#ffffff"/>
+<rect width="1540" height="2280" fill="#ffffff"/>
 <text x="32" y="40" font-family="sans-serif" font-size="25" font-weight="700" fill="#10253f">Descida — memória, retry e retirada</text>
 <text x="32" y="70" font-family="sans-serif" font-size="16" fill="#52657c">Flesh to Chrome · Sprint 1 · Propostas/pendências em laranja e tracejado</text>
 <polyline points="690,214 690,316" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
 <polyline points="690,404 690,484" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,404 690,440 1490,440 1490,1230 690,1230 690,1266" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
 <polyline points="690,616 690,645 260,645 260,674" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
-<polyline points="260,806 260,826 1480,826 1480,296 690,296 690,316" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="260,806 260,834 1470,834 1470,288 690,288 690,316" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
 <polyline points="260,806 260,864" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
 <polyline points="260,996 260,1054" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
-<polyline points="260,996 260,1016 1450,1016 1450,1626 260,1626 260,1646" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="260,996 260,1024 1440,1024 1440,1618 260,1618 260,1646" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
 <polyline points="260,1186 260,1266" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
-<polyline points="260,1186 260,1222 1430,1222 1430,1610 260,1610 260,1646" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
-<polyline points="260,1354 260,1374 1510,1374 1510,296 690,296 690,316" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="260,1186 260,1206 1510,1206 1510,1626 260,1626 260,1646" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="260,1354 260,1382 1500,1382 1500,288 690,288 690,316" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
 <polyline points="690,616 690,656 1120,656 1120,696" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
-<polyline points="690,616 690,652 1490,652 1490,850 1120,850 1120,886" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
 <polyline points="1120,784 1120,886" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
-<polyline points="1120,974 1120,1076" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
-<polyline points="1120,1164 1120,1244" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1120,974 1120,1054" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1120,1186 1120,1226 690,1226 690,1266" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,1354 690,1456" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,1544 690,1572 100,1572 100,288 690,288 690,316" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1120,1186 1120,1244" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1120,1376 1120,1396 30,1396 30,866 1120,866 1120,886" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
 <polyline points="1120,1376 1120,1456" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
-<polyline points="1120,1376 1120,1404 100,1404 100,98 690,98 690,126" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1120,1376 1120,1412 1490,1412 1490,1610 1120,1610 1120,1646" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1120,1544 1120,1646" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1120,1734 1120,1814" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1120,1946 1120,2026" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1120,1946 1120,1966 90,1966 90,106 690,106 690,126" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<text x="1090" y="432" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">morte / reinício / saída</text>
 <text x="475" y="636" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">não</text>
-<text x="870" y="818" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">não</text>
+<text x="865" y="826" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">não</text>
 <text x="308" y="835" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">sim</text>
 <text x="308" y="1025" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">sim</text>
-<text x="855" y="1008" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">não</text>
+<text x="850" y="1016" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">não</text>
 <text x="308" y="1226" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">sim</text>
-<text x="845" y="1214" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">não</text>
-<text x="905" y="647" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">sim / primeira</text>
-<text x="1090" y="644" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">sim / demais</text>
-<text x="1168" y="1416" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">sim</text>
-<text x="610" y="1396" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">não / próximo setor</text>
+<text x="885" y="1198" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">não</text>
+<text x="905" y="647" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">sim</text>
+<text x="905" y="1217" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">sim</text>
+<text x="738" y="1405" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">ao retomar</text>
+<text x="1168" y="1215" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">não</text>
+<text x="575" y="1388" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">não</text>
+<text x="1168" y="1416" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">sim / primeira</text>
+<text x="1305" y="1404" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">sim / demais</text>
+<text x="1168" y="1986" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">sim</text>
+<text x="605" y="1958" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">não / próximo setor</text>
 <rect x="532" y="126" width="316" height="88" rx="38" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
 <text x="690" y="176" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Entrar no setor D1–D4</text>
 <rect x="532" y="316" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
@@ -47,22 +61,34 @@
 <polygon points="260,1054 418,1120 260,1186 102,1120" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
 <text x="260" y="1126" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Aceita repetir?</text>
 <rect x="102" y="1266" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
-<text x="260" y="1306" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Registrar retry usado; reiniciar</text>
-<text x="260" y="1326" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">setor</text>
-<rect x="962" y="696" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
-<text x="1120" y="736" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Primeira retirada: George recusa</text>
-<text x="1120" y="756" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">ajudar</text>
-<rect x="962" y="886" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
-<text x="1120" y="926" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">ReForge: retirar implante e</text>
-<text x="1120" y="946" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">bioprintar</text>
-<rect x="962" y="1076" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
-<text x="1120" y="1116" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Salvar retirada, corpo e</text>
-<text x="1120" y="1136" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">habilidade</text>
-<polygon points="1120,1244 1278,1310 1120,1376 962,1310" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
-<text x="1120" y="1316" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Quatro retiradas?</text>
-<rect x="962" y="1456" width="316" height="88" rx="38" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
-<text x="1120" y="1506" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Epílogo Flesh</text>
+<text x="260" y="1316" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Registrar retry; reiniciar setor</text>
 <rect x="102" y="1646" width="316" height="88" rx="38" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
-<text x="260" y="1686" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Quebrar cadeia: preservar corpo e</text>
-<text x="260" y="1706" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">seguir Hollow</text>
+<text x="260" y="1686" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Quebrar cadeia; preservar corpo;</text>
+<text x="260" y="1706" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Hollow</text>
+<rect x="962" y="696" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="1120" y="736" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Memória após último checkpoint;</text>
+<text x="1120" y="756" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">antes da retirada</text>
+<rect x="962" y="886" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="1120" y="936" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Percorrer caminho até a retirada</text>
+<polygon points="1120,1054 1278,1120 1120,1186 962,1120" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="1120" y="1116" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Morreu, reiniciou ou</text>
+<text x="1120" y="1136" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">saiu?</text>
+<rect x="532" y="1266" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="1306" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Perder pendente; manter</text>
+<text x="690" y="1326" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">consolidadas; recoleta ativa</text>
+<rect x="532" y="1456" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="1496" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Retomar conforme RN01/RN03; sem</text>
+<text x="690" y="1516" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">consumir retry</text>
+<polygon points="1120,1244 1278,1310 1120,1376 962,1310" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="1120" y="1316" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Chegou à retirada?</text>
+<rect x="962" y="1456" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="1120" y="1496" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Na primeira etapa: George recusa;</text>
+<text x="1120" y="1516" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">buscar ReForge</text>
+<rect x="962" y="1646" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="1120" y="1686" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Retirar / bioprintar; consolidar</text>
+<text x="1120" y="1706" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">memória e salvar</text>
+<polygon points="1120,1814 1278,1880 1120,1946 962,1880" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="1120" y="1886" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Quatro retiradas?</text>
+<rect x="962" y="2026" width="316" height="88" rx="38" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="1120" y="2076" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Epílogo Flesh</text>
 </svg>

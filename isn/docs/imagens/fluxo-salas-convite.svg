@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1540" height="1710" viewBox="0 0 1540 1710" role="img" aria-labelledby="title desc">
+<title id="title">Salas privadas — código e link (D03 aprovada)</title>
+<desc id="desc">Diagrama gerado da mesma fonte do bloco Mermaid. Laranja e tracejado indicam propostas ou decisões pendentes.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#52657c"/></marker></defs>
+<rect width="1540" height="1710" fill="#ffffff"/>
+<text x="32" y="40" font-family="sans-serif" font-size="25" font-weight="700" fill="#10253f">Salas privadas — código e link (D03 aprovada)</text>
+<text x="32" y="70" font-family="sans-serif" font-size="16" fill="#52657c">Flesh to Chrome · Sprint 1 · Propostas/pendências em laranja e tracejado</text>
+<polyline points="260,214 260,316" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="260,404 260,506" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="260,594 260,696" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="260,784 260,804 1480,804 1480,106 1120,106 1120,126" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1120,214 1120,316" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1120,404 1120,506" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1120,594 1120,674" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1120,806 1120,886" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1120,806 1120,846 690,846 690,886" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,974 690,1076" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="848,930 962,930" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,1164 690,1244" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,1376 690,1416 260,1416 260,1456" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="260,1544 260,1572 1470,1572 1470,1048 690,1048 690,1076" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,1376 690,1416 1120,1416 1120,1456" fill="none" stroke="#52657c" stroke-width="1.7" stroke-dasharray="7 5" marker-end="url(#arrow)"/>
+<text x="870" y="796" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">convite</text>
+<text x="1168" y="846" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">não</text>
+<text x="905" y="837" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">sim</text>
+<text x="738" y="1025" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">condições mantidas</text>
+<text x="905" y="918" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">vaga perdida</text>
+<text x="475" y="1407" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">não</text>
+<text x="865" y="1564" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">se ainda vigente</text>
+<text x="905" y="1407" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">sim</text>
+<rect x="102" y="126" width="316" height="88" rx="38" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="260" y="176" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Criador autenticado</text>
+<rect x="102" y="316" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="260" y="366" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">REST: criar sala e convite</text>
+<rect x="102" y="506" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="260" y="546" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Partidas: sala, convite e vínculo</text>
+<text x="260" y="566" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">ativo</text>
+<rect x="102" y="696" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="260" y="736" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Copiar código ou link;</text>
+<text x="260" y="756" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">compartilhar</text>
+<rect x="962" y="126" width="316" height="88" rx="38" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="1120" y="166" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Convidado: abrir link ou digitar</text>
+<text x="1120" y="186" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">código</text>
+<rect x="962" y="316" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="1120" y="366" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Autenticar e confirmar entrada</text>
+<rect x="962" y="506" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="1120" y="556" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Resolver código por chave direta</text>
+<polygon points="1120,674 1278,740 1120,806 962,740" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="1120" y="736" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Convite vigente e vaga</text>
+<text x="1120" y="756" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">livre?</text>
+<rect x="962" y="886" width="316" height="88" rx="38" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="1120" y="936" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Recusar sem expor sala privada</text>
+<rect x="532" y="886" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="926" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Reservar vaga e consumir convite</text>
+<text x="690" y="946" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">atomicamente</text>
+<rect x="532" y="1076" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="1126" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Lobby privado: dois participantes</text>
+<polygon points="690,1244 848,1310 690,1376 532,1310" fill="#fff7ed" stroke="#b45309" stroke-width="2" stroke-dasharray="6 4"/>
+<text x="690" y="1306" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Dois prontos e conexão</text>
+<text x="690" y="1326" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">válida?</text>
+<rect x="102" y="1456" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="260" y="1496" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Aguardar; tratar saída ou</text>
+<text x="260" y="1516" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">expiração</text>
+<rect x="962" y="1456" width="316" height="88" rx="38" fill="#fff7ed" stroke="#b45309" stroke-width="2" stroke-dasharray="6 4"/>
+<text x="1120" y="1506" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Iniciar corrida pelo canal D04</text>
+</svg>

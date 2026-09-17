@@ -2,18 +2,13 @@
 
 Projeto: **Flesh to Chrome** — especificação da Sprint 1.
 
-<<<<<<< HEAD
 Fonte única: [`../diagramas.json`](../diagramas.json). Mermaid e SVG abaixo são gerados por `python3 isn/scripts/gerar_diagramas.py` a partir da raiz do repositório. Não editar as versões geradas separadamente.
-=======
-As figuras estão em PNG em [`../imagens/`](../imagens/). Também tem Mermaid pra editar fácil.
->>>>>>> refs/remotes/origin/docs/isn-sprint1
 
 Os diagramas descrevem o sistema planejado, não comprovam implementação. Propostas e decisões pendentes têm rótulo Dxx e/ou traço pontilhado; ver [registro de decisões](07-decisoes-pendentes.md).
 
 ## 1. AWS — microsserviços e serviços gerenciados
 
-<<<<<<< HEAD
-Arquitetura de referência: implantação e dados próprios para Conta, Campanha, Partidas, Comunicações e Auditoria. Blocos com múltiplas tabelas são agrupamentos visuais, não banco compartilhado entre serviços. Cada domínio acessa apenas seus dados. Tempo real é candidato D04. Conta AWS ainda não criada; Free Tier e orçamento no documento 12. Route 53 resolve nomes para os destinos; suas setas são registros DNS, não passagem de tráfego HTTP. ACM fornece certificados. api.* e ws.* são nomes propostos (D08/D04); detalhes e custos no documento 12, seção 3.1.
+Arquitetura de referência: implantação e dados próprios para Conta, Campanha, Partidas, Comunicações e Auditoria. Blocos com múltiplas tabelas são agrupamentos visuais, não banco compartilhado entre serviços. Cada domínio acessa apenas seus dados. Tempo real é candidato D04. Conta AWS ainda não criada; Free Tier e orçamento no documento 12. Route 53 resolve nomes para os destinos; suas setas são registros DNS, não passagem de tráfego HTTP. ACM fornece certificados. api.* e ws.* são nomes propostos (D08/D04); detalhes e custos no documento 12, seção 3.1. Documento 13 recomenda WSS para o protótipo; API Gateway/Lambda segue em validação. Heartbeat não estende o limite de 2 h; renovar no lobby. D03/D07 aprovadas: salas privadas por código/link, central de notificações e feedback SES/SNS/SQS no documento 14. Compra notifica apenas no jogo, sem e-mail.
 
 ```mermaid
 flowchart TD
@@ -23,7 +18,7 @@ flowchart TD
   cdn["CloudFront: CDN"]
   cognito["Cognito Lite: login social"]
   http["API Gateway HTTP + JWT"]
-  ws["API Gateway WebSocket — D04"]
+  ws["API Gateway WSS: protótipo — D04"]
   account["Lambda Conta"]
   campaign["Lambda Campanha"]
   match["Lambdas Partidas"]
@@ -75,26 +70,12 @@ flowchart TD
   classDef pending fill:#fff7ed,stroke:#b45309,stroke-dasharray:5 4
   class ws pending
 ```
-=======
-O browser baixa o frontend e fala com a API. A API cuida de save da campanha, multiplayer/salas, OAuth e e-mail.
-
-```mermaid
-flowchart LR
-  usuario[Usuario]
-  browser[Browser_Frontend_Phaser]
-  api[Backend_API_REST]
-  db[(Banco_save_ranking)]
-  oauth[Provedor_OAuth_Google]
-  email[Email_notificacoes]
-  mp[Multiplayer_salas]
-  static[Hospedagem_estatica]
->>>>>>> refs/remotes/origin/docs/isn-sprint1
 
 ![AWS — microsserviços e serviços gerenciados](../imagens/diagrama-aws-microsservicos.svg)
 
 ## 2. AWS — eventos, auditoria e notificações
 
-Fluxo proposto por serviço produtor: mudança e outbox na mesma transação. Streams ativa publicador; SQS e consumidores permitem retentativas. Destinos deduplicam eventId; falhas repetidas vão para DLQ. Outbox preservada permite reconciliar publicação perdida. SES não bloqueia save e Streams não substitui armazenamento permanente.
+Fluxo proposto por serviço produtor: mudança e outbox na mesma transação. Streams ativa publicador; SQS e consumidores permitem retentativas. Destinos deduplicam eventId; falhas repetidas vão para DLQ. Outbox preservada permite reconciliar publicação perdida. SES não bloqueia save e Streams não substitui armazenamento permanente. D07 aprovada no documento 14 define categorias/preferências e feedback de entrega SES via SNS/SQS, detalhado no fluxo de comunicações.
 
 ```mermaid
 flowchart TD
@@ -141,7 +122,7 @@ Visão de contexto; detalhamento físico nos diagramas AWS. Conta, Campanha, Par
 ```mermaid
 flowchart TD
   teclado["Teclado"]
-  pad["Gamepad físico — D01/D02"]
+  pad["Gamepad físico — D01"]
   static["S3 + CloudFront: frontend"]
   input["Ações de entrada comuns"]
   browser["Navegador: Phaser"]
@@ -150,7 +131,7 @@ flowchart TD
   multi["Multiplayer: salas e resultados"]
   db["DynamoDB: tabelas por serviço"]
   google["Cognito + Google"]
-  notify["Comunicações + SES — D07"]
+  notify["Comunicações + SES"]
   audit["Auditoria persistente"]
   teclado --> input
   pad -.->|"mesmas ações"| input
@@ -160,30 +141,20 @@ flowchart TD
   browser -->|"save local"| local
   browser -.->|"tempo real"| multi
   api --> db
-<<<<<<< HEAD
   api -->|"autenticação"| google
-  api -.->|"eventos"| notify
+  api -->|"eventos"| notify
   api -->|"operações críticas"| audit
   api -->|"salas / consulta"| multi
   multi -->|"grava resultado"| db
   classDef pending fill:#fff7ed,stroke:#b45309,stroke-dasharray:5 4
-  class pad,notify pending
+  class pad pending
 ```
 
 ![Visão geral — jogo, serviços e nuvem](../imagens/diagrama-visao-geral.svg)
-=======
-  api --> oauth
-  api --> email
-  api --> mp
-```
-
-![Visão geral](../imagens/diagrama-visao-geral.png)
->>>>>>> refs/remotes/origin/docs/isn-sprint1
 
 ## 4. Microsserviços do backend e seus dados
 
-<<<<<<< HEAD
-Cada serviço tem Lambda(s), IAM role, pacote e tabela próprios, com implantação independente. As conexões de eventos representam outbox/publicação por filas, detalhadas no diagrama AWS de eventos. Não há leitura direta da tabela de outro serviço. Identidade e e-mail são terceirizados para Cognito/Google e SES.
+Cada serviço tem Lambda(s), IAM role, pacote e tabela próprios, com implantação independente. As conexões de eventos representam outbox/publicação por filas, detalhadas no diagrama AWS de eventos. Não há leitura direta da tabela de outro serviço. Identidade e e-mail são terceirizados para Cognito/Google e SES. Se a loja for implementada, Campanha também mantém aquisições por conta em itens separados do save; débito/desbloqueio/outbox consistentes, sem acesso à tabela Conta (D11; documentos 08/09).
 
 ```mermaid
 flowchart TD
@@ -225,61 +196,6 @@ flowchart TD
 ## 5. Ambientes e implantação
 
 Pulumi mantém base e serviços independentes por ambiente. Dev local é padrão; dev em nuvem é temporário e isolado de produção. AWS gerenciada/Lambda/DynamoDB são a base; conta ainda não criada, com elegibilidade, capacidade e orçamento em D08/D09. Não provisionar compute ocioso como requisito de microsserviços. Base DNS/HTTPS compartilhada via Route 53 e ACM; subdomínios de dev não exigem nova zona pública.
-=======
-## 2. Módulos do backend
-
-```mermaid
-flowchart TB
-  fe[Frontend_Phaser]
-
-  subgraph backend [Backend]
-    auth[Auth_OAuth]
-    save[Save_campanha]
-    game[Game_progress_API]
-    notify[Email_notificacoes]
-    audit[Auditoria]
-    multi[Multiplayer]
-    rank[Ranking_partida]
-  end
-
-  db[(Banco)]
-  google[Google]
-  mailer[SES_ou_similar]
-
-  fe --> auth
-  fe --> save
-  fe --> game
-  fe --> multi
-  auth --> google
-  auth --> db
-  save --> db
-  game --> db
-  multi --> db
-  multi --> rank
-  save --> audit
-  auth --> audit
-  game --> audit
-  multi --> audit
-  notify --> mailer
-  auth --> notify
-```
-
-![Módulos do backend](../imagens/diagrama-modulos-backend.png)
-
-| Módulo | Função |
-| --- | --- |
-| Auth | login/logout com Google, sessão/token |
-| Save | grava/lê progresso da campanha |
-| Game progress | fase, implante, Portão |
-| Multiplayer | salas / partida 1v1 |
-| Ranking | resultado da corrida multiplayer |
-| E-mail | boas-vindas e avisos |
-| Auditoria | log de operações críticas |
-
----
-
-## 3. Ambientes: desenvolvimento × produção
->>>>>>> refs/remotes/origin/docs/isn-sprint1
 
 ```mermaid
 flowchart TD
@@ -307,18 +223,11 @@ flowchart TD
   class devcloud pending
 ```
 
-<<<<<<< HEAD
 ![Ambientes e implantação](../imagens/diagrama-ambientes.svg)
 
 ## 6. Entrada por teclado e gamepad físico
-=======
-![Ambientes](../imagens/diagrama-ambientes.png)
 
-- **Dev:** pra testar sem gastar / sem quebrar produção.  
-- **Prod:** domínio público, subida automática com CI/CD + IaC (Pulumi), região `sa-east-1`.
->>>>>>> refs/remotes/origin/docs/isn-sprint1
-
-Controle físico é escopo confirmado. Botões, compatibilidade, vários controles e desconexão estão em D01/D02. Não existe celular remoto neste desenho. Teclado continua disponível e ambos usam as mesmas restrições do gameplay.
+Controle físico confirmado. D01 cobre botões, compatibilidade e vários controles. D02 aprovada: desconexão pausa campanha com retomada explícita pelo controle/teclado; multiplayer segue sem pausa e com aviso. Teclado e gamepad usam as mesmas restrições do gameplay; não existe celular remoto neste desenho.
 
 ```mermaid
 flowchart TD
@@ -341,12 +250,11 @@ flowchart TD
   class detect,netgame pending
 ```
 
-<<<<<<< HEAD
 ![Entrada por teclado e gamepad físico](../imagens/diagrama-entrada.svg)
 
 ## 7. Multiplayer — salas, sincronização e resultado
 
-ZIP RF22/RF23 e UC09 confirmam dois jogadores autenticados, criação/entrada em sala e resultado/classificação da corrida gravados. Dois navegadores são a topologia proposta. D03 ainda cobre descoberta/compartilhamento da sala e visibilidade/retenção; D04 cobre protocolo e autoridade. Ranking global não está definido. Implementação de referência: API Gateway HTTP para salas, Lambda Partidas e DynamoDB próprio para resultados. API Gateway WebSocket é candidato a validar em custo/latência; não enviar cada frame como save/auditoria. Ver documento 12.
+Dois navegadores com jogadores autenticados, criação/entrada em sala e resultado/classificação persistidos. D03 aprovada: código/link privado, convite de 10 min, uma partida ativa por conta, reserva atômica da segunda vaga e histórico privado de 30 dias. Cancelar sala se alguém sair antes da largada. Não há ranking global nem busca pública inicial. API Gateway HTTP, Lambda Partidas e DynamoDB próprio atendem salas/resultados. WSS é recomendado para o protótipo; API Gateway/Lambda, autoridade, presença e prazos de rede seguem em D04. Renovar conexão no lobby; não retomar corrida após derrota. Ver documentos 12–14.
 
 ```mermaid
 flowchart TD
@@ -355,10 +263,11 @@ flowchart TD
   c1["Cliente 1 / Phaser"]
   c2["Cliente 2 / Phaser"]
   rest["REST: salas, entrada e prontidão"]
-  realtime["API Gateway WebSocket — D04"]
+  realtime["API Gateway WSS: protótipo — D04"]
   authority["Lambda Partidas: validação — D04"]
   events["Auditoria: entrada, saída e resultado"]
   history["DynamoDB matches: resultado"]
+  presence["Partidas: presença e prazos — D04"]
   p1 --> c1
   p2 --> c2
   c1 -->|"HTTPS / sessão"| rest
@@ -369,31 +278,36 @@ flowchart TD
   realtime -.->|"sincronização"| authority
   authority --> events
   authority -->|"gravação no backend"| history
+  realtime -.->|"sinais / queda"| presence
+  presence -.->|"avalia queda"| authority
+  authority -.->|"estado / resultado"| realtime
+  realtime -.->|"entrega"| c1
+  realtime -.->|"entrega"| c2
   classDef pending fill:#fff7ed,stroke:#b45309,stroke-dasharray:5 4
-  class realtime,authority pending
+  class realtime,authority,presence pending
 ```
 
 ![Multiplayer — salas, sincronização e resultado](../imagens/diagrama-multiplayer.svg)
 
 ## 8. Modelo lógico — cardinalidades e separação de dados
 
-Detalhes dos campos no documento 08. O ZIP confirma sala/partida, participantes autenticados e resultado persistido; formato dos dados é proposta de modelagem. Cosméticos são opcionais D11. Snapshot não é segundo slot. D03 cobre visibilidade/retenção dos resultados, não sua existência. O mapeamento físico agora usa tabelas DynamoDB por microsserviço, conforme documentos 08/12; linhas de relação não autorizam acesso cruzado entre serviços.
+Detalhes no documento 08. D05 aprova isolamento por conta. D10 separa memória pendente e consolidada pela retirada. D11 aprova aquisições cosméticas por conta, independentes de campanha/snapshot/reset; loja continua opcional. Proposta física: itens de aquisições separados na tabela do serviço Campanha, para débito/desbloqueio/outbox consistentes. D03/D07 aprovadas: histórico privado e central por conta, ambos com 30 dias de exibição; deduplicação tem retenção própria. Implementação da loja permanece opcional. Compra não gera entrega de e-mail.
 
 ```mermaid
 flowchart TD
   user["Usuário"]
   campaign["Campanha ativa"]
-  notice["Notificação no jogo — D07"]
-  email["Entrega de e-mail — D07"]
+  notice["Notificação no jogo"]
+  email["Entrega de e-mail"]
   snapshot["Snapshot pré-Portão"]
   audit["Evento de auditoria"]
   participant["Participante autenticado"]
-  state["Estado: créditos, implantes, memórias, retry e final"]
-  skin["Cosmético desbloqueado — D11"]
+  state["Estado: créditos, implantes, memórias pendentes/consolidadas, retry e final"]
+  skin["Cosmético da conta — loja opcional"]
   match["Partida / resultado e classificação"]
   user -->|"1 : 0..1"| campaign
-  user -.->|"1 : N"| notice
-  user -.->|"1 : N"| email
+  user -->|"1 : N"| notice
+  user -->|"1 : N"| email
   campaign -->|"1 : 0..1"| snapshot
   campaign -->|"contém"| state
   user -->|"1 : N"| audit
@@ -401,10 +315,7 @@ flowchart TD
   match -->|"2 prontos para iniciar"| participant
   user -.->|"1 : N opcional"| skin
   classDef pending fill:#fff7ed,stroke:#b45309,stroke-dasharray:5 4
-  class notice,email,skin pending
+  class skin pending
 ```
 
 ![Modelo lógico — cardinalidades e separação de dados](../imagens/diagrama-dados.svg)
-=======
-Sprint 1 = diagrama de blocos. Nomes exatos de serviços AWS a gente fecha no Pulumi depois.
->>>>>>> refs/remotes/origin/docs/isn-sprint1
