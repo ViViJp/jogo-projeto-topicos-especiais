@@ -22,13 +22,3 @@ Equipe (ISN): João Pedro, Victor Blum
 - `scripts/gerar_diagramas.py` — gera Mermaid e SVG em conjunto
 
 O protótipo Phaser está em `flesh-to-chrome/` neste repositório; a entrada da raiz encaminha para esse projeto.
-
-Gamepad físico e multiplayer estão documentados. As decisões ainda não fechadas estão em [decisões pendentes](docs/sprint1/07-decisoes-pendentes.md).
-
-Multiplayer exige login, salas no backend e resultado/classificação persistidos.
-
-Arquitetura de referência: [microsserviços AWS, escala e custos](docs/sprint1/12-arquitetura-aws-microsservicos.md). Conta AWS ainda não criada; seleção prioriza recursos gerenciados e Free Tier elegível.
-
-Transporte multiplayer: [comparação entre MQTT, WebTransport e WebSocket](docs/sprint1/13-transporte-multiplayer.md). WSS é recomendado para o protótipo; hospedagem, latência, custos e regras de desconexão dependem de validação.
-
-Modelos aprovados: [salas privadas e notificações com custo controlado](docs/sprint1/14-salas-e-notificacoes.md). D12 aprovada: memória após o último checkpoint, antes da retirada.

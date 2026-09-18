@@ -2,7 +2,7 @@
 
 Projeto **Flesh to Chrome**, ISN 2026.2. Equipe ISN: João Pedro e Victor Blum. Domínio previsto: `nihil-legere-possum.lat`.
 
-Esta entrega documenta o jogo completo planejado e os serviços de nuvem. Implementação e implantação são etapas posteriores. Referência: [GDD 1.0.0](../../../gdd.md). Gamepad físico foi acrescentado por solicitação do responsável; multiplayer mantém as regras e sequência de desenvolvimento do GDD, com login, salas e resultado persistido definidos no escopo ISN.
+Esta entrega documenta o jogo completo planejado e os serviços de nuvem. Implementação e implantação são etapas posteriores. Referência: [GDD 1.0.0](../../../gdd.md). 
 
 | Documento | Conteúdo | Issue original |
 | --- | --- | --- |

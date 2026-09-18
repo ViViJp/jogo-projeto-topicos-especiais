@@ -1,6 +1,6 @@
 # D03 e D07 aprovadas — salas e notificações com custo controlado
 
-Modelo aprovado pelo responsável em **17/09/2026**, com exclusão do e-mail de compra. Esta é uma especificação para implementação, não funcionalidades já implementadas. O modelo reaproveita os cinco microsserviços do [documento 12](12-arquitetura-aws-microsservicos.md). D12 foi aprovada separadamente: todas as memórias ficam após o último checkpoint e antes da área de retirada do implante.
+O modelo reaproveita os cinco microsserviços do [documento 12](12-arquitetura-aws-microsservicos.md). 
 
 ## 1. D03: salas privadas por código e link
 
