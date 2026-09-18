@@ -16,6 +16,15 @@ export interface SaveData {
   currentPhaseId: string;
   checkpoint: {
     x: number;
+    /**
+     * v0.4.1 - campo novo, aditivo (não quebra o formato documentado na
+     * Seção 20.1 nem exige migração: um save antigo sem `y` cai no default
+     * 0 via `load()`). Sem isso, "Continuar" a partir de um checkpoint
+     * salvo num mapa com mais de uma elevação de chão (caso da Fase 1 desde
+     * a v0.4.0) reaparecia o personagem na altura errada - mesmo bug do
+     * `GameSceneData.checkpointY`, ver `GameScene.ts`.
+     */
+    y: number;
     consolidatedCreditIds: string[];
   };
   wallet: number;
@@ -35,7 +44,7 @@ function defaultSave(): SaveData {
   return {
     version: 1,
     currentPhaseId: "fase1",
-    checkpoint: { x: 0, consolidatedCreditIds: [] },
+    checkpoint: { x: 0, y: 0, consolidatedCreditIds: [] },
     wallet: 0,
     abilities: createInitialAbilityState(),
     descentState: { active: false, brokenChain: false, recoveredFragmentIds: [] },
@@ -60,7 +69,13 @@ export class SaveState {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return new SaveState(defaultSave());
       const parsed = JSON.parse(raw) as SaveData;
-      return new SaveState({ ...defaultSave(), ...parsed });
+      const merged = { ...defaultSave(), ...parsed };
+      // `checkpoint` é objeto aninhado - o spread acima troca o objeto
+      // inteiro, então um save salvo ANTES da v0.4.0 (sem `checkpoint.y`)
+      // ia trazer `y: undefined` em vez do default 0. Corrigido explicitamente
+      // pra não reintroduzir o bug de respawn com saves antigos.
+      merged.checkpoint = { ...merged.checkpoint, y: merged.checkpoint.y ?? 0 };
+      return new SaveState(merged);
     } catch (err) {
       console.warn("[SaveState] save corrompido, iniciando novo estado", err);
       return new SaveState(defaultSave());
@@ -78,15 +93,15 @@ export class SaveState {
     return this.data;
   }
 
-  updateCheckpoint(x: number, consolidatedCreditIds: string[], wallet: number): void {
-    this.data.checkpoint = { x, consolidatedCreditIds };
+  updateCheckpoint(x: number, y: number, consolidatedCreditIds: string[], wallet: number): void {
+    this.data.checkpoint = { x, y, consolidatedCreditIds };
     this.data.wallet = wallet;
     this.persist();
   }
 
   setPhase(phaseId: string): void {
     this.data.currentPhaseId = phaseId;
-    this.data.checkpoint = { x: 0, consolidatedCreditIds: [] };
+    this.data.checkpoint = { x: 0, y: 0, consolidatedCreditIds: [] };
     this.persist();
   }
 
