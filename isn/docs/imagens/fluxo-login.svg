@@ -15,23 +15,29 @@
 <polyline points="690,974 690,1014 260,1014 260,1054" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
 <polyline points="690,974 690,1025 1120,1025 1120,1076" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
 <polyline points="260,1186 260,1266" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
-<polyline points="1120,1164 1120,1192 40,1192 40,1428 690,1428 690,1456" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
-<polyline points="260,1186 260,1222 1490,1222 1490,1420 260,1420 260,1456" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="260,1186 260,1214 1500,1214 1500,1428 260,1428 260,1456" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
 <polyline points="260,1354 260,1456" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1120,1164 1120,1266" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1120,1354 1120,1405 690,1405 690,1456" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1120,1164 1120,1200 80,1200 80,1420 690,1420 690,1456" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="260,594 260,614 1450,614 1450,486 1120,486 1120,506" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
 <text x="475" y="457" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">não</text>
 <text x="905" y="457" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">sim</text>
 <text x="600" y="834" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">cancelou / erro</text>
 <text x="905" y="837" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">sim</text>
 <text x="905" y="1016" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">carregar</text>
 <text x="308" y="1226" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">sim</text>
-<text x="580" y="1184" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">após reconciliação</text>
-<text x="875" y="1214" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">não</text>
+<text x="880" y="1206" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">não</text>
+<text x="1168" y="1215" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">confirmada</text>
+<text x="600" y="1192" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">cancelar: preservar contexto</text>
+<text x="855" y="606" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">login durante sessão</text>
 <rect x="532" y="126" width="316" height="88" rx="38" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
 <text x="690" y="176" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Abrir site / menu</text>
 <polygon points="690,294 848,360 690,426 532,360" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
 <text x="690" y="366" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Entrar na conta?</text>
 <rect x="102" y="506" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
-<text x="260" y="556" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Carregar ou criar save local</text>
+<text x="260" y="546" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Jogar como visitante: apenas</text>
+<text x="260" y="566" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">nesta sessão</text>
 <rect x="962" y="506" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
 <text x="1120" y="556" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Autenticar: Cognito + Google</text>
 <polygon points="1120,674 1278,740 1120,806 962,740" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
@@ -47,8 +53,11 @@
 <text x="260" y="1306" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Solicitar e-mail + notificação</text>
 <text x="260" y="1326" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">sem bloquear</text>
 <rect x="532" y="1456" width="316" height="88" rx="38" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
-<text x="690" y="1496" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Descartar memória pendente da</text>
-<text x="690" y="1516" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">sessão anterior; continuar</text>
+<text x="690" y="1496" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Continuar; limpar memória</text>
+<text x="690" y="1516" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">pendente se nova sessão</text>
 <rect x="102" y="1456" width="316" height="88" rx="38" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
 <text x="260" y="1506" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Fim da tarefa de comunicação</text>
+<rect x="962" y="1266" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="1120" y="1306" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Salvar na conta e auditar</text>
+<text x="1120" y="1326" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">importação aceita</text>
 </svg>

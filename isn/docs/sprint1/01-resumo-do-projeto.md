@@ -35,7 +35,7 @@ O multiplayer integra o escopo ISN; a ordem de desenvolvimento continua posterio
 
 - Frontend: TypeScript, Phaser, Parcel e mapas Tiled/JSON, no projeto existente `flesh-to-chrome/`.
 - Entrada: teclado e adaptador de gamepad físico, convergindo para as mesmas ações. Não há controle remoto por celular neste escopo.
-- Campanha: simulação no navegador e save local em `localStorage`, inclusive para visitante.
+- Campanha: visitante joga apenas na sessão atual, sem save persistente; fechar/recarregar o jogo descarta seu progresso. Após autenticação, o progresso da sessão pode ser vinculado à conta, com cache local por identidade e persistência na nuvem (D05/D06).
 - Nuvem: microsserviços Conta, Campanha, Partidas, Comunicações e Auditoria em AWS Lambda, publicados independentemente por domínio; API Gateway HTTP expõe RESTful, com tabelas DynamoDB próprias e IAM separado.
 - Serviços gerenciados: Cognito + Google para identidade, Route 53 para DNS público, ACM para HTTPS, S3/CloudFront para frontend, SQS para eventos assíncronos, SES para e-mail e CloudWatch para operação.
 - Multiplayer: backend mantém salas/partidas para dois jogadores autenticados e grava resultado/classificação de cada corrida, separado do save da campanha. Salas privadas são encontradas por código/link (D03 aprovada); a autoridade da simulação continua em D04; WSS é o transporte recomendado para o protótipo após comparação com MQTT e WebTransport no [estudo de transportes](13-transporte-multiplayer.md). API Gateway WebSocket com Lambda continua candidato a hospedagem, condicionado a testes de custo, latência e desconexão.
@@ -43,7 +43,7 @@ O multiplayer integra o escopo ISN; a ordem de desenvolvimento continua posterio
 
 Decisões, diagrama AWS, custos e limites: [12-arquitetura-aws-microsservicos.md](12-arquitetura-aws-microsservicos.md).
 
-A nuvem acrescenta persistência entre dispositivos ao save local previsto no GDD. A resolução de conflitos entre cópias foi aprovada em D05 no [registro de decisões](07-decisoes-pendentes.md), como extensão ISN ao GDD.
+A definição validada com o professor restringe a persistência da campanha aos jogadores autenticados. Isso substitui, no escopo ISN, a previsão de save de visitante entre sessões do GDD §20; o GDD ainda não foi atualizado. Não há registro retroativo das ações anteriores ao login. A resolução de conflitos entre cópias foi aprovada em D05 no [registro de decisões](07-decisoes-pendentes.md), como extensão ISN ao GDD.
 
 ## Limite desta entrega
 

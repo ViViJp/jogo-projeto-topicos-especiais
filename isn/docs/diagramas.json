@@ -624,7 +624,7 @@
   {
     "file": "diagrama-visao-geral",
     "title": "Visão geral — jogo, serviços e nuvem",
-    "intro": "Visão de contexto; detalhamento físico nos diagramas AWS. Conta, Campanha, Partidas, Auditoria e Comunicações são microsserviços independentes em Lambda, com tabelas DynamoDB próprias. S3/CloudFront entregam o jogo; Cognito/Google autenticam. Sincronização multiplayer continua sujeita à prova D04.",
+    "intro": "Visão de contexto; detalhamento físico nos diagramas AWS. Conta, Campanha, Partidas, Auditoria e Comunicações são microsserviços independentes em Lambda, com tabelas DynamoDB próprias. S3/CloudFront entregam o jogo; Cognito/Google autenticam. Sincronização multiplayer continua sujeita à prova D04. D06: visitante joga somente na sessão, sem save persistente; login permite vincular progresso à conta conforme D05, sem histórico retroativo.",
     "nodes": [
       {
         "id": "teclado",
@@ -676,7 +676,7 @@
       },
       {
         "id": "local",
-        "label": "Save local / localStorage",
+        "label": "Estado visitante: sessão / cache: conta autenticada",
         "col": 0,
         "row": 2,
         "shape": "box",
@@ -757,7 +757,7 @@
       {
         "source": "browser",
         "target": "local",
-        "label": "save local",
+        "label": "estado / cache",
         "pending": false
       },
       {
@@ -1032,7 +1032,7 @@
   {
     "file": "diagrama-ambientes",
     "title": "Ambientes e implantação",
-    "intro": "Pulumi mantém base e serviços independentes por ambiente. Dev local é padrão; dev em nuvem é temporário e isolado de produção. AWS gerenciada/Lambda/DynamoDB são a base; conta ainda não criada, com elegibilidade, capacidade e orçamento em D08/D09. Não provisionar compute ocioso como requisito de microsserviços. Base DNS/HTTPS compartilhada via Route 53 e ACM; subdomínios de dev não exigem nova zona pública.",
+    "intro": "Pulumi mantém base e serviços independentes por ambiente. Dev local é padrão; dev em nuvem é temporário e isolado de produção. AWS gerenciada/Lambda/DynamoDB são a base; conta ainda não criada, com elegibilidade, capacidade e orçamento em D08. Não provisionar compute ocioso como requisito de microsserviços. Base DNS/HTTPS compartilhada via Route 53 e ACM; subdomínios de dev não exigem nova zona pública.",
     "nodes": [
       {
         "id": "git",
@@ -1478,7 +1478,7 @@
   {
     "file": "diagrama-dados",
     "title": "Modelo lógico — cardinalidades e separação de dados",
-    "intro": "Detalhes no documento 08. D05 aprova isolamento por conta. D10 separa memória pendente e consolidada pela retirada. D11 aprova aquisições cosméticas por conta, independentes de campanha/snapshot/reset; loja continua opcional. Proposta física: itens de aquisições separados na tabela do serviço Campanha, para débito/desbloqueio/outbox consistentes. D03/D07 aprovadas: histórico privado e central por conta, ambos com 30 dias de exibição; deduplicação tem retenção própria. Implementação da loja permanece opcional. Compra não gera entrega de e-mail.",
+    "intro": "Detalhes no documento 08. D05 aprova isolamento por conta. D10 separa memória pendente e consolidada pela retirada. D11 aprova aquisições cosméticas por conta, independentes de campanha/snapshot/reset; loja continua opcional. Proposta física: itens de aquisições separados na tabela do serviço Campanha, para débito/desbloqueio/outbox consistentes. D03/D07 aprovadas: histórico privado e central por conta, ambos com 30 dias de exibição; deduplicação tem retenção própria. Implementação da loja permanece opcional. Compra não gera entrega de e-mail. D06: Campanha persistente pertence apenas à conta autenticada; visitante não gera registro e perde progresso ao fechar/recarregar. Importação registra estado atual, sem histórico retroativo.",
     "nodes": [
       {
         "id": "user",
@@ -1622,7 +1622,7 @@
   {
     "file": "fluxo-login",
     "title": "Login, save local e comunicações",
-    "intro": "D05 aprovada: comparar saves e exigir escolha explícita em conflito/importação, com revisão e cache isolado por conta. Cancelar preserva cópias; visitante permanece separado após importação. Troca de conta não transfere envios nem cosméticos. Ao continuar após saída, memória pendente é descartada (D10). Primeiro cadastro dispara comunicação D07 sem bloquear a campanha.",
+    "intro": "D06 aprovada: sem login, campanha apenas na sessão; fechar/recarregar descarta progresso. Preservar estado durante autenticação e vincular à conta conforme D05: comparar cópias, confirmar importação e exigir escolha em conflito. Cache persistente isolado por conta; auditar importação aceita, sem histórico anterior ao login. Cancelar mantém visitante somente na sessão aberta. Troca de conta não transfere envios nem cosméticos. Descartar memória pendente apenas ao retomar após saída (D10), não ao autenticar na mesma sessão. Primeiro cadastro dispara comunicação D07 sem bloquear a campanha.",
     "nodes": [
       {
         "id": "start",
@@ -1642,7 +1642,7 @@
       },
       {
         "id": "local",
-        "label": "Carregar ou criar save local",
+        "label": "Jogar como visitante: apenas nesta sessão",
         "col": 0,
         "row": 2,
         "shape": "box",
@@ -1698,7 +1698,7 @@
       },
       {
         "id": "play",
-        "label": "Descartar memória pendente da sessão anterior; continuar",
+        "label": "Continuar; limpar memória pendente se nova sessão",
         "col": 1,
         "row": 7,
         "shape": "end",
@@ -1710,6 +1710,14 @@
         "col": 0,
         "row": 7,
         "shape": "end",
+        "pending": false
+      },
+      {
+        "id": "persist",
+        "label": "Salvar na conta e auditar importação aceita",
+        "col": 2,
+        "row": 6,
+        "shape": "box",
         "pending": false
       }
     ],
@@ -1775,12 +1783,6 @@
         "pending": false
       },
       {
-        "source": "resolve",
-        "target": "play",
-        "label": "após reconciliação",
-        "pending": false
-      },
-      {
         "source": "first",
         "target": "commDone",
         "label": "não",
@@ -1791,6 +1793,30 @@
         "target": "commDone",
         "label": "",
         "pending": false
+      },
+      {
+        "source": "resolve",
+        "target": "persist",
+        "label": "confirmada",
+        "pending": false
+      },
+      {
+        "source": "persist",
+        "target": "play",
+        "label": "",
+        "pending": false
+      },
+      {
+        "source": "resolve",
+        "target": "play",
+        "label": "cancelar: preservar contexto",
+        "pending": false
+      },
+      {
+        "source": "local",
+        "target": "provider",
+        "label": "login durante sessão",
+        "pending": false
       }
     ],
     "group": "flow"
@@ -1798,7 +1824,7 @@
   {
     "file": "fluxo-gameplay",
     "title": "Loop da fase e persistência",
-    "intro": "Checkpoint e fim de fase são avaliados mesmo sem obstáculos. Na campanha, créditos não consolidados se perdem na morte; o modo multiplayer usa a regra própria RN08. A descida não contém créditos comuns. Após morte, scan do trecho volta a oculto.",
+    "intro": "Checkpoint e fim de fase são avaliados mesmo sem obstáculos. Na campanha, créditos não consolidados se perdem na morte; o modo multiplayer usa a regra própria RN08. A descida não contém créditos comuns. Após morte, scan do trecho volta a oculto. D06: salvamento persistente somente após autenticação; para visitante, marcos e snapshot existem apenas na sessão e são descartados ao fechar/recarregar.",
     "nodes": [
       {
         "id": "start",
@@ -1986,7 +2012,7 @@
   {
     "file": "fluxo-clinica",
     "title": "Clínica, implante e próxima fase",
-    "intro": "O procedimento acontece sem escolha de aceitar/recusar. Aceitação de Alex é narrativa. Save local permanece conforme GDD; sincronização em nuvem só para autenticado, sem bloquear gameplay por falha de rede.",
+    "intro": "O procedimento acontece sem escolha de aceitar/recusar. Aceitação de Alex é narrativa. D06: atualizar estado da sessão; persistir cache e sincronizar na nuvem somente para conta autenticada. Visitante perde campanha ao fechar/recarregar. Falha de rede mantém cache da conta e pendência, sem bloquear gameplay.",
     "nodes": [
       {
         "id": "start",
@@ -2022,7 +2048,7 @@
       },
       {
         "id": "local",
-        "label": "Salvar localmente",
+        "label": "Atualizar sessão; cache só se autenticado",
         "col": 1,
         "row": 4,
         "shape": "box",
@@ -2128,7 +2154,7 @@
   {
     "file": "fluxo-campanha",
     "title": "Campanha completa e finais",
-    "intro": "A descida usa a ordem e o retry do fluxo específico. Snapshot pré-Portão permanece separado; restauração integral permite repetir a escolha. Corpo de Hollow é o estado preservado na quebra, sem novas retiradas.",
+    "intro": "A descida usa a ordem e o retry do fluxo específico. Snapshot pré-Portão permanece separado; restauração integral permite repetir a escolha. Corpo de Hollow é o estado preservado na quebra, sem novas retiradas. D06: salvamento persistente somente após autenticação; para visitante, marcos e snapshot existem apenas na sessão e são descartados ao fechar/recarregar.",
     "nodes": [
       {
         "id": "start",
@@ -2324,7 +2350,7 @@
   {
     "file": "fluxo-descida",
     "title": "Descida — memória, retry e retirada",
-    "intro": "D10 aprovada: memória fica pendente até a retirada do implante da fase. Morte, reinício manual ou saída antes disso apagam a pendente e exigem recoleta; checkpoint não consolida. Retirada consolida memória, corpo e perda de habilidade juntos; memórias anteriores sobrevivem. Morte/saída/reinício não consomem retry por si sós. Retorno segue RN01/RN03; D12 aprovada: todas as memórias após o último checkpoint e antes da área de retirada, permitindo recoleta. D1 Topo/propulsores → D2 Corporativo/olhos → D3 Urbano/braços → D4 Industrial/pernas. George recusa ajuda somente na primeira etapa.",
+    "intro": "D10 aprovada: memória fica pendente até a retirada do implante da fase. Morte, reinício manual ou saída antes disso apagam a pendente e exigem recoleta; checkpoint não consolida. Retirada consolida memória, corpo e perda de habilidade juntos; memórias anteriores sobrevivem. Morte/saída/reinício não consomem retry por si sós. Retorno segue RN01/RN03; D12 aprovada: todas as memórias após o último checkpoint e antes da área de retirada, permitindo recoleta. D1 Topo/propulsores → D2 Corporativo/olhos → D3 Urbano/braços → D4 Industrial/pernas. George recusa ajuda somente na primeira etapa. D06: salvamento persistente somente após autenticação; para visitante, marcos e snapshot existem apenas na sessão e são descartados ao fechar/recarregar.",
     "nodes": [
       {
         "id": "start",

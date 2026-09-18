@@ -1,6 +1,6 @@
 # Multiplayer — comparação de transportes e recomendação
 
-Estudo documental em **17/09/2026**. Referências: [GDD §21](../../../gdd.md), [arquitetura AWS](12-arquitetura-aws-microsservicos.md) e decisões D04/D09. Não houve benchmark, implantação nem implementação de rede nesta revisão.
+Estudo documental em **17/09/2026**. Referências: [GDD §21](../../../gdd.md), [arquitetura AWS](12-arquitetura-aws-microsservicos.md) e decisões D04/D08. D09 está resolvida: não há exigência de latência/FPS para a entrega final. Não houve benchmark, implantação nem implementação de rede nesta revisão.
 
 ## 1. Recomendação para este jogo
 
@@ -79,13 +79,13 @@ API Gateway mede mensagens em blocos de 32 KB e minutos conectados; somar Lambda
 
 WebTransport em servidor próprio exige estimar compute, rede, eventual balanceador e operação, incluindo tempo ocioso. Escala baixa pode favorecer pagamento por uso; carga sustentada pode mudar a comparação. Usar preços da região escolhida e apresentar custo bruto separado de créditos/franquias; conta AWS ainda não criada.
 
-## 6. Prova necessária para fechar D04
+## 6. Validação funcional e diagnóstico para D04
 
-Executar primeiro WebSocket/API Gateway com dois navegadores e carga adicional progressiva. Comparar snapshots a 2, 5, 10 e 20 Hz com interpolação, sem confundir essa frequência com FPS ou taxa de eventos críticos. Ações/marcos devem ser enviados prontamente; incluir esses envios extras no custo. Validar se 2–5 Hz realmente representam bem dash/pulo; não fixar taxa baixa apenas por economia.
+Validar primeiro WebSocket/API Gateway com dois navegadores. Como experimento técnico opcional, comparar snapshots a 2, 5, 10 e 20 Hz com interpolação e carga adicional progressiva; esses valores não são requisitos acadêmicos nem metas de FPS/latência. Ações/marcos devem ser enviados prontamente; incluir esses envios extras no custo. Validar se 2–5 Hz realmente representam bem dash/pulo; não fixar taxa baixa apenas por economia.
 
-Medir RTT p50/p95/p99, idade do estado recebido, fila de envio, atraso visual, perda de conexão, cold starts, throttling, invocações/escritas por partida e custo por 100 corridas. Simular atraso, jitter, perda de pacotes, Wi-Fi interrompido, aba suspensa, mensagem duplicada, logout, queda simultânea e chegada concorrente com desconexão. Testar lobby ocioso por mais de 10 minutos e expiração/renovação de conexão de 2 h; programar esse ensaio prolongado na etapa de implementação.
+Para diagnóstico, pode-se medir RTT p50/p95/p99, idade do estado recebido, fila de envio, atraso visual, perda de conexão, cold starts e throttling. Não há valor mínimo/máximo de aprovação da entrega para essas métricas. Invocações/escritas e custo por carga ajudam o dimensionamento de D08. Simular atraso, jitter, perda de pacotes, Wi-Fi interrompido, aba suspensa, mensagem duplicada, logout, queda simultânea e chegada concorrente com desconexão. Testar lobby ocioso por mais de 10 minutos e expiração/renovação de conexão de 2 h; programar esse ensaio prolongado na etapa de implementação.
 
-Os testes de resultado devem preservar créditos após morte sem duplicação, desempates, cronômetro contínuo, janela única de 20 s, DNF e derrota por queda confirmada. D09 define as metas numéricas e carga aceitas pela equipe; aprovar o protótipo exige esses limites e evidência, não apenas abrir um socket.
+Os testes de resultado devem preservar créditos após morte sem duplicação, desempates, cronômetro contínuo, janela única de 20 s, DNF e derrota por queda confirmada. A validação verifica essas regras e o funcionamento da corrida; D09 não impõe metas numéricas de desempenho. D04 ainda precisa fechar autoridade/sincronização/desconexão; D08 cobre orçamento e dimensionamento.
 
 Se falhar, identificar a causa: **Lambda/estado lento** pode justificar processo dedicado ainda com WebSocket; **bloqueio por perdas e necessidade de estados descartáveis** justifica comparar WebTransport; **custo de distribuição/pub-sub** justifica comparar MQTT/IoT Core com a mesma validação. Trocar protocolo sem isolar a causa pode preservar o problema.
 
@@ -93,7 +93,7 @@ Se falhar, identificar a causa: **Lambda/estado lento** pode justificar processo
 
 - Prazo para confirmar queda e tratamento de queda simultânea/falha de infraestrutura.
 - Duração máxima quando ninguém termina; 120 s não é esse limite no GDD.
-- Autoridade da simulação/resultado, metas de latência e custo, carga e taxa de snapshots aceitáveis.
+- Autoridade da simulação/resultado, carga e taxa de snapshots para operação (D04); orçamento e dimensionamento (D08). Não é necessário definir meta acadêmica de latência/FPS.
 - Qualquer permissão para retornar à corrida após queda exige revisão explícita do GDD §21.7.
 
 WebSocket fica recomendado para o protótipo; D04 permanece aberta para validação e regras. MQTT e WebTransport são alternativas estudadas, não novos serviços obrigatórios nem transportes a implementar simultaneamente.

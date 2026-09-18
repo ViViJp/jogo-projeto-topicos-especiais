@@ -21,7 +21,7 @@
 <text x="475" y="256" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">mesmas ações</text>
 <text x="1085" y="416" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">carrega</text>
 <text x="905" y="348" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">HTTPS</text>
-<text x="475" y="446" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">save local</text>
+<text x="475" y="446" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">estado / cache</text>
 <text x="738" y="455" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">tempo real</text>
 <text x="1275" y="432" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">autenticação</text>
 <text x="575" y="416" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">eventos</text>
@@ -41,7 +41,8 @@
 <rect x="962" y="316" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
 <text x="1120" y="366" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Microsserviços via HTTP API</text>
 <rect x="102" y="506" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
-<text x="260" y="556" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Save local / localStorage</text>
+<text x="260" y="546" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Estado visitante: sessão / cache:</text>
+<text x="260" y="566" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">conta autenticada</text>
 <rect x="532" y="506" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
 <text x="690" y="556" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Multiplayer: salas e resultados</text>
 <rect x="962" y="506" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>

@@ -85,6 +85,8 @@ Proposta de implementação para não perder operações críticas:
 
 O padrão outbox evita o problema de atualizar o banco e falhar antes de publicar o evento. A origem DynamoDB/Lambda pode entregar registros repetidos; processamento precisa ser idempotente. [Outbox](https://docs.aws.amazon.com/prescriptive-guidance/latest/cloud-design-patterns/transactional-outbox.html), [DynamoDB com Lambda](https://docs.aws.amazon.com/lambda/latest/dg/with-ddb.html). Streams retém registros por 24 horas; conservar itens de outbox permite recuperação além dessa janela. [Componentes DynamoDB](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/HowItWorks.CoreComponents.html).
 
+D06: visitante mantém campanha somente na sessão do navegador, sem save persistente ou histórico de campanha. Após autenticação, Campanha recebe o estado atual conforme D05 e registra a importação, sem eventos retroativos anteriores ao login. Cache persistente pertence à conta identificada.
+
 A confirmação HTTP de save significa campanha e evento durável registrados; a projeção de auditoria pode aparecer depois. O cliente não deve interpretar atraso de projeção como perda do save. Não enviar posições por frame à outbox, às filas de comunicação ou ao catálogo de auditoria.
 
 ## 5. DynamoDB: economia e crescimento
@@ -153,7 +155,7 @@ SES inicia em sandbox: envio apenas para endereços/domínios verificados ou sim
 - Definir limites de concorrência por microsserviço, throttling de API, retentativas com backoff e filas/DLQs. Isolamento reduz o efeito de pico multiplayer sobre save e comunicações; quotas da conta ainda são compartilhadas.
 - CloudWatch com retenção inicial proposta de 7 dias para logs operacionais dev e 14 dias em prod; auditoria tem retenção própria D06. Não registrar payloads completos, tokens ou tráfego de cada frame.
 - Monitorar créditos, data final do plano, chamadas, GB-s, tráfego, mensagens, throttling, DLQ e falhas de envio. Alarmes de orçamento avisam; **não são bloqueio garantido de cobrança**. [AWS Budgets](https://docs.aws.amazon.com/cost-management/latest/userguide/budgets-managing-costs.html).
-- Estimar o custo bruto além do desconto dos créditos. Teto mensal permanece D09; a ausência da conta não permite certificar custo zero. Crescimento deve ser acompanhado de orçamento, sem habilitar serviços pagos por conveniência.
+- Estimar o custo bruto além do desconto dos créditos. Teto mensal e dimensionamento permanecem em D08; a ausência da conta não permite certificar custo zero. Crescimento deve ser acompanhado de orçamento, sem habilitar serviços pagos por conveniência.
 
 ## 9. Implantação por serviço
 
@@ -166,6 +168,6 @@ CI pode usar o executor já disponível no repositório, sem manter servidor Jen
 - D08 parcialmente resolvida: AWS gerenciada/serverless e serviços base definidos; confirmar conta, elegibilidade, região final, plano CloudFront e associação da zona DNS, registrador/delegação do domínio, capacidade/quotas e integração IaC.
 - D04: WebSocket recomendado para protótipo pelo documento 13; testar hospedagem API Gateway/Lambda, autoridade, ritmo de mensagens, presença, duração máxima da corrida e desconexão. Não presumir reconexão com retorno após derrota.
 - D03/D07 aprovadas: salas privadas, canais, retenção e feedback SES/SNS no documento 14; compras sem e-mail. Implementação, medições e liberação SES ainda precisam ser executadas.
-- D09: teto de custo, carga e metas finais. D02/D05/D10 foram aprovadas; D11 tem sincronização por conta aprovada e cronograma opcional pendente. D12 foi aprovada: memória após último checkpoint e antes da retirada. D01/D06 continuam pendentes.
+- D09 resolvida: não há meta de latência/FPS exigida para a entrega final. Orçamento, carga de dimensionamento e limites operacionais ficam em D08; sincronização/carga multiplayer em D04. D02/D05/D10 foram aprovadas; D11 tem sincronização por conta aprovada e cronograma opcional pendente. D12 foi aprovada: memória após último checkpoint e antes da retirada. D01 continua pendente. D06 tem escopo aprovado: campanha persistente somente após login, sem histórico retroativo de visitante; retenção e acesso operacional ficam para detalhamento.
 
 As fontes oficiais foram consultadas nesta revisão. Preços e condições devem ser revalidados no momento de criação da conta e antes da implantação; esta documentação não substitui a fatura/estimativa regional da AWS.

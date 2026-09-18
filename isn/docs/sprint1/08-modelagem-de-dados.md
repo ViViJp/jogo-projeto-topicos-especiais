@@ -7,7 +7,7 @@ Modelo lógico proposto para ISN, agora mapeado para DynamoDB por microsserviço
 | Entidade | Identificação e atributos principais | Relação / restrição |
 | --- | --- | --- |
 | Usuário | `id`, `provider`, `providerSubject`, nome, e-mail, criação | Par provedor/subject único; e-mail não é identidade primária. |
-| Campanha | `id`, `userId`, `revision`, `schemaVersion`, `state`, atualização | Usuário tem zero ou uma campanha ativa; revisão muda a cada gravação. |
+| Campanha | `id`, `userId`, `revision`, `schemaVersion`, `state`, atualização | Usuário autenticado tem zero ou uma campanha ativa; revisão muda a cada gravação. Visitante não gera registro persistente de campanha. |
 | SnapshotPortão | Estado integral de campanha anterior à escolha | Zero ou um por campanha; não contém snapshot recursivo nem revisão de transporte. |
 | Notificação | `id`, `userId`, `eventKey`, categoria, conteúdo, alvo, criação, leitura, expiração | Usuário tem várias; leitura só pelo proprietário. D07 define 30 dias de exibição; deduplicação tem prazo próprio. |
 | PreferênciaComunicação | `userId`, categorias, canais, revisão | D07 aprovada, pertence a Comunicações; finais por e-mail desativados inicialmente. |
@@ -53,13 +53,14 @@ Estado transitório (posição por frame, créditos ainda não consolidados, ani
 4. Gravar campanha e evento de outbox na mesma transação do DynamoDB do serviço Campanha. Streams/publicador encaminha o evento ao serviço Auditoria por SQS, com deduplicação e recuperação. A projeção de auditoria é assíncrona; não confirmar save sem evento durável.
 5. Novo Jogo substitui estado da campanha após confirmação na interface; não apaga cosméticos independentes.
 6. Restauração pré-Portão copia estado narrativo anterior integralmente; revisão de transporte continua monotônica.
-7. Sincronização local pendente não deve ser apresentada como já gravada na nuvem. Importação recebe origem explícita; validar estrutura não prova legitimidade de cada ação offline.
+7. Sincronização pendente no cache da conta não deve ser apresentada como já gravada na nuvem. Importação recebe origem explícita e registra a vinculação do estado atual, sem reconstruir histórico anterior ao login (D06); validar estrutura não prova legitimidade de cada ação offline.
+8. Estado de visitante existe apenas na sessão; não persistir campanha/histórico de visitante no navegador ou no backend. Após autenticação e reconciliação D05, persistir sob a identidade autenticada. Fechar/recarregar sem login descarta esse estado.
 
 ## Invariantes das decisões aprovadas
 
 - Memória pendente e consolidada são estados diferentes. A mesma memória não ocupa ambos; retirada concluída exige sua memória consolidada e a ausência do implante. Persistir retirada/memória/corpo de forma atômica; reenvio não repete procedimento.
 - Morte, reinício manual e saída limpam apenas memória pendente, preservam retiradas e memórias anteriores e não incrementam retry. Carregamento de campanha após saída normaliza `pendingMemory` para nulo mesmo se o navegador não executou o salvamento de saída. Próxima fase da cadeia não pode permanecer habilitada com base numa coleta perdida. Checkpoint e gravação local/remota não consolidam por si sós.
-- O cache é identificado por ambiente e identidade da conta; visitante tem espaço próprio. Importar exige confirmação, revisão esperada e não muda o proprietário de cosméticos. Logout/troca de conta isola envios pendentes.
+- O cache é identificado por ambiente e identidade da conta; visitante tem estado temporário próprio, sem persistência entre sessões. Importar exige confirmação, revisão esperada e não muda o proprietário de cosméticos. Logout/troca de conta isola envios pendentes.
 - Aquisições cosméticas são itens por conta, separados de `state`, snapshot e reset. Proposta técnica: serviço Campanha possui esses itens na própria tabela, em chaves separadas da campanha, para transacionar débito, desbloqueio e outbox sem acesso a outra tabela de serviço. Reset/restauração/PUT de campanha não excluem nem criam esses itens. A reconciliação de saldo deve respeitar débitos já registrados; uma cópia antiga não estorna compras automaticamente.
 - Contrato e mapeamento físico da loja são propostas de implementação; sua propriedade/sincronização por conta estão aprovadas. Manter registro idempotente da operação e unicidade conta/item. Nenhuma aquisição concluída depende apenas de `localStorage`.
 

@@ -14,13 +14,13 @@ Esta matriz relaciona requisitos, regras, casos e diagramas. **Cobertura documen
 | RF-ISN-06 banco | RN01/10; UC04 | Modelo 08 e diagrama de dados | D05 aprovada; D08 pendente |
 | RF-ISN-07 modelo/arquitetura | RN01/08/10 | Documentos 05 e 08 | D04/D06/D08 |
 | RF-ISN-08 e-mail/notificações | RN10; UC07 | Central, e-mails seletivos e feedback; D07 aprovada | D08: liberação SES |
-| RF-ISN-09 operações críticas | RN10; UC08 | Catálogo de eventos, banco e API | D06 |
+| RF-ISN-09 operações críticas | RN01/10; UC02/04/08 | Catálogo de eventos, banco e API; campanha registrada após login, sem histórico retroativo de visitante (D06 aprovada) | D06: somente retenção/acesso operacional |
 | RF-ISN-10 dev/prod | RN10 | Diagrama de ambientes | D08 |
 | RF-ISN-11 IaC | RN10 | Pulumi para toda implantação em nuvem | D08 |
 | RF-ISN-12 CI/CD | RN10 | Fluxo de deploy com falhas | D08 |
-| Responsividade | RNF01; UC01/14 | Viewports, teclado/gamepad | D01/D09 |
-| Baixa latência | RNF02–04 | Critérios de medição da campanha/API/multiplayer | D04/D09 |
-| Custo mínimo | RNF05 | Estimativa por carga/serviço como critério | D08/D09 |
+| Responsividade | RNF01; UC01/14 | Viewports, teclado/gamepad; sem meta de FPS | D01 |
+| Baixa latência — orientação de qualidade | RNF02–04 | Funcionamento de campanha/API/multiplayer; sem meta numérica exigida na entrega (D09 resolvida) | D04: sincronização e operação |
+| Custo mínimo | RNF05 | Estimativa por carga/serviço como critério | D08 |
 
 ## Produto, GDD e cobertura
 
@@ -29,7 +29,7 @@ Esta matriz relaciona requisitos, regras, casos e diagramas. **Cobertura documen
 | Auto-runner, ações e hazards — GDD §14 | RF-J01 | RN02; UC03 | Entrada e loop gameplay |
 | Setores e implantes — §§14/16 | RF-J02 | RN04; UC05 | Clínica e campanha; corpo/implantes |
 | Créditos/checkpoints/anti-farming — §14.4/14.12 | RF-J03 | RN03; UC03/09 | Loop; IDs consolidados |
-| Save único, local e Novo Jogo — §20 | RF-J04 | RN01; UC04/09 | Login; campanha/snapshot |
+| Save único por conta e Novo Jogo — §20, atualizado por D06; visitante somente na sessão | RF-J04 | RN01; UC04/09 | Login; campanha/snapshot |
 | Sincronização por conta — extensão ISN | RF-J05 | RN01; UC02/04 | Nuvem; escolha explícita, revisão e cache por conta; D05 aprovada |
 | Portão e repetição dos finais — §18 | RF-J06 | RN05; UC06/12 | Campanha; snapshot pré-Portão |
 | Glitches/retirada/bioprinting — §§15/18 | RF-J07 | RN06; UC10/11 | Descida; perda por morte/reinício/saída antes da retirada e consolidação no procedimento; D10/D12 aprovadas; memória após último checkpoint |
@@ -60,7 +60,7 @@ Os identificadores atuais são a referência da documentação. UC13 trata multi
 | Área | Requisitos e conteúdo |
 | --- | --- |
 | Web, nuvem e identidade | RF-ISN-01–06; domínio no resumo/UC01; login e save RF-J04/05 |
-| Persistência e operação | Save local RF-J04/05 conforme GDD §20; comunicações/auditoria/ambientes RF-ISN-08–12 e RN10 |
+| Persistência e operação | Save por conta e cache local RF-J04/05; D06 substitui persistência de visitante do GDD §20; comunicações/auditoria/ambientes RF-ISN-08–12 e RN10 |
 | Gameplay e progressão | RF-J01/02/03; clínica sem escolha sim/não, movimento, implantes e créditos |
 | Campanha e finais | RF-J04/05/06; modelo completo de campanha e estado pré-Portão |
 | Multiplayer | RF-J11/14; login dos dois participantes, salas privadas e resultado persistido separado da campanha |
@@ -78,6 +78,9 @@ Especificação para a implementação futura, não testes executados nesta revi
 | D02 | Desconectar controle durante corrida multiplayer | Corrida continua; aviso/teclado; não registrar derrota por queda de periférico. |
 | D05 | Login com cópias divergentes; cancelar; depois escolher uma | Nenhuma sobrescrita ao cancelar; escolha explícita respeita revisão e proprietário, sem união automática. |
 | D05 | Trocar da conta A para B com alterações locais pendentes | Nenhum save, aquisição ou envio de A é associado a B; visitante continua separado. |
+| D06 | Jogar sem autenticar; fechar e reabrir o jogo | Campanha visitante descartada; nenhum save persistente nem histórico de campanha de visitante. |
+| D06 | Iniciar como visitante e autenticar durante a sessão; confirmar vinculação D05 | Progresso atual salvo na conta com importação auditada; nenhuma reconstrução das ações anteriores ao login. |
+| D06 | Autenticar com campanha remota divergente do progresso visitante | Solicitar escolha conforme D05; não sobrescrever automaticamente. Cancelar mantém visitante somente na sessão aberta. |
 | D10 | Coletar memória e morrer, reiniciar ou sair antes da retirada | Perder pendente, permitir recoleta; checkpoint não a protege e carregamento não a restaura. |
 | D10 | Retirar implante; depois morrer, reiniciar ou sair | Preservar memória consolidada, corpo e retirada; não exigir nova coleta nem repetir procedimento. |
 | D10 | Memória D1 consolidada e D2 pendente; morrer | Manter D1, perder somente D2; morte não consome retry nem quebra cadeia por si só. |

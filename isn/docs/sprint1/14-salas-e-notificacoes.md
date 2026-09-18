@@ -35,7 +35,7 @@ Todos os itens abaixo pertencem ao **serviço Partidas**, na tabela `matches`. C
 | Vínculo ativo | `PK=USER#id`, `SK=ACTIVE` | `matchId`, validade aplicável ao estado; liberação condicional |
 | Resumo de resultado | `PK=USER#id`, `SK=RESULT#data#matchId` | Resultado visível ao participante e referência à partida |
 
-Gerar código com fonte criptográfica e reservar sua chave com condição de inexistência; colisão gera novo código. Usar leitura direta do convite e da sala, sem `Scan`. O hash evita armazenar o código em texto no item de busca, mas o código continua sendo uma credencial de convite. Quem possui o código e autentica pode disputar a vaga; não é convite vinculado a uma pessoa específica. Não devolver dados privados apenas por conhecer o ID da partida. Restringir tentativas por conta, limite de criação e tamanho dos pedidos; definir limiares em D09.
+Gerar código com fonte criptográfica e reservar sua chave com condição de inexistência; colisão gera novo código. Usar leitura direta do convite e da sala, sem `Scan`. O hash evita armazenar o código em texto no item de busca, mas o código continua sendo uma credencial de convite. Quem possui o código e autentica pode disputar a vaga; não é convite vinculado a uma pessoa específica. Não devolver dados privados apenas por conhecer o ID da partida. Restringir tentativas por conta, limite de criação e tamanho dos pedidos; definir limites operacionais em D08, sem relação com meta de latência/FPS da entrega.
 
 Ingresso usa transação/condições: convite vigente e não consumido, sala aguardando e não expirada, segundo slot livre, usuário diferente do criador e sem outra partida ativa. Atualizar vaga, convite e vínculo do usuário na mesma operação; `operationId` permite reenvio idempotente. Duas pessoas simultâneas não podem ocupar a segunda vaga. Prontidão/largada também verificam revisão e dois participantes, com uma única transição para execução. [Transações DynamoDB](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/transaction-apis.html).
 
@@ -98,7 +98,7 @@ O custo total deve ser calculado na região escolhida, com créditos/franquias s
 
 - **D03 aprovada:** salas privadas por código/link, validade de 10 min, uma partida ativa por conta, cancelamento pré-largada, histórico privado de 30 dias e ausência inicial de busca pública.
 - **D07 aprovada:** categorias/canais da tabela, preferências, retenção, limite de tentativas e inclusão de SNS/SQS para feedback SES; compras geram aviso apenas no jogo, sem e-mail.
-- **D04/D09:** transporte validado, tratamento de desconexão, frequência e carga, limites de abuso e orçamento final. Compartilhar código não resolve sincronização da corrida.
+- **D04/D08:** transporte validado, tratamento de desconexão, frequência/carga de operação, limites de abuso e orçamento final. D09 está resolvida: não há metas de latência/FPS exigidas para a entrega. Compartilhar código não resolve sincronização da corrida.
 
 Critérios para implementação: dois ingressos concorrentes reservam uma única vaga; convite vencido é rejeitado mesmo antes do TTL; usuário não acessa resultado alheio; evento repetido não cria nova notificação; troca de conta não mistura central/preferências; falha de e-mail não bloqueia login, save, compra ou resultado.
 

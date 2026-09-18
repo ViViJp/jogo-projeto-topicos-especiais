@@ -15,8 +15,10 @@ Frontend, backend, banco e auditoria são partes do sistema, não atores externo
 **Ator:** Jogador. **Pré-condição:** navegador desktop e acesso ao site.
 
 1. Baixar frontend/assets sob demanda, inicializar Phaser e exibir Menu Principal.
-2. Verificar save local e dispositivos de entrada disponíveis.
-3. Oferecer Novo Jogo, Continue quando houver save, login e acesso ao modo multiplayer planejado.
+2. Verificar dispositivos de entrada e cache da conta, cujo uso exige autenticação da respectiva identidade; não carregar campanha persistente de visitante.
+3. Oferecer Novo Jogo, login e acesso ao modo multiplayer planejado; Continue fica disponível para campanha da conta autenticada ou progresso da sessão ainda aberta.
+
+Ao iniciar como visitante, informar que o progresso será perdido ao fechar/recarregar e que é necessário autenticar para salvá-lo na conta.
 
 **Alternativa:** falha no carregamento informa erro e permite tentar novamente.
 
@@ -29,7 +31,7 @@ Frontend, backend, banco e auditoria são partes do sistema, não atores externo
 1. Solicitar entrada com Google via Cognito; serviço Conta integra o fluxo gerenciado e valida a identidade antes de criar/associar o perfil.
 2. Criar/identificar conta, estabelecer sessão e registrar login.
 3. Se for primeiro cadastro, solicitar comunicações de boas-vindas (UC07), sem bloquear a sessão por falha de envio.
-4. Consultar campanha da conta e tratar cópia local conforme UC04/D05.
+4. Preservar o progresso visitante durante a autenticação; consultar campanha da conta e vincular o progresso da sessão conforme UC04/D05. Registrar a importação aceita, sem histórico retroativo anterior ao login (D06).
 5. Ao sair, invalidar a sessão e registrar logout.
 
 **Alternativas:** cancelamento/erro retorna ao menu; sessão expirada solicita novo login para recursos privados.
@@ -51,20 +53,20 @@ Frontend, backend, banco e auditoria são partes do sistema, não atores externo
 
 ## UC04 — Salvar, continuar e sincronizar campanha
 
-**Ator:** Jogador; autenticação exigida apenas para cópia na nuvem.
+**Ator:** Jogador; autenticação exigida para persistir campanha entre sessões, localmente na conta e na nuvem.
 
-1. Atualizar save local nos marcos persistentes: checkpoint, fim de fase, implantação, escolha narrativa, retry, retirada, final e retorno ao Portão.
+1. Atualizar estado da sessão e, somente se autenticado, cache local da conta nos marcos: checkpoint, fim de fase, implantação, escolha narrativa, retry, retirada, final e retorno ao Portão.
 2. Ao continuar, restaurar início/checkpoint, créditos consolidados, implantes e estado narrativo; descartar créditos transitórios.
 3. Se autenticado, enviar campanha e revisão esperada para API.
 4. Microsserviço Campanha valida proprietário, estrutura e transições; grava revisão e evento durável na mesma transação. Serviço Auditoria recebe o evento por fila; cliente confirma sincronização após a transação.
 
-**Alternativas:** visitante conserva save local; API indisponível mantém cópia local e informa sincronização pendente; revisão divergente impede sobrescrita automática e aciona resolução D05. Memória recém-recuperada permanece pendente até a retirada; morte, reinício manual ou saída anterior ao procedimento a remove (D10 aprovada). Ao carregar após saída, eliminar coleta pendente da sessão anterior; preservar memórias consolidadas.
+**Alternativas:** visitante mantém estado somente na sessão e perde a campanha ao fechar/recarregar; API indisponível após autenticação mantém cache da conta e informa sincronização pendente; revisão divergente impede sobrescrita automática e aciona resolução D05. Memória recém-recuperada permanece pendente até a retirada; morte, reinício manual ou saída anterior ao procedimento a remove (D10 aprovada). Ao carregar após saída, eliminar coleta pendente da sessão anterior; preservar memórias consolidadas.
 
-**Reconciliação aprovada (D05):** no login, carregar a campanha remota e identificar o cache da mesma conta e a cópia visitante, sem misturá-los. Quando houver conflito, apresentar as cópias e exigir escolha; importação visitante exige confirmação mesmo sem save remoto. Escolher local envia a revisão remota atual como condição; novo conflito exige nova escolha, não sobrescrita forçada. Escolher remoto exige confirmação antes de descartar divergências locais. Cancelar mantém ambas. Se as cópias coincidem, continuar normalmente.
+**Reconciliação aprovada (D05):** no login, carregar a campanha remota e identificar o cache da mesma conta e o progresso visitante da sessão atual, sem misturá-los. Quando houver conflito, apresentar as cópias e exigir escolha; importação visitante exige confirmação mesmo sem save remoto. Escolher local envia a revisão remota atual como condição; novo conflito exige nova escolha, não sobrescrita forçada. Escolher remoto exige confirmação antes de descartar divergências locais. Cancelar mantém a campanha remota e o progresso local em seu contexto; visitante continua somente na sessão aberta. Se as cópias coincidem, continuar normalmente.
 
-Manter visitante separado após importação; logout não transforma save da conta em visitante. Na troca de conta, isolar credenciais, cache e envios pendentes pela identidade original. Desbloqueios cosméticos vêm da conta e não da cópia da campanha escolhida.
+Após importação confirmada, continuar no contexto da conta; não criar save persistente de visitante. Logout não transforma save da conta em visitante. Na troca de conta, isolar credenciais, cache e envios pendentes pela identidade original. Desbloqueios cosméticos vêm da conta e não da cópia da campanha escolhida.
 
-**Pós-condição:** um save ativo por contexto local/conta; não há criação de slots adicionais.
+**Pós-condição:** uma campanha ativa por conta autenticada, ou progresso temporário de visitante na sessão; sem slots adicionais nem auditoria retroativa das ações de visitante.
 
 ## UC05 — Receber implante na clínica
 
@@ -219,7 +221,7 @@ flowchart LR
   google["Provedor de identidade"]
   mail["Provedor de e-mail"]
   campanha["UC01/03/05/06/09/10/11/12: campanha e menus"]
-  save["UC04: save local e sincronização"]
+  save["UC04: progresso da sessão / save por conta"]
   login["UC02: autenticar e sair"]
   servicos["UC07/08: comunicações e auditoria"]
   multi["UC13: multiplayer"]

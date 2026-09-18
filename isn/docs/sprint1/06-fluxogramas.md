@@ -8,21 +8,22 @@ Os diagramas descrevem o sistema planejado, não comprovam implementação. Prop
 
 ## 1. Login, save local e comunicações
 
-D05 aprovada: comparar saves e exigir escolha explícita em conflito/importação, com revisão e cache isolado por conta. Cancelar preserva cópias; visitante permanece separado após importação. Troca de conta não transfere envios nem cosméticos. Ao continuar após saída, memória pendente é descartada (D10). Primeiro cadastro dispara comunicação D07 sem bloquear a campanha.
+D06 aprovada: sem login, campanha apenas na sessão; fechar/recarregar descarta progresso. Preservar estado durante autenticação e vincular à conta conforme D05: comparar cópias, confirmar importação e exigir escolha em conflito. Cache persistente isolado por conta; auditar importação aceita, sem histórico anterior ao login. Cancelar mantém visitante somente na sessão aberta. Troca de conta não transfere envios nem cosméticos. Descartar memória pendente apenas ao retomar após saída (D10), não ao autenticar na mesma sessão. Primeiro cadastro dispara comunicação D07 sem bloquear a campanha.
 
 ```mermaid
 flowchart TD
   start(["Abrir site / menu"])
   login{"Entrar na conta?"}
-  local["Carregar ou criar save local"]
+  local["Jogar como visitante: apenas nesta sessão"]
   provider["Autenticar: Cognito + Google"]
   ok{"Login válido?"}
   account["Identificar conta e auditar"]
   first{"Primeiro cadastro?"}
   resolve["Comparar cópias / confirmar escolha"]
   send["Solicitar e-mail + notificação sem bloquear"]
-  play(["Descartar memória pendente da sessão anterior; continuar"])
+  play(["Continuar; limpar memória pendente se nova sessão"])
   commDone(["Fim da tarefa de comunicação"])
+  persist["Salvar na conta e auditar importação aceita"]
   start --> login
   login -->|"não"| local
   local --> play
@@ -33,16 +34,19 @@ flowchart TD
   account --> first
   account -->|"carregar"| resolve
   first -->|"sim"| send
-  resolve -->|"após reconciliação"| play
   first -->|"não"| commDone
   send --> commDone
+  resolve -->|"confirmada"| persist
+  persist --> play
+  resolve -->|"cancelar: preservar contexto"| play
+  local -->|"login durante sessão"| provider
 ```
 
 ![Login, save local e comunicações](../imagens/fluxo-login.svg)
 
 ## 2. Loop da fase e persistência
 
-Checkpoint e fim de fase são avaliados mesmo sem obstáculos. Na campanha, créditos não consolidados se perdem na morte; o modo multiplayer usa a regra própria RN08. A descida não contém créditos comuns. Após morte, scan do trecho volta a oculto.
+Checkpoint e fim de fase são avaliados mesmo sem obstáculos. Na campanha, créditos não consolidados se perdem na morte; o modo multiplayer usa a regra própria RN08. A descida não contém créditos comuns. Após morte, scan do trecho volta a oculto. D06: salvamento persistente somente após autenticação; para visitante, marcos e snapshot existem apenas na sessão e são descartados ao fechar/recarregar.
 
 ```mermaid
 flowchart TD
@@ -78,7 +82,7 @@ flowchart TD
 
 ## 3. Clínica, implante e próxima fase
 
-O procedimento acontece sem escolha de aceitar/recusar. Aceitação de Alex é narrativa. Save local permanece conforme GDD; sincronização em nuvem só para autenticado, sem bloquear gameplay por falha de rede.
+O procedimento acontece sem escolha de aceitar/recusar. Aceitação de Alex é narrativa. D06: atualizar estado da sessão; persistir cache e sincronizar na nuvem somente para conta autenticada. Visitante perde campanha ao fechar/recarregar. Falha de rede mantém cache da conta e pendência, sem bloquear gameplay.
 
 ```mermaid
 flowchart TD
@@ -86,7 +90,7 @@ flowchart TD
   scene["George: procedimento sem escolha sim/não"]
   implant["Instalar implante da fase"]
   ability["Atualizar corpo e habilidade"]
-  local["Salvar localmente"]
+  local["Atualizar sessão; cache só se autenticado"]
   auth{"Autenticado?"}
   sync["Sincronizar e auditar no backend"]
   next(["Seguir para próxima fase"])
@@ -107,7 +111,7 @@ flowchart TD
 
 ## 4. Campanha completa e finais
 
-A descida usa a ordem e o retry do fluxo específico. Snapshot pré-Portão permanece separado; restauração integral permite repetir a escolha. Corpo de Hollow é o estado preservado na quebra, sem novas retiradas.
+A descida usa a ordem e o retry do fluxo específico. Snapshot pré-Portão permanece separado; restauração integral permite repetir a escolha. Corpo de Hollow é o estado preservado na quebra, sem novas retiradas. D06: salvamento persistente somente após autenticação; para visitante, marcos e snapshot existem apenas na sessão e são descartados ao fechar/recarregar.
 
 ```mermaid
 flowchart TD
@@ -144,7 +148,7 @@ flowchart TD
 
 ## 5. Descida — memória, retry e retirada
 
-D10 aprovada: memória fica pendente até a retirada do implante da fase. Morte, reinício manual ou saída antes disso apagam a pendente e exigem recoleta; checkpoint não consolida. Retirada consolida memória, corpo e perda de habilidade juntos; memórias anteriores sobrevivem. Morte/saída/reinício não consomem retry por si sós. Retorno segue RN01/RN03; D12 aprovada: todas as memórias após o último checkpoint e antes da área de retirada, permitindo recoleta. D1 Topo/propulsores → D2 Corporativo/olhos → D3 Urbano/braços → D4 Industrial/pernas. George recusa ajuda somente na primeira etapa.
+D10 aprovada: memória fica pendente até a retirada do implante da fase. Morte, reinício manual ou saída antes disso apagam a pendente e exigem recoleta; checkpoint não consolida. Retirada consolida memória, corpo e perda de habilidade juntos; memórias anteriores sobrevivem. Morte/saída/reinício não consomem retry por si sós. Retorno segue RN01/RN03; D12 aprovada: todas as memórias após o último checkpoint e antes da área de retirada, permitindo recoleta. D1 Topo/propulsores → D2 Corporativo/olhos → D3 Urbano/braços → D4 Industrial/pernas. George recusa ajuda somente na primeira etapa. D06: salvamento persistente somente após autenticação; para visitante, marcos e snapshot existem apenas na sessão e são descartados ao fechar/recarregar.
 
 ```mermaid
 flowchart TD

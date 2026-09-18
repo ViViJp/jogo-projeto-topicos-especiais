@@ -26,6 +26,8 @@ Um HTTP API por ambiente encaminha `/auth/*` e `/me` a Conta; `/me/campaign*` e,
 
 ## Campanha
 
+Todas as rotas de campanha exigem sessão autenticada; sem sessão, responder `401` e não criar registro de campanha. D06: após login, o estado da sessão visitante pode ser vinculado pela rota PUT com `source: guest-import`, respeitando confirmação/conflitos D05. Auditar a importação aceita, sem envio de histórico retroativo de visitante. Antes do login, a campanha existe apenas na sessão do navegador e é perdida ao fechar/recarregar. Cache persistente é exclusivo da conta autenticada; salvar apenas no navegador não confirma gravação na nuvem.
+
 | Método e rota | Entrada | Saída / efeitos |
 | --- | --- | --- |
 | `GET /me/campaign` | Sessão | `200` com campanha, estado, versão e revisão; `404` sem save. |

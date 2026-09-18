@@ -117,7 +117,7 @@ flowchart TD
 
 ## 3. Visão geral — jogo, serviços e nuvem
 
-Visão de contexto; detalhamento físico nos diagramas AWS. Conta, Campanha, Partidas, Auditoria e Comunicações são microsserviços independentes em Lambda, com tabelas DynamoDB próprias. S3/CloudFront entregam o jogo; Cognito/Google autenticam. Sincronização multiplayer continua sujeita à prova D04.
+Visão de contexto; detalhamento físico nos diagramas AWS. Conta, Campanha, Partidas, Auditoria e Comunicações são microsserviços independentes em Lambda, com tabelas DynamoDB próprias. S3/CloudFront entregam o jogo; Cognito/Google autenticam. Sincronização multiplayer continua sujeita à prova D04. D06: visitante joga somente na sessão, sem save persistente; login permite vincular progresso à conta conforme D05, sem histórico retroativo.
 
 ```mermaid
 flowchart TD
@@ -127,7 +127,7 @@ flowchart TD
   input["Ações de entrada comuns"]
   browser["Navegador: Phaser"]
   api["Microsserviços via HTTP API"]
-  local["Save local / localStorage"]
+  local["Estado visitante: sessão / cache: conta autenticada"]
   multi["Multiplayer: salas e resultados"]
   db["DynamoDB: tabelas por serviço"]
   google["Cognito + Google"]
@@ -138,7 +138,7 @@ flowchart TD
   input --> browser
   browser -->|"carrega"| static
   browser -->|"HTTPS"| api
-  browser -->|"save local"| local
+  browser -->|"estado / cache"| local
   browser -.->|"tempo real"| multi
   api --> db
   api -->|"autenticação"| google
@@ -195,7 +195,7 @@ flowchart TD
 
 ## 5. Ambientes e implantação
 
-Pulumi mantém base e serviços independentes por ambiente. Dev local é padrão; dev em nuvem é temporário e isolado de produção. AWS gerenciada/Lambda/DynamoDB são a base; conta ainda não criada, com elegibilidade, capacidade e orçamento em D08/D09. Não provisionar compute ocioso como requisito de microsserviços. Base DNS/HTTPS compartilhada via Route 53 e ACM; subdomínios de dev não exigem nova zona pública.
+Pulumi mantém base e serviços independentes por ambiente. Dev local é padrão; dev em nuvem é temporário e isolado de produção. AWS gerenciada/Lambda/DynamoDB são a base; conta ainda não criada, com elegibilidade, capacidade e orçamento em D08. Não provisionar compute ocioso como requisito de microsserviços. Base DNS/HTTPS compartilhada via Route 53 e ACM; subdomínios de dev não exigem nova zona pública.
 
 ```mermaid
 flowchart TD
@@ -291,7 +291,7 @@ flowchart TD
 
 ## 8. Modelo lógico — cardinalidades e separação de dados
 
-Detalhes no documento 08. D05 aprova isolamento por conta. D10 separa memória pendente e consolidada pela retirada. D11 aprova aquisições cosméticas por conta, independentes de campanha/snapshot/reset; loja continua opcional. Proposta física: itens de aquisições separados na tabela do serviço Campanha, para débito/desbloqueio/outbox consistentes. D03/D07 aprovadas: histórico privado e central por conta, ambos com 30 dias de exibição; deduplicação tem retenção própria. Implementação da loja permanece opcional. Compra não gera entrega de e-mail.
+Detalhes no documento 08. D05 aprova isolamento por conta. D10 separa memória pendente e consolidada pela retirada. D11 aprova aquisições cosméticas por conta, independentes de campanha/snapshot/reset; loja continua opcional. Proposta física: itens de aquisições separados na tabela do serviço Campanha, para débito/desbloqueio/outbox consistentes. D03/D07 aprovadas: histórico privado e central por conta, ambos com 30 dias de exibição; deduplicação tem retenção própria. Implementação da loja permanece opcional. Compra não gera entrega de e-mail. D06: Campanha persistente pertence apenas à conta autenticada; visitante não gera registro e perde progresso ao fechar/recarregar. Importação registra estado atual, sem histórico retroativo.
 
 ```mermaid
 flowchart TD
