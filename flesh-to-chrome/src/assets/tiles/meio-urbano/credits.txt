@@ -1,0 +1,19 @@
+Meio Urbano — Flesh to Chrome (Fase 3)
+
+INTERIM (até importar pack urbano dedicado):
+- tileset-interim.png — Industrial 1C cyber (Atomic Realm)
+- backgrounds/ — parallax interim
+
+OPCIONAL — Future City 27 (knekko, CC0):
+Baixe em https://opengameart.org/content/future-city-27
+Coloque em public/assets/tiles/_downloads/:
+  future_city_27_gritty.png  (recomendado — slum/cyberpunk)
+  alley-tiles.png
+  urban-characters.png (renomeie characters.png)
+Rode: python3 scripts/setup_meio_urbano.py
+
+OPCIONAL — Kenney RPG Urban Kit (CC0):
+https://kenney-assets.itch.io/rpg-urban-kit
+Zip em _downloads/kenney_rpgUrbanKit.zip → import_tilesets.py
+
+GDD Fase 3: ataque, bandido, drone, objetos quebráveis

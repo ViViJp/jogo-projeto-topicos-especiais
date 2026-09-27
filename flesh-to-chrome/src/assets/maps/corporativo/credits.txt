@@ -1,0 +1,5 @@
+Fase 4 — Corporativo (Tiled)
+Layout: levelDesign.md Fase 4 + GDD §16.4
+Tileset: Industrial 1B + parallax bulkhead
+Objects: scan_reveal, laser, auto_door, propaganda_pai
+Regenerar: python3 scripts/generate_tiled_maps.py --fase 4
