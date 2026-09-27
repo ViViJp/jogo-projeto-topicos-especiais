@@ -30,9 +30,18 @@ export class ClinicScene extends Phaser.Scene {
   create(): void {
     this.cameras.main.setBackgroundColor(0x120a1a);
 
-    const implantKey: keyof AbilityState = "legs"; // apenas Fase 1 chega aqui neste protótipo
-    const implantLabel = "pernas mecânicas";
-    const abilityLabel = "salto duplo";
+    const implantByPhase: Record<string, { key: keyof AbilityState; label: string; ability: string }> = {
+      fase1: { key: "legs", label: "pernas mecânicas", ability: "salto duplo" },
+      "fase2-intro": { key: "arms", label: "braços mecânicos", ability: "ataque e quebra" },
+    };
+    const implant = implantByPhase[this.data$.completedPhaseId] ?? {
+      key: "legs" as keyof AbilityState,
+      label: "pernas mecânicas",
+      ability: "salto duplo",
+    };
+    const implantKey = implant.key;
+    const implantLabel = implant.label;
+    const abilityLabel = implant.ability;
 
     const save = SaveState.load();
     const newAbilities: AbilityState = { ...this.data$.abilities, [implantKey]: true };

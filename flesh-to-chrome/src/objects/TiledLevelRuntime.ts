@@ -346,7 +346,17 @@ export class TiledLevelRuntime {
 
   /** Colisão/overlap do jogador com o chão e os perigos reais do tilemap. */
   registerPhysics(player: Player): void {
-    this.scene.physics.add.collider(player.sprite, this.groundLayer);
+    this.scene.physics.add.collider(player.sprite, this.groundLayer, () => {
+      const body = player.sprite.body as Phaser.Physics.Arcade.Body | null;
+      if (!body) return;
+      // Pisar no topo é a colisão normal do runner. Colisão lateral ou
+      // contra a parte inferior de um tile sólido representa parede/teto e
+      // é fatal: a regra do jogo é 1 hit = morte para qualquer elemento
+      // que realmente gere colisão.
+      if (body.blocked.left || body.blocked.right || body.blocked.up) {
+        player.kill();
+      }
+    });
     if (this.hazardsLayer) {
       this.scene.physics.add.overlap(player.sprite, this.hazardsLayer, (_obj, tileObj) => {
         const tile = tileObj as unknown as Phaser.Tilemaps.Tile;
