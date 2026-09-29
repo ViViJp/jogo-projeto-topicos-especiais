@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { SCREEN_WIDTH, SCREEN_HEIGHT } from "../config/GameConfig";
+import { InputManager } from "../systems/InputManager";
 
 /**
  * Stub da `MultiplayerScene` prevista na seção 22.2 do GDD.
@@ -9,17 +10,22 @@ import { SCREEN_WIDTH, SCREEN_HEIGHT } from "../config/GameConfig";
  * estrutura de cenas do projeto já corresponda à Seção 22 do GDD.
  */
 export class MultiplayerScene extends Phaser.Scene {
+  private input$!: InputManager;
+  private returning = false;
+
   constructor() {
     super("MultiplayerScene");
   }
 
   create(): void {
     this.cameras.main.setBackgroundColor(0x05050a);
+    this.input$ = new InputManager(this);
+    this.returning = false;
     this.add
       .text(
         SCREEN_WIDTH / 2,
         SCREEN_HEIGHT / 2,
-        "Multiplayer — Marco 5 (pós-MVP)\nNão implementado neste protótipo.\n\nENTER para voltar",
+        "Multiplayer — Marco 5 (pós-MVP)\nNão implementado neste protótipo.\n\nENTER / A para voltar",
         {
           fontFamily: "Courier New, monospace",
           fontSize: "22px",
@@ -29,6 +35,18 @@ export class MultiplayerScene extends Phaser.Scene {
       )
       .setOrigin(0.5);
 
-    this.input.keyboard?.once("keydown-ENTER", () => this.scene.start("MenuScene"));
+  }
+
+  update(): void {
+    if (this.input$.isConfirmJustDown()) {
+      this.backToMenu();
+    }
+    this.input$.postUpdate();
+  }
+
+  private backToMenu(): void {
+    if (this.returning) return;
+    this.returning = true;
+    this.scene.start("MenuScene");
   }
 }

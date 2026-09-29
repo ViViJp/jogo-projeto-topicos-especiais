@@ -1113,6 +1113,22 @@ Continuar do Portão restaura integralmente o estado anterior à escolha.
 ### Confirmar
 - `Enter`
 
+## 19.1.1 Controle USB
+
+O jogo aceita controles no padrão Web Gamepad e controles USB retrô com layout A/B/X/Y, direcional, Start, Select, L1 e R1.
+
+- **Pulo / salto duplo:** `A` ou direcional `↑`
+- **Slide:** `B`, `L1` ou direcional `↓`
+- **Ataque:** `X`
+- **Scan:** `Y` ou `Select`
+- **Dash:** `R1`
+- **Pausa:** `Start`
+- **Confirmar:** `A`
+- **Cancelar / voltar em menus:** `B` ou `Select`
+- **Navegação de menus:** direcional
+
+Como Flesh to Chrome é um auto-runner, Alex continua correndo automaticamente; esquerda e direita são usadas na navegação dos menus. O jogo detecta automaticamente o perfil USB/SNES e também aceita direcionais expostos pelo navegador como eixos.
+
 ## 19.2 Pausa
 
 ### Campanha
