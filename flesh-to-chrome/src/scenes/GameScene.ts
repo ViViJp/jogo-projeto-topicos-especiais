@@ -7,7 +7,7 @@ import { HUD } from "../systems/HUD";
 import { SaveState } from "../systems/SaveState";
 import { Player } from "../entities/Player";
 import { LevelRuntime } from "../objects/LevelRuntime";
-import { TiledLevelRuntime } from "../objects/TiledLevelRuntime";
+import { TILED_CHECKPOINT_TEXTURE_KEY, TiledLevelRuntime } from "../objects/TiledLevelRuntime";
 import { TiledPhase3Runtime } from "../objects/TiledPhase3Runtime";
 import { TILED_FASE3_MAP_KEY, TILED_FASE3_TILESET_KEY, TILED_FASE3_MAP_DATA } from "../levels/TiledFase3";
 import { LEVELS, getNextPhaseId } from "../levels";
@@ -144,6 +144,9 @@ export class GameScene extends Phaser.Scene {
       if (!this.textures.exists("enemy-drone")) {
         this.load.spritesheet("enemy-drone", this.enemyDroneUrl().href, { frameWidth: 32, frameHeight: 32 });
       }
+      if (!this.textures.exists(TILED_CHECKPOINT_TEXTURE_KEY)) {
+        this.load.image(TILED_CHECKPOINT_TEXTURE_KEY, this.checkpointTvUrl().href);
+      }
       if (!this.cache.tilemap.exists(TILED_FASE1_MAP_KEY)) {
         this.cache.tilemap.add(TILED_FASE1_MAP_KEY, {
           format: Phaser.Tilemaps.Formats.TILED_JSON,
@@ -185,6 +188,10 @@ export class GameScene extends Phaser.Scene {
 
   private enemyDroneUrl(): URL {
     return new URL("../assets/npcs/enemies/drone/drone.png", import.meta.url);
+  }
+
+  private checkpointTvUrl(): URL {
+    return new URL("../assets/props/checkpoint/tv-checkpoint.png", import.meta.url);
   }
 
   private phase3TilesetUrl(): URL {

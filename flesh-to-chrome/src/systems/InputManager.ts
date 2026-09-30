@@ -37,7 +37,6 @@ export class InputManager {
   }
 
   private anyJustDown(action: GameAction): boolean {
-    const eventPressed = this.justPressed[action] === true;
     const keys = this.keys[action];
     const viaKeyboard = keys?.some((key) => Phaser.Input.Keyboard.JustDown(key)) ?? false;
     return viaKeyboard || this.isGamepadJustDown(action);
@@ -156,6 +155,5 @@ export class InputManager {
     this.snapshotGamepadState();
     this.consumedGamepadActions.clear();
     this.attackPointerJustDown = false;
-    this.justPressed = {};
   }
 }
