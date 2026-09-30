@@ -7,7 +7,7 @@ export const LEVELS: Record<string, LevelData> = {
   [PHASE_2_INTRO.id]: PHASE_2_INTRO,
 };
 
-export const PHASE_ORDER = [PHASE_1.id, PHASE_2_INTRO.id];
+export const PHASE_ORDER = [PHASE_1.id, PHASE_2_INTRO.id, "fase3"];
 
 export function getNextPhaseId(currentId: string): string | null {
   const idx = PHASE_ORDER.indexOf(currentId);
