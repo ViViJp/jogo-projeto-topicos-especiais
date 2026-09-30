@@ -11,6 +11,9 @@ import { AbilityState } from "../systems/AbilityState";
 import { InputManager } from "../systems/InputManager";
 import { ALEX_TEXTURE_KEY, ALEX_RUN_ANIM, ALEX_SLIDE_FRAME, ensureAlexAnimations } from "../utils/AlexSprite";
 
+const ALEX_EYES_TEXTURE_KEY = "alex-eyes";
+const ALEX_EYES_RUN_ANIM = "alex-eyes-run";
+
 export type PlayerState =
   | "running"
   | "jumping"
@@ -49,6 +52,7 @@ export class Player {
   private onDeath: () => void;
   private onScanPulse: (active: boolean) => void;
   private currentBreakable: Phaser.GameObjects.GameObject | null = null;
+  private visorFx?: Phaser.GameObjects.Graphics;
 
   constructor(
     scene: Phaser.Scene,
@@ -65,10 +69,19 @@ export class Player {
     this.onScanPulse = callbacks.onScanPulse;
 
     ensureAlexAnimations(scene);
-    this.sprite = scene.physics.add.sprite(x, y, ALEX_TEXTURE_KEY);
+    if (abilities.eyes && scene.textures.exists(ALEX_EYES_TEXTURE_KEY) && !scene.anims.exists(ALEX_EYES_RUN_ANIM)) {
+      scene.anims.create({
+        key: ALEX_EYES_RUN_ANIM,
+        frames: scene.anims.generateFrameNumbers(ALEX_EYES_TEXTURE_KEY, { start: 11 * 13, end: 11 * 13 + 8 }),
+        frameRate: 12,
+        repeat: -1,
+      });
+    }
+    this.sprite = scene.physics.add.sprite(x, y, abilities.eyes && scene.textures.exists(ALEX_EYES_TEXTURE_KEY) ? ALEX_EYES_TEXTURE_KEY : ALEX_TEXTURE_KEY);
     this.sprite.setOrigin(0.5, 1);
     this.sprite.setCollideWorldBounds(false);
     this.applyRunningPose();
+    this.createVisorFx();
 
     this.sprite.setVelocityX(BASE_RUN_SPEED);
   }
@@ -110,6 +123,7 @@ export class Player {
     if (this.state === "dead") return;
 
     this.updateTimers(deltaMs);
+    this.updateVisorFx();
 
     if (this.state === "pressed") {
       if (this.input.isAttackJustDown() && this.abilities.arms) {
@@ -220,8 +234,25 @@ export class Player {
    * "slide atravessa o chão"), agora com os números certos para a arte
    * final em vez do retângulo placeholder.
    */
+  private createVisorFx(): void {
+    if (!this.abilities.eyes) return;
+    this.visorFx?.destroy();
+    this.visorFx = this.scene.add.graphics();
+    this.visorFx.setDepth(this.sprite.depth + 3);
+    this.visorFx.lineStyle(2, 0x36e2ff, 0.95);
+    this.visorFx.fillStyle(0x36e2ff, 0.16);
+    this.visorFx.fillRoundedRect(-8, -55, 18, 8, 3);
+    this.visorFx.strokeRoundedRect(-8, -55, 18, 8, 3);
+  }
+
+  private updateVisorFx(): void {
+    if (!this.visorFx) return;
+    this.visorFx.setPosition(this.sprite.x + 10, this.sprite.y);
+    this.visorFx.setVisible(this.state !== "dead");
+  }
+
   private applyRunningPose(): void {
-    this.sprite.anims.play(ALEX_RUN_ANIM, true);
+    this.sprite.anims.play(this.sprite.texture.key === ALEX_EYES_TEXTURE_KEY ? ALEX_EYES_RUN_ANIM : ALEX_RUN_ANIM, true);
     this.sprite.body!.setSize(PLAYER_SIZE.width, PLAYER_SIZE.height);
     this.sprite.body!.setOffset(PLAYER_BODY_OFFSET.x, PLAYER_BODY_OFFSET.y);
   }
@@ -244,6 +275,7 @@ export class Player {
     this.state = "attacking";
     this.attackRecoveryTimer = PHYSICS.attack.recoveryMs;
     this.scene.events.emit("player-attack", this.sprite.x, this.sprite.y);
+    this.showAttackFeedback();
 
     this.scene.time.delayedCall(PHYSICS.attack.animDurationMs, () => {
       if (this.state === "attacking") {
@@ -261,7 +293,40 @@ export class Player {
 
     this.scanTimer = PHYSICS.scan.durationMs;
     this.onScanPulse(true);
+    this.showScanFeedback();
     if (this.state === "running") this.state = "scanning";
+  }
+
+  private showAttackFeedback(): void {
+    const g = this.scene.add.graphics();
+    g.setDepth(this.sprite.depth + 2);
+    const y = this.sprite.y - 34;
+    g.lineStyle(5, 0x7cfcea, 1);
+    g.beginPath();
+    g.arc(this.sprite.x + 24, y, 30, Phaser.Math.DegToRad(-55), Phaser.Math.DegToRad(55));
+    g.strokePath();
+    this.scene.tweens.add({
+      targets: g,
+      alpha: 0,
+      x: 12,
+      duration: 140,
+      onComplete: () => g.destroy(),
+    });
+  }
+
+  private showScanFeedback(): void {
+    const ring = this.scene.add.circle(this.sprite.x, this.sprite.y - 30, 18, 0x36e2ff, 0.08);
+    ring.setStrokeStyle(3, 0x36e2ff, 0.95);
+    ring.setDepth(this.sprite.depth + 1);
+    this.scene.tweens.add({
+      targets: ring,
+      radius: 220,
+      alpha: 0,
+      duration: PHYSICS.scan.durationMs,
+      ease: "Cubic.easeOut",
+      onUpdate: () => ring.setPosition(this.sprite.x, this.sprite.y - 30),
+      onComplete: () => ring.destroy(),
+    });
   }
 
   // ---- Dash (seção 14.10) ----
@@ -285,6 +350,7 @@ export class Player {
   }
 
   destroy(): void {
+    this.visorFx?.destroy();
     this.sprite.destroy();
   }
 }

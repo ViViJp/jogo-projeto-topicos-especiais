@@ -9,6 +9,7 @@ import { KEY_BINDINGS, GameAction } from "../config/Controls";
  */
 export class InputManager {
   private keys: Partial<Record<GameAction, Phaser.Input.Keyboard.Key[]>> = {};
+  private justPressed: Partial<Record<GameAction, boolean>> = {};
   private attackPointerJustDown = false;
 
   constructor(scene: Phaser.Scene) {
@@ -19,6 +20,11 @@ export class InputManager {
       this.keys[action] = KEY_BINDINGS[action].map((code) =>
         keyboard.addKey(Phaser.Input.Keyboard.KeyCodes[code as keyof typeof Phaser.Input.Keyboard.KeyCodes])
       );
+      for (const code of KEY_BINDINGS[action]) {
+        scene.input.keyboard?.on(`keydown-${code}`, () => {
+          this.justPressed[action] = true;
+        });
+      }
     });
 
     scene.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
@@ -29,9 +35,10 @@ export class InputManager {
   }
 
   private anyJustDown(action: GameAction): boolean {
+    const eventPressed = this.justPressed[action] === true;
     const keys = this.keys[action];
-    if (!keys) return false;
-    return keys.some((k) => Phaser.Input.Keyboard.JustDown(k));
+    const keyPressed = !!keys?.some((k) => Phaser.Input.Keyboard.JustDown(k));
+    return eventPressed || keyPressed;
   }
 
   private anyIsDown(action: GameAction): boolean {
@@ -73,5 +80,6 @@ export class InputManager {
   /** Deve ser chamado ao final de cada update() da cena para "consumir" eventos de pointer discretos. */
   postUpdate(): void {
     this.attackPointerJustDown = false;
+    this.justPressed = {};
   }
 }
