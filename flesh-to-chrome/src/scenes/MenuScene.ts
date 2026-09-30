@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { SCREEN_WIDTH, SCREEN_HEIGHT } from "../config/GameConfig";
+import { InputManager } from "../systems/InputManager";
 import { SaveState } from "../systems/SaveState";
 import { GameSceneData } from "./GameScene";
 
@@ -9,6 +10,7 @@ interface MenuOption {
 }
 
 export class MenuScene extends Phaser.Scene {
+  private input$!: InputManager;
   private options: MenuOption[] = [];
   private optionTexts: Phaser.GameObjects.Text[] = [];
   private selectedIndex = 0;
@@ -21,6 +23,8 @@ export class MenuScene extends Phaser.Scene {
 
   create(): void {
     this.cameras.main.setBackgroundColor(0x05050a);
+    this.input$ = new InputManager(this);
+    this.optionTexts = [];
 
     this.add
       .text(SCREEN_WIDTH / 2, 150, "FLESH TO CHROME", {
@@ -63,19 +67,35 @@ export class MenuScene extends Phaser.Scene {
 
     this.setSelected(0);
 
-    this.input.keyboard?.on("keydown-UP", () => this.setSelected((this.selectedIndex - 1 + this.options.length) % this.options.length));
-    this.input.keyboard?.on("keydown-DOWN", () => this.setSelected((this.selectedIndex + 1) % this.options.length));
-    this.input.keyboard?.on("keydown-W", () => this.setSelected((this.selectedIndex - 1 + this.options.length) % this.options.length));
-    this.input.keyboard?.on("keydown-S", () => this.setSelected((this.selectedIndex + 1) % this.options.length));
-    this.input.keyboard?.on("keydown-ENTER", () => this.confirmSelection());
-
     this.add
-      .text(SCREEN_WIDTH / 2, SCREEN_HEIGHT - 40, "↑↓ / W S navegar   ENTER confirmar", {
+      .text(SCREEN_WIDTH / 2, SCREEN_HEIGHT - 40, "↑↓ / W S ou DIRECIONAL navegar   ENTER / A confirmar", {
         fontFamily: "Courier New, monospace",
         fontSize: "14px",
         color: "#565f80",
       })
       .setOrigin(0.5);
+  }
+
+  update(): void {
+    if (this.confirmVisible) {
+      if (this.input$.isCancelJustDown()) {
+        this.hideConfirm();
+      } else if (this.input$.isConfirmJustDown()) {
+        this.confirmNewGame();
+      }
+      this.input$.postUpdate();
+      return;
+    }
+
+    if (this.input$.isMenuUpJustDown() || this.input$.isMenuLeftJustDown()) {
+      this.setSelected((this.selectedIndex - 1 + this.options.length) % this.options.length);
+    } else if (this.input$.isMenuDownJustDown() || this.input$.isMenuRightJustDown()) {
+      this.setSelected((this.selectedIndex + 1) % this.options.length);
+    } else if (this.input$.isConfirmJustDown()) {
+      this.confirmSelection();
+    }
+
+    this.input$.postUpdate();
   }
 
   private setSelected(index: number): void {
@@ -119,7 +139,7 @@ export class MenuScene extends Phaser.Scene {
       .text(
         SCREEN_WIDTH / 2,
         SCREEN_HEIGHT - 110,
-        "Isso vai apagar o save atual. ENTER para confirmar, ESC para cancelar.",
+        "Isso vai apagar o save atual. ENTER/A confirma, ESC/B/SELECT cancela.",
         {
           fontFamily: "Courier New, monospace",
           fontSize: "18px",
@@ -130,22 +150,17 @@ export class MenuScene extends Phaser.Scene {
       )
       .setOrigin(0.5);
 
-    const onConfirm = () => {
-      cleanup();
-      SaveState.newGame();
-      this.scene.start("GameScene", { phaseId: "fase1" } as GameSceneData);
-    };
-    const onCancel = () => {
-      cleanup();
-    };
-    const cleanup = () => {
-      this.confirmVisible = false;
-      this.confirmText?.destroy();
-      this.input.keyboard?.off("keydown-ENTER", onConfirm);
-      this.input.keyboard?.off("keydown-ESC", onCancel);
-    };
+  }
 
-    this.input.keyboard?.once("keydown-ENTER", onConfirm);
-    this.input.keyboard?.once("keydown-ESC", onCancel);
+  private confirmNewGame(): void {
+    this.hideConfirm();
+    SaveState.newGame();
+    this.scene.start("GameScene", { phaseId: "fase1" } as GameSceneData);
+  }
+
+  private hideConfirm(): void {
+    this.confirmVisible = false;
+    this.confirmText?.destroy();
+    this.confirmText = undefined;
   }
 }

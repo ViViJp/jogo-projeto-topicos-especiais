@@ -422,7 +422,7 @@ export class GameScene extends Phaser.Scene {
       this.physics.world.pause();
       this.tweens.pauseAll();
       this.pauseText = this.add
-        .text(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, "PAUSADO\nESC para voltar | ENTER para reiniciar a fase", {
+        .text(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, "PAUSADO\nESC / START para voltar | ENTER / A para reiniciar a fase", {
           fontFamily: "Courier New, monospace",
           fontSize: "26px",
           color: "#ffffff",

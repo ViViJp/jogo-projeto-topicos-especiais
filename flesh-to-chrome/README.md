@@ -326,15 +326,16 @@ decisões de v0.4.0" e "Correções e decisões de v0.3.0".
 
 ## Controles (Seção 19.1 do GDD)
 
-| Ação | Teclas |
-| --- | --- |
-| Pulo / Salto duplo | Espaço, W, ↑ |
-| Slide | S, ↓ |
-| Ataque | J, clique esquerdo |
-| Scan | L, E |
-| Dash | K, Shift |
-| Pausa / voltar | Esc |
-| Confirmar | Enter |
+| Ação | Teclas | Controle |
+| --- | --- | --- |
+| Pulo / Salto duplo | Espaço, W, ↑ | A ou direcional ↑ |
+| Slide | S, ↓ | B, L1 ou direcional ↓ |
+| Ataque | J, clique esquerdo | X |
+| Scan | L, E | Y ou Select |
+| Dash | K, Shift | R1 |
+| Pausa / voltar | Esc | Start |
+| Confirmar | Enter | A |
+| Cancelar em menus | Esc | B ou Select |
 
 ## Arquitetura
 

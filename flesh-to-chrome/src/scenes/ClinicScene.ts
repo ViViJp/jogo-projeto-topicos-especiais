@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { SCREEN_WIDTH, SCREEN_HEIGHT } from "../config/GameConfig";
 import { AbilityState } from "../systems/AbilityState";
+import { InputManager } from "../systems/InputManager";
 import { SaveState } from "../systems/SaveState";
 import { GameSceneData } from "./GameScene";
 
@@ -18,6 +19,9 @@ interface ClinicSceneData {
  */
 export class ClinicScene extends Phaser.Scene {
   private data$!: ClinicSceneData;
+  private input$!: InputManager;
+  private proceeded = false;
+  private proceed!: () => void;
 
   constructor() {
     super("ClinicScene");
@@ -29,6 +33,8 @@ export class ClinicScene extends Phaser.Scene {
 
   create(): void {
     this.cameras.main.setBackgroundColor(0x120a1a);
+    this.input$ = new InputManager(this);
+    this.proceeded = false;
 
     const implantByPhase: Record<string, { key: keyof AbilityState; label: string; ability: string }> = {
       fase1: { key: "legs", label: "pernas mecânicas", ability: "salto duplo" },
@@ -78,7 +84,7 @@ export class ClinicScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     const prompt = this.add
-      .text(SCREEN_WIDTH / 2, SCREEN_HEIGHT - 100, "ENTER para continuar", {
+      .text(SCREEN_WIDTH / 2, SCREEN_HEIGHT - 100, "ENTER / A para continuar", {
         fontFamily: "Courier New, monospace",
         fontSize: "20px",
         color: "#8892b0",
@@ -87,7 +93,9 @@ export class ClinicScene extends Phaser.Scene {
 
     this.tweens.add({ targets: prompt, alpha: 0.3, yoyo: true, repeat: -1, duration: 700 });
 
-    const proceed = () => {
+    this.proceed = () => {
+      if (this.proceeded) return;
+      this.proceeded = true;
       if (!this.data$.nextPhaseId) {
         this.scene.start("EndingScene", { ...this.data$, abilities: newAbilities });
         return;
@@ -102,7 +110,12 @@ export class ClinicScene extends Phaser.Scene {
       } as GameSceneData);
     };
 
-    this.input.keyboard?.once("keydown-ENTER", proceed);
-    this.input.once("pointerdown", proceed);
+    this.input.once("pointerdown", this.proceed);
+  }
+  update(): void {
+    if (this.input$.isConfirmJustDown()) {
+      this.proceed();
+    }
+    this.input$.postUpdate();
   }
 }
