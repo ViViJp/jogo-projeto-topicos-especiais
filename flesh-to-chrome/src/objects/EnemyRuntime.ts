@@ -50,7 +50,7 @@ export class EnemyRuntime {
       if (kind !== "bandido" && kind !== "drone") continue;
 
       const x = (object.x ?? 0) + (object.width ?? 0) / 2;
-      const y = (object.y ?? 0) + offsetY + (object.height ?? 0) + (kind === "bandido" ? 32 : 0);
+      const y = (object.y ?? 0) + offsetY + (object.height ?? 0);
       const sprite = scene.physics.add.sprite(x, y, ENEMY_KEYS[kind]);
       sprite.setOrigin(0.5, 1);
       sprite.setImmovable(true);
@@ -58,6 +58,9 @@ export class EnemyRuntime {
       sprite.body!.setSize(kind === "bandido" ? 28 : 22, kind === "bandido" ? 38 : 22);
       sprite.body!.setOffset(kind === "bandido" ? 10 : 5, kind === "bandido" ? 6 : 5);
       sprite.setDepth(4);
+      // Inimigos ficam discretos antes do scan; o visor os destaca sem removê-los
+      // totalmente da cena, preservando a leitura do runner.
+      sprite.setAlpha(0.35);
       sprite.setData("enemyId", object.name || `enemy-${object.id}`);
       sprite.setData("enemyKind", kind);
 
@@ -112,7 +115,7 @@ export class EnemyRuntime {
     for (const enemy of this.enemies) {
       if (!enemy.sprite.active || enemy.kind !== "bandido") continue;
 
-      const closeEnough = Math.abs(enemy.sprite.x - x) <= attackRange && Math.abs(enemy.sprite.y - y) <= verticalRange;
+      const closeEnough = enemy.sprite.x >= x - 8 && enemy.sprite.x <= x + attackRange && Math.abs(enemy.sprite.y - y) <= verticalRange;
       if (!closeEnough) continue;
 
       enemy.sprite.setData("hp", 0);
@@ -168,11 +171,13 @@ export class EnemyRuntime {
       if (enemy.revealed && Math.abs(enemy.sprite.x - playerX) > 960) {
         enemy.revealed = false;
         enemy.sprite.clearTint();
+        enemy.sprite.setAlpha(0.35);
       }
 
       if (!enemy.revealed && this.scanActive && Math.abs(enemy.sprite.x - playerX) <= 800) {
         enemy.revealed = true;
         enemy.sprite.setTint(0x36e2ff);
+        enemy.sprite.setAlpha(1);
       }
     }
   }

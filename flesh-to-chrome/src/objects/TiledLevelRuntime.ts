@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { Player } from "../entities/Player";
+import { EnemyRuntime } from "./EnemyRuntime";
 import { TEX } from "../utils/PlaceholderTextures";
 import {
   TILED_FASE1_MAP_KEY,
@@ -105,6 +106,8 @@ export class TiledLevelRuntime {
   readonly creditSprites = new Map<string, Phaser.Physics.Arcade.Sprite>();
   readonly checkpointTriggered = new Set<string>();
   private readonly hazardZones: Array<{ zone: Phaser.GameObjects.Zone; behavior: HazardBehavior; kind: string }> = [];
+  private enemyRuntime?: EnemyRuntime;
+  private playerRef?: Player;
 
   private endGateTriggered = false;
 
@@ -346,6 +349,7 @@ export class TiledLevelRuntime {
 
   /** Colisão/overlap do jogador com o chão e os perigos reais do tilemap. */
   registerPhysics(player: Player): void {
+    this.playerRef = player;
     this.scene.physics.add.collider(player.sprite, this.groundLayer, () => {
       const body = player.sprite.body as Phaser.Physics.Arcade.Body | null;
       if (!body) return;
@@ -384,10 +388,25 @@ export class TiledLevelRuntime {
         }
       });
     }
+
+    // Fase 1 também usa o runtime real de inimigos para permitir o teste
+    // completo de ataque, scan e colisão fatal dentro do mapa existente.
+    this.enemyRuntime = new EnemyRuntime(this.scene, player, this.getEnemyObjects(), TILED_FASE1_OFFSET_Y);
+    this.enemyRuntime.registerPlayerCollision(() => player.kill());
+  }
+
+  private getEnemyObjects(): Phaser.Types.Tilemaps.TiledObject[] {
+    return this.map.getObjectLayer("objects")?.objects.filter((object) => object.type === "enemy") ?? [];
+  }
+
+  setScanActive(active: boolean): void {
+    if (active) this.enemyRuntime?.scan(this.playerRef?.sprite.x ?? 0);
+    else this.enemyRuntime?.stopScan();
   }
 
   /** Deve ser chamado a cada frame pela GameScene. */
   update(player: Player): void {
+    this.enemyRuntime?.update();
     const px = player.sprite.x;
     const py = player.sprite.y;
 
@@ -424,6 +443,8 @@ export class TiledLevelRuntime {
   }
 
   destroy(): void {
+    this.enemyRuntime?.destroy();
+    this.hazardZones.forEach((hz) => hz.zone.destroy());
     this.creditSprites.forEach((s) => s.destroy());
     this.creditSprites.clear();
   }

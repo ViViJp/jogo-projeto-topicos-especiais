@@ -96,6 +96,7 @@ export class GameScene extends Phaser.Scene {
   private isPaused = false;
   private pauseText?: Phaser.GameObjects.Text;
   private scanOverlay?: Phaser.GameObjects.Rectangle;
+  private activeAbilities!: AbilityState;
   private restarting = false;
   private levelLengthPx = 0;
 
@@ -113,6 +114,11 @@ export class GameScene extends Phaser.Scene {
       abilities: data.abilities ?? createInitialAbilityState(),
     };
     this.restarting = false;
+    // Para esta versão de desenvolvimento, a Fase 1 disponibiliza as quatro
+    // mecânicas pedidas sem gravar esses implantes no progresso da campanha.
+    this.activeAbilities = data.phaseId === "fase1"
+      ? { legs: data.abilities?.legs ?? false, arms: true, eyes: true, thrusters: true }
+      : (data.abilities ?? createInitialAbilityState());
   }
 
   preload(): void {
@@ -121,6 +127,9 @@ export class GameScene extends Phaser.Scene {
     if (!this.textures.exists(ALEX_TEXTURE_KEY)) {
       this.load.spritesheet(ALEX_TEXTURE_KEY, this.alexUrl().href, ALEX_SHEET_CONFIG);
     }
+    if (!this.textures.exists("alex-eyes")) {
+      this.load.spritesheet("alex-eyes", this.alexEyesUrl().href, ALEX_SHEET_CONFIG);
+    }
 
     if (this.data$.phaseId === "fase1") {
       if (!this.textures.exists(TILED_FASE1_TILESET_KEY)) {
@@ -128,6 +137,12 @@ export class GameScene extends Phaser.Scene {
       }
       if (!this.textures.exists(TILED_FASE1_TILESET2_KEY)) {
         this.load.image(TILED_FASE1_TILESET2_KEY, this.tilesetCrystalCaveUrl().href);
+      }
+      if (!this.textures.exists("enemy-bandido")) {
+        this.load.spritesheet("enemy-bandido", this.enemyBandidoUrl().href, { frameWidth: 48, frameHeight: 48 });
+      }
+      if (!this.textures.exists("enemy-drone")) {
+        this.load.spritesheet("enemy-drone", this.enemyDroneUrl().href, { frameWidth: 32, frameHeight: 32 });
       }
       if (!this.cache.tilemap.exists(TILED_FASE1_MAP_KEY)) {
         this.cache.tilemap.add(TILED_FASE1_MAP_KEY, {
@@ -152,12 +167,24 @@ export class GameScene extends Phaser.Scene {
     return new URL("../assets/player/alex-flesh/alex-flesh.png", import.meta.url);
   }
 
+  private alexEyesUrl(): URL {
+    return new URL("../assets/player/alex-eyes/alex-eyes.png", import.meta.url);
+  }
+
   private tilesetSewerUrl(): URL {
     return new URL("../assets/tiles/esgoto/tiles/tilesetSewer.png", import.meta.url);
   }
 
   private tilesetCrystalCaveUrl(): URL {
     return new URL("../assets/tiles/esgoto/crystal-cave-tiles.png", import.meta.url);
+  }
+
+  private enemyBandidoUrl(): URL {
+    return new URL("../assets/npcs/enemies/bandido/bandido.png", import.meta.url);
+  }
+
+  private enemyDroneUrl(): URL {
+    return new URL("../assets/npcs/enemies/drone/drone.png", import.meta.url);
   }
 
   private phase3TilesetUrl(): URL {
@@ -174,6 +201,8 @@ export class GameScene extends Phaser.Scene {
     this.input$ = new InputManager(this);
     this.credits = new CreditsSystem(this.data$.wallet, this.data$.consolidatedCreditIds);
     this.hud = new HUD(this);
+    this.events.on("player-attack", () => this.hud.flashPrompt("ATAQUE", 220));
+    this.events.on("player-dash-start", () => this.hud.flashPrompt("DASH", 220));
 
     if (this.data$.phaseId === "fase1") {
       this.createTiled();
@@ -200,7 +229,7 @@ export class GameScene extends Phaser.Scene {
 
     const spawnX = this.data$.checkpointX > 0 ? this.data$.checkpointX : runtime.spawn.x;
     const spawnY = this.data$.checkpointX > 0 ? this.data$.checkpointY : runtime.spawn.y;
-    this.player = new Player(this, spawnX, spawnY, this.data$.abilities, this.input$, {
+    this.player = new Player(this, spawnX, spawnY, this.activeAbilities, this.input$, {
       onDeath: () => this.handlePlayerDeath(),
       onScanPulse: (active) => this.handleScanPulse(active),
     });
@@ -291,10 +320,10 @@ export class GameScene extends Phaser.Scene {
     this.hud.setCredits(phaseValue, phaseTotalValue, this.credits.getTotal());
 
     const labels: string[] = [];
-    if (this.data$.abilities.legs) labels.push("[Pernas: Salto Duplo]");
-    if (this.data$.abilities.arms) labels.push("[Braços: Ataque]");
-    if (this.data$.abilities.eyes) labels.push("[Olhos: Scan]");
-    if (this.data$.abilities.thrusters) labels.push("[Propulsores: Dash]");
+    if (this.activeAbilities.legs) labels.push("[Pernas: Salto Duplo]");
+    if (this.activeAbilities.arms) labels.push("[Braços: Ataque]");
+    if (this.activeAbilities.eyes) labels.push("[Olhos: Scan]");
+    if (this.activeAbilities.thrusters) labels.push("[Propulsores: Dash]");
     this.hud.setAbilities(labels);
   }
 
@@ -376,9 +405,13 @@ export class GameScene extends Phaser.Scene {
           .setDepth(900);
       }
       this.scanOverlay.setVisible(true);
+      this.scanOverlay.setAlpha(0.16);
+      this.hud.flashPrompt("VISOR ATIVO — inimigos detectados", 750);
+      this.tiledRuntime?.setScanActive(true);
       this.tiledPhase3Runtime?.setScanActive(true);
     } else if (this.scanOverlay) {
       this.scanOverlay.setVisible(false);
+      this.tiledRuntime?.setScanActive(false);
       this.tiledPhase3Runtime?.setScanActive(false);
     }
   }
