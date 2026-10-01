@@ -1,0 +1,7 @@
+Pixel Art TV Sprite
+
+Autor: Denislav
+Fonte: https://opengameart.org/content/pixel-art-tv-sprite-cc0
+Licença: CC0 1.0
+Arquivo original: old_tv.png
+Uso: televisão do checkpoint da Fase 1

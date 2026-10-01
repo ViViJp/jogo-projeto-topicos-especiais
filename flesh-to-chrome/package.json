@@ -4,9 +4,9 @@
   "description": "Flesh to Chrome - 2D cyberpunk auto-runner (academic project prototype)",
   "private": true,
   "scripts": {
-    "start": "parcel src/index.html --open",
-    "dev": "parcel src/index.html",
-    "build": "parcel build src/index.html --dist-dir dist",
+    "start": "parcel src/index.html --open --no-cache",
+    "dev": "parcel src/index.html --no-cache",
+    "build": "parcel build src/index.html --dist-dir dist --no-cache",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {

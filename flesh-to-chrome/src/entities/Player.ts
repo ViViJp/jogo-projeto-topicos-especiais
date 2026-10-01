@@ -340,7 +340,7 @@ export class Player {
     this.dashTimer = PHYSICS.dash.durationMs;
     this.dashCooldownTimer = PHYSICS.dash.cooldownMs;
     this.sprite.setVelocityX(PHYSICS.dash.speed);
-    this.scene.events.emit("player-dash-start");
+    this.scene.events.emit("player-dash-start", this.sprite.x, this.sprite.y);
     this.scene.time.delayedCall(PHYSICS.dash.durationMs, () => {
       if (this.state === "dashing") {
         this.state = this.isGrounded() ? "running" : "jumping";
