@@ -8,8 +8,6 @@ import { SaveState } from "../systems/SaveState";
 import { Player } from "../entities/Player";
 import { LevelRuntime } from "../objects/LevelRuntime";
 import { TILED_CHECKPOINT_TEXTURE_KEY, TiledLevelRuntime } from "../objects/TiledLevelRuntime";
-import { TiledPhase3Runtime } from "../objects/TiledPhase3Runtime";
-import { TILED_FASE3_MAP_KEY, TILED_FASE3_TILESET_KEY, TILED_FASE3_MAP_DATA } from "../levels/TiledFase3";
 import { LEVELS, getNextPhaseId } from "../levels";
 import {
   TILED_FASE1_MAP_KEY,
@@ -72,6 +70,8 @@ const PHASE_BACKGROUND: Record<string, number> = {
   fase1: TILED_FASE1_BACKGROUND,
   "fase2-intro": TILED_FASE1_BACKGROUND,
   fase3: TILED_FASE1_BACKGROUND,
+  fase4: TILED_FASE1_BACKGROUND,
+  fase5: TILED_FASE1_BACKGROUND,
 };
 
 /**
@@ -88,7 +88,6 @@ export class GameScene extends Phaser.Scene {
   private player!: Player;
   private legacyRuntime?: LevelRuntime;
   private tiledRuntime?: TiledLevelRuntime;
-  private tiledPhase3Runtime?: TiledPhase3Runtime;
   private credits!: CreditsSystem;
   private hud!: HUD;
   private save!: SaveState;
@@ -114,11 +113,23 @@ export class GameScene extends Phaser.Scene {
       abilities: data.abilities ?? createInitialAbilityState(),
     };
     this.restarting = false;
-    // Para esta versão de desenvolvimento, a Fase 1 disponibiliza as quatro
-    // mecânicas pedidas sem gravar esses implantes no progresso da campanha.
-    this.activeAbilities = data.phaseId === "fase1"
-      ? { legs: data.abilities?.legs ?? false, arms: true, eyes: true, thrusters: true }
-      : (data.abilities ?? createInitialAbilityState());
+    // Cada prévia ativa apenas as mecânicas já apresentadas na campanha.
+    // Isso também corrige saves antigos que tenham sido gravados com
+    // implantes adiantados ou sem os braços ao entrar na Fase 3.
+    const savedAbilities = data.abilities ?? createInitialAbilityState();
+    if (data.phaseId === "fase1") {
+      this.activeAbilities = { legs: false, arms: false, eyes: false, thrusters: false };
+    } else if (data.phaseId === "fase2-intro") {
+      this.activeAbilities = { legs: true, arms: false, eyes: false, thrusters: false };
+    } else if (data.phaseId === "fase3") {
+      this.activeAbilities = { legs: true, arms: true, eyes: false, thrusters: false };
+    } else if (data.phaseId === "fase4") {
+      this.activeAbilities = { legs: true, arms: true, eyes: true, thrusters: false };
+    } else if (data.phaseId === "fase5") {
+      this.activeAbilities = { legs: true, arms: true, eyes: true, thrusters: true };
+    } else {
+      this.activeAbilities = savedAbilities;
+    }
   }
 
   preload(): void {
@@ -153,16 +164,6 @@ export class GameScene extends Phaser.Scene {
           data: TILED_FASE1_MAP_DATA,
         });
       }
-    } else if (this.data$.phaseId === "fase3") {
-      if (!this.textures.exists(TILED_FASE3_TILESET_KEY)) {
-        this.load.image(TILED_FASE3_TILESET_KEY, this.phase3TilesetUrl().href);
-      }
-      if (!this.cache.tilemap.exists(TILED_FASE3_MAP_KEY)) {
-        this.cache.tilemap.add(TILED_FASE3_MAP_KEY, {
-          format: Phaser.Tilemaps.Formats.TILED_JSON,
-          data: TILED_FASE3_MAP_DATA,
-        });
-      }
     }
   }
 
@@ -194,9 +195,6 @@ export class GameScene extends Phaser.Scene {
     return new URL("../assets/props/checkpoint/tv-checkpoint.png", import.meta.url);
   }
 
-  private phase3TilesetUrl(): URL {
-    return new URL("../assets/tiles/meio-urbano/tiles/tileset-interim.png", import.meta.url);
-  }
 
   create(): void {
     generatePlaceholderTextures(this);
@@ -213,8 +211,6 @@ export class GameScene extends Phaser.Scene {
 
     if (this.data$.phaseId === "fase1") {
       this.createTiled();
-    } else if (this.data$.phaseId === "fase3") {
-      this.createTiledPhase3();
     } else {
       this.createLegacy();
     }
@@ -246,26 +242,6 @@ export class GameScene extends Phaser.Scene {
     this.hud.flashPrompt(TILED_FASE1_NAME, 1800);
   }
 
-  private createTiledPhase3(): void {
-    const runtime = new TiledPhase3Runtime(this, new Set(this.data$.consolidatedCreditIds), {
-      onCreditCollected: (id, value) => this.handleCreditCollected(id, value),
-      onCheckpoint: (_id, x, y) => this.handleCheckpoint(x, y),
-      onEndGate: () => this.handleEndGate(),
-      onFatalCollision: () => this.player.kill(),
-    });
-    this.tiledPhase3Runtime = runtime;
-    this.levelLengthPx = runtime.lengthPx;
-
-    const spawnX = this.data$.checkpointX > 0 ? this.data$.checkpointX : runtime.spawn.x;
-    const spawnY = this.data$.checkpointX > 0 ? this.data$.checkpointY : runtime.spawn.y;
-    this.player = new Player(this, spawnX, spawnY, this.data$.abilities, this.input$, {
-      onDeath: () => this.handlePlayerDeath(),
-      onScanPulse: (active) => this.handleScanPulse(active),
-    });
-    runtime.registerPhysics(this.player);
-    this.hud.flashPrompt("Fase 3 — Meio Urbano", 1800);
-  }
-
   private createLegacy(): void {
     const level = LEVELS[this.data$.phaseId];
     this.levelLengthPx = level.length;
@@ -275,7 +251,7 @@ export class GameScene extends Phaser.Scene {
     // um checkpoint de verdade) sempre bate com level.groundY de qualquer
     // forma, mas usa a mesma lógica do path Tiled por consistência.
     const spawnY = this.data$.checkpointX > 0 ? this.data$.checkpointY : level.groundY;
-    this.player = new Player(this, spawnX, spawnY, this.data$.abilities, this.input$, {
+    this.player = new Player(this, spawnX, spawnY, this.activeAbilities, this.input$, {
       onDeath: () => this.handlePlayerDeath(),
       onScanPulse: (active) => this.handleScanPulse(active),
     });
@@ -286,11 +262,17 @@ export class GameScene extends Phaser.Scene {
       onEndGate: () => this.handleEndGate(),
     });
     this.legacyRuntime = runtime;
+    runtime.registerBreakablePhysics(this.player);
+    runtime.registerAbilityGatePhysics(this.player);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => runtime.destroy());
 
     this.physics.add.collider(this.player.sprite, runtime.groundGroup, () => {
       const body = this.player.sprite.body as Phaser.Physics.Arcade.Body | null;
       if (!body) return;
-      if (body.blocked.left || body.blocked.right || body.blocked.up) {
+      // `blocked.left/right` pode vir da barricada no mesmo passo de física
+      // em que este callback do chão é executado. Se Alex está apoiado no
+      // piso (`blocked.down`), isso não é uma colisão lateral com o terreno.
+      if (!body.blocked.down && (body.blocked.left || body.blocked.right || body.blocked.up)) {
         this.player.kill();
       }
     });
@@ -309,7 +291,6 @@ export class GameScene extends Phaser.Scene {
   /** Créditos da fase atual, num formato comum aos dois formatos de nível (Tiled/desenhado à mão). */
   private phaseCredits(): Array<{ id: string; value: number }> {
     if (this.tiledRuntime) return this.tiledRuntime.credits;
-    if (this.tiledPhase3Runtime) return this.tiledPhase3Runtime.credits;
     return LEVELS[this.data$.phaseId].credits;
   }
 
@@ -366,19 +347,19 @@ export class GameScene extends Phaser.Scene {
 
     const nextPhaseId = getNextPhaseId(this.data$.phaseId);
     // A clínica de George instala um novo implante ao final de cada uma das
-    // quatro primeiras fases (seção 11.1). Este protótipo implementa apenas
-    // a Fase 1 completa + o início da Fase 2 (Marco 2 - Vertical Slice), então
-    // só a Fase 1 leva à clínica; o fim da Fase 2 (ainda incompleta) encerra
-    // no roteiro/roadmap em vez de instalar os braços prematuramente.
+    // fases implementadas (seção 11.1). No fim da prévia da Fase 2, a clínica
+    // libera os braços e continua para a prévia da Fase 3 registrada em
+    // `PHASE_ORDER`.
+    const phasesWithClinic = new Set(["fase1", "fase2-intro", "fase3", "fase4"]);
     const destination = destinationOverride ??
-      (this.data$.phaseId === "fase1" || this.data$.phaseId === "fase2-intro" ? "ClinicScene" : "EndingScene");
+      (phasesWithClinic.has(this.data$.phaseId) ? "ClinicScene" : "EndingScene");
 
     this.time.delayedCall(300, () => {
       this.scene.start(destination, {
         completedPhaseId: this.data$.phaseId,
         nextPhaseId,
         wallet: this.credits.getTotal(),
-        abilities: this.data$.abilities,
+        abilities: this.activeAbilities,
       });
     });
   }
@@ -413,13 +394,13 @@ export class GameScene extends Phaser.Scene {
       }
       this.scanOverlay.setVisible(true);
       this.scanOverlay.setAlpha(0.16);
-      this.hud.flashPrompt("VISOR ATIVO — inimigos detectados", 750);
+      this.hud.flashPrompt("VISOR ATIVO — rotas e armadilhas detectadas", 750);
       this.tiledRuntime?.setScanActive(true);
-      this.tiledPhase3Runtime?.setScanActive(true);
-    } else if (this.scanOverlay) {
-      this.scanOverlay.setVisible(false);
+      this.legacyRuntime?.setScanActive(true, this.player.sprite.x);
+    } else {
+      this.scanOverlay?.setVisible(false);
       this.tiledRuntime?.setScanActive(false);
-      this.tiledPhase3Runtime?.setScanActive(false);
+      this.legacyRuntime?.setScanActive(false, this.player.sprite.x);
     }
   }
 
@@ -474,8 +455,6 @@ export class GameScene extends Phaser.Scene {
     this.player.update(delta);
     if (this.tiledRuntime) {
       this.tiledRuntime.update(this.player);
-    } else if (this.tiledPhase3Runtime) {
-      this.tiledPhase3Runtime.update(this.player);
     } else {
       this.legacyRuntime!.update(this.player);
     }

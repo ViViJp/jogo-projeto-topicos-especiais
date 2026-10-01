@@ -39,6 +39,8 @@ export class ClinicScene extends Phaser.Scene {
     const implantByPhase: Record<string, { key: keyof AbilityState; label: string; ability: string }> = {
       fase1: { key: "legs", label: "pernas mecânicas", ability: "salto duplo" },
       "fase2-intro": { key: "arms", label: "braços mecânicos", ability: "ataque e quebra" },
+      fase3: { key: "eyes", label: "olhos mecânicos", ability: "scan e revelação" },
+      fase4: { key: "thrusters", label: "propulsores", ability: "dash" },
     };
     const implant = implantByPhase[this.data$.completedPhaseId] ?? {
       key: "legs" as keyof AbilityState,
