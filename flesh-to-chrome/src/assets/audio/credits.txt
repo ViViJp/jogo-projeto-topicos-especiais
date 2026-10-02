@@ -2,7 +2,7 @@
 
 ## Estrutura
 ```
-public/assets/audio/
+flesh-to-chrome/src/assets/audio/
   music/   # BGM loops por cena
   sfx/     # one-shots
   credits.txt

@@ -19,18 +19,14 @@ Gerados a partir de `levelDesign.md` + GDD §16 (draft jogável; editável no Ti
 - `hazards` — canos, prensas, barricadas (tiles)
 - `objects` — spawn, checkpoint, créditos, inimigos, clínica, Portão
 
-## Regenerar
-
-```bash
-python3 scripts/generate_tiled_maps.py          # todas
-python3 scripts/generate_tiled_maps.py --fase 3 # uma fase
-```
-
 ## Abrir no Tiled
 
 1. Instale https://www.mapeditor.org/
-2. **File → Open** → `public/assets/maps/<setor>/fase-N.json`
-3. Edite e salve
+2. Para a Fase 1, abra `flesh-to-chrome/src/assets/maps/esgoto/fase-1.tmj`
+3. Edite, salve e exporte; o `fase-1.json` gerado na mesma pasta é o arquivo carregado pelo jogo
+
+Os mapas JSON das fases 2–5 são referências de produção e serão migrados
+para projetos `.tmj` conforme seus blockouts forem retomados.
 
 ## Phaser (Vitor)
 

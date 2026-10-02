@@ -2,6 +2,6 @@ Asset Pack - Sewer — cammellaro
 https://cammellaro.itch.io/sewer
 
 License: personal and commercial use; no redistribution.
-Place sewer.zip in tiles/_downloads/ and run: python3 scripts/import_tilesets.py
+Os arquivos utilizados pelo projeto estão preservados nesta árvore de assets.
 
 GDD: Fase 1 — Esgoto / Periferia (16×16)

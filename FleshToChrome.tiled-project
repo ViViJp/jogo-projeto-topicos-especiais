@@ -6,7 +6,7 @@
     "extensionsPath": "extensions",
     "folders": [
         ".",
-        "public/assets"
+        "flesh-to-chrome/src/assets"
     ],
     "properties": [
     ],

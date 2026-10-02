@@ -776,7 +776,7 @@ Fase 1 e, só nesse caso, integrá-la - com atenção a três pontos
 específicos (altura do pulo, animação de agachamento/slide, sombra) e a
 instrução explícita de não mexer em mais nada além disso se não houvesse
 mapa novo. Primeiro passo foi justamente essa verificação: `md5sum` e
-dimensões do JSON (`public/assets/maps/esgoto/fase-1.json` dentro do rar)
+dimensões do JSON (`assets/maps/esgoto/fase-1.json` dentro do rar original)
 contra o mapa em uso - diferentes (1050×28 contra 720×20, hashes
 diferentes), então a integração prosseguiu.
 
