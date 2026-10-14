@@ -28,16 +28,17 @@ export interface TiledCheckpointObj {
 
 export const TILED_CHECKPOINT_TEXTURE_KEY = "checkpoint-tv";
 
-/** `hazard.kind` conhecidos (contrato §5.3 + `electric_wire`, novo na v0.4.0 - ver nota em `buildObjectHazards`). */
+/** `hazard.kind` oficiais do contrato em `docs/TILED_PHASER_CONTRACT.md`. */
 type HazardBehavior = "floor" | "overhead";
 const HAZARD_KIND_BEHAVIOR: Record<string, HazardBehavior> = {
   toxic_water: "floor",
   electric_wire: "overhead",
+  broken_pipe: "floor",
 };
 
 /**
  * Instancia a Fase 1 a partir do mapa Tiled real, seguindo
- * `TILED_PHASER_CONTRACT1.md`:
+ * `docs/TILED_PHASER_CONTRACT.md`:
  *
  *  - layer `ground`: colisão física com Alex (contrato §3) - toda célula
  *    não-vazia, usando o próprio grid do tilemap do Phaser (honesto
@@ -45,19 +46,10 @@ const HAZARD_KIND_BEHAVIOR: Record<string, HazardBehavior> = {
  *    baixo "seguro" e a plataforma elevada "arriscada" que corre por cima
  *    dele em parte do percurso).
  *  - layer `hazards`: só o **visual** do perigo (contrato §3 - "a lógica
- *    fica em objects"). O mapa atual, porém, não tem nenhum objeto da
- *    classe `hazard` ainda (só os 4 tipos formalizados no contrato §5
- *    estão realmente em uso: `spawn`, `phase_end`, `credit`, e agora
- *    também `checkpoint`/`clinic`, que aparecem no mapa mas ainda não
- *    foram formalizados no documento - ver README). A água tóxica que de
- *    fato existe na fase (visível na própria layer `hazards`) usa a
- *    propriedade customizada `hazard=true` definida nos tiles do tileset
- *    (`sewer.tsj`) - mecanismo mais antigo, da v0.2.0, que aparentemente
- *    ainda é o que o mapa exportado usa na prática. Para o jogo não ficar
- *    com 98 tiles de água tóxica puramente decorativos (sem matar
- *    ninguém), este runtime lê essa propriedade. Também aceita um futuro
- *    objeto `hazard`/`kind` na layer `objects`, se/quando o mapa passar a
- *    seguir o contrato à risca nesse ponto - ver `buildObjectHazards()`.
+ *    fica em objects"). O mapa atual usa objetos `hazard` reais para água
+ *    tóxica, fios elétricos e cano rompido; `buildObjectHazards()` cria a
+ *    zona física de cada um. O mecanismo antigo por propriedade de tile é
+ *    mantido apenas como fallback de compatibilidade.
  *  - layer `deco`: puramente visual, sem colisão - mesmo um tile marcado
  *    `solid=true` no tileset (aparece 720× nessa layer) não colide aqui:
  *    o contrato é explícito ("sem colisão por padrão" pra `deco`), e esse
@@ -68,7 +60,7 @@ const HAZARD_KIND_BEHAVIOR: Record<string, HazardBehavior> = {
  *    sobre Tiled JSON" já avisa que isso pode variar por versão/exportação;
  *    confirmado inspecionando o JSON real antes de escrever este parser).
  *
- * v0.4.0 - blockout final da Fase 1 (1050×28, dois tilesets - ver
+ * v0.4.0+ - blockout expandido da Fase 1 (1900×28, dois tilesets - ver
  * `TiledFase1.ts`). Duas mudanças de mecanismo importantes em relação ao
  * mapa provisório usado desde a v0.3.0:
  *
@@ -85,15 +77,11 @@ const HAZARD_KIND_BEHAVIOR: Record<string, HazardBehavior> = {
  *     o mapa antigo não tinha nenhum objeto `hazard` real (só um
  *     `hazard=true` no tileset, mecanismo velho da v0.2.0, mantido aqui
  *     como fallback morto - `classifyHazardTiles`/`setCollisionByProperty`
- *     - caso algum mapa futuro ainda dependa dele). Este mapa tem 6
- *     objetos `hazard` reais: `kind=toxic_water` (4×, poço sem fundo -
- *     mesmo comportamento "floor" de sempre) e `kind=electric_wire` (2×,
- *     NOVO, não documentado no contrato ainda). Pela geometria do objeto
- *     (16px de altura, encostado bem em cima da superfície do chão
- *     principal) e pelo levelDesign.md ("fios elétricos" citados junto
- *     com a mecânica de slide na "sequência de domínio"), tratado como
- *     "overhead" (mesma regra de sempre: mata a não ser que Alex esteja
- *     deslizando) - `HAZARD_KIND_BEHAVIOR` acima. Ver `buildObjectHazards()`.
+ *     - caso algum mapa futuro ainda dependa dele). O mapa atual usa
+ *     objetos `hazard` reais. `toxic_water` e `broken_pipe` usam o
+ *     comportamento "floor" (morte em qualquer estado); `electric_wire`
+ *     usa "overhead" (mata a não ser que Alex esteja deslizando). Todos
+ *     estão formalizados no contrato v0.4.
  */
 export class TiledLevelRuntime {
   readonly map: Phaser.Tilemaps.Tilemap;
@@ -347,8 +335,7 @@ export class TiledLevelRuntime {
       // Tiled dá x/y do CANTO superior-esquerdo do retângulo; a zone usa centro.
       const zone = this.scene.add.zone(x + w / 2, y + h / 2, w, h);
       this.scene.physics.add.existing(zone, true); // true = corpo estático
-      // `kind` desconhecido (fora do contrato §5.3 e de `electric_wire`,
-      // novo na v0.4.0) cai em "floor" por segurança - morte instantânea é
+      // `kind` desconhecido cai em "floor" por segurança - morte instantânea é
       // o comportamento mais chamativo/óbvio de testar do que deixar um
       // hazard sem nenhum efeito passar despercebido em playtest.
       const behavior: HazardBehavior = kind ? (HAZARD_KIND_BEHAVIOR[kind] ?? "floor") : "floor";

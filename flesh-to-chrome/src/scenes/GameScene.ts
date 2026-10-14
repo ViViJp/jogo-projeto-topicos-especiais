@@ -77,7 +77,7 @@ const PHASE_BACKGROUND: Record<string, number> = {
 /**
  * v0.3.0 - a Fase 1 volta a usar o mapa Tiled real
  * (`src/assets/maps/esgoto/fase-1.json`), desta vez seguindo o contrato
- * `TILED_PHASER_CONTRACT1.md` entregue pelo level designer (ver
+ * `docs/TILED_PHASER_CONTRACT.md` entregue pelo level designer (ver
  * `TiledLevelRuntime.ts`/`TiledFase1.ts`). A física NÃO foi recalibrada
  * (continua 320px/s / gravidade 1600, os valores "bons" da v0.2.1) - só o
  * chão/objetos passam a vir do mapa real; a Fase 2 em diante continua no

@@ -25,6 +25,11 @@ Gerados a partir de `levelDesign.md` + GDD §16 (draft jogável; editável no Ti
 2. Para a Fase 1, abra `flesh-to-chrome/src/assets/maps/esgoto/fase-1.tmj`
 3. Edite, salve e exporte; o `fase-1.json` gerado na mesma pasta é o arquivo carregado pelo jogo
 
+Antes de editar objetos ou hazards, consulte
+[`docs/TILED_PHASER_CONTRACT.md`](../../../docs/TILED_PHASER_CONTRACT.md).
+Todo cano rompido tocável deve ter arte em `hazards` e um Rectangle
+Object `hazard` com `kind = broken_pipe`.
+
 Os mapas JSON das fases 2–5 são referências de produção e serão migrados
 para projetos `.tmj` conforme seus blockouts forem retomados.
 

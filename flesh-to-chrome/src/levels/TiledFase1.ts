@@ -3,7 +3,7 @@ import fase1Map from "../assets/maps/esgoto/fase-1.json";
 /**
  * Config da Fase 1 sobre o mapa Tiled real
  * (`src/assets/maps/esgoto/fase-1.json`), seguindo o contrato
- * `TILED_PHASER_CONTRACT1.md` (v0.1, 2026-09-12) entregue pelo level
+ * `docs/TILED_PHASER_CONTRACT.md` (contrato vivo) entregue pelo level
  * designer. Só a Fase 1 está no contrato oficial até agora - os outros
  * mapas entregues (`src/assets/maps/{industrial,meio-urbano,corporativo,
  * topo}`) continuam em 32×32px e sem um contrato formal (grid oficial só
@@ -14,7 +14,8 @@ import fase1Map from "../assets/maps/esgoto/fase-1.json";
  * v0.4.0 - troca pelo blockout FINAL da Fase 1 entregue pelo level design
  * (branch/export mais recente do Tiled - commit "feat: Finalizando o
  * blockout da fase 1"), bem maior e mais completo que o mapa provisório
- * usado desde a v0.3.0: 1050×28 tiles (era 720×20), duas elevações de chão
+ * usado desde a v0.3.0 e depois expandido para 1900×28 tiles, com duas
+ * elevações de chão
  * (uma "profunda" no trecho inicial e a principal depois de um degrau),
  * plataformas opcionais elevadas pra rota de risco, e agora usa DOIS
  * tilesets no mesmo mapa (`sewer` pro chão/primeiro plano, como antes, e
@@ -23,9 +24,9 @@ import fase1Map from "../assets/maps/esgoto/fase-1.json";
  * tinha nenhum objeto real da classe `hazard` (só um `hazard=true` nos
  * tiles da layer `hazards`, mecanismo antigo da v0.2.0); este mapa novo
  * segue o contrato à risca (§5.3) com objetos `hazard`/`kind` de verdade
- * na layer `objects` - `toxic_water` (poços sem fundo, já existia) e
- * `electric_wire` (novo - fios finos exatamente na altura da cabeça de
- * Alex parado/correndo, ~16px acima da superfície do chão principal,
+ * na layer `objects` - `toxic_water` (poços sem fundo), `broken_pipe`
+ * (cano rompido letal em qualquer estado) e `electric_wire` (fios finos
+ * na altura da cabeça de Alex parado/correndo, ~16px acima da superfície do chão principal,
  * pedindo pra deslizar por baixo - ver `TiledLevelRuntime.buildObjectHazards()`).
  *
  * O JSON é importado ESTATICAMENTE (`import ... from "*.json"`), não via
@@ -146,7 +147,8 @@ export const TILED_FASE1_NAME = "Fase 1 — Esgoto / Periferia";
  * nenhum uso de `scrollY`/`startFollow` no projeto). Sem deslocar, o chão
  * ficaria colado perto do topo da tela com um vão vazio enorme embaixo.
  *
- * Recalculado na v0.4.0 pro mapa novo (1050×28, chão principal agora na
+ * Recalculado na v0.4.0 pro mapa novo (posteriormente expandido para
+ * 1900×28, chão principal na
  * linha 21 do grid, y=336 no espaço do mapa - antes era a linha 16/y=256
  * no mapa provisório de 20 linhas). Mesmo critério de sempre: escolhido
  * pra essa linha cair em y=560 na tela (o mesmo `GROUND_Y` do nível
