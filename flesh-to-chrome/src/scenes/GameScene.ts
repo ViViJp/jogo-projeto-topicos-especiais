@@ -225,7 +225,7 @@ export class GameScene extends Phaser.Scene {
     const runtime = new TiledLevelRuntime(this, new Set(this.data$.consolidatedCreditIds), {
       onCreditCollected: (id, value) => this.handleCreditCollected(id, value),
       onCheckpoint: (_id, x, y) => this.handleCheckpoint(x, y),
-      onEndGate: (destination) => this.handleEndGate(destination),
+      onEndGate: (destination, implant) => this.handleEndGate(destination, implant),
     });
     this.tiledRuntime = runtime;
     this.levelLengthPx = runtime.lengthPx;
@@ -331,11 +331,10 @@ export class GameScene extends Phaser.Scene {
 
   /**
    * `destinationOverride` vem do objeto `clinic` do mapa Tiled (propriedade
-   * `next`, ainda não formalizada no contrato - ver `TiledLevelRuntime.ts`);
-   * o nível desenhado à mão não tem esse objeto, então usa a mesma regra
-   * fixa de antes.
+   * `next` e `implant`); o nível desenhado à mão não tem esse objeto, então
+   * usa a mesma regra fixa de antes.
    */
-  private handleEndGate(destinationOverride?: string): void {
+  private handleEndGate(destinationOverride?: string, implantOverride?: keyof AbilityState): void {
     this.credits.consolidate();
     this.save.updateCheckpoint(
       this.player.sprite.x,
@@ -360,6 +359,7 @@ export class GameScene extends Phaser.Scene {
         nextPhaseId,
         wallet: this.credits.getTotal(),
         abilities: this.activeAbilities,
+        implant: implantOverride,
       });
     });
   }

@@ -234,6 +234,29 @@
                  "y":288
                 }, 
                 {
+                 "height":80,
+                 "id":76,
+                 "name":"clinic_01",
+                 "opacity":1,
+                 "properties":[
+                        {
+                         "name":"implant",
+                         "type":"string",
+                         "value":"legs"
+                        },
+                        {
+                         "name":"next",
+                         "type":"string",
+                         "value":"ClinicScene"
+                        }],
+                 "rotation":0,
+                 "type":"clinic",
+                 "visible":true,
+                 "width":64,
+                 "x":28800,
+                 "y":288
+                },
+                {
                  "height":48,
                  "id":7,
                  "name":"toxic_water_01",
@@ -1146,7 +1169,7 @@
          "y":0
         }],
  "nextlayerid":10,
- "nextobjectid":76,
+ "nextobjectid":77,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.12.2",

@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { Player } from "../entities/Player";
 import { EnemyRuntime } from "./EnemyRuntime";
+import { AbilityState } from "../systems/AbilityState";
 import { TEX } from "../utils/PlaceholderTextures";
 import {
   TILED_FASE1_MAP_KEY,
@@ -91,6 +92,7 @@ export class TiledLevelRuntime {
   readonly spawn: { x: number; y: number };
   readonly endGateX: number;
   readonly clinicDestination: string;
+  readonly clinicImplant?: keyof AbilityState;
   readonly fallDeathY: number;
   readonly credits: TiledCreditObj[] = [];
   readonly checkpoints: TiledCheckpointObj[] = [];
@@ -108,7 +110,7 @@ export class TiledLevelRuntime {
     private callbacks: {
       onCreditCollected: (id: string, value: number) => void;
       onCheckpoint: (id: string, x: number, y: number) => void;
-      onEndGate: (destination: string) => void;
+      onEndGate: (destination: string, implant?: keyof AbilityState) => void;
     }
   ) {
     this.map = scene.make.tilemap({ key: TILED_FASE1_MAP_KEY });
@@ -169,6 +171,10 @@ export class TiledLevelRuntime {
 
     const clinicObj = byType("clinic")[0];
     this.clinicDestination = this.propString(clinicObj, "next") ?? "ClinicScene";
+    const clinicImplant = this.propString(clinicObj, "implant");
+    this.clinicImplant = clinicImplant && ["legs", "arms", "eyes", "thrusters"].includes(clinicImplant)
+      ? clinicImplant as keyof AbilityState
+      : undefined;
 
     for (const o of byType("credit")) {
       const id = this.propString(o, "id") ?? o.name ?? `credit-${o.id}`;
@@ -434,7 +440,7 @@ export class TiledLevelRuntime {
 
     if (!this.endGateTriggered && px >= this.endGateX) {
       this.endGateTriggered = true;
-      this.callbacks.onEndGate(this.clinicDestination);
+      this.callbacks.onEndGate(this.clinicDestination, this.clinicImplant);
     }
   }
 

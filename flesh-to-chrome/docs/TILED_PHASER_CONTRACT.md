@@ -1,6 +1,6 @@
 # Flesh to Chrome — Contrato Tiled ↔ Phaser
 
-**Versão:** 0.4  
+**Versão:** 0.5  
 **Data:** 2026-10-14  
 **Status:** contrato vivo — atualizar sempre que uma nova classe, propriedade, camada ou valor de comportamento for criado no Tiled.
 
@@ -23,6 +23,15 @@ Para a Fase 1:
 - Orientação: **Orthogonal**
 - Arquivo autoral: **src/assets/maps/esgoto/fase-1.tmj**
 - Arquivo exportado: **src/assets/maps/esgoto/fase-1.json**
+
+Para a Fase 2:
+
+- Grid: **32 × 32 px**
+- Setor: **Industrial**
+- Orientação: **Orthogonal**
+- Arquivo autoral: **src/assets/maps/industrial/fase-2.tmj**
+- Arquivo exportado: **src/assets/maps/industrial/fase-2.json**
+- Status: **blockout autorado; integração Phaser dos comportamentos industriais ainda pendente**
 
 ## 3. Camadas oficiais
 
@@ -86,6 +95,7 @@ A integração trata esses valores como case-sensitive.
 
 - Retângulos ligados à geometria do mapa devem, sempre que possível, ficar alinhados ao grid.
 - Na Fase 1, dimensões de retângulos preferencialmente devem ser múltiplos de **16 px**.
+- Na Fase 2, dimensões de retângulos preferencialmente devem ser múltiplos de **32 px**.
 - A hitbox de um hazard deve cobrir o trecho visual realmente letal, sem invadir área segura.
 - Um ajuste interno menor que o tile é permitido quando necessário para acompanhar a silhueta da arte, mas precisa ser validado no Phaser.
 - Objetos do tipo Point (**spawn**, **credit**) podem ficar centralizados sobre tiles e não precisam obrigatoriamente ter X/Y múltiplos de 16.
@@ -220,11 +230,57 @@ id: f1-cp1
 
 **Representação visual:** videogame + televisão de tubo em uma layer visual ou instanciados pelo Phaser. O objeto **checkpoint** representa a lógica, não a arte.
 
-## 6. Classes planejadas / ainda não formalizadas
+## 6. Classes da Fase 2 com integração pendente
+
+As classes abaixo já estão normalizadas no mapa da Fase 2, mas só serão consideradas implementadas depois que o runtime Phaser interpretar e testar seus comportamentos.
+
+### 6.1 **tutorial**
+
+**Geometria Tiled:** Rectangle Object.
+
+~~~text
+Nome: tutorial_double_jump_01
+Classe: tutorial
+skill = double_jump
+~~~
+
+### 6.2 **conveyor**
+
+**Função:** área de esteira que altera o deslocamento horizontal sem causar morte por si só.
+
+**Geometria Tiled:** Rectangle Object.
+
+| Propriedade | Tipo | Valores | Obrigatória |
+| --- | --- | --- | --- |
+| **direction** | string | **left** ou **right** | sim |
+| **speed** | int | velocidade adicional em px/s | sim |
+
+### 6.3 **clinic**
+
+**Função:** identifica a clínica e o implante concedido após a conclusão da fase.
+
+**Geometria Tiled:** Rectangle Object.
+
+| Propriedade | Tipo | Exemplo | Obrigatória |
+| --- | --- | --- | --- |
+| **implant** | string | **arms** | sim |
+| **next** | string | **ClinicScene** | sim |
+
+### 6.4 Novos valores de **hazard.kind**
+
+| kind | Representação planejada | Regra planejada |
+| --- | --- | --- |
+| **press** | prensa industrial | morte durante o ciclo ativo |
+| **steam** | jato de vapor | morte durante a emissão |
+| **mech_arm** | braço mecânico | morte ao contato com a parte ativa |
+| **crusher** | trituradora | morte ao contato |
+
+Esses valores não devem usar o fallback da Fase 1. Cada comportamento precisa ser implementado explicitamente antes de a Fase 2 substituir o nível legado.
+
+## 7. Classes planejadas / ainda não formalizadas
 
 Estas classes só entram no contrato oficial quando forem efetivamente criadas no mapa e implementadas:
 
-- **clinic**
 - **enemy**
 - **breakable**
 - **scan_reveal**
@@ -244,9 +300,11 @@ Ao criar uma delas, documentar:
 6. exemplo real;
 7. teste realizado no Phaser.
 
-## 7. Contrato atual da Fase 1
+## 8. Contratos atuais por fase
 
-### Layers
+### 8.1 Fase 1
+
+#### Layers
 
 ~~~text
 objects
@@ -257,30 +315,73 @@ deco-back
 background
 ~~~
 
-### Objetos usados
+#### Objetos usados
 
 ~~~text
 spawn
 phase_end
+clinic
 hazard
 credit
 checkpoint
 ~~~
 
-### Valores usados
+#### Valores usados
 
 ~~~text
 hazard.kind = toxic_water | electric_wire | broken_pipe
 credit.route = normal | risk
 phase_end.fase = 1
+clinic.implant = legs
+clinic.next = ClinicScene
 checkpoint.id = f1-cp1
 ~~~
 
-## 8. Regras para integração Phaser
+### 8.2 Fase 2 — esquema autoral
+
+#### Layers
+
+~~~text
+objects
+deco
+hazards
+ground
+deco-back
+background
+~~~
+
+#### Objetos usados
+
+~~~text
+spawn
+tutorial
+credit
+hazard
+conveyor
+checkpoint
+clinic
+phase_end
+~~~
+
+#### Valores usados
+
+~~~text
+tutorial.skill = double_jump
+hazard.kind = press | steam | mech_arm | crusher
+conveyor.direction = left | right
+conveyor.speed = int
+credit.route = normal | risk
+checkpoint.id = f2-cp1
+clinic.implant = arms
+clinic.next = ClinicScene
+phase_end.fase = 2
+~~~
+
+## 9. Regras para integração Phaser
 
 O responsável pela integração deve:
 
-1. carregar o **fase-1.json** exportado do Tiled;
+1. carregar o **fase-N.json** correspondente exportado do Tiled;
 2. criar/renderizar as layers pelos nomes exatos;
 3. aplicar colisão física sólida na layer **ground**;
 4. não aplicar colisão por padrão em **background**, **deco-back** e **deco**;
@@ -288,7 +389,7 @@ O responsável pela integração deve:
 6. ler a Object Layer **objects**;
 7. despachar o comportamento pela classe;
 8. ler propriedades personalizadas sem alterar seus nomes;
-9. implementar explicitamente todos os valores de **hazard.kind** definidos neste contrato;
+9. implementar explicitamente todos os valores de **hazard.kind** usados pela fase integrada;
 10. considerar classes e valores case-sensitive;
 11. avisar o level designer antes de mudar qualquer nome usado pelo parser.
 
@@ -296,7 +397,7 @@ O responsável pela integração deve:
 
 Dependendo da versão/exportação do Tiled, a informação exibida na interface como **Classe** pode aparecer no JSON como **type**. A integração deve ser validada contra o JSON exportado real antes de fixar o parser.
 
-## 9. Checklist antes de adicionar classe ou kind
+## 10. Checklist antes de adicionar classe ou kind
 
 - [ ] Definir nome em minúsculas.
 - [ ] Definir Point, Rectangle ou outro tipo.
@@ -308,7 +409,7 @@ Dependendo da versão/exportação do Tiled, a informação exibida na interface
 - [ ] Implementar explicitamente o parser/comportamento no Phaser.
 - [ ] Testar pelo menos um objeto real no jogo.
 
-## 10. Checklist da Fase 1 antes do passe de decoração
+## 11. Checklist da Fase 1 antes do passe de decoração
 
 1. Confirmar que o arquivo aberto é **fase-1.tmj**, não o backup nem o JSON exportado.
 2. Confirmar o grid de **16 × 16 px** e as seis layers oficiais.
@@ -323,7 +424,15 @@ Dependendo da versão/exportação do Tiled, a informação exibida na interface
 11. Testar no Phaser todos os hazards e o respawn do checkpoint.
 12. Somente depois bloquear **ground**, **hazards** e **objects** e iniciar **background → deco-back → deco**.
 
-## 11. Histórico de alterações
+## 12. Histórico de alterações
+
+### v0.5 — 2026-10-14
+
+- registrada a Fase 2 como mapa industrial 32 × 32;
+- normalizados nomes, IDs, Points e dimensões dos objetos do blockout;
+- formalizado o esquema autoral de **tutorial**, **conveyor** e **clinic**;
+- registrados os kinds industriais **press**, **steam**, **mech_arm** e **crusher** como pendentes de implementação no Phaser;
+- diferenciada a esteira não letal dos objetos da classe **hazard**.
 
 ### v0.4 — 2026-10-14
 

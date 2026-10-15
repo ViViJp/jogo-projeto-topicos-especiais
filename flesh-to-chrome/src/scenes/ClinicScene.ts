@@ -10,6 +10,7 @@ interface ClinicSceneData {
   nextPhaseId: string | null;
   wallet: number;
   abilities: AbilityState;
+  implant?: keyof AbilityState;
 }
 
 /**
@@ -36,18 +37,20 @@ export class ClinicScene extends Phaser.Scene {
     this.input$ = new InputManager(this);
     this.proceeded = false;
 
-    const implantByPhase: Record<string, { key: keyof AbilityState; label: string; ability: string }> = {
-      fase1: { key: "legs", label: "pernas mecânicas", ability: "salto duplo" },
-      "fase2-intro": { key: "arms", label: "braços mecânicos", ability: "ataque e quebra" },
-      fase3: { key: "eyes", label: "olhos mecânicos", ability: "scan e revelação" },
-      fase4: { key: "thrusters", label: "propulsores", ability: "dash" },
+    const implantByKey: Record<keyof AbilityState, { label: string; ability: string }> = {
+      legs: { label: "pernas mecânicas", ability: "salto duplo" },
+      arms: { label: "braços mecânicos", ability: "ataque e quebra" },
+      eyes: { label: "olhos mecânicos", ability: "scan e revelação" },
+      thrusters: { label: "propulsores", ability: "dash" },
     };
-    const implant = implantByPhase[this.data$.completedPhaseId] ?? {
-      key: "legs" as keyof AbilityState,
-      label: "pernas mecânicas",
-      ability: "salto duplo",
+    const implantKeyByPhase: Record<string, keyof AbilityState> = {
+      fase1: "legs",
+      "fase2-intro": "arms",
+      fase3: "eyes",
+      fase4: "thrusters",
     };
-    const implantKey = implant.key;
+    const implantKey = this.data$.implant ?? implantKeyByPhase[this.data$.completedPhaseId] ?? "legs";
+    const implant = implantByKey[implantKey];
     const implantLabel = implant.label;
     const abilityLabel = implant.ability;
 
