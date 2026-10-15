@@ -20,6 +20,16 @@ export class MenuScene extends Phaser.Scene {
   }
 
   create(): void {
+    // O Phaser reaproveita a MESMA instância da cena a cada `scene.start`, então
+    // estes campos sobrevivem entre visitas. Sem zerar, `optionTexts` ainda
+    // guardava os textos DESTRUÍDOS da visita anterior e `setSelected()` chamava
+    // `setColor` neles — exceção que derrubava o menu inteiro (tela vazia) ao
+    // voltar do Multiplayer com ESC.
+    this.optionTexts = [];
+    this.selectedIndex = 0;
+    this.confirmVisible = false;
+    this.confirmText = undefined;
+
     this.cameras.main.setBackgroundColor(0x05050a);
 
     this.add
@@ -45,7 +55,7 @@ export class MenuScene extends Phaser.Scene {
       this.options.push({ label: "Continuar", action: () => this.continueGame() });
     }
     this.options.push({ label: "Novo Jogo", action: () => this.newGame(hasSave) });
-    this.options.push({ label: "Multiplayer (pós-MVP — não implementado)", action: () => {} });
+    this.options.push({ label: "Multiplayer", action: () => this.multiplayer() });
 
     this.options.forEach((opt, i) => {
       const text = this.add
@@ -89,6 +99,10 @@ export class MenuScene extends Phaser.Scene {
   private confirmSelection(): void {
     if (this.confirmVisible) return;
     this.options[this.selectedIndex]?.action();
+  }
+
+  private multiplayer(): void {
+    this.scene.start("MultiplayerScene");
   }
 
   private continueGame(): void {
