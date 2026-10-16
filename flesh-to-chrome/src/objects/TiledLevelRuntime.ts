@@ -210,6 +210,7 @@ export class TiledLevelRuntime {
 
     this.buildCredits();
     this.buildCheckpoints();
+    this.buildPhaseExit(endObj, ground, offsetY);
     this.buildObjectHazards(byType("hazard"), offsetY);
   }
 
@@ -296,6 +297,18 @@ export class TiledLevelRuntime {
     }
   }
 
+  private buildPhaseExit(
+    endObj: Phaser.Types.Tilemaps.TiledObject | undefined,
+    ground: Phaser.Tilemaps.TilemapLayer,
+    offsetY: number
+  ): void {
+    const x = endObj?.x ?? this.endGateX;
+    const y = this.groundSurfaceYAt(x, ground, offsetY);
+    const arch = this.scene.add.rectangle(x + 20, y - 28, 36, 56, 0x140e18).setDepth(2);
+    arch.setStrokeStyle(2, 0xc46a3a);
+    this.scene.add.rectangle(x + 20, y - 24, 18, 28, 0x6ec8ff, 0.85).setDepth(2);
+  }
+
   private buildCheckpoints(): void {
     // Mesmo visual usado no nível desenhado à mão (`LevelRuntime.ts`) -
     // `checkpoint` ainda não está formalizado no contrato (§6), mas já
@@ -358,7 +371,7 @@ export class TiledLevelRuntime {
       // é fatal: a regra do jogo é 1 hit = morte para qualquer elemento
       // que realmente gere colisão.
       if (body.blocked.left || body.blocked.right || body.blocked.up) {
-        player.kill();
+        player.kill("hit");
       }
     });
     if (this.hazardsLayer) {
@@ -373,18 +386,18 @@ export class TiledLevelRuntime {
         if (tile.index === -1) return;
         const kind = tile.properties?.obstacleKind;
         if (kind === "overhead") {
-          if (player.getState() !== "sliding") player.kill();
+          if (player.getState() !== "sliding") player.kill("shock");
         } else if (kind === "floor") {
-          player.kill();
+          player.kill("water");
         }
       });
     }
     for (const hz of this.hazardZones) {
       this.scene.physics.add.overlap(player.sprite, hz.zone, () => {
         if (hz.behavior === "overhead") {
-          if (player.getState() !== "sliding") player.kill();
+          if (player.getState() !== "sliding") player.kill(hz.kind === "electric_wire" ? "shock" : "hit");
         } else {
-          player.kill();
+          player.kill(hz.kind === "toxic_water" ? "water" : "hit");
         }
       });
     }
@@ -432,7 +445,7 @@ export class TiledLevelRuntime {
     // Queda fora do chão real (poço sem tile de hazard visual, ou só cair
     // além do fim do nível).
     if (py > this.fallDeathY && player.getState() !== "dead") {
-      player.kill();
+      player.kill("water");
       return;
     }
 

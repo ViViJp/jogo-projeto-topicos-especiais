@@ -9,7 +9,7 @@ import {
 } from "../config/GameConfig";
 import { AbilityState } from "../systems/AbilityState";
 import { InputManager } from "../systems/InputManager";
-import { ALEX_TEXTURE_KEY, ALEX_RUN_ANIM, ALEX_SLIDE_FRAME, ensureAlexAnimations } from "../utils/AlexSprite";
+import { ALEX_TEXTURE_KEY, ALEX_HURT_ANIM, ALEX_RUN_ANIM, ALEX_SLIDE_FRAME, ensureAlexAnimations } from "../utils/AlexSprite";
 
 const ALEX_EYES_TEXTURE_KEY = "alex-eyes";
 const ALEX_EYES_RUN_ANIM = "alex-eyes-run";
@@ -23,6 +23,8 @@ export type PlayerState =
   | "dashing"
   | "pressed" // preso contra um quebrável (seção 14.7)
   | "dead";
+
+export type DeathCause = "shock" | "water" | "hit";
 
 /**
  * Controlador de Alex Murphy.
@@ -48,6 +50,7 @@ export class Player {
   private dashCooldownTimer = 0;
   private pressedTimer = 0;
   private scanTimer = 0;
+  private beatUntil = 0;
 
   private onDeath: () => void;
   private onScanPulse: (active: boolean) => void;
@@ -111,12 +114,73 @@ export class Player {
     this.sprite.setVelocityX(BASE_RUN_SPEED);
   }
 
-  kill(): void {
+  kill(cause: DeathCause = "hit"): void {
     if (this.state === "dead") return;
     this.state = "dead";
     this.sprite.setVelocity(0, 0);
     this.sprite.body!.enable = false;
+    if (this.scene.anims.exists(ALEX_HURT_ANIM)) {
+      this.sprite.anims.play(ALEX_HURT_ANIM, true);
+    }
+    if (cause === "shock") {
+      this.sprite.setTint(0xffe29a);
+      this.burst(0xfff1a8);
+    } else if (cause === "water") {
+      this.sprite.setTint(0x7dffb2);
+      this.scene.tweens.add({ targets: this.sprite, y: this.sprite.y + 10, duration: 280 });
+    }
     this.onDeath();
+  }
+
+  /** Parada curta no checkpoint: senta na frente de uma TV e volta a correr. */
+  playCheckpoint(): void {
+    if (this.state === "dead") return;
+    this.beatUntil = this.scene.time.now + 700;
+    this.sprite.setVelocityX(0);
+    this.sprite.anims.stop();
+    this.sprite.setFrame(ALEX_SLIDE_FRAME);
+    const x = this.sprite.x + 26;
+    const y = this.sprite.y - 22;
+    const tv = this.scene.add.rectangle(x, y, 20, 14, 0x1a120c).setDepth(6);
+    const screen = this.scene.add.rectangle(x, y - 1, 12, 8, 0x7ec8ff).setDepth(7);
+    this.scene.time.delayedCall(700, () => {
+      tv.destroy();
+      screen.destroy();
+      if (this.state === "dead") return;
+      this.sprite.anims.play(this.runAnim(), true);
+      this.sprite.setVelocityX(BASE_RUN_SPEED);
+    });
+  }
+
+  /** Chegada no fim da fase: para e olha a saída antes da clínica. */
+  playPhaseExit(): void {
+    if (this.state === "dead") return;
+    this.beatUntil = this.scene.time.now + 500;
+    this.sprite.setVelocity(0, 0);
+    this.sprite.anims.stop();
+    this.sprite.setFrame(ALEX_SLIDE_FRAME);
+  }
+
+  private burst(color: number): void {
+    for (let i = 0; i < 5; i++) {
+      const spark = this.scene.add.circle(
+        this.sprite.x + (i - 2) * 6,
+        this.sprite.y - 28,
+        2,
+        color
+      ).setDepth(8);
+      this.scene.tweens.add({
+        targets: spark,
+        y: spark.y - 16 - i * 3,
+        alpha: 0,
+        duration: 280,
+        onComplete: () => spark.destroy(),
+      });
+    }
+  }
+
+  private runAnim(): string {
+    return this.sprite.texture.key === ALEX_EYES_TEXTURE_KEY ? ALEX_EYES_RUN_ANIM : ALEX_RUN_ANIM;
   }
 
   update(deltaMs: number): void {
@@ -151,6 +215,11 @@ export class Player {
     this.handleAttack();
     this.handleScan();
     this.handleDash();
+
+    if (this.scene.time.now < this.beatUntil) {
+      this.sprite.setVelocityX(0);
+      return;
+    }
 
     // fora dos estados especiais, garante velocidade base constante
     if (this.state === "running" || this.state === "jumping") {

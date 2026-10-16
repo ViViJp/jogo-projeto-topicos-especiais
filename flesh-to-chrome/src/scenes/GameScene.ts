@@ -338,7 +338,8 @@ export class GameScene extends Phaser.Scene {
     this.data$.checkpointX = x;
     this.data$.checkpointY = y;
     this.updateHud();
-    this.hud.flashPrompt("Checkpoint alcançado — créditos consolidados");
+    this.hud.flashPrompt("Checkpoint — Alex senta e joga");
+    this.player.playCheckpoint();
   }
 
   /**
@@ -366,7 +367,9 @@ export class GameScene extends Phaser.Scene {
     const destination = destinationOverride ??
       (this.data$.phaseId === "fase1" || this.data$.phaseId === "fase2-intro" ? "ClinicScene" : "EndingScene");
 
-    this.time.delayedCall(300, () => {
+    this.player.playPhaseExit();
+    this.cameras.main.fadeOut(480, 10, 8, 16);
+    this.time.delayedCall(500, () => {
       this.scene.start(destination, {
         completedPhaseId: this.data$.phaseId,
         nextPhaseId,
