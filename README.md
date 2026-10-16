@@ -28,6 +28,7 @@ Na raiz, `npm run dev` / `npm run build` apenas encaminham para essa pasta.
 - Mapa Fase 1 (blockout Victor): [`flesh-to-chrome/src/assets/maps/esgoto/fase-1.tmj`](flesh-to-chrome/src/assets/maps/esgoto/fase-1.tmj)
 - Integração Phaser do mapa: issue [#15](https://github.com/ViViJp/jogo-projeto-topicos-especiais/issues/15) (Motoca)
 - Docs: [`gdd.md`](gdd.md), [`levelDesign.md`](levelDesign.md), [`Cyberpunk.md`](Cyberpunk.md)
+- Contrato Tiled ↔ Phaser: [`flesh-to-chrome/docs/TILED_PHASER_CONTRACT.md`](flesh-to-chrome/docs/TILED_PHASER_CONTRACT.md)
 
 ## O que **não** é o jogo
 
