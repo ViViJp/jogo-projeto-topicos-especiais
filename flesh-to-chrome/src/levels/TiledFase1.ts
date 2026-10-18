@@ -4,12 +4,9 @@ import fase1Map from "../assets/maps/esgoto/fase-1.json";
  * Config da Fase 1 sobre o mapa Tiled real
  * (`src/assets/maps/esgoto/fase-1.json`), seguindo o contrato
  * `docs/TILED_PHASER_CONTRACT.md` (contrato vivo) entregue pelo level
- * designer. Só a Fase 1 está no contrato oficial até agora - os outros
- * mapas entregues (`src/assets/maps/{industrial,meio-urbano,corporativo,
- * topo}`) continuam em 32×32px e sem um contrato formal (grid oficial só
- * definido pra Fase 1 no documento), então ficam de fora desta integração;
- * a Fase 2 em diante continua no formato desenhado à mão
- * (`src/levels/phase2Intro.ts`) até terem seu próprio contrato.
+ * designer. A Fase 2 possui configuração e runtime próprios em
+ * `TiledFase2.ts`/`TiledPhase2Runtime.ts`; esta classe continua dedicada
+ * às regras particulares do mapa de 16×16 px da Fase 1.
  *
  * v0.4.0 - troca pelo blockout FINAL da Fase 1 entregue pelo level design
  * (branch/export mais recente do Tiled - commit "feat: Finalizando o

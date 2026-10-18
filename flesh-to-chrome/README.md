@@ -252,12 +252,10 @@ Stack conforme a Seção 22 do GDD: **TypeScript + Phaser `^4.2.1` + Parcel**.
 
 Esta entrega implementa o **Marco 2 — Vertical Slice** do cronograma (GDD
 seção 24.2), com toda a arquitetura de sistemas já pronta para os marcos
-seguintes. Desde a v0.3.0, a **Fase 1 usa o mapa Tiled real** entregue pela
-equipe, seguindo `TILED_PHASER_CONTRACT1.md` (ver Changelog e "Correções e
-decisões de v0.3.0" abaixo); a **Fase 2-intro continua** no formato
-desenhado à mão da v0.1 (`LevelBuilder`/`phase2Intro.ts`), porque o
-contrato ainda só cobre o grid 16×16 da Fase 1 — ver "Reintegrando os
-mapas Tiled das Fases 2-5" para a próxima etapa dessa migração:
+seguintes. A **Fase 1** usa seu mapa Tiled de 16×16 px e a **Fase 2** usa
+agora o blockout Tiled industrial de 32×32 px. As duas integrações seguem
+`docs/TILED_PHASER_CONTRACT.md`; as fases seguintes ainda aguardam seus
+runtimes específicos:
 
 - Corrida automática, pulo, slide, salto duplo — com os tempos/valores de
   referência da Seção 14 do GDD (todos marcados como "provisório" onde o
@@ -348,14 +346,14 @@ src/
   systems/                 # Input, Créditos, Save, HUD, Habilidades
   levels/                  # dados de fase (builder sequencial + registry)
   levels/TiledFase1.ts     # config/import estático do mapa Tiled da Fase 1
+  levels/TiledFase2.ts     # config/import estático do mapa Tiled da Fase 2
   objects/LevelRuntime.ts        # runtime da(s) fase(s) desenhada(s) à mão
   objects/TiledLevelRuntime.ts   # runtime da Fase 1 a partir do mapa Tiled
+  objects/TiledPhase2Runtime.ts  # runtime industrial da Fase 2
   utils/AlexSprite.ts      # frames/animações do spritesheet LPC real
   utils/PlaceholderTextures.ts  # texturas placeholder do resto do nível
-  assets/maps/**/*.json    # os 5 mapas Tiled reais (fase-1 .. fase-5) -
-                           # só fase-1.json é carregado pelo GameScene
-                           # nesta versão, ver "Reintegrando os mapas
-                           # Tiled das Fases 2-5" abaixo
+  assets/maps/**/*.json    # mapas Tiled (Fases 1 e 2 carregadas pelo jogo;
+                           # mapas posteriores aguardam integração)
   assets/tiles/**          # tilesets de cada fase (idem)
   assets/player/           # spritesheet LPC de Alex (em uso)
 ```
@@ -365,22 +363,17 @@ src/
 O GDD define Tiled/JSON como ferramenta de level design (Seção 7.1). A
 v0.2.0 chegou a integrar os 5 mapas Tiled reais entregues pela equipe, mas
 a v0.2.1 reverteu tudo (ver Changelog) porque a gameplay resultante ficou
-pior; a v0.3.0 reintegra especificamente a **Fase 1**, agora seguindo
-`TILED_PHASER_CONTRACT1.md` e com a física original (320px/s, gravidade
-1600 — não a recalibração da v0.2.0). `GameScene.ts` decide por fase qual
-runtime usar (`isTiledPhase()`): `fase1` carrega `TiledLevelRuntime` a
-partir de `fase-1.json`; `fase2-intro` continua no formato próprio
-(`LevelBuilder`/`LevelTypes.ts`, via `src/levels/index.ts`/`LEVELS`), com
-cada fase descrita por um `LevelBuilder` sequencial (chão, gaps,
-obstáculos aéreos, créditos, checkpoints) na mesma ordem dos nós dos
-fluxogramas de `levelDesign.md` — os comentários no código de
-`phase2Intro.ts` apontam para cada nó correspondente.
+pior; a v0.3.0 reintegrou a **Fase 1** e a integração atual também usa o
+blockout Tiled da **Fase 2**, ambos com a física original (320px/s,
+gravidade 1600). `GameScene.ts` decide por fase qual runtime usar:
+`fase1` carrega `TiledLevelRuntime` a partir de `fase-1.json` e
+`fase2-intro` carrega `TiledPhase2Runtime` a partir de `fase-2.json`.
 
-Os mapas `.json` do Tiled e os tilesets reais das Fases 2-5 **continuam no
-repositório** (`src/assets/maps/`, `src/assets/tiles/`) para quando fizer
-sentido migrá-las também — ver a seção logo abaixo.
+Os mapas `.json` do Tiled e os tilesets das fases posteriores continuam no
+repositório (`src/assets/maps/`, `src/assets/tiles/`) para suas próximas
+integrações.
 
-### Reintegrando os mapas Tiled das Fases 2-5
+### Reintegrando os mapas Tiled das Fases 3-5
 
 A reintegração da Fase 1 na v0.3.0 confirma que **é possível usar os
 mapas Tiled reais sem reproduzir o problema da v0.2.0**, desde que dois
@@ -419,8 +412,8 @@ reusar o script, porque a versão simples (só checar se o pouso alcança o
 **início** da próxima plataforma) pode aprovar erradamente uma travessia
 que na verdade **ultrapassa** uma plataforma curta e cai no vão seguinte.
 
-**Nota técnica sobre o JSON do mapa e o Parcel** (válida para a Fase 1,
-já religada nesta versão, e para quando as Fases 2-5 também forem):
+**Nota técnica sobre o JSON do mapa e o Parcel** (válida para as Fases 1
+e 2 já integradas e para quando as Fases 3-5 também forem):
 `new URL('./mapa.json',
 import.meta.url)` faz o Parcel tratar o arquivo como módulo JS (roda pelo
 transformer de JSON padrão), não como asset estático copiável — o que
@@ -1221,9 +1214,9 @@ Esta entrega cobre os Marcos 1 e 2. Os próximos passos, em ordem:
   máquina de estados do jogador via `enterPressedState`/
   `resolvePressedSuccess`), e o Portão ao final da Fase 5. Os mapas Tiled
   reais entregues pela equipe (`src/assets/maps/`) são o material natural
-  para desenhar essas fases — a Fase 1 já foi religada na v0.3.0 seguindo
-  o contrato (`TILED_PHASER_CONTRACT1.md`); ver "Reintegrando os mapas
-  Tiled das Fases 2-5" para o que falta pra estender às demais.
+  para desenhar essas fases — as Fases 1 e 2 já usam seus mapas reais;
+  ver "Reintegrando os mapas Tiled das Fases 3-5" para o que falta nas
+  demais.
 - **Marco 4 — Narrativa, descida e finais** (Seção 24.4): prólogo, arco de
   George, propagandas do pai, escolha Chrome/Flesh no Portão, glitches
   (Seção 18.3), retry especial, ReForge Industries e bioprinting (Seção

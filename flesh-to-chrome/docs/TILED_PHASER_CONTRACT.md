@@ -1,7 +1,7 @@
 # Flesh to Chrome — Contrato Tiled ↔ Phaser
 
-**Versão:** 0.5  
-**Data:** 2026-10-14  
+**Versão:** 0.7
+**Data:** 2026-10-18
 **Status:** contrato vivo — atualizar sempre que uma nova classe, propriedade, camada ou valor de comportamento for criado no Tiled.
 
 ## 1. Objetivo
@@ -31,7 +31,7 @@ Para a Fase 2:
 - Orientação: **Orthogonal**
 - Arquivo autoral: **src/assets/maps/industrial/fase-2.tmj**
 - Arquivo exportado: **src/assets/maps/industrial/fase-2.json**
-- Status: **blockout autorado; integração Phaser dos comportamentos industriais ainda pendente**
+- Status: **blockout integrado ao Phaser; ciclos e animações individuais dos hazards ainda pendentes**
 
 ## 3. Camadas oficiais
 
@@ -230,9 +230,9 @@ id: f1-cp1
 
 **Representação visual:** videogame + televisão de tubo em uma layer visual ou instanciados pelo Phaser. O objeto **checkpoint** representa a lógica, não a arte.
 
-## 6. Classes da Fase 2 com integração pendente
+## 6. Classes da Fase 2
 
-As classes abaixo já estão normalizadas no mapa da Fase 2, mas só serão consideradas implementadas depois que o runtime Phaser interpretar e testar seus comportamentos.
+As classes abaixo estão normalizadas no mapa da Fase 2 e são interpretadas pelo runtime `TiledPhase2Runtime`. Os hazards industriais ainda usam um comportamento provisório, explicitado na seção 6.4.
 
 ### 6.1 **tutorial**
 
@@ -255,6 +255,8 @@ skill = double_jump
 | **direction** | string | **left** ou **right** | sim |
 | **speed** | int | velocidade adicional em px/s | sim |
 
+No runtime atual, a velocidade é aplicada somente enquanto o corpo de Alex está apoiado sobre a superfície e sobrepõe horizontalmente o retângulo. `right` soma a velocidade à corrida-base e `left` subtrai. Ao sair da esteira ou pular, Alex volta à velocidade-base.
+
 ### 6.3 **clinic**
 
 **Função:** identifica a clínica e o implante concedido após a conclusão da fase.
@@ -268,14 +270,24 @@ skill = double_jump
 
 ### 6.4 Novos valores de **hazard.kind**
 
-| kind | Representação planejada | Regra planejada |
+| kind | Representação planejada | Regra provisória atual |
 | --- | --- | --- |
-| **press** | prensa industrial | morte durante o ciclo ativo |
-| **steam** | jato de vapor | morte durante a emissão |
-| **mech_arm** | braço mecânico | morte ao contato com a parte ativa |
+| **press** | prensa industrial | morte imediata ao contato |
+| **steam** | jato de vapor | morte imediata ao contato |
+| **mech_arm** | braço mecânico | morte imediata ao contato |
 | **crusher** | trituradora | morte ao contato |
 
-Esses valores não devem usar o fallback da Fase 1. Cada comportamento precisa ser implementado explicitamente antes de a Fase 2 substituir o nível legado.
+Os quatro valores são reconhecidos explicitamente pelo runtime da Fase 2. Seus ciclos, estados ativos e animações continuam pendentes; até que sejam definidos, toda a área retangular autorada em `objects` permanece letal em qualquer estado de Alex.
+
+### 6.5 **low_ceiling**
+
+**Função:** mantém um obstáculo baixo atravessável somente durante o slide, sem obrigar a arte do cano a invadir a silhueta agachada de Alex.
+
+**Geometria Tiled:** Rectangle Object cobrindo apenas a faixa superior ocupada pela hitbox em pé. Não usa propriedades personalizadas.
+
+No mapa atual, a arte usa Tile Objects da classe **low_ceiling_visual**, com a base em **Y = 332**, deixando **52 px** entre o piso em Y = 384 e o cano. O retângulo lógico **low_ceiling** possui **24 px** de altura e mata Alex somente quando o estado não é `sliding`. A hitbox agachada de **30 px** passa abaixo dele.
+
+Os Tile Objects visuais ficam na layer **objects** porque precisam usar uma posição vertical intermediária, fora do grid de 32 px. Eles não possuem física; a regra continua concentrada nos retângulos **low_ceiling**.
 
 ## 7. Classes planejadas / ainda não formalizadas
 
@@ -357,6 +369,8 @@ spawn
 tutorial
 credit
 hazard
+low_ceiling
+low_ceiling_visual
 conveyor
 checkpoint
 clinic
@@ -368,6 +382,8 @@ phase_end
 ~~~text
 tutorial.skill = double_jump
 hazard.kind = press | steam | mech_arm | crusher
+low_ceiling = volume letal em pé e atravessável somente durante o slide
+low_ceiling_visual = Tile Object visual sem colisão, posicionado fora do grid
 conveyor.direction = left | right
 conveyor.speed = int
 credit.route = normal | risk
@@ -425,6 +441,20 @@ Dependendo da versão/exportação do Tiled, a informação exibida na interface
 12. Somente depois bloquear **ground**, **hazards** e **objects** e iniciar **background → deco-back → deco**.
 
 ## 12. Histórico de alterações
+
+### v0.7 — 2026-10-18
+
+- convertida a arte dos dois canos baixos em Tile Objects, permitindo uma abertura intermediária de 52 px;
+- formalizada a classe **low_ceiling** para preservar a exigência do slide sem sobrepor o sprite ao cano;
+- adicionados `low_ceiling_01` e `low_ceiling_02` ao mapa e ao runtime da Fase 2.
+
+### v0.6 — 2026-10-15
+
+- integrada a exportação `fase-2.json` ao Phaser, substituindo a prévia programática da Fase 2;
+- implementada a colisão da layer **ground** e a leitura de spawn, créditos, checkpoint, clínica e fim de fase;
+- implementadas as esteiras com velocidade adicional, direção e detecção de contato com a superfície;
+- definidos temporariamente **press**, **steam**, **mech_arm** e **crusher** como hazards de morte imediata ao contato;
+- mantidos ciclos e animações individuais dos hazards industriais como trabalho futuro.
 
 ### v0.5 — 2026-10-14
 

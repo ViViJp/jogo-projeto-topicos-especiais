@@ -8,6 +8,7 @@ import { SaveState } from "../systems/SaveState";
 import { Player } from "../entities/Player";
 import { LevelRuntime } from "../objects/LevelRuntime";
 import { TILED_CHECKPOINT_TEXTURE_KEY, TiledLevelRuntime } from "../objects/TiledLevelRuntime";
+import { TiledPhase2Runtime } from "../objects/TiledPhase2Runtime";
 import { LEVELS, getNextPhaseId } from "../levels";
 import {
   TILED_FASE1_MAP_KEY,
@@ -17,11 +18,19 @@ import {
   TILED_FASE1_BACKGROUND,
   TILED_FASE1_NAME,
 } from "../levels/TiledFase1";
+import {
+  TILED_FASE2_MAP_DATA,
+  TILED_FASE2_MAP_KEY,
+  TILED_FASE2_NAME,
+  TILED_FASE2_TILESETS,
+} from "../levels/TiledFase2";
 import { generatePlaceholderTextures } from "../utils/PlaceholderTextures";
 import { ALEX_TEXTURE_KEY, ALEX_SHEET_CONFIG } from "../utils/AlexSprite";
 
 export interface GameSceneData {
   phaseId: string;
+  /** Execução iniciada pelo seletor temporário; não altera o save da campanha. */
+  testMode?: boolean;
   checkpointX?: number;
   /**
    * v0.4.0 bugfix: o mapa novo da Fase 1 tem duas elevações de chão
@@ -80,14 +89,16 @@ const PHASE_BACKGROUND: Record<string, number> = {
  * `docs/TILED_PHASER_CONTRACT.md` entregue pelo level designer (ver
  * `TiledLevelRuntime.ts`/`TiledFase1.ts`). A física NÃO foi recalibrada
  * (continua 320px/s / gravidade 1600, os valores "bons" da v0.2.1) - só o
- * chão/objetos passam a vir do mapa real; a Fase 2 em diante continua no
- * formato desenhado à mão até terem seu próprio contrato.
+ * chão/objetos passam a vir do mapa real. A Fase 2 também usa agora seu
+ * blockout Tiled industrial; as fases posteriores continuam no formato
+ * desenhado à mão até suas integrações específicas.
  */
 export class GameScene extends Phaser.Scene {
   private input$!: InputManager;
   private player!: Player;
   private legacyRuntime?: LevelRuntime;
   private tiledRuntime?: TiledLevelRuntime;
+  private tiledPhase2Runtime?: TiledPhase2Runtime;
   private credits!: CreditsSystem;
   private hud!: HUD;
   private save!: SaveState;
@@ -104,8 +115,18 @@ export class GameScene extends Phaser.Scene {
   }
 
   init(data: GameSceneData): void {
+    // A instância da Scene é reutilizada pelo Phaser entre fases. Limpa as
+    // referências do runtime anterior para a seleção abaixo não continuar
+    // atualizando/consultando uma fase que já sofreu shutdown.
+    this.legacyRuntime = undefined;
+    this.tiledRuntime = undefined;
+    this.tiledPhase2Runtime = undefined;
+    this.isPaused = false;
+    this.pauseText = undefined;
+    this.scanOverlay = undefined;
     this.data$ = {
       phaseId: data.phaseId,
+      testMode: data.testMode ?? false,
       checkpointX: data.checkpointX ?? 0,
       checkpointY: data.checkpointY ?? 0,
       consolidatedCreditIds: data.consolidatedCreditIds ?? [],
@@ -164,6 +185,33 @@ export class GameScene extends Phaser.Scene {
           data: TILED_FASE1_MAP_DATA,
         });
       }
+    } else if (this.data$.phaseId === "fase2-intro") {
+      this.preloadPhase2Map();
+    }
+  }
+
+  private preloadPhase2Map(): void {
+    const assets: Array<{ key: string; url: URL }> = [
+      { key: TILED_FASE2_TILESETS[0].key, url: new URL("../assets/tiles/industrial/tiles/1_Industrial_Tileset_1.png", import.meta.url) },
+      { key: TILED_FASE2_TILESETS[1].key, url: new URL("../assets/tiles/industrial/tiles/1_Industrial_Tileset_1B.png", import.meta.url) },
+      { key: TILED_FASE2_TILESETS[2].key, url: new URL("../assets/tiles/industrial/tiles/1_Industrial_Tileset_1C.png", import.meta.url) },
+      { key: TILED_FASE2_TILESETS[3].key, url: new URL("../assets/tiles/industrial/backgrounds/2_Industrial_Tileset_1_Background.png", import.meta.url) },
+      { key: TILED_FASE2_TILESETS[4].key, url: new URL("../assets/tiles/industrial/backgrounds/2_Industrial_Tileset_1B_Background.png", import.meta.url) },
+      { key: TILED_FASE2_TILESETS[5].key, url: new URL("../assets/tiles/industrial/backgrounds/2_Industrial_Tileset_1C_Background_Violet.png", import.meta.url) },
+      { key: TILED_FASE2_TILESETS[6].key, url: new URL("../assets/tiles/industrial/backgrounds/3_Far_Background_Tile.png", import.meta.url) },
+    ];
+
+    for (const asset of assets) {
+      if (!this.textures.exists(asset.key)) this.load.image(asset.key, asset.url.href);
+    }
+    if (!this.textures.exists(TILED_CHECKPOINT_TEXTURE_KEY)) {
+      this.load.image(TILED_CHECKPOINT_TEXTURE_KEY, this.checkpointTvUrl().href);
+    }
+    if (!this.cache.tilemap.exists(TILED_FASE2_MAP_KEY)) {
+      this.cache.tilemap.add(TILED_FASE2_MAP_KEY, {
+        format: Phaser.Tilemaps.Formats.TILED_JSON,
+        data: TILED_FASE2_MAP_DATA,
+      });
     }
   }
 
@@ -211,6 +259,8 @@ export class GameScene extends Phaser.Scene {
 
     if (this.data$.phaseId === "fase1") {
       this.createTiled();
+    } else if (this.data$.phaseId === "fase2-intro") {
+      this.createTiledPhase2();
     } else {
       this.createLegacy();
     }
@@ -238,8 +288,30 @@ export class GameScene extends Phaser.Scene {
     });
 
     runtime.registerPhysics(this.player);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => runtime.destroy());
 
     this.hud.flashPrompt(TILED_FASE1_NAME, 1800);
+  }
+
+  private createTiledPhase2(): void {
+    const runtime = new TiledPhase2Runtime(this, new Set(this.data$.consolidatedCreditIds), {
+      onCreditCollected: (id, value) => this.handleCreditCollected(id, value),
+      onCheckpoint: (_id, x, y) => this.handleCheckpoint(x, y),
+      onEndGate: (destination, implant) => this.handleEndGate(destination, implant),
+    });
+    this.tiledPhase2Runtime = runtime;
+    this.levelLengthPx = runtime.lengthPx;
+
+    const spawnX = this.data$.checkpointX > 0 ? this.data$.checkpointX : runtime.spawn.x;
+    const spawnY = this.data$.checkpointX > 0 ? this.data$.checkpointY : runtime.spawn.y;
+    this.player = new Player(this, spawnX, spawnY, this.activeAbilities, this.input$, {
+      onDeath: () => this.handlePlayerDeath(),
+      onScanPulse: (active) => this.handleScanPulse(active),
+    });
+
+    runtime.registerPhysics(this.player);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => runtime.destroy());
+    this.hud.flashPrompt(TILED_FASE2_NAME, 1800);
   }
 
   private createLegacy(): void {
@@ -291,6 +363,7 @@ export class GameScene extends Phaser.Scene {
   /** Créditos da fase atual, num formato comum aos dois formatos de nível (Tiled/desenhado à mão). */
   private phaseCredits(): Array<{ id: string; value: number }> {
     if (this.tiledRuntime) return this.tiledRuntime.credits;
+    if (this.tiledPhase2Runtime) return this.tiledPhase2Runtime.credits;
     return LEVELS[this.data$.phaseId].credits;
   }
 
@@ -322,7 +395,9 @@ export class GameScene extends Phaser.Scene {
 
   private handleCheckpoint(x: number, y: number): void {
     this.credits.consolidate();
-    this.save.updateCheckpoint(x, y, this.credits.getConsolidatedIds(), this.credits.getTotal());
+    if (!this.data$.testMode) {
+      this.save.updateCheckpoint(x, y, this.credits.getConsolidatedIds(), this.credits.getTotal());
+    }
     this.data$.checkpointX = x;
     this.data$.checkpointY = y;
     this.updateHud();
@@ -336,13 +411,21 @@ export class GameScene extends Phaser.Scene {
    */
   private handleEndGate(destinationOverride?: string, implantOverride?: keyof AbilityState): void {
     this.credits.consolidate();
-    this.save.updateCheckpoint(
-      this.player.sprite.x,
-      this.player.sprite.y,
-      this.credits.getConsolidatedIds(),
-      this.credits.getTotal()
-    );
+    if (!this.data$.testMode) {
+      this.save.updateCheckpoint(
+        this.player.sprite.x,
+        this.player.sprite.y,
+        this.credits.getConsolidatedIds(),
+        this.credits.getTotal()
+      );
+    }
     this.updateHud();
+
+    if (this.data$.testMode) {
+      this.hud.flashPrompt("Teste concluído — retornando ao seletor", 900);
+      this.time.delayedCall(700, () => this.scene.start("MenuScene"));
+      return;
+    }
 
     const nextPhaseId = getNextPhaseId(this.data$.phaseId);
     // A clínica de George instala um novo implante ao final de cada uma das
@@ -374,6 +457,7 @@ export class GameScene extends Phaser.Scene {
     this.time.delayedCall(700, () => {
       this.scene.restart({
         phaseId: this.data$.phaseId,
+        testMode: this.data$.testMode,
         checkpointX: this.data$.checkpointX,
         checkpointY: this.data$.checkpointY,
         consolidatedCreditIds: this.credits.getConsolidatedIds(),
@@ -396,10 +480,12 @@ export class GameScene extends Phaser.Scene {
       this.scanOverlay.setAlpha(0.16);
       this.hud.flashPrompt("VISOR ATIVO — rotas e armadilhas detectadas", 750);
       this.tiledRuntime?.setScanActive(true);
+      this.tiledPhase2Runtime?.setScanActive(true);
       this.legacyRuntime?.setScanActive(true, this.player.sprite.x);
     } else {
       this.scanOverlay?.setVisible(false);
       this.tiledRuntime?.setScanActive(false);
+      this.tiledPhase2Runtime?.setScanActive(false);
       this.legacyRuntime?.setScanActive(false, this.player.sprite.x);
     }
   }
@@ -409,8 +495,11 @@ export class GameScene extends Phaser.Scene {
     if (this.isPaused) {
       this.physics.world.pause();
       this.tweens.pauseAll();
+      const testModeHelp = this.data$.testMode
+        ? "\nS / ↓ para voltar ao seletor de fases"
+        : "";
       this.pauseText = this.add
-        .text(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, "PAUSADO\nESC / START para voltar | ENTER / A para reiniciar a fase", {
+        .text(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, `PAUSADO\nESC / START para voltar | ENTER / A para reiniciar a fase${testModeHelp}`, {
           fontFamily: "Courier New, monospace",
           fontSize: "26px",
           color: "#ffffff",
@@ -437,10 +526,17 @@ export class GameScene extends Phaser.Scene {
     }
 
     if (this.isPaused) {
+      if (this.data$.testMode && this.input$.isMenuDownJustDown()) {
+        this.togglePause();
+        this.scene.start("MenuScene");
+        this.input$.postUpdate();
+        return;
+      }
       if (this.isPaused && this.input$.isConfirmJustDown()) {
         this.togglePause();
         this.scene.restart({
           phaseId: this.data$.phaseId,
+          testMode: this.data$.testMode,
           checkpointX: this.data$.checkpointX,
           checkpointY: this.data$.checkpointY,
           consolidatedCreditIds: this.credits.getConsolidatedIds(),
@@ -455,6 +551,8 @@ export class GameScene extends Phaser.Scene {
     this.player.update(delta);
     if (this.tiledRuntime) {
       this.tiledRuntime.update(this.player);
+    } else if (this.tiledPhase2Runtime) {
+      this.tiledPhase2Runtime.update(this.player);
     } else {
       this.legacyRuntime!.update(this.player);
     }
