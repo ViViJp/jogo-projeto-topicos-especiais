@@ -1,7 +1,7 @@
 # Flesh to Chrome — Contrato Tiled ↔ Phaser
 
-**Versão:** 0.7
-**Data:** 2026-10-18
+**Versão:** 0.12
+**Data:** 2026-10-19
 **Status:** contrato vivo — atualizar sempre que uma nova classe, propriedade, camada ou valor de comportamento for criado no Tiled.
 
 ## 1. Objetivo
@@ -38,17 +38,19 @@ Para a Fase 2:
 A ordem recomendada no painel do Tiled, de cima para baixo, é:
 
 1. **objects** — objetos lógicos e pontos de gameplay
-2. **deco** — decoração em primeiro plano
-3. **hazards** — representação visual de perigos
-4. **ground** — geometria sólida e plataformas
-5. **deco-back** — decoração atrás do jogador
-6. **background** — fundo visual sem colisão
+2. **deco-low-ceilings** — visual deslocado dos canos baixos da Fase 2
+3. **deco** — decoração em primeiro plano
+4. **hazards** — representação visual de perigos
+5. **ground** — geometria sólida e plataformas
+6. **deco-back** — decoração atrás do jogador
+7. **background** — fundo visual sem colisão
 
 ### Regras
 
 - **ground**: tudo que deve ter colisão física sólida com Alex.
 - **hazards**: apenas o visual do perigo; a lógica letal fica em **objects**.
 - **deco** e **deco-back**: sem colisão por padrão.
+- **deco-low-ceilings**: Tile Layer exclusiva da Fase 2, sem colisão, com deslocamento vertical de **12 px**.
 - **background**: sem colisão.
 - **objects**: nunca deve ser renderizada como parte visual do cenário final.
 - Um elemento letal não deve depender apenas de um tile visual: ele deve possuir um objeto lógico correspondente.
@@ -285,9 +287,11 @@ Os quatro valores são reconhecidos explicitamente pelo runtime da Fase 2. Seus 
 
 **Geometria Tiled:** Rectangle Object cobrindo apenas a faixa superior ocupada pela hitbox em pé. Não usa propriedades personalizadas.
 
-No mapa atual, a arte usa Tile Objects da classe **low_ceiling_visual**, com a base em **Y = 332**, deixando **52 px** entre o piso em Y = 384 e o cano. O retângulo lógico **low_ceiling** possui **24 px** de altura e mata Alex somente quando o estado não é `sliding`. A hitbox agachada de **30 px** passa abaixo dele.
+No mapa atual, a arte fica na Tile Layer **deco-low-ceilings**, desenhada na linha 9 e deslocada **12 px** para baixo. A base visual permanece em **Y = 332**, deixando **52 px** entre o piso em Y = 384 e o cano. O retângulo lógico **low_ceiling** possui **24 px** de altura e mata Alex somente quando o estado não é `sliding`. A hitbox agachada de **30 px** passa abaixo dele.
 
-Os Tile Objects visuais ficam na layer **objects** porque precisam usar uma posição vertical intermediária, fora do grid de 32 px. Eles não possuem física; a regra continua concentrada nos retângulos **low_ceiling**.
+Cada cano baixo da Fase 2 possui **192 px de comprimento (6 tiles de 32 px)**, tanto no visual quanto no Rectangle Object lógico. Esse comprimento foi validado em playtest como atravessável ao manter o comando de slide pressionado durante todo o obstáculo. Alterações futuras na duração ou na renovação do slide exigem um novo teste dessa medida.
+
+A layer visual não possui colisão. A regra de gameplay continua concentrada em um único Rectangle Object **low_ceiling** por cano, mantendo a layer **objects** livre de peças decorativas.
 
 ## 7. Classes planejadas / ainda não formalizadas
 
@@ -320,6 +324,7 @@ Ao criar uma delas, documentar:
 
 ~~~text
 objects
+deco-low-ceilings
 deco
 hazards
 ground
@@ -370,7 +375,6 @@ tutorial
 credit
 hazard
 low_ceiling
-low_ceiling_visual
 conveyor
 checkpoint
 clinic
@@ -383,7 +387,7 @@ phase_end
 tutorial.skill = double_jump
 hazard.kind = press | steam | mech_arm | crusher
 low_ceiling = volume letal em pé e atravessável somente durante o slide
-low_ceiling_visual = Tile Object visual sem colisão, posicionado fora do grid
+deco-low-ceilings.offsetY = 12 px; visual sem colisão
 conveyor.direction = left | right
 conveyor.speed = int
 credit.route = normal | risk
@@ -441,6 +445,40 @@ Dependendo da versão/exportação do Tiled, a informação exibida na interface
 12. Somente depois bloquear **ground**, **hazards** e **objects** e iniciar **background → deco-back → deco**.
 
 ## 12. Histórico de alterações
+
+### v0.12 — 2026-10-19
+
+- removido `steam_06`, que começava apenas 32 px após a saída inferior da terceira plataforma suspensa e tornava essa rota impossível;
+- padronizados os sete canos baixos em 192 px (6 tiles), medida confirmada como atravessável em playtest;
+- auditados os vãos e as sequências de hazards da Fase 2 contra a corrida, o salto e o salto duplo atuais.
+
+### v0.11 — 2026-10-19
+
+- reduzidas as rotas suspensas da Fase 2 de quatro para três;
+- definida progressão: primeira plataforma segura, segunda com um vapor e terceira com dois vapores;
+- removidos a quarta plataforma e os créditos `credit_risk_13` a `credit_risk_16`;
+- ajustado o total da fase para 12 créditos opcionais.
+
+### v0.10 — 2026-10-19
+
+- distribuídas quatro rotas suspensas de risco pela Fase 2, incluindo a plataforma original;
+- ampliada a fase de 4 para 16 créditos opcionais, todos com `route = risk` e IDs únicos;
+- adicionados `steam_13` a `steam_16` sobre as plataformas, mantendo a rota inferior disponível;
+- mantidas as plataformas em Y = 256 e os créditos em Y = 208, exigindo o uso consciente do salto duplo.
+
+### v0.9 — 2026-10-19
+
+- substituídos os 39 Tile Objects `low_ceiling_visual_*` pela Tile Layer `deco-low-ceilings`;
+- mantida a base dos canos baixos em Y = 332 por meio de deslocamento vertical de 12 px;
+- mantido apenas um Rectangle Object lógico `low_ceiling` por cano.
+
+### v0.8 — 2026-10-19
+
+- concluída a geometria de `ground` da Fase 2 até a clínica e o `phase_end`;
+- colocado piso seguro sob o checkpoint em X = 16.000;
+- adicionados seis vãos calculados entre 160 e 256 px na segunda metade da fase;
+- autorada a combinação final com novas prensas, esteiras, jatos de vapor, braços mecânicos, trituradoras e canos baixos;
+- mantida a duração estimada em aproximadamente 92 segundos considerando as cinco esteiras.
 
 ### v0.7 — 2026-10-18
 

@@ -58,7 +58,6 @@ export class TiledPhase2Runtime {
   private readonly creditSprites = new Map<string, Phaser.Physics.Arcade.Sprite>();
   private readonly hazardZones: Phaser.GameObjects.Zone[] = [];
   private readonly lowCeilingZones: Phaser.GameObjects.Zone[] = [];
-  private readonly lowCeilingVisuals: Phaser.GameObjects.Image[] = [];
   private readonly conveyors: Conveyor[] = [];
   private readonly tutorialLabels: Phaser.GameObjects.Text[] = [];
   private endGateTriggered = false;
@@ -94,6 +93,7 @@ export class TiledPhase2Runtime {
     this.groundLayer = ground;
 
     this.createVisualLayer("hazards", tilesets, 1, offsetY);
+    this.createVisualLayer("deco-low-ceilings", tilesets, 1, offsetY);
     this.createVisualLayer("deco", tilesets, 2, offsetY);
 
     this.lengthPx = this.map.widthInPixels;
@@ -121,7 +121,6 @@ export class TiledPhase2Runtime {
     this.readCheckpoints(byType("checkpoint"), offsetY);
     this.buildHazards(byType("hazard"), offsetY);
     this.buildLowCeilings(byType("low_ceiling"), offsetY);
-    this.buildLowCeilingVisuals(byType("low_ceiling_visual"), offsetY);
     this.readConveyors(byType("conveyor"), offsetY);
     this.buildTutorials(byType("tutorial"), offsetY);
     this.buildCredits();
@@ -132,10 +131,14 @@ export class TiledPhase2Runtime {
     name: string,
     tilesets: Phaser.Tilemaps.Tileset[],
     depth: number,
-    offsetY: number,
+    worldOffsetY: number,
   ): void {
-    const layer = this.map.createLayer(name, tilesets, 0, offsetY) as Phaser.Tilemaps.TilemapLayer | null;
-    layer?.setDepth(depth);
+    // Sem x/y explícitos, o Phaser preserva offsetx/offsety autorados no
+    // Tiled. Depois somamos somente o deslocamento global do mapa na tela.
+    const layer = this.map.createLayer(name, tilesets) as Phaser.Tilemaps.TilemapLayer | null;
+    if (!layer) return;
+    layer.setPosition(layer.x, layer.y + worldOffsetY);
+    layer.setDepth(depth);
   }
 
   private readString(
@@ -222,37 +225,6 @@ export class TiledPhase2Runtime {
       );
       this.scene.physics.add.existing(zone, true);
       this.lowCeilingZones.push(zone);
-    }
-  }
-
-  /**
-   * Os canos baixos são Tile Objects porque o grid de 32 px não oferece a
-   * altura intermediária necessária: 32 px invade a pose e 64 px parece
-   * alto demais. Como objetos, o limite inferior pode ficar em Y=332,
-   * produzindo exatamente 52 px de abertura sobre o piso em Y=384.
-   */
-  private buildLowCeilingVisuals(objects: Phaser.Types.Tilemaps.TiledObject[], offsetY: number): void {
-    const tileset = this.map.tilesets.find((candidate) => candidate.name === "industrial");
-    const definition = TILED_FASE2_TILESETS.find((candidate) => candidate.name === "industrial");
-    if (!tileset || !definition) return;
-
-    const texture = this.scene.textures.get(definition.key);
-    for (const object of objects) {
-      if (typeof object.gid !== "number") continue;
-      const coordinates = tileset.getTileTextureCoordinates(object.gid) as { x: number; y: number } | null;
-      if (!coordinates) continue;
-
-      const frame = `tiled-low-ceiling-${object.gid}`;
-      if (!texture.has(frame)) {
-        texture.add(frame, 0, coordinates.x, coordinates.y, tileset.tileWidth, tileset.tileHeight);
-      }
-
-      const image = this.scene.add
-        .image(object.x ?? 0, (object.y ?? 0) + offsetY, definition.key, frame)
-        .setOrigin(0, 1)
-        .setDisplaySize(object.width ?? 32, object.height ?? 32)
-        .setDepth(1);
-      this.lowCeilingVisuals.push(image);
     }
   }
 
@@ -404,7 +376,6 @@ export class TiledPhase2Runtime {
     this.creditSprites.forEach((sprite) => sprite.destroy());
     this.hazardZones.forEach((zone) => zone.destroy());
     this.lowCeilingZones.forEach((zone) => zone.destroy());
-    this.lowCeilingVisuals.forEach((image) => image.destroy());
     this.tutorialLabels.forEach((label) => label.destroy());
   }
 }
