@@ -12,13 +12,12 @@ npm run dev
 
 Stack oficial (GDD §22): **TypeScript + Phaser 4 + Parcel** em [`flesh-to-chrome/`](flesh-to-chrome/).
 
-Na raiz, `npm run dev` / `npm run build` apenas encaminham para essa pasta.
 
 ## Papéis do time
 
 | Pessoa | Foco |
 | --- | --- |
-| **João Pedro** | Arte 2D / UI / áudio → `public/assets/` (+ cópia usada pelo protótipo em `flesh-to-chrome/public/assets/`) |
+| **João Pedro** | Arte 2D / UI / áudio → `public/assets/` e assets integrados ao protótipo em `flesh-to-chrome/src/assets/` |
 | **Victor Blum** | Game / level design → mapas Tiled em `public/assets/maps/` |
 | **Vitor Nascimento (Motoca)** | Phaser / integração → código em `flesh-to-chrome/src/` (carregar tilemaps, física, cenas) |
 
