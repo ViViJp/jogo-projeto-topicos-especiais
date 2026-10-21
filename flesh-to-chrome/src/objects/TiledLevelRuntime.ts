@@ -23,7 +23,10 @@ export interface TiledCheckpointObj {
   id: string;
   x: number;
   y: number;
+  width: number;
 }
+
+export const TILED_CHECKPOINT_TEXTURE_KEY = "checkpoint-tv";
 
 /** `hazard.kind` conhecidos (contrato §5.3 + `electric_wire`, novo na v0.4.0 - ver nota em `buildObjectHazards`). */
 type HazardBehavior = "floor" | "overhead";
@@ -205,7 +208,12 @@ export class TiledLevelRuntime {
       // do checkpoint, em vez de confiar em qualquer coordenada Y autorada
       // no editor - `groundSurfaceYAt()` abaixo. Reaproveitado também pelo
       // marcador visual (`buildCheckpoints()`), que tinha o mesmo problema.
-      this.checkpoints.push({ id, x, y: this.groundSurfaceYAt(x, ground, offsetY) });
+      this.checkpoints.push({
+        id,
+        x,
+        y: this.groundSurfaceYAt(x, ground, offsetY),
+        width: o.width ?? 32,
+      });
     }
 
     this.buildCredits();
@@ -311,8 +319,9 @@ export class TiledLevelRuntime {
     // concordam com o chão de verdade, em qualquer elevação.
     for (const cp of this.checkpoints) {
       this.scene.add
-        .rectangle(cp.x, cp.y - 40, 30, 100, 0x36e2ff, 0.25)
-        .setStrokeStyle(2, 0x36e2ff)
+        .image(cp.x + cp.width / 2, cp.y, TILED_CHECKPOINT_TEXTURE_KEY)
+        .setOrigin(0.5, 1)
+        .setDisplaySize(72, 61)
         .setDepth(2);
     }
   }

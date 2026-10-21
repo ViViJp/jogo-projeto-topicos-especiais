@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { SCREEN_WIDTH, SCREEN_HEIGHT } from "../config/GameConfig";
+import { InputManager } from "../systems/InputManager";
 
 /**
  * Fim do conteúdo implementado neste protótipo (Marco 2 - Vertical Slice).
@@ -8,12 +9,18 @@ import { SCREEN_WIDTH, SCREEN_HEIGHT } from "../config/GameConfig";
  * quem jogar o protótipo entenda exatamente o que falta.
  */
 export class EndingScene extends Phaser.Scene {
+  private input$!: InputManager;
+  private returning = false;
+  private back!: () => void;
+
   constructor() {
     super("EndingScene");
   }
 
   create(): void {
     this.cameras.main.setBackgroundColor(0x05050a);
+    this.input$ = new InputManager(this);
+    this.returning = false;
 
     this.add
       .text(SCREEN_WIDTH / 2, 90, "FIM DO PROTÓTIPO (MARCO 2 — VERTICAL SLICE)", {
@@ -28,11 +35,14 @@ export class EndingScene extends Phaser.Scene {
       "Implementado nesta build:",
       "  • Fase 1 completa (Esgoto/Periferia): corrida, pulo, slide, água tóxica, canos, créditos, checkpoint",
       "  • Clínica de George e instalação das pernas mecânicas",
-      "  • Salto duplo e início da Fase 2 (Industrial): gap impossível de salto simples + rota de risco",
+      "  • Salto duplo e prévia da Fase 2 (Industrial): gaps e rota de risco",
+      "  • Ataque/quebra e prévia da Fase 3 (Meio Urbano): tutorial com barricadas",
+      "  • Visor/scan e prévia da Fase 4 (Corporativo): passagens ocultas",
+      "  • Dash e prévia da Fase 5 (Topo): barreiras cinéticas e grande vão",
       "  • Save em localStorage, HUD, câmera, sistema de créditos anti-farming",
       "",
       "Próximos marcos (ver README.md e Seção 24 do GDD):",
-      "  • Marco 3 — Fases 2-5 completas, ataque/scan/dash, inimigos, Portão",
+      "  • Marco 3 — Fases 2-5 completas, inimigos e Portão",
       "  • Marco 4 — Narrativa, descida Flesh/Hollow, ReForge Industries, finais",
       "  • Marco 5 — Multiplayer competitivo",
       "  • Marco 6 — Polimento, loja cosmética opcional",
@@ -46,7 +56,7 @@ export class EndingScene extends Phaser.Scene {
     }).setOrigin(0.5, 0.5);
 
     const prompt = this.add
-      .text(SCREEN_WIDTH / 2, SCREEN_HEIGHT - 60, "ENTER para voltar ao menu", {
+      .text(SCREEN_WIDTH / 2, SCREEN_HEIGHT - 60, "ENTER / A para voltar ao menu", {
         fontFamily: "Courier New, monospace",
         fontSize: "18px",
         color: "#8892b0",
@@ -54,8 +64,18 @@ export class EndingScene extends Phaser.Scene {
       .setOrigin(0.5);
     this.tweens.add({ targets: prompt, alpha: 0.3, yoyo: true, repeat: -1, duration: 700 });
 
-    const back = () => this.scene.start("MenuScene");
-    this.input.keyboard?.once("keydown-ENTER", back);
-    this.input.once("pointerdown", back);
+    this.back = () => {
+      if (this.returning) return;
+      this.returning = true;
+      this.scene.start("MenuScene");
+    };
+    this.input.once("pointerdown", this.back);
+  }
+
+  update(): void {
+    if (this.input$.isConfirmJustDown()) {
+      this.back();
+    }
+    this.input$.postUpdate();
   }
 }
