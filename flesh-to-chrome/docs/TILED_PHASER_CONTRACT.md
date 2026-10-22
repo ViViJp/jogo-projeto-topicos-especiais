@@ -1,6 +1,6 @@
 # Flesh to Chrome — Contrato Tiled ↔ Phaser
 
-**Versão:** 0.13
+**Versão:** 0.14
 **Data:** 2026-10-21
 **Status:** contrato vivo — atualizar sempre que uma nova classe, propriedade, camada ou valor de comportamento for criado no Tiled.
 
@@ -41,7 +41,12 @@ Para a Fase 3:
 - Arquivo autoral: **src/assets/maps/meio-urbano/fase-3.tmj**
 - Arquivo exportado: **src/assets/maps/meio-urbano/fase-3.json**
 - Tileset: **warped-city-environment**
-- Status: **blockout autoral concluído; integração do novo mapa ao Phaser ainda pendente**
+- Status: **blockout autoral integrado ao Phaser e disponível no seletor temporário de fases**
+
+> **Exportação da Fase 3:** o arquivo `.tmj` pode permanecer comprimido para
+> edição no Tiled, mas o `.json` consumido pelo jogo deve usar dados de layer
+> em array, sem `encoding: base64` e sem `compression: zlib`. O parser Tiled do
+> Phaser 4 ignora layers comprimidas e carregaria a fase sem chão.
 
 ## 3. Camadas oficiais
 
@@ -530,6 +535,12 @@ Dependendo da versão/exportação do Tiled, a informação exibida na interface
 12. Somente depois bloquear **ground**, **hazards** e **objects** e iniciar **background → deco-back → deco**.
 
 ## 12. Histórico de alterações
+
+### v0.14 — 2026-10-21
+
+- integrado o blockout autoral da Fase 3 ao `GameScene` e ao seletor temporário;
+- implementados no runtime créditos, checkpoint, clínica, inimigos, barricadas e portões elétricos;
+- registrada a exigência de exportar o JSON de runtime sem compressão zlib.
 
 ### v0.13 — 2026-10-21
 

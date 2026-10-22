@@ -9,6 +9,7 @@ import { Player } from "../entities/Player";
 import { LevelRuntime } from "../objects/LevelRuntime";
 import { TILED_CHECKPOINT_TEXTURE_KEY, TiledLevelRuntime } from "../objects/TiledLevelRuntime";
 import { TiledPhase2Runtime } from "../objects/TiledPhase2Runtime";
+import { TiledPhase3Runtime } from "../objects/TiledPhase3Runtime";
 import { LEVELS, getNextPhaseId } from "../levels";
 import {
   TILED_FASE1_MAP_KEY,
@@ -24,6 +25,12 @@ import {
   TILED_FASE2_NAME,
   TILED_FASE2_TILESETS,
 } from "../levels/TiledFase2";
+import {
+  TILED_FASE3_MAP_DATA,
+  TILED_FASE3_MAP_KEY,
+  TILED_FASE3_NAME,
+  TILED_FASE3_TILESET_KEY,
+} from "../levels/TiledFase3";
 import { generatePlaceholderTextures } from "../utils/PlaceholderTextures";
 import { ALEX_TEXTURE_KEY, ALEX_SHEET_CONFIG } from "../utils/AlexSprite";
 
@@ -89,9 +96,9 @@ const PHASE_BACKGROUND: Record<string, number> = {
  * `docs/TILED_PHASER_CONTRACT.md` entregue pelo level designer (ver
  * `TiledLevelRuntime.ts`/`TiledFase1.ts`). A física NÃO foi recalibrada
  * (continua 320px/s / gravidade 1600, os valores "bons" da v0.2.1) - só o
- * chão/objetos passam a vir do mapa real. A Fase 2 também usa agora seu
- * blockout Tiled industrial; as fases posteriores continuam no formato
- * desenhado à mão até suas integrações específicas.
+ * chão/objetos passam a vir do mapa real. As Fases 2 e 3 também usam agora
+ * seus blockouts Tiled; as fases posteriores continuam no formato desenhado
+ * à mão até suas integrações específicas.
  */
 export class GameScene extends Phaser.Scene {
   private input$!: InputManager;
@@ -99,6 +106,7 @@ export class GameScene extends Phaser.Scene {
   private legacyRuntime?: LevelRuntime;
   private tiledRuntime?: TiledLevelRuntime;
   private tiledPhase2Runtime?: TiledPhase2Runtime;
+  private tiledPhase3Runtime?: TiledPhase3Runtime;
   private credits!: CreditsSystem;
   private hud!: HUD;
   private save!: SaveState;
@@ -121,6 +129,7 @@ export class GameScene extends Phaser.Scene {
     this.legacyRuntime = undefined;
     this.tiledRuntime = undefined;
     this.tiledPhase2Runtime = undefined;
+    this.tiledPhase3Runtime = undefined;
     this.isPaused = false;
     this.pauseText = undefined;
     this.scanOverlay = undefined;
@@ -187,6 +196,8 @@ export class GameScene extends Phaser.Scene {
       }
     } else if (this.data$.phaseId === "fase2-intro") {
       this.preloadPhase2Map();
+    } else if (this.data$.phaseId === "fase3") {
+      this.preloadPhase3Map();
     }
   }
 
@@ -211,6 +222,30 @@ export class GameScene extends Phaser.Scene {
       this.cache.tilemap.add(TILED_FASE2_MAP_KEY, {
         format: Phaser.Tilemaps.Formats.TILED_JSON,
         data: TILED_FASE2_MAP_DATA,
+      });
+    }
+  }
+
+  private preloadPhase3Map(): void {
+    if (!this.textures.exists(TILED_FASE3_TILESET_KEY)) {
+      this.load.image(
+        TILED_FASE3_TILESET_KEY,
+        new URL("../assets/tiles/meio-urbano/ENVIRONMENT/tileset.png", import.meta.url).href,
+      );
+    }
+    if (!this.textures.exists("enemy-bandido")) {
+      this.load.spritesheet("enemy-bandido", this.enemyBandidoUrl().href, { frameWidth: 48, frameHeight: 48 });
+    }
+    if (!this.textures.exists("enemy-drone")) {
+      this.load.spritesheet("enemy-drone", this.enemyDroneUrl().href, { frameWidth: 32, frameHeight: 32 });
+    }
+    if (!this.textures.exists(TILED_CHECKPOINT_TEXTURE_KEY)) {
+      this.load.image(TILED_CHECKPOINT_TEXTURE_KEY, this.checkpointTvUrl().href);
+    }
+    if (!this.cache.tilemap.exists(TILED_FASE3_MAP_KEY)) {
+      this.cache.tilemap.add(TILED_FASE3_MAP_KEY, {
+        format: Phaser.Tilemaps.Formats.TILED_JSON,
+        data: TILED_FASE3_MAP_DATA,
       });
     }
   }
@@ -261,6 +296,8 @@ export class GameScene extends Phaser.Scene {
       this.createTiled();
     } else if (this.data$.phaseId === "fase2-intro") {
       this.createTiledPhase2();
+    } else if (this.data$.phaseId === "fase3") {
+      this.createTiledPhase3();
     } else {
       this.createLegacy();
     }
@@ -314,6 +351,27 @@ export class GameScene extends Phaser.Scene {
     this.hud.flashPrompt(TILED_FASE2_NAME, 1800);
   }
 
+  private createTiledPhase3(): void {
+    const runtime = new TiledPhase3Runtime(this, new Set(this.data$.consolidatedCreditIds), {
+      onCreditCollected: (id, value) => this.handleCreditCollected(id, value),
+      onCheckpoint: (_id, x, y) => this.handleCheckpoint(x, y),
+      onEndGate: (destination, implant) => this.handleEndGate(destination, implant),
+    });
+    this.tiledPhase3Runtime = runtime;
+    this.levelLengthPx = runtime.lengthPx;
+
+    const spawnX = this.data$.checkpointX > 0 ? this.data$.checkpointX : runtime.spawn.x;
+    const spawnY = this.data$.checkpointX > 0 ? this.data$.checkpointY : runtime.spawn.y;
+    this.player = new Player(this, spawnX, spawnY, this.activeAbilities, this.input$, {
+      onDeath: () => this.handlePlayerDeath(),
+      onScanPulse: (active) => this.handleScanPulse(active),
+    });
+
+    runtime.registerPhysics(this.player);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => runtime.destroy());
+    this.hud.flashPrompt(TILED_FASE3_NAME, 1800);
+  }
+
   private createLegacy(): void {
     const level = LEVELS[this.data$.phaseId];
     this.levelLengthPx = level.length;
@@ -364,6 +422,7 @@ export class GameScene extends Phaser.Scene {
   private phaseCredits(): Array<{ id: string; value: number }> {
     if (this.tiledRuntime) return this.tiledRuntime.credits;
     if (this.tiledPhase2Runtime) return this.tiledPhase2Runtime.credits;
+    if (this.tiledPhase3Runtime) return this.tiledPhase3Runtime.credits;
     return LEVELS[this.data$.phaseId].credits;
   }
 
@@ -481,11 +540,13 @@ export class GameScene extends Phaser.Scene {
       this.hud.flashPrompt("VISOR ATIVO — rotas e armadilhas detectadas", 750);
       this.tiledRuntime?.setScanActive(true);
       this.tiledPhase2Runtime?.setScanActive(true);
+      this.tiledPhase3Runtime?.setScanActive(true);
       this.legacyRuntime?.setScanActive(true, this.player.sprite.x);
     } else {
       this.scanOverlay?.setVisible(false);
       this.tiledRuntime?.setScanActive(false);
       this.tiledPhase2Runtime?.setScanActive(false);
+      this.tiledPhase3Runtime?.setScanActive(false);
       this.legacyRuntime?.setScanActive(false, this.player.sprite.x);
     }
   }
@@ -553,6 +614,8 @@ export class GameScene extends Phaser.Scene {
       this.tiledRuntime.update(this.player);
     } else if (this.tiledPhase2Runtime) {
       this.tiledPhase2Runtime.update(this.player);
+    } else if (this.tiledPhase3Runtime) {
+      this.tiledPhase3Runtime.update(this.player);
     } else {
       this.legacyRuntime!.update(this.player);
     }
