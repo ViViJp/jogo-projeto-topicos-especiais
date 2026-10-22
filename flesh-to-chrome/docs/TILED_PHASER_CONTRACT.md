@@ -1,6 +1,6 @@
 # Flesh to Chrome — Contrato Tiled ↔ Phaser
 
-**Versão:** 0.14
+**Versão:** 0.17
 **Data:** 2026-10-21
 **Status:** contrato vivo — atualizar sempre que uma nova classe, propriedade, camada ou valor de comportamento for criado no Tiled.
 
@@ -487,6 +487,24 @@ phase_end.fase = 3
 
 O mapa possui **30.720 px** de comprimento. Com a velocidade-base atual de **320 px/s**, o percurso linear equivale a aproximadamente **96 s sem mortes**, dentro da hipótese de 90–120 s do GDD. As pausas provocadas por quebráveis ainda precisam ser medidas em playtest.
 
+O risco/recompensa do blockout segue três regras verificáveis:
+
+- na primeira escolha, a rua com bandido concede dois créditos e a plataforma evasiva concede somente um;
+- o conjunto central de rooftops concentra créditos, mas intercala dois portões elétricos e dois drones;
+- na escolha final, a rua agressiva oferece quatro créditos protegidos por quatro bandidos, enquanto a rota superior oferece somente dois e exige precisão contra um drone.
+
+### Auditoria de acessibilidade da Fase 3
+
+Após a revisão de colisões com plataformas sobrepostas, o caminho principal mantém somente três vãos:
+
+| Intervalo horizontal | Largura | Cobertura superior | Movimento exigido |
+| --- | ---: | --- | --- |
+| `x = 7.008–7.200` | 192 px / 12 tiles | nenhuma | pulo simples |
+| `x = 16.768–16.992` | 224 px / 14 tiles | nenhuma | pulo simples |
+| `x = 27.392–27.584` | 192 px / 12 tiles | nenhuma | pulo simples |
+
+O pulo simples percorre aproximadamente **256 px** no mesmo nível. A maior elevação das plataformas opcionais é **192 px**, abaixo dos aproximadamente **226 px** alcançáveis com o salto duplo. Não deve existir um vão obrigatório sob plataformas baixas: esses trechos permanecem como corredores contínuos.
+
 ## 9. Regras para integração Phaser
 
 O responsável pela integração deve:
@@ -535,6 +553,23 @@ Dependendo da versão/exportação do Tiled, a informação exibida na interface
 12. Somente depois bloquear **ground**, **hazards** e **objects** e iniciar **background → deco-back → deco**.
 
 ## 12. Histórico de alterações
+
+### v0.17 — 2026-10-21
+
+- fechado o vão de 15 tiles entre `x = 22.976` e `x = 23.216`, cuja plataforma superior bloqueava o salto;
+- auditados todos os gaps restantes do caminho principal contra o pulo atual e a presença de plataformas superiores;
+- formalizada a regra de que corredores sob plataformas baixas não podem conter buracos obrigatórios.
+
+### v0.16 — 2026-10-21
+
+- fechado o vão inferior entre `x = 11.200` e `x = 11.392` da Fase 3;
+- corrigido o trecho em que a plataforma baixa deixava Alex correr por baixo, mas bloqueava o arco necessário para saltar sobre o vão.
+
+### v0.15 — 2026-10-21
+
+- redistribuídos os créditos da Fase 3 para que a maior recompensa corresponda à rota de maior risco;
+- movido o primeiro drone para a plataforma premiada e adicionados dois portões elétricos e um drone aos rooftops centrais;
+- transformada a rota inferior final em desafio agressivo com quatro pares sequenciais de bandido e crédito.
 
 ### v0.14 — 2026-10-21
 

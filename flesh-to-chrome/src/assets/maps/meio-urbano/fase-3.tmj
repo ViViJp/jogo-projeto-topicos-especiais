@@ -33,7 +33,7 @@
   },
   {
    "compression": "zlib",
-   "data": "eNrt3IsJwCAMRdGXCSLuP2y38FPPgTuBYCKFJgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGfqSsZjzXLuAAAAAAAArNW+xwEAgP3dvg4AAAAAAAAAAAAAAAAAAAAAwEbt/znOxbkA2Af8LxsAAOzr9nMAAADw/vf+BwCAp/d7+zsAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAArNWVDEmSftAsc1CSe0GSbrlv3buSZB6YCZK856Xz5jEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABwlw/dMJwN",
+   "data": "eJzt3MENgCAQRcGlAgn9F+vBsxdMwF1mkteAHvhqYgQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMA/XS2iH9Zou686AAAAAAAApznpu5zvcQAAZFd5v9vrAAAAAAAAAAAAAAAAAAAAAADnyvx/ncr/z3FfAFgp87njnAIAoLrKe90+BwAAgIfnfwAAqCPzvrffAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGCtq0V0SZIKNJpzUJIkaUczO8wekyRJ0lve80nzfXk+AwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPK5AWlUndY=",
    "encoding": "base64",
    "height": 45,
    "id": 3,
@@ -47,7 +47,7 @@
   },
   {
    "compression": "zlib",
-   "data": "eNrt1VERQFAARNHbvwRSIAVSoIUY5s2cE+F+7BYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMDYpmquFikAewQAfhIAAACAoa3VVu1SAPYIAPwkAAAAAEM7qrO6pADsEQD4SQAAAACGdldP9UoB2CMA8JMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD84gNAARuR",
+   "data": "eJzt1VGtwgAURMHj3wSgoqCioAJw8RQ0adKPS15nFJyv3QIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAODMLtW1uk2HAAAAAAAAAHDIUt2rx3QIAAAAAAAAAIes1bN6TYcAAAAAAAAAcMi7+lTf6RAAAAAAAAAAAAAAAAAAYNylula36RAAAAAAAAAADlmqe/WYDgEAAAAAAADgkLV6Vq/pEAAAAAAAAAAOeVef6jsdAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPysS3WtbtMhwOnZIwDY5icBAAAA2GOp7tVjOgQ4PXsEANv8JAAAAAB7rNWzek2HAKdnjwBgm58EAAAAYI939am+0yHA6dkjANjmJwEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP63P435LfE=",
    "encoding": "base64",
    "height": 45,
    "id": 4,
@@ -154,7 +154,7 @@
      "visible": true,
      "width": 0,
      "x": 3072,
-     "y": 400
+     "y": 528
     },
     {
      "height": 48,
@@ -262,7 +262,7 @@
      "visible": true,
      "width": 32,
      "x": 4800,
-     "y": 494
+     "y": 394
     },
     {
      "height": 0,
@@ -377,6 +377,24 @@
      "y": 512
     },
     {
+     "height": 64,
+     "id": 48,
+     "name": "electric_gate_04",
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "electric_gate"
+      }
+     ],
+     "rotation": 0,
+     "type": "hazard",
+     "visible": true,
+     "width": 48,
+     "x": 9184,
+     "y": 384
+    },
+    {
      "height": 0,
      "id": 18,
      "name": "credit_risk_07",
@@ -441,6 +459,24 @@
      "width": 48,
      "x": 10320,
      "y": 512
+    },
+    {
+     "height": 32,
+     "id": 49,
+     "name": "drone_06",
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "drone"
+      }
+     ],
+     "rotation": 0,
+     "type": "enemy",
+     "visible": true,
+     "width": 32,
+     "x": 10336,
+     "y": 346
     },
     {
      "height": 0,
@@ -549,6 +585,24 @@
      "width": 48,
      "x": 12736,
      "y": 512
+    },
+    {
+     "height": 64,
+     "id": 50,
+     "name": "electric_gate_05",
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "electric_gate"
+      }
+     ],
+     "rotation": 0,
+     "type": "hazard",
+     "visible": true,
+     "width": 48,
+     "x": 12800,
+     "y": 304
     },
     {
      "height": 0,
@@ -898,6 +952,24 @@
      "y": 528
     },
     {
+     "height": 48,
+     "id": 51,
+     "name": "bandido_11",
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "bandido"
+      }
+     ],
+     "rotation": 0,
+     "type": "enemy",
+     "visible": true,
+     "width": 48,
+     "x": 23424,
+     "y": 512
+    },
+    {
      "height": 0,
      "id": 40,
      "name": "credit_risk_18",
@@ -918,8 +990,8 @@
      "type": "credit",
      "visible": true,
      "width": 0,
-     "x": 23424,
-     "y": 400
+     "x": 23648,
+     "y": 528
     },
     {
      "height": 64,
@@ -1071,7 +1143,7 @@
   }
  ],
  "nextlayerid": 7,
- "nextobjectid": 48,
+ "nextobjectid": 52,
  "orientation": "orthogonal",
  "properties": [
   {
