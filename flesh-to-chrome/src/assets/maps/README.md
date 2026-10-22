@@ -8,7 +8,7 @@ Gerados a partir de `levelDesign.md` + GDD §16 (draft jogável; editável no Ti
 | --- | --- | --- | --- |
 | 1 | Esgoto | `esgoto/fase-1.json` | 16×16 |
 | 2 | Industrial | `industrial/fase-2.json` | 32×32 |
-| 3 | Meio Urbano | `meio-urbano/fase-3.json` | 32×32 |
+| 3 | Meio Urbano | `meio-urbano/fase-3.json` | 16×16 |
 | 4 | Corporativo | `corporativo/fase-4.json` | 32×32 |
 | 5 | Topo | `topo/fase-5.json` | 32×32 |
 
@@ -30,8 +30,9 @@ Antes de editar objetos ou hazards, consulte
 Todo cano rompido tocável deve ter arte em `hazards` e um Rectangle
 Object `hazard` com `kind = broken_pipe`.
 
-Os mapas JSON das fases 2–5 são referências de produção e serão migrados
-para projetos `.tmj` conforme seus blockouts forem retomados.
+As Fases 1–3 possuem projetos `.tmj` autorais. Os mapas JSON das Fases 4 e
+5 continuam como referências de produção e serão migrados quando seus
+blockouts forem retomados.
 
 ## Phaser (Vitor)
 

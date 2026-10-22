@@ -1,5 +1,20 @@
 Fase 3 — Meio Urbano (Tiled)
 Layout: levelDesign.md Fase 3 + GDD §16.3
-Tileset interim: Industrial 1C (substituir por Future City 27)
+
+Tileset definitivo preparado:
+- warped-city-environment.tsj
+- imagem: ../../tiles/meio-urbano/ENVIRONMENT/tileset.png
+- autor: ansimuz
+- origem: https://ansimuz.itch.io/warped-city
+- licença: CC0-1.0
+- grade nativa: 16 × 16 px
+
+O mapa autoral fase-3.tmj e sua exportação fase-3.json usam grade 16 × 16 e
+o tileset Warped City incorporado, preservando o TSJ externo como referência
+para novas importações no Tiled.
+
 Inimigos: objects bandido/drone → npcs/enemies/
-Mapa preservado como referência para o futuro blockout da Fase 3.
+
+Pendência de arte do blockout:
+- não há no projeto um sprite dedicado para barricada/caixa quebrável;
+- os objetos `breakable` permanecem como volumes lógicos até esse asset ser produzido ou escolhido.

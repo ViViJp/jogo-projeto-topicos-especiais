@@ -1,7 +1,17 @@
 Meio Urbano — Flesh to Chrome (Fase 3)
 
-INTERIM (até importar pack urbano dedicado):
-- tileset-interim.png — Industrial 1C cyber (Atomic Realm)
+PRINCIPAL — Warped City (ansimuz, CC0-1.0):
+- https://ansimuz.itch.io/warped-city
+- ENVIRONMENT/tileset.png — tileset nativo 16 × 16
+- ENVIRONMENT/background/ — componentes para parallax
+- ENVIRONMENT/props/ — decoração urbana
+- SPRITES/misc/ — drone, torre, projéteis e efeitos
+
+Configuração Tiled:
+- ../../maps/meio-urbano/warped-city-environment.tsj
+
+INTERIM (preservado apenas para a prévia antiga 32 × 32):
+- tiles/tileset-interim.png — Industrial 1C cyber (Atomic Realm)
 - backgrounds/ — parallax interim
 
 OPCIONAL — Future City 27 (knekko, CC0):

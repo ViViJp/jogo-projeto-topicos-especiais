@@ -1,7 +1,7 @@
 # Flesh to Chrome — Contrato Tiled ↔ Phaser
 
-**Versão:** 0.12
-**Data:** 2026-10-19
+**Versão:** 0.13
+**Data:** 2026-10-21
 **Status:** contrato vivo — atualizar sempre que uma nova classe, propriedade, camada ou valor de comportamento for criado no Tiled.
 
 ## 1. Objetivo
@@ -32,6 +32,16 @@ Para a Fase 2:
 - Arquivo autoral: **src/assets/maps/industrial/fase-2.tmj**
 - Arquivo exportado: **src/assets/maps/industrial/fase-2.json**
 - Status: **blockout integrado ao Phaser; ciclos e animações individuais dos hazards ainda pendentes**
+
+Para a Fase 3:
+
+- Grid: **16 × 16 px**
+- Setor: **Meio Urbano**
+- Orientação: **Orthogonal**
+- Arquivo autoral: **src/assets/maps/meio-urbano/fase-3.tmj**
+- Arquivo exportado: **src/assets/maps/meio-urbano/fase-3.json**
+- Tileset: **warped-city-environment**
+- Status: **blockout autoral concluído; integração do novo mapa ao Phaser ainda pendente**
 
 ## 3. Camadas oficiais
 
@@ -232,7 +242,7 @@ id: f1-cp1
 
 **Representação visual:** videogame + televisão de tubo em uma layer visual ou instanciados pelo Phaser. O objeto **checkpoint** representa a lógica, não a arte.
 
-## 6. Classes da Fase 2
+## 6. Classes adicionais por fase
 
 As classes abaixo estão normalizadas no mapa da Fase 2 e são interpretadas pelo runtime `TiledPhase2Runtime`. Os hazards industriais ainda usam um comportamento provisório, explicitado na seção 6.4.
 
@@ -293,12 +303,44 @@ Cada cano baixo da Fase 2 possui **192 px de comprimento (6 tiles de 32 px)**, t
 
 A layer visual não possui colisão. A regra de gameplay continua concentrada em um único Rectangle Object **low_ceiling** por cano, mantendo a layer **objects** livre de peças decorativas.
 
+### 6.6 **breakable**
+
+**Função:** barricada ou caixa destruível pelo ataque dos braços mecânicos.
+
+**Geometria Tiled:** Rectangle Object alinhado ao volume que bloqueia o caminho.
+
+| Propriedade | Tipo | Valores atuais | Obrigatória |
+| --- | --- | --- | --- |
+| **id** | string | identificador único, como **f3-breakable-01** | sim |
+| **kind** | string | **barricade** | sim |
+
+Ao tocar o quebrável sem atacar, Alex entra no estado de pressão definido pelo GDD. O objeto não é um hazard de morte imediata: o jogador possui a janela de reação configurada no código para executar o ataque.
+
+### 6.7 **enemy**
+
+**Função:** ponto lógico de criação de um inimigo da Fase 3.
+
+**Geometria Tiled:** Rectangle Object envolvendo aproximadamente o volume inicial do inimigo.
+
+| Propriedade | Tipo | Valores | Obrigatória |
+| --- | --- | --- | --- |
+| **kind** | string | **bandido** ou **drone** | sim |
+
+- **bandido:** possui 1 HP, é destruído por um ataque e mata Alex ao contato;
+- **drone:** é indestrutível, patrulha horizontalmente e mata Alex ao contato.
+
+### 6.8 **hazard.kind = electric_gate**
+
+O portão elétrico é um Rectangle Object da classe **hazard**, com `kind = electric_gate`. O visual correspondente fica na layer **hazards**. No blockout da Fase 3, ele possui **48 × 64 px** e deve ser ultrapassado com salto; contato causa morte imediata.
+
+### 6.9 Tutorial de ataque
+
+O objeto da classe **tutorial** usa `skill = attack`. Ele marca a área segura anterior à primeira barricada, sem possuir colisão própria.
+
 ## 7. Classes planejadas / ainda não formalizadas
 
 Estas classes só entram no contrato oficial quando forem efetivamente criadas no mapa e implementadas:
 
-- **enemy**
-- **breakable**
 - **scan_reveal**
 - **gate**
 - **ending_choice**
@@ -397,6 +439,49 @@ clinic.next = ClinicScene
 phase_end.fase = 2
 ~~~
 
+### 8.3 Fase 3 — esquema autoral
+
+#### Layers
+
+~~~text
+objects
+deco
+hazards
+ground
+deco-back
+background
+~~~
+
+#### Objetos usados
+
+~~~text
+spawn
+tutorial
+breakable
+enemy
+credit
+hazard
+checkpoint
+clinic
+phase_end
+~~~
+
+#### Valores usados
+
+~~~text
+tutorial.skill = attack
+breakable.kind = barricade
+enemy.kind = bandido | drone
+hazard.kind = electric_gate
+credit.route = normal | risk
+checkpoint.id = f3-cp1
+clinic.implant = eyes
+clinic.next = ClinicScene
+phase_end.fase = 3
+~~~
+
+O mapa possui **30.720 px** de comprimento. Com a velocidade-base atual de **320 px/s**, o percurso linear equivale a aproximadamente **96 s sem mortes**, dentro da hipótese de 90–120 s do GDD. As pausas provocadas por quebráveis ainda precisam ser medidas em playtest.
+
 ## 9. Regras para integração Phaser
 
 O responsável pela integração deve:
@@ -445,6 +530,13 @@ Dependendo da versão/exportação do Tiled, a informação exibida na interface
 12. Somente depois bloquear **ground**, **hazards** e **objects** e iniciar **background → deco-back → deco**.
 
 ## 12. Histórico de alterações
+
+### v0.13 — 2026-10-21
+
+- criado o mapa autoral `fase-3.tmj` em grid 16 × 16 com o tileset Warped City;
+- formalizadas as classes `breakable` e `enemy` e o hazard `electric_gate`;
+- organizado o blockout em tutorial de ataque, escolhas agressiva/evasiva, área vertical, checkpoint e sequência final;
+- dimensionado o percurso para aproximadamente 96 segundos na velocidade-base atual.
 
 ### v0.12 — 2026-10-19
 

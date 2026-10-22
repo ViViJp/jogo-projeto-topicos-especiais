@@ -1,0 +1,1156 @@
+{
+ "compressionlevel": -1,
+ "height": 45,
+ "infinite": false,
+ "layers": [
+  {
+   "compression": "zlib",
+   "data": "eNrtwTEBAAAAwqD1T20ND6AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgBcDRksAAQ==",
+   "encoding": "base64",
+   "height": 45,
+   "id": 1,
+   "name": "background",
+   "opacity": 1,
+   "type": "tilelayer",
+   "visible": true,
+   "width": 1920,
+   "x": 0,
+   "y": 0
+  },
+  {
+   "compression": "zlib",
+   "data": "eNrtwTEBAAAAwqD1T20ND6AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgBcDRksAAQ==",
+   "encoding": "base64",
+   "height": 45,
+   "id": 2,
+   "name": "deco-back",
+   "opacity": 1,
+   "type": "tilelayer",
+   "visible": true,
+   "width": 1920,
+   "x": 0,
+   "y": 0
+  },
+  {
+   "compression": "zlib",
+   "data": "eNrt3IsJwCAMRdGXCSLuP2y38FPPgTuBYCKFJgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGfqSsZjzXLuAAAAAAAArNW+xwEAgP3dvg4AAAAAAAAAAAAAAAAAAAAAwEbt/znOxbkA2Af8LxsAAOzr9nMAAADw/vf+BwCAp/d7+zsAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAArNWVDEmSftAsc1CSe0GSbrlv3buSZB6YCZK856Xz5jEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABwlw/dMJwN",
+   "encoding": "base64",
+   "height": 45,
+   "id": 3,
+   "name": "ground",
+   "opacity": 1,
+   "type": "tilelayer",
+   "visible": true,
+   "width": 1920,
+   "x": 0,
+   "y": 0
+  },
+  {
+   "compression": "zlib",
+   "data": "eNrt1VERQFAARNHbvwRSIAVSoIUY5s2cE+F+7BYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMDYpmquFikAewQAfhIAAACAoa3VVu1SAPYIAPwkAAAAAEM7qrO6pADsEQD4SQAAAACGdldP9UoB2CMA8JMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD84gNAARuR",
+   "encoding": "base64",
+   "height": 45,
+   "id": 4,
+   "name": "hazards",
+   "opacity": 1,
+   "type": "tilelayer",
+   "visible": true,
+   "width": 1920,
+   "x": 0,
+   "y": 0
+  },
+  {
+   "compression": "zlib",
+   "data": "eNrtwTEBAAAAwqD1T20ND6AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgBcDRksAAQ==",
+   "encoding": "base64",
+   "height": 45,
+   "id": 5,
+   "name": "deco",
+   "opacity": 1,
+   "type": "tilelayer",
+   "visible": true,
+   "width": 1920,
+   "x": 0,
+   "y": 0
+  },
+  {
+   "draworder": "topdown",
+   "id": 6,
+   "name": "objects",
+   "objects": [
+    {
+     "height": 0,
+     "id": 1,
+     "name": "spawn",
+     "point": true,
+     "properties": [],
+     "rotation": 0,
+     "type": "spawn",
+     "visible": true,
+     "width": 0,
+     "x": 80,
+     "y": 560
+    },
+    {
+     "height": 96,
+     "id": 2,
+     "name": "tutorial_attack_01",
+     "properties": [
+      {
+       "name": "skill",
+       "type": "string",
+       "value": "attack"
+      }
+     ],
+     "rotation": 0,
+     "type": "tutorial",
+     "visible": true,
+     "width": 320,
+     "x": 640,
+     "y": 464
+    },
+    {
+     "height": 64,
+     "id": 3,
+     "name": "barricade_01",
+     "properties": [
+      {
+       "name": "id",
+       "type": "string",
+       "value": "f3-breakable-01"
+      },
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "barricade"
+      }
+     ],
+     "rotation": 0,
+     "type": "breakable",
+     "visible": true,
+     "width": 64,
+     "x": 1600,
+     "y": 496
+    },
+    {
+     "height": 0,
+     "id": 6,
+     "name": "credit_risk_02",
+     "point": true,
+     "properties": [
+      {
+       "name": "id",
+       "type": "string",
+       "value": "f3-risk-02"
+      },
+      {
+       "name": "route",
+       "type": "string",
+       "value": "risk"
+      }
+     ],
+     "rotation": 0,
+     "type": "credit",
+     "visible": true,
+     "width": 0,
+     "x": 3072,
+     "y": 400
+    },
+    {
+     "height": 48,
+     "id": 4,
+     "name": "bandido_01",
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "bandido"
+      }
+     ],
+     "rotation": 0,
+     "type": "enemy",
+     "visible": true,
+     "width": 48,
+     "x": 3200,
+     "y": 512
+    },
+    {
+     "height": 0,
+     "id": 7,
+     "name": "credit_risk_03",
+     "point": true,
+     "properties": [
+      {
+       "name": "id",
+       "type": "string",
+       "value": "f3-risk-03"
+      },
+      {
+       "name": "route",
+       "type": "string",
+       "value": "risk"
+      }
+     ],
+     "rotation": 0,
+     "type": "credit",
+     "visible": true,
+     "width": 0,
+     "x": 3360,
+     "y": 400
+    },
+    {
+     "height": 0,
+     "id": 5,
+     "name": "credit_risk_01",
+     "point": true,
+     "properties": [
+      {
+       "name": "id",
+       "type": "string",
+       "value": "f3-risk-01"
+      },
+      {
+       "name": "route",
+       "type": "string",
+       "value": "risk"
+      }
+     ],
+     "rotation": 0,
+     "type": "credit",
+     "visible": true,
+     "width": 0,
+     "x": 3392,
+     "y": 528
+    },
+    {
+     "height": 0,
+     "id": 9,
+     "name": "credit_risk_04",
+     "point": true,
+     "properties": [
+      {
+       "name": "id",
+       "type": "string",
+       "value": "f3-risk-04"
+      },
+      {
+       "name": "route",
+       "type": "string",
+       "value": "risk"
+      }
+     ],
+     "rotation": 0,
+     "type": "credit",
+     "visible": true,
+     "width": 0,
+     "x": 4672,
+     "y": 400
+    },
+    {
+     "height": 32,
+     "id": 8,
+     "name": "drone_01",
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "drone"
+      }
+     ],
+     "rotation": 0,
+     "type": "enemy",
+     "visible": true,
+     "width": 32,
+     "x": 4800,
+     "y": 494
+    },
+    {
+     "height": 0,
+     "id": 10,
+     "name": "credit_risk_05",
+     "point": true,
+     "properties": [
+      {
+       "name": "id",
+       "type": "string",
+       "value": "f3-risk-05"
+      },
+      {
+       "name": "route",
+       "type": "string",
+       "value": "risk"
+      }
+     ],
+     "rotation": 0,
+     "type": "credit",
+     "visible": true,
+     "width": 0,
+     "x": 4960,
+     "y": 400
+    },
+    {
+     "height": 64,
+     "id": 11,
+     "name": "barricade_02",
+     "properties": [
+      {
+       "name": "id",
+       "type": "string",
+       "value": "f3-breakable-02"
+      },
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "barricade"
+      }
+     ],
+     "rotation": 0,
+     "type": "breakable",
+     "visible": true,
+     "width": 64,
+     "x": 6000,
+     "y": 496
+    },
+    {
+     "height": 64,
+     "id": 12,
+     "name": "barricade_03",
+     "properties": [
+      {
+       "name": "id",
+       "type": "string",
+       "value": "f3-breakable-03"
+      },
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "barricade"
+      }
+     ],
+     "rotation": 0,
+     "type": "breakable",
+     "visible": true,
+     "width": 64,
+     "x": 7808,
+     "y": 496
+    },
+    {
+     "height": 0,
+     "id": 17,
+     "name": "credit_risk_06",
+     "point": true,
+     "properties": [
+      {
+       "name": "id",
+       "type": "string",
+       "value": "f3-risk-06"
+      },
+      {
+       "name": "route",
+       "type": "string",
+       "value": "risk"
+      }
+     ],
+     "rotation": 0,
+     "type": "credit",
+     "visible": true,
+     "width": 0,
+     "x": 8960,
+     "y": 416
+    },
+    {
+     "height": 48,
+     "id": 13,
+     "name": "bandido_02",
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "bandido"
+      }
+     ],
+     "rotation": 0,
+     "type": "enemy",
+     "visible": true,
+     "width": 48,
+     "x": 9056,
+     "y": 512
+    },
+    {
+     "height": 0,
+     "id": 18,
+     "name": "credit_risk_07",
+     "point": true,
+     "properties": [
+      {
+       "name": "id",
+       "type": "string",
+       "value": "f3-risk-07"
+      },
+      {
+       "name": "route",
+       "type": "string",
+       "value": "risk"
+      }
+     ],
+     "rotation": 0,
+     "type": "credit",
+     "visible": true,
+     "width": 0,
+     "x": 9344,
+     "y": 416
+    },
+    {
+     "height": 0,
+     "id": 19,
+     "name": "credit_risk_08",
+     "point": true,
+     "properties": [
+      {
+       "name": "id",
+       "type": "string",
+       "value": "f3-risk-08"
+      },
+      {
+       "name": "route",
+       "type": "string",
+       "value": "risk"
+      }
+     ],
+     "rotation": 0,
+     "type": "credit",
+     "visible": true,
+     "width": 0,
+     "x": 10112,
+     "y": 352
+    },
+    {
+     "height": 48,
+     "id": 14,
+     "name": "bandido_03",
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "bandido"
+      }
+     ],
+     "rotation": 0,
+     "type": "enemy",
+     "visible": true,
+     "width": 48,
+     "x": 10320,
+     "y": 512
+    },
+    {
+     "height": 0,
+     "id": 20,
+     "name": "credit_risk_09",
+     "point": true,
+     "properties": [
+      {
+       "name": "id",
+       "type": "string",
+       "value": "f3-risk-09"
+      },
+      {
+       "name": "route",
+       "type": "string",
+       "value": "risk"
+      }
+     ],
+     "rotation": 0,
+     "type": "credit",
+     "visible": true,
+     "width": 0,
+     "x": 10560,
+     "y": 352
+    },
+    {
+     "height": 0,
+     "id": 21,
+     "name": "credit_risk_10",
+     "point": true,
+     "properties": [
+      {
+       "name": "id",
+       "type": "string",
+       "value": "f3-risk-10"
+      },
+      {
+       "name": "route",
+       "type": "string",
+       "value": "risk"
+      }
+     ],
+     "rotation": 0,
+     "type": "credit",
+     "visible": true,
+     "width": 0,
+     "x": 11424,
+     "y": 400
+    },
+    {
+     "height": 32,
+     "id": 15,
+     "name": "drone_02",
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "drone"
+      }
+     ],
+     "rotation": 0,
+     "type": "enemy",
+     "visible": true,
+     "width": 32,
+     "x": 11520,
+     "y": 368
+    },
+    {
+     "height": 0,
+     "id": 22,
+     "name": "credit_risk_11",
+     "point": true,
+     "properties": [
+      {
+       "name": "id",
+       "type": "string",
+       "value": "f3-risk-11"
+      },
+      {
+       "name": "route",
+       "type": "string",
+       "value": "risk"
+      }
+     ],
+     "rotation": 0,
+     "type": "credit",
+     "visible": true,
+     "width": 0,
+     "x": 12608,
+     "y": 336
+    },
+    {
+     "height": 48,
+     "id": 16,
+     "name": "bandido_04",
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "bandido"
+      }
+     ],
+     "rotation": 0,
+     "type": "enemy",
+     "visible": true,
+     "width": 48,
+     "x": 12736,
+     "y": 512
+    },
+    {
+     "height": 0,
+     "id": 23,
+     "name": "credit_risk_12",
+     "point": true,
+     "properties": [
+      {
+       "name": "id",
+       "type": "string",
+       "value": "f3-risk-12"
+      },
+      {
+       "name": "route",
+       "type": "string",
+       "value": "risk"
+      }
+     ],
+     "rotation": 0,
+     "type": "credit",
+     "visible": true,
+     "width": 0,
+     "x": 13024,
+     "y": 336
+    },
+    {
+     "height": 64,
+     "id": 24,
+     "name": "electric_gate_01",
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "electric_gate"
+      }
+     ],
+     "rotation": 0,
+     "type": "hazard",
+     "visible": true,
+     "width": 48,
+     "x": 14400,
+     "y": 496
+    },
+    {
+     "height": 80,
+     "id": 25,
+     "name": "checkpoint_01",
+     "properties": [
+      {
+       "name": "id",
+       "type": "string",
+       "value": "f3-cp1"
+      }
+     ],
+     "rotation": 0,
+     "type": "checkpoint",
+     "visible": true,
+     "width": 32,
+     "x": 15360,
+     "y": 480
+    },
+    {
+     "height": 48,
+     "id": 26,
+     "name": "bandido_05",
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "bandido"
+      }
+     ],
+     "rotation": 0,
+     "type": "enemy",
+     "visible": true,
+     "width": 48,
+     "x": 16000,
+     "y": 512
+    },
+    {
+     "height": 32,
+     "id": 27,
+     "name": "drone_03",
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "drone"
+      }
+     ],
+     "rotation": 0,
+     "type": "enemy",
+     "visible": true,
+     "width": 32,
+     "x": 17760,
+     "y": 494
+    },
+    {
+     "height": 64,
+     "id": 28,
+     "name": "barricade_04",
+     "properties": [
+      {
+       "name": "id",
+       "type": "string",
+       "value": "f3-breakable-04"
+      },
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "barricade"
+      }
+     ],
+     "rotation": 0,
+     "type": "breakable",
+     "visible": true,
+     "width": 64,
+     "x": 18432,
+     "y": 496
+    },
+    {
+     "height": 64,
+     "id": 29,
+     "name": "electric_gate_02",
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "electric_gate"
+      }
+     ],
+     "rotation": 0,
+     "type": "hazard",
+     "visible": true,
+     "width": 48,
+     "x": 19072,
+     "y": 496
+    },
+    {
+     "height": 48,
+     "id": 30,
+     "name": "bandido_06",
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "bandido"
+      }
+     ],
+     "rotation": 0,
+     "type": "enemy",
+     "visible": true,
+     "width": 48,
+     "x": 20000,
+     "y": 512
+    },
+    {
+     "height": 0,
+     "id": 38,
+     "name": "credit_risk_16",
+     "point": true,
+     "properties": [
+      {
+       "name": "id",
+       "type": "string",
+       "value": "f3-risk-16"
+      },
+      {
+       "name": "route",
+       "type": "string",
+       "value": "risk"
+      }
+     ],
+     "rotation": 0,
+     "type": "credit",
+     "visible": true,
+     "width": 0,
+     "x": 21184,
+     "y": 416
+    },
+    {
+     "height": 48,
+     "id": 31,
+     "name": "bandido_07",
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "bandido"
+      }
+     ],
+     "rotation": 0,
+     "type": "enemy",
+     "visible": true,
+     "width": 48,
+     "x": 21248,
+     "y": 512
+    },
+    {
+     "height": 0,
+     "id": 35,
+     "name": "credit_risk_13",
+     "point": true,
+     "properties": [
+      {
+       "name": "id",
+       "type": "string",
+       "value": "f3-risk-13"
+      },
+      {
+       "name": "route",
+       "type": "string",
+       "value": "risk"
+      }
+     ],
+     "rotation": 0,
+     "type": "credit",
+     "visible": true,
+     "width": 0,
+     "x": 21472,
+     "y": 528
+    },
+    {
+     "height": 48,
+     "id": 32,
+     "name": "bandido_08",
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "bandido"
+      }
+     ],
+     "rotation": 0,
+     "type": "enemy",
+     "visible": true,
+     "width": 48,
+     "x": 21952,
+     "y": 512
+    },
+    {
+     "height": 0,
+     "id": 36,
+     "name": "credit_risk_14",
+     "point": true,
+     "properties": [
+      {
+       "name": "id",
+       "type": "string",
+       "value": "f3-risk-14"
+      },
+      {
+       "name": "route",
+       "type": "string",
+       "value": "risk"
+      }
+     ],
+     "rotation": 0,
+     "type": "credit",
+     "visible": true,
+     "width": 0,
+     "x": 22176,
+     "y": 528
+    },
+    {
+     "height": 32,
+     "id": 34,
+     "name": "drone_04",
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "drone"
+      }
+     ],
+     "rotation": 0,
+     "type": "enemy",
+     "visible": true,
+     "width": 32,
+     "x": 22336,
+     "y": 350
+    },
+    {
+     "height": 0,
+     "id": 39,
+     "name": "credit_risk_17",
+     "point": true,
+     "properties": [
+      {
+       "name": "id",
+       "type": "string",
+       "value": "f3-risk-17"
+      },
+      {
+       "name": "route",
+       "type": "string",
+       "value": "risk"
+      }
+     ],
+     "rotation": 0,
+     "type": "credit",
+     "visible": true,
+     "width": 0,
+     "x": 22528,
+     "y": 352
+    },
+    {
+     "height": 48,
+     "id": 33,
+     "name": "bandido_09",
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "bandido"
+      }
+     ],
+     "rotation": 0,
+     "type": "enemy",
+     "visible": true,
+     "width": 48,
+     "x": 22656,
+     "y": 512
+    },
+    {
+     "height": 0,
+     "id": 37,
+     "name": "credit_risk_15",
+     "point": true,
+     "properties": [
+      {
+       "name": "id",
+       "type": "string",
+       "value": "f3-risk-15"
+      },
+      {
+       "name": "route",
+       "type": "string",
+       "value": "risk"
+      }
+     ],
+     "rotation": 0,
+     "type": "credit",
+     "visible": true,
+     "width": 0,
+     "x": 22880,
+     "y": 528
+    },
+    {
+     "height": 0,
+     "id": 40,
+     "name": "credit_risk_18",
+     "point": true,
+     "properties": [
+      {
+       "name": "id",
+       "type": "string",
+       "value": "f3-risk-18"
+      },
+      {
+       "name": "route",
+       "type": "string",
+       "value": "risk"
+      }
+     ],
+     "rotation": 0,
+     "type": "credit",
+     "visible": true,
+     "width": 0,
+     "x": 23424,
+     "y": 400
+    },
+    {
+     "height": 64,
+     "id": 41,
+     "name": "barricade_05",
+     "properties": [
+      {
+       "name": "id",
+       "type": "string",
+       "value": "f3-breakable-05"
+      },
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "barricade"
+      }
+     ],
+     "rotation": 0,
+     "type": "breakable",
+     "visible": true,
+     "width": 64,
+     "x": 24640,
+     "y": 496
+    },
+    {
+     "height": 32,
+     "id": 42,
+     "name": "drone_05",
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "drone"
+      }
+     ],
+     "rotation": 0,
+     "type": "enemy",
+     "visible": true,
+     "width": 32,
+     "x": 25504,
+     "y": 494
+    },
+    {
+     "height": 64,
+     "id": 43,
+     "name": "electric_gate_03",
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "electric_gate"
+      }
+     ],
+     "rotation": 0,
+     "type": "hazard",
+     "visible": true,
+     "width": 48,
+     "x": 26400,
+     "y": 496
+    },
+    {
+     "height": 48,
+     "id": 44,
+     "name": "bandido_10",
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "bandido"
+      }
+     ],
+     "rotation": 0,
+     "type": "enemy",
+     "visible": true,
+     "width": 48,
+     "x": 28224,
+     "y": 512
+    },
+    {
+     "height": 64,
+     "id": 45,
+     "name": "barricade_06",
+     "properties": [
+      {
+       "name": "id",
+       "type": "string",
+       "value": "f3-breakable-06"
+      },
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "barricade"
+      }
+     ],
+     "rotation": 0,
+     "type": "breakable",
+     "visible": true,
+     "width": 64,
+     "x": 28800,
+     "y": 496
+    },
+    {
+     "height": 96,
+     "id": 46,
+     "name": "clinic_01",
+     "properties": [
+      {
+       "name": "implant",
+       "type": "string",
+       "value": "eyes"
+      },
+      {
+       "name": "next",
+       "type": "string",
+       "value": "ClinicScene"
+      }
+     ],
+     "rotation": 0,
+     "type": "clinic",
+     "visible": true,
+     "width": 64,
+     "x": 29696,
+     "y": 464
+    },
+    {
+     "height": 128,
+     "id": 47,
+     "name": "phase_end",
+     "properties": [
+      {
+       "name": "fase",
+       "type": "int",
+       "value": 3
+      }
+     ],
+     "rotation": 0,
+     "type": "phase_end",
+     "visible": true,
+     "width": 64,
+     "x": 30464,
+     "y": 432
+    }
+   ],
+   "opacity": 1,
+   "type": "objectgroup",
+   "visible": true,
+   "x": 0,
+   "y": 0
+  }
+ ],
+ "nextlayerid": 7,
+ "nextobjectid": 48,
+ "orientation": "orthogonal",
+ "properties": [
+  {
+   "name": "fase",
+   "type": "int",
+   "value": 3
+  },
+  {
+   "name": "setor",
+   "type": "string",
+   "value": "meio-urbano"
+  },
+  {
+   "name": "gdd",
+   "type": "string",
+   "value": "§16.3 + levelDesign.md Fase 3"
+  },
+  {
+   "name": "implant",
+   "type": "string",
+   "value": "eyes"
+  },
+  {
+   "name": "skill",
+   "type": "string",
+   "value": "attack"
+  },
+  {
+   "name": "target_duration_seconds",
+   "type": "int",
+   "value": 96
+  }
+ ],
+ "renderorder": "right-down",
+ "tiledversion": "1.12.2",
+ "tileheight": 16,
+ "tilesets": [
+  {
+   "columns": 24,
+   "firstgid": 1,
+   "image": "../../tiles/meio-urbano/ENVIRONMENT/tileset.png",
+   "imageheight": 256,
+   "imagewidth": 384,
+   "margin": 0,
+   "name": "warped-city-environment",
+   "properties": [
+    {
+     "name": "author",
+     "type": "string",
+     "value": "ansimuz"
+    },
+    {
+     "name": "license",
+     "type": "string",
+     "value": "CC0-1.0"
+    },
+    {
+     "name": "source",
+     "type": "string",
+     "value": "https://ansimuz.itch.io/warped-city"
+    }
+   ],
+   "spacing": 0,
+   "tilecount": 384,
+   "tiledversion": "1.12.2",
+   "tileheight": 16,
+   "tilewidth": 16,
+   "type": "tileset",
+   "version": "1.10"
+  }
+ ],
+ "tilewidth": 16,
+ "type": "map",
+ "version": "1.10",
+ "width": 1920,
+ "editorsettings": {
+  "export": {
+   "format": "json",
+   "target": "fase-3.json"
+  }
+ }
+}
