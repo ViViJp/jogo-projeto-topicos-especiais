@@ -1,42 +1,32 @@
 {
-  "columns": 6,
-  "image": "../../tiles/industrial/tiles/1_Industrial_Tileset_1B.png",
-  "imageheight": 128,
-  "imagewidth": 192,
+  "columns": 9,
+  "image": "../../tiles/corporativo/foozle-scifi-lab/tiles/level_tileset.png",
+  "imageheight": 300,
+  "imagewidth": 300,
   "margin": 0,
-  "name": "corporativo",
+  "name": "foozle-scifi-lab",
+  "properties": [
+    {
+      "name": "author",
+      "type": "string",
+      "value": "aimen23b"
+    },
+    {
+      "name": "license",
+      "type": "string",
+      "value": "CC0-1.0"
+    },
+    {
+      "name": "source",
+      "type": "string",
+      "value": "https://foozle.io/"
+    }
+  ],
   "spacing": 0,
-  "tilecount": 24,
+  "tilecount": 81,
   "tiledversion": "1.10.2",
   "tileheight": 32,
   "tilewidth": 32,
   "type": "tileset",
-  "version": "1.10",
-  "tiles": [
-    {
-      "id": 0,
-      "properties": [
-        {
-          "name": "solid",
-          "type": "bool",
-          "value": true
-        }
-      ]
-    },
-    {
-      "id": 4,
-      "properties": [
-        {
-          "name": "fake",
-          "type": "bool",
-          "value": true
-        },
-        {
-          "name": "scan",
-          "type": "bool",
-          "value": true
-        }
-      ]
-    }
-  ]
+  "version": "1.10"
 }

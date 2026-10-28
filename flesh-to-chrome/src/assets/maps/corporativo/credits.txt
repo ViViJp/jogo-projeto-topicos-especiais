@@ -1,5 +1,25 @@
 Fase 4 — Corporativo (Tiled)
 Layout: levelDesign.md Fase 4 + GDD §16.4
-Tileset: Industrial 1B + parallax bulkhead
-Objects: scan_reveal, laser, auto_door, propaganda_pai
-Mapa preservado como referência para o futuro blockout da Fase 4.
+
+Tileset principal: Sci-Fi Labs Tileset 1.0
+Artista: aimen23b
+Distribuição: Foozle — https://foozle.io/
+Licença: CC0 (uso e modificação permitidos, inclusive comercialmente)
+
+Arquivos Tiled:
+- fase-4.tmj — projeto autoral editável
+- fase-4.json — exportação sem compressão para o runtime
+- tileset-corporativo.tsj — construção do cenário, grade 32x32
+- tileset-corporativo-decor.tsj — decoração, grade 32x32
+- foozle-laser.tsj — laser animado
+- foozle-laser-spikes.tsj — armadilha oculta animada
+- foozle-automatic-door.tsj — barreira automática animada
+
+Spritesheets auxiliares em ../../tiles/corporativo/foozle-scifi-lab:
+- animations — plataforma móvel
+- interactive — barreira e painel de controle
+- traps — laser, espinhos laser, serras, lâminas e torretas
+
+Blockout: 30.720 px, aproximadamente 96 s a 320 px/s, com 20 créditos,
+um checkpoint, rotas ocultas, paredes falsas, armadilhas ocultas, lasers,
+barreiras automáticas, pisos falsos, propaganda do pai, clínica e fim de fase.

@@ -1,0 +1,32 @@
+{
+  "columns": 3,
+  "image": "../../tiles/corporativo/foozle-scifi-lab/decor/full-decor-tiles.png",
+  "imageheight": 96,
+  "imagewidth": 96,
+  "margin": 0,
+  "name": "foozle-scifi-lab-decor",
+  "properties": [
+    {
+      "name": "author",
+      "type": "string",
+      "value": "aimen23b"
+    },
+    {
+      "name": "license",
+      "type": "string",
+      "value": "CC0-1.0"
+    },
+    {
+      "name": "source",
+      "type": "string",
+      "value": "https://foozle.io/"
+    }
+  ],
+  "spacing": 0,
+  "tilecount": 9,
+  "tiledversion": "1.10.2",
+  "tileheight": 32,
+  "tilewidth": 32,
+  "type": "tileset",
+  "version": "1.10"
+}

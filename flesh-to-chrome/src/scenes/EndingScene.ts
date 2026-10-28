@@ -37,7 +37,7 @@ export class EndingScene extends Phaser.Scene {
       "  • Clínica de George e instalação das pernas mecânicas",
       "  • Salto duplo e prévia da Fase 2 (Industrial): gaps e rota de risco",
       "  • Ataque/quebra e prévia da Fase 3 (Meio Urbano): tutorial com barricadas",
-      "  • Visor/scan e prévia da Fase 4 (Corporativo): passagens ocultas",
+      "  • Visor/scan e Fase 4 (Corporativo): passagens e armadilhas ocultas",
       "  • Dash e prévia da Fase 5 (Topo): barreiras cinéticas e grande vão",
       "  • Save em localStorage, HUD, câmera, sistema de créditos anti-farming",
       "",

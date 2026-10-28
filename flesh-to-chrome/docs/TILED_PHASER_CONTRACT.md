@@ -342,14 +342,72 @@ O portão elétrico é um Rectangle Object da classe **hazard**, com `kind = ele
 
 O objeto da classe **tutorial** usa `skill = attack`. Ele marca a área segura anterior à primeira barricada, sem possuir colisão própria.
 
+### 6.10 **scan_reveal**
+
+**Função:** associa uma região visual ou lógica da Fase 4 à revelação produzida
+pelos olhos mecânicos. O objeto não possui colisão própria.
+
+**Geometria Tiled:** Rectangle Object envolvendo o elemento ou trecho revelável.
+
+| Propriedade | Tipo | Valores | Obrigatória |
+| --- | --- | --- | --- |
+| **id** | string | identificador único | sim |
+| **kind** | string | **hidden_route**, **false_wall**, **hidden_hazard** ou **false_floor** | sim |
+| **group** | string | grupo compartilhado por visuais e hazards relacionados | sim |
+
+Ao receber um scan válido, o runtime deve destacar os objetos do grupo e manter
+a revelação até Alex sair do trecho. Após morte e respawn, o grupo volta ao
+estado oculto. `false_wall` não cria colisão; `false_floor` marca arte sem
+colisão sobre uma abertura real da layer `ground`.
+
+### 6.11 Novos valores de **hazard.kind** da Fase 4
+
+| kind | Representação | Regra |
+| --- | --- | --- |
+| **laser** | emissor/feixe laser visível | morte imediata ao contato |
+| **hidden_spikes** | espinhos laser inicialmente ocultos | morte imediata ao contato; o scan revela a arte antes da aproximação |
+
+Um `hidden_spikes` deve possuir a propriedade string **reveal_group**, ligando
+o hazard ao `scan_reveal.group` correspondente. A lógica letal permanece ativa
+mesmo antes da revelação.
+
+### 6.12 **automatic_door**
+
+**Função:** barreira corporativa que alterna entre fechada e aberta. Fechada,
+bloqueia e mata Alex ao contato; aberta, permite a passagem.
+
+**Geometria Tiled:** Rectangle Object cobrindo toda a passagem vertical.
+
+| Propriedade | Tipo | Regra | Obrigatória |
+| --- | --- | --- | --- |
+| **id** | string | identificador único | sim |
+| **cycle_ms** | int | duração total do ciclo | sim |
+| **open_ms** | int | janela aberta dentro do ciclo | sim |
+| **phase_ms** | int | deslocamento inicial do ciclo | sim |
+
+O visual fica na layer `hazards`, mas sua colisão temporizada deve ser criada a
+partir do Rectangle Object.
+
+### 6.13 **narrative**
+
+**Função:** marca uma zona de beat narrativo sem colisão.
+
+**Geometria Tiled:** Rectangle Object.
+
+| Propriedade | Tipo | Valores atuais | Obrigatória |
+| --- | --- | --- | --- |
+| **id** | string | identificador único | sim |
+| **kind** | string | **father_ad** | sim |
+
+Na Fase 4, `father_ad` identifica a propaganda corporativa do pai antes da
+clínica de George.
+
 ## 7. Classes planejadas / ainda não formalizadas
 
 Estas classes só entram no contrato oficial quando forem efetivamente criadas no mapa e implementadas:
 
-- **scan_reveal**
 - **gate**
 - **ending_choice**
-- **narrative**
 - **zone**
 - **animated_prop**
 
@@ -505,6 +563,77 @@ Após a revisão de colisões com plataformas sobrepostas, o caminho principal m
 
 O pulo simples percorre aproximadamente **256 px** no mesmo nível. A maior elevação das plataformas opcionais é **192 px**, abaixo dos aproximadamente **226 px** alcançáveis com o salto duplo. Não deve existir um vão obrigatório sob plataformas baixas: esses trechos permanecem como corredores contínuos.
 
+### 8.4 Fase 4 — esquema autoral
+
+#### Layers
+
+~~~text
+objects
+deco
+hazards
+scan-visuals
+ground
+deco-back
+background
+~~~
+
+`scan-visuals` é visual e não possui colisão. A propriedade
+`scan_controlled = true` indica que o runtime deve controlar cada região pelo
+`scan_reveal.kind`: armadilhas começam ocultas; paredes, rotas e pisos falsos
+continuam visíveis, mas recebem o destaque de falsidade quando revelados.
+
+#### Objetos usados
+
+~~~text
+spawn
+tutorial
+scan_reveal
+hazard
+automatic_door
+credit
+checkpoint
+narrative
+clinic
+phase_end
+~~~
+
+#### Valores usados
+
+~~~text
+tutorial.skill = scan
+scan_reveal.kind = hidden_route | false_wall | hidden_hazard | false_floor
+hazard.kind = laser | hidden_spikes
+automatic_door.cycle_ms = int
+automatic_door.open_ms = int
+automatic_door.phase_ms = int
+credit.route = normal | risk
+checkpoint.id = f4-cp1
+narrative.kind = father_ad
+clinic.implant = thrusters
+clinic.next = ClinicScene
+phase_end.fase = 4
+~~~
+
+O mapa possui **30.720 px** de comprimento. A **320 px/s**, o percurso linear
+equivale a aproximadamente **96 s sem mortes**, dentro da hipótese de 90–120 s
+do GDD. Existem 20 créditos: 4 na rota normal e 16 associados a plataformas,
+armadilhas, pisos falsos, lasers ou portas temporizadas.
+
+#### Auditoria de acessibilidade da Fase 4
+
+| Intervalo horizontal | Largura | Leitura | Movimento exigido |
+| --- | ---: | --- | --- |
+| `x = 8.704–8.992` | 288 px / 9 tiles | rota revelada | salto duplo |
+| `x = 11.520–11.712` | 192 px / 6 tiles | laser | pulo simples |
+| `x = 17.024–17.216` | 192 px / 6 tiles | piso falso | pulo simples após scan |
+| `x = 18.176–18.400` | 224 px / 7 tiles | piso falso | pulo simples após scan |
+| `x = 21.184–21.472` | 288 px / 9 tiles | combinação final | salto duplo |
+| `x = 24.576–24.768` | 192 px / 6 tiles | piso falso final | pulo simples após scan |
+
+Nenhum vão possui plataforma baixa cobrindo sua trajetória. Os vãos de 192 e
+224 px ficam abaixo do alcance simples aproximado de 256 px; os dois vãos de
+288 px foram reservados para exigir o salto duplo já adquirido.
+
 ## 9. Regras para integração Phaser
 
 O responsável pela integração deve:
@@ -512,7 +641,7 @@ O responsável pela integração deve:
 1. carregar o **fase-N.json** correspondente exportado do Tiled;
 2. criar/renderizar as layers pelos nomes exatos;
 3. aplicar colisão física sólida na layer **ground**;
-4. não aplicar colisão por padrão em **background**, **deco-back** e **deco**;
+4. não aplicar colisão por padrão em **background**, **deco-back**, **deco** e **scan-visuals**;
 5. tratar **hazards** como representação visual, mantendo a lógica letal em **objects**;
 6. ler a Object Layer **objects**;
 7. despachar o comportamento pela classe;
@@ -553,6 +682,23 @@ Dependendo da versão/exportação do Tiled, a informação exibida na interface
 12. Somente depois bloquear **ground**, **hazards** e **objects** e iniciar **background → deco-back → deco**.
 
 ## 12. Histórico de alterações
+
+### v0.19 — 2026-10-27
+
+- integrada a exportação `fase-4.json` ao `GameScene`, substituindo a prévia programática;
+- implementados scan persistente por trecho, paredes e pisos falsos, armadilhas ocultas e lasers;
+- implementadas cinco portas automáticas com ciclo, janela aberta e fase independentes;
+- integrados créditos, checkpoint, propaganda do pai, clínica, propulsores e fim da fase;
+- ampliadas as portas para 256 px de altura, impedindo ignorar o timing com salto duplo.
+
+### v0.18 — 2026-10-27
+
+- criado o blockout autoral `fase-4.tmj` com o tileset Foozle Sci-Fi Labs;
+- dimensionado o percurso em 30.720 px, aproximadamente 96 s na velocidade-base;
+- formalizadas as classes `scan_reveal`, `automatic_door` e `narrative`;
+- formalizados os hazards `laser` e `hidden_spikes` e a layer `scan-visuals`;
+- distribuídos 20 créditos, um checkpoint e a sequência completa prevista pelo GDD;
+- auditados os seis vãos contra os alcances atuais de pulo e salto duplo.
 
 ### v0.17 — 2026-10-21
 
