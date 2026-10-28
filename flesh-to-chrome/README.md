@@ -1245,55 +1245,51 @@ Esta entrega cobre os Marcos 1 e 2. Os próximos passos, em ordem:
 | Victor Blum | Game design / level design / GDD |
 | João Pedro | Arte 2D / UI |
 
-## Multiplayer MQTT — Etapas 1 e 2
+## Multiplayer via MQTT — configuração e testes
 
-O projeto agora possui a base de multiplayer em `src/network/`:
+A base de multiplayer está implementada em `src/network/` e contempla:
 
 - conexão MQTT sobre WebSocket;
-- reconexão automática;
-- keep-alive;
-- criação de sala com código de 6 caracteres;
-- entrada em sala por código;
-- identificação de host/jogador;
-- mensagens de presença e boas-vindas.
+- reconexão automática e keep-alive;
+- criação de salas com código de 6 caracteres e entrada por código;
+- identificação de host e jogadores;
+- mensagens de boas-vindas e presença dos participantes.
 
-### Broker local para desenvolvimento
+A pista de corrida, a movimentação e a sincronização da corrida, a pontuação, as regras de DNF e a apresentação dos resultados ainda fazem parte do roadmap.
 
-O jogo espera por padrão um broker MQTT WebSocket em `ws://localhost:9001`.
+### Configurar e iniciar o broker
 
-Com Mosquitto, configure um listener WebSocket em `9001`, por exemplo:
+O cliente usa, por padrão, o broker MQTT via WebSocket em `ws://localhost:9001`. Instale o [Eclipse Mosquitto](https://mosquitto.org/download/) e configure um listener WebSocket na porta `9001`. O arquivo `mqtt-dev.conf`, localizado na raiz de `flesh-to-chrome/`, contém a configuração de desenvolvimento usada pelo projeto.
 
-```conf
-listener 1883
-protocol mqtt
+No terminal, dentro da pasta `flesh-to-chrome/`, inicie o broker:
 
-listener 9001
-protocol websockets
-allow_anonymous true
+```bash
+mosquitto -c mqtt-dev.conf -v
 ```
 
-A configuração acima é somente para desenvolvimento local. Para produção, use autenticação e `wss://`.
+Mantenha esse terminal aberto. Se o comando `mosquitto` não for reconhecido no Windows, execute o `mosquitto.exe` pelo caminho completo da instalação e informe o caminho completo para `mqtt-dev.conf`.
 
-Depois inicie o broker e o projeto:
+A configuração de desenvolvimento pode permitir conexões sem autenticação; use-a apenas em ambiente confiável. Para produção, configure autenticação, transporte seguro (`wss://`) e as regras de acesso adequadas.
+
+### Iniciar o jogo e testar salas
+
+Em outro terminal, também dentro de `flesh-to-chrome/`, execute:
 
 ```bash
 npm install
 npm start
 ```
 
-No menu, escolha **Multiplayer**. Em uma janela crie a sala; em outra janela entre usando o código exibido.
+No menu do jogo, escolha **Multiplayer**. Em uma janela, selecione **Criar sala**; em outra, informe o código gerado e selecione **Entrar na sala**. As duas instâncias devem conectar ao broker e mostrar o mesmo código de sala.
 
-### Fluxo de teste das etapas 1 e 2
+### Testar em outro computador pela rede local
 
-1. Inicie o broker com `mqtt-dev.conf`.
-2. Inicie o jogo com `npm start`.
-3. Menu → **Multiplayer**.
-4. Janela A → **Criar sala**.
-5. Janela B → informe o código → **Entrar na sala**.
-6. As duas telas devem mostrar o broker conectado e o mesmo código de sala.
+O cliente aceita o parâmetro `broker` na URL para apontar para o broker MQTT de outro computador. No computador anfitrião, descubra o IPv4 com `ipconfig` e confirme que o broker WebSocket está acessível pela porta `9001`. No outro computador, abra o jogo usando o IP do anfitrião e acrescente o parâmetro abaixo à URL:
 
-O multiplayer ainda não move jogadores nem sincroniza a Fase 1. Essas funções pertencem às próximas etapas; aqui estamos validando somente conexão, reconexão, identidade e salas.
+```text
+?broker=ws://IP:9001
+```
 
-## Multiplayer MQTT (desenvolvimento)
+Por exemplo, se o IP do computador que executa o broker for `192.168.1.50`, use `?broker=ws://192.168.1.50:9001`. Se a URL do jogo já tiver parâmetros, acrescente `&broker=ws://192.168.1.50:9001` em vez de um segundo `?`.
 
-O multiplayer usa MQTT.js sobre WebSocket. Instale as dependências com `npm install` antes de iniciar o jogo. O broker local usa `mqtt-dev.conf` e WebSocket na porta 9001.
+O servidor de desenvolvimento do jogo também precisa aceitar conexões pela rede local; acesse-o usando o IP do computador anfitrião e a porta exibida pelo Parcel, não `localhost`. Libere no Firewall do Windows as portas necessárias para o servidor do jogo e para o broker. O parâmetro `broker` muda o endereço MQTT, mas não expõe por si só o servidor do jogo à rede.
