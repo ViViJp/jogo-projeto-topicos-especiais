@@ -184,7 +184,13 @@ export class Room {
         this.onHello(message);
         break;
       case "room_welcome":
-        if (this.role === "player" && this.status === "searching" && message.targetId === this.playerId) {
+        if (
+          this.role === "player" &&
+          (this.status === "searching" || this.status === "joined") &&
+          message.targetId === this.playerId
+        ) {
+          // Também processa a confirmação se a reconexão MQTT ocorreu antes
+          // de o host expirar o jogador localmente.
           this.onWelcome(message.hostId);
         }
         break;
@@ -197,6 +203,17 @@ export class Room {
       case "room_leave":
         this.removePeer(message.playerId);
         break;
+      case "room_rejoin":
+        if (this.role === "player" && message.targetId === this.playerId) {
+          // O host expirou nossa presença. Recomeçar a negociação e aguardar
+          // novo room_welcome antes de considerar a entrada confirmada.
+          this.status = "searching";
+          this.peers.clear();
+          this.peers.set(message.playerId, { role: "host", lastSeen: Date.now() });
+          this.stopTimers();
+          this.announce();
+        }
+        break;
     }
 
     for (const listener of this.messageListeners) listener(message);
@@ -204,6 +221,18 @@ export class Room {
 
   /** Só o host decide quem entra (capacidade de 2 jogadores, GDD 21.1). */
   private onHello(message: Extract<RoomMessage, { type: "room_hello" }>): void {
+    if (this.role === "host" && message.role === "host") {
+      // Colisão rara de códigos de sala: ambos elegem o menor playerId como
+      // host. O outro se torna jogador e envia um novo hello para ser admitido.
+      if (this.playerId.localeCompare(message.playerId) < 0) return;
+      this.role = "player";
+      this.status = "searching";
+      this.peers.clear();
+      this.stopTimers();
+      this.announce();
+      this.emit();
+      return;
+    }
     if (this.role !== "host") return;
 
     const known = this.peers.has(message.playerId);
@@ -237,10 +266,14 @@ export class Room {
     if (peer) peer.lastSeen = Date.now();
   }
 
-  private removePeer(playerId: string): void {
+  private removePeer(playerId: string, requestRejoin = false): void {
     const peer = this.peers.get(playerId);
     if (!peer) return;
     this.peers.delete(playerId);
+
+    if (requestRejoin && peer.role === "player" && this.role === "host") {
+      this.publish({ type: "room_rejoin", playerId: this.playerId, targetId: playerId });
+    }
 
     if (peer.role === "host" && this.role === "player") {
       // O host saiu: a sala deixa de existir para quem entrou.
@@ -268,7 +301,7 @@ export class Room {
     this.sweepTimer = window.setInterval(() => {
       const now = Date.now();
       for (const [playerId, peer] of [...this.peers]) {
-        if (now - peer.lastSeen > PEER_TIMEOUT_MS) this.removePeer(playerId);
+        if (now - peer.lastSeen > PEER_TIMEOUT_MS) this.removePeer(playerId, true);
       }
     }, 1000);
   }

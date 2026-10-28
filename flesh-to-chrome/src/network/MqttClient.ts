@@ -1,6 +1,6 @@
 import mqtt, { MqttClient as MqttJsClient } from "mqtt";
 
-export type MqttConnectionState = "offline" | "connecting" | "online" | "reconnecting";
+export type MqttConnectionState = "offline" | "connecting" | "online" | "reconnecting" | "subscription_error";
 
 export interface MqttMessage {
   topic: string;
@@ -77,7 +77,16 @@ export class MqttClient {
 
   /** Idempotente: se já há uma conexão (conectada, conectando ou reconectando), não faz nada. */
   connect(): void {
-    if (this.client) return;
+    // Uma recusa de SUBACK não fecha necessariamente o socket. Permitir uma
+    // nova tentativa explícita, encerrando a conexão que ficou sem inscrição.
+    if (this.client && this.state !== "subscription_error") return;
+    if (this.client && this.state === "subscription_error") {
+      const failedClient = this.client;
+      this.client = undefined;
+      failedClient.removeAllListeners();
+      failedClient.on("error", () => undefined);
+      failedClient.end(false);
+    }
 
     this.everConnected = false;
     this.lastError = undefined;
@@ -193,7 +202,7 @@ export class MqttClient {
   }
 
   publish(topic: string, payload: string): boolean {
-    if (!this.client?.connected) return false;
+    if (!this.client?.connected || this.state !== "online" || !this.activeTopics.has(topic)) return false;
     this.client.publish(topic, payload, { qos: 0, retain: false });
     return true;
   }
@@ -214,7 +223,7 @@ export class MqttClient {
       if (this.client !== client) return;
       const refused = granted?.some((g) => g.qos === 128);
       if (error || refused) {
-        this.setState("online", `Falha ao entrar no tópico: ${error?.message ?? "broker recusou a inscrição"}`);
+        this.setState("subscription_error", `Falha ao entrar no tópico: ${error?.message ?? "broker recusou a inscrição"}. Tente sair/desconectar e conectar novamente.`);
         return;
       }
       for (const topic of pending) {

@@ -25,7 +25,8 @@ export type RoomMessage =
   | { type: "room_welcome"; playerId: string; hostId: string; targetId?: string }
   | { type: "room_full"; playerId: string; targetId: string }
   | { type: "room_presence"; playerId: string; role: RoomPlayerRole }
-  | { type: "room_leave"; playerId: string };
+  | { type: "room_leave"; playerId: string }
+  | { type: "room_rejoin"; playerId: string; targetId: string };
 
 export function roomTopic(roomId: string): string {
   return `${MQTT_TOPIC_PREFIX}/${roomId}/room`;
@@ -62,7 +63,7 @@ export function encodeRoomMessage(message: RoomMessage): string {
   return JSON.stringify(message);
 }
 
-const MESSAGE_TYPES = new Set(["room_hello", "room_welcome", "room_full", "room_presence", "room_leave"]);
+const MESSAGE_TYPES = new Set(["room_hello", "room_welcome", "room_full", "room_presence", "room_leave", "room_rejoin"]);
 
 export function decodeRoomMessage(payload: string): RoomMessage | undefined {
   try {

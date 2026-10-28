@@ -1230,9 +1230,12 @@ Esta entrega cobre os Marcos 1 e 2. Os próximos passos, em ordem:
   15.5/15.6), Hollow, Flesh e epílogo. O formato de save já reserva os
   campos `descentState`, `preGateSave` e `endingReached` em
   `src/systems/SaveState.ts` para isso.
-- **Marco 5 — Multiplayer** (Seção 24.5): implementar `MultiplayerScene`
-  (hoje um stub) com a lógica da Seção 21 (pista própria, créditos
-  individuais, tempo ajustado, DNF, desconexão).
+- **Marco 5 — Multiplayer** (Seção 24.5): a base de conexão MQTT/WebSocket,
+  criação/entrada em salas, identificação de host e jogadores, presença e
+  reconexão já está implementada em `src/network/` e integrada à
+  `MultiplayerScene`. Ainda faltam a pista própria, movimentação e
+  sincronização da corrida, créditos individuais, tempo ajustado, regras
+  de DNF, tratamento completo de desconexão e apresentação dos resultados.
 - **Marco 6 — Polimento e entrega** (Seção 24.6): playtests para calibrar
   os valores marcados como provisórios, arte final substituindo os
   placeholders, áudio, e — só depois de tudo estável — a loja cosmética
@@ -1254,7 +1257,9 @@ A base de multiplayer está implementada em `src/network/` e contempla:
 - reconexão automática e keep-alive;
 - criação de salas com código de 6 caracteres e entrada por código;
 - identificação de host e jogadores;
-- mensagens de boas-vindas e presença dos participantes.
+- mensagens de boas-vindas e presença dos participantes;
+- nova confirmação do host quando um jogador expira por timeout;
+- desempate determinístico caso dois clientes tentem ser host da mesma sala.
 
 A pista de corrida, a movimentação e a sincronização da corrida, a pontuação, as regras de DNF e a apresentação dos resultados ainda fazem parte do roadmap.
 

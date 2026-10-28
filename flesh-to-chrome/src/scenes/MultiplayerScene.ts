@@ -4,11 +4,14 @@ import { MULTIPLAYER_CONFIG } from "../config/MultiplayerConfig";
 import { createClientId, ROOM_CAPACITY } from "../network/MultiplayerProtocol";
 import { MqttClient, MqttConnectionState } from "../network/MqttClient";
 import { Room, RoomState } from "../network/Room";
+import { InputManager } from "../systems/InputManager";
 
 /** Posição/tamanho do campo de código, em coordenadas do jogo (1280×720). */
 const INPUT_BOX = { centerX: SCREEN_WIDTH / 2, top: 390, width: 220, height: 42, fontSize: 20 };
 
 export class MultiplayerScene extends Phaser.Scene {
+  private input$!: InputManager;
+  private returning = false;
   private mqtt?: MqttClient;
   private room?: Room;
   private roomInput?: HTMLInputElement;
@@ -31,6 +34,8 @@ export class MultiplayerScene extends Phaser.Scene {
   }
 
   create(): void {
+    this.returning = false;
+    this.input$ = new InputManager(this);
     this.cameras.main.setBackgroundColor(0x05050a);
     this.createUi();
     this.createNetwork();
@@ -136,13 +141,17 @@ export class MultiplayerScene extends Phaser.Scene {
       wordWrap: { width: 760 },
     }).setOrigin(0.5);
 
-    this.add.text(SCREEN_WIDTH / 2, SCREEN_HEIGHT - 35, "ESC voltar ao menu", {
+    this.add.text(SCREEN_WIDTH / 2, SCREEN_HEIGHT - 35, "ESC / B / SELECT voltar ao menu", {
       fontFamily: "Courier New, monospace",
       fontSize: "14px",
       color: "#565f80",
     }).setOrigin(0.5);
 
-    this.input.keyboard?.on("keydown-ESC", () => this.backToMenu());
+  }
+
+  update(): void {
+    if (!this.returning && this.input$.isCancelJustDown()) this.backToMenu();
+    this.input$.postUpdate();
   }
 
   private positionInput(): void {
@@ -220,12 +229,14 @@ export class MultiplayerScene extends Phaser.Scene {
       connecting: "Broker: conectando...",
       online: "Broker: conectado",
       reconnecting: "Broker: reconectando...",
+      subscription_error: "Broker: inscrição recusada",
     };
     const colors: Record<MqttConnectionState, string> = {
       offline: "#ff8a8a",
       connecting: "#FFD37C",
       online: "#7CFCEA",
       reconnecting: "#FFD37C",
+      subscription_error: "#ff8a8a",
     };
     this.statusText?.setText(detail ? `${labels[state]}\n${detail}` : labels[state]);
     this.statusText?.setColor(colors[state]);
@@ -302,6 +313,8 @@ export class MultiplayerScene extends Phaser.Scene {
   }
 
   private backToMenu(): void {
+    if (this.returning) return;
+    this.returning = true;
     // `cleanup()` roda pelo evento SHUTDOWN assim que a cena para.
     this.scene.start("MenuScene");
   }
