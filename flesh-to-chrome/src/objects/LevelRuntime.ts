@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { LevelData } from "../levels/LevelTypes";
+import { AbilityGateKind, LevelData } from "../levels/LevelTypes";
 import { TEX } from "../utils/PlaceholderTextures";
 import { Player } from "../entities/Player";
 import { PLAYER_SLIDE_SIZE } from "../config/GameConfig";
@@ -26,8 +26,18 @@ const OVERHEAD_TOP_Y = -4000; // bem acima de qualquer altura de pulo possível
 export class LevelRuntime {
   readonly groundGroup: Phaser.Physics.Arcade.StaticGroup;
   readonly overheadGroup: Phaser.Physics.Arcade.StaticGroup;
+  readonly breakableGroup: Phaser.Physics.Arcade.StaticGroup;
+  readonly abilityGateGroup: Phaser.Physics.Arcade.StaticGroup;
   readonly creditSprites = new Map<string, Phaser.Physics.Arcade.Sprite>();
   readonly checkpointZones: { id: string; x: number; triggered: boolean; zone: Phaser.GameObjects.Zone }[] = [];
+  private readonly breakableObjects: Phaser.GameObjects.Rectangle[] = [];
+  private readonly abilityGateObjects: Array<{
+    ability: AbilityGateKind;
+    object: Phaser.GameObjects.Rectangle;
+  }> = [];
+  private pressedAttackListener: (breakable: Phaser.GameObjects.GameObject | null) => void = () => undefined;
+  private attackListener: (x: number, y: number) => void = () => undefined;
+  private dashListener: (x: number, y: number) => void = () => undefined;
   private endGateTriggered = false;
 
   constructor(
@@ -42,11 +52,16 @@ export class LevelRuntime {
   ) {
     this.groundGroup = scene.physics.add.staticGroup();
     this.overheadGroup = scene.physics.add.staticGroup();
+    this.breakableGroup = scene.physics.add.staticGroup();
+    this.abilityGateGroup = scene.physics.add.staticGroup();
     this.buildGround();
     this.buildOverheadColliders();
     this.buildHazardVisuals();
     this.buildCredits();
     this.buildCheckpoints();
+    this.buildBreakables();
+    this.buildAbilityGates();
+    this.buildEndGate();
   }
 
   private buildGround(): void {
@@ -120,6 +135,223 @@ export class LevelRuntime {
     }
   }
 
+  private buildBreakables(): void {
+    for (const item of this.level.breakables) {
+      const rect = this.scene.add
+        .rectangle(item.x, this.level.groundY - item.height / 2, item.width, item.height, 0xb64cff, 0.82)
+        .setStrokeStyle(2, 0xe0a8ff)
+        .setDepth(4);
+      rect.setData("breakableId", item.id);
+      this.scene.physics.add.existing(rect, true);
+      this.breakableGroup.add(rect);
+      this.breakableObjects.push(rect);
+
+      if (item.prompt) {
+        this.scene.add
+          .text(item.x, this.level.groundY - item.height - 34, item.prompt, {
+            fontFamily: "Courier New, monospace",
+            fontSize: "16px",
+            color: "#e0a8ff",
+            backgroundColor: "#101522",
+            padding: { x: 6, y: 4 },
+          })
+          .setOrigin(0.5)
+          .setDepth(5);
+      }
+    }
+  }
+
+  private buildAbilityGates(): void {
+    for (const item of this.level.abilityGates) {
+      const isScanGate = item.ability === "scan";
+      const color = isScanGate ? 0x36e2ff : 0xff9f43;
+      const rect = this.scene.add
+        .rectangle(
+          item.x,
+          this.level.groundY - item.height / 2,
+          item.width,
+          item.height,
+          color,
+          isScanGate ? 0.12 : 0.72
+        )
+        .setStrokeStyle(2, color, isScanGate ? 0.32 : 0.95)
+        .setDepth(4);
+      rect.setData("abilityGateId", item.id);
+      this.scene.physics.add.existing(rect, true);
+      this.abilityGateGroup.add(rect);
+      this.abilityGateObjects.push({ ability: item.ability, object: rect });
+
+      if (item.prompt) {
+        this.scene.add
+          .text(item.x, this.level.groundY - item.height - 34, item.prompt, {
+            fontFamily: "Courier New, monospace",
+            fontSize: "16px",
+            color: isScanGate ? "#36e2ff" : "#ffbd72",
+            backgroundColor: "#101522",
+            padding: { x: 6, y: 4 },
+          })
+          .setOrigin(0.5)
+          .setDepth(5);
+      }
+    }
+  }
+
+  /**
+   * Barreiras de habilidade são obstáculos seguros: bloqueiam Alex até o
+   * jogador usar a ação ensinada. Scan revela a passagem; dash rompe a
+   * barreira cinética.
+   */
+  registerAbilityGatePhysics(player: Player): void {
+    this.scene.physics.add.collider(player.sprite, this.abilityGateGroup);
+
+    this.dashListener = (x) => {
+      this.openNearestAbilityGate("dash", x, 220);
+    };
+    this.scene.events.on("player-dash-start", this.dashListener);
+  }
+
+  setScanActive(active: boolean, playerX: number): void {
+    if (!active) return;
+    this.openNearestAbilityGate("scan", playerX, 720);
+  }
+
+  private openNearestAbilityGate(ability: AbilityGateKind, playerX: number, range: number): void {
+    const candidates = this.abilityGateObjects
+      .filter(({ ability: gateAbility, object }) =>
+        gateAbility === ability &&
+        object.active &&
+        object.x >= playerX - 24 &&
+        object.x <= playerX + range
+      )
+      .sort((a, b) => Math.abs(a.object.x - playerX) - Math.abs(b.object.x - playerX));
+
+    const target = candidates[0];
+    if (!target) return;
+
+    const index = this.abilityGateObjects.indexOf(target);
+    if (index >= 0) this.abilityGateObjects.splice(index, 1);
+    const body = target.object.body as Phaser.Physics.Arcade.StaticBody | null;
+    if (body) body.enable = false;
+    target.object.setActive(false);
+
+    const message = ability === "scan" ? "PASSAGEM REVELADA" : "BARREIRA ROMPIDA";
+    const color = ability === "scan" ? "#36e2ff" : "#ffbd72";
+    const label = this.scene.add
+      .text(target.object.x, this.level.groundY - target.object.displayHeight - 26, message, {
+        fontFamily: "Courier New, monospace",
+        fontSize: "14px",
+        color,
+        backgroundColor: "#101522",
+        padding: { x: 5, y: 3 },
+      })
+      .setOrigin(0.5)
+      .setDepth(6);
+
+    this.scene.tweens.add({
+      targets: [target.object, label],
+      alpha: 0,
+      scaleX: 1.15,
+      duration: 260,
+      onComplete: () => {
+        target.object.destroy();
+        label.destroy();
+      },
+    });
+  }
+
+  /**
+   * Liga a regra do GDD para quebráveis: Alex para ao colidir, recebe uma
+   * curta janela de reação e destrói o obstáculo ao usar o ataque.
+   */
+  registerBreakablePhysics(player: Player): void {
+    this.scene.physics.add.collider(player.sprite, this.breakableGroup, (_player, obstacle) => {
+      const object = obstacle as Phaser.GameObjects.Rectangle;
+      if (!object.active) return;
+      // Se o arco do golpe ainda está ativo ao tocar a barricada, o impacto
+      // já a destrói; caso contrário começa a janela de reação do GDD.
+      if (player.getState() === "attacking") {
+        this.destroyBreakable(object, player);
+      } else {
+        player.enterPressedState(object);
+      }
+    });
+
+    this.pressedAttackListener = (breakable) => {
+      if (!breakable) return;
+      this.destroyBreakable(breakable as Phaser.GameObjects.Rectangle, player);
+    };
+
+    // O golpe também acerta antes do contato. Assim o jogador pode atacar
+    // durante a aproximação, em vez de precisar esperar Alex ficar preso.
+    this.attackListener = (x, y) => {
+      // A distância é medida até a borda mais próxima da barricada, não
+      // até seu centro. A janela de 180 px equivale a ~0,56 s de corrida.
+      const attackRange = 180;
+      const verticalRange = 80;
+      const target = this.breakableObjects.find((object) => {
+        const nearEdgeX = object.x - object.displayWidth / 2;
+        return object.active &&
+          nearEdgeX >= x - 8 &&
+          nearEdgeX <= x + attackRange &&
+          Math.abs(object.y - y) <= verticalRange;
+      });
+      if (target) this.destroyBreakable(target, player);
+    };
+    this.scene.events.on("player-attack-attempt", this.pressedAttackListener);
+    this.scene.events.on("player-attack", this.attackListener);
+  }
+
+  private destroyBreakable(object: Phaser.GameObjects.Rectangle, player: Player): void {
+    const index = this.breakableObjects.indexOf(object);
+    if (index === -1 || !object.active) return;
+
+    this.breakableObjects.splice(index, 1);
+    const body = object.body as Phaser.Physics.Arcade.StaticBody | null;
+    if (body) body.enable = false;
+    object.setActive(false);
+    player.resolvePressedSuccess();
+    this.scene.tweens.add({
+      targets: object,
+      alpha: 0,
+      scaleX: 1.18,
+      scaleY: 0.75,
+      duration: 120,
+      onComplete: () => object.destroy(),
+    });
+  }
+
+  /**
+   * Torna visível o gatilho de término dos níveis legados. Antes a Fase 2
+   * terminava apenas ao cruzar uma coordenada X invisível, sem comunicar ao
+   * jogador que aquele trecho era o fim da prévia.
+   */
+  private buildEndGate(): void {
+    const x = this.level.endGateX;
+    const y = this.level.groundY - 110;
+    const gate = this.scene.add.image(x, y, TEX.gate).setDepth(4);
+    gate.setTint(0x36e2ff);
+
+    const label = this.scene.add
+      .text(x, this.level.groundY - 244, "FIM DA PRÉVIA", {
+        fontFamily: "Courier New, monospace",
+        fontSize: "16px",
+        color: "#36e2ff",
+        backgroundColor: "#101522",
+        padding: { x: 6, y: 4 },
+      })
+      .setOrigin(0.5)
+      .setDepth(5);
+
+    this.scene.tweens.add({
+      targets: [gate, label],
+      alpha: 0.45,
+      duration: 650,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.easeInOut",
+    });
+  }
+
   /** Deve ser chamado a cada frame pela GameScene. */
   update(player: Player): void {
     const px = player.sprite.x;
@@ -167,6 +399,13 @@ export class LevelRuntime {
   }
 
   destroy(): void {
+    this.scene.events.off("player-attack-attempt", this.pressedAttackListener);
+    this.scene.events.off("player-attack", this.attackListener);
+    this.scene.events.off("player-dash-start", this.dashListener);
+    this.breakableObjects.forEach((object) => object.destroy());
+    this.breakableObjects.length = 0;
+    this.abilityGateObjects.forEach(({ object }) => object.destroy());
+    this.abilityGateObjects.length = 0;
     this.creditSprites.forEach((s) => s.destroy());
     this.creditSprites.clear();
   }

@@ -17,6 +17,9 @@ const config: Phaser.Types.Core.GameConfig = {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
+  input: {
+    gamepad: true,
+  },
   // Correção do "tremor de tela" reportado em playtest (v0.2.0): com
   // Phaser.Scale.FIT a tela do jogo quase nunca escala por um fator
   // inteiro (depende do tamanho da janela do jogador), e por padrão o

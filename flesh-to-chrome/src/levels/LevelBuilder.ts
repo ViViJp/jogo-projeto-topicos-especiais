@@ -4,6 +4,9 @@ import {
   OverheadObstacle,
   CreditEntry,
   CheckpointEntry,
+  BreakableEntry,
+  AbilityGateEntry,
+  AbilityGateKind,
 } from "./LevelTypes";
 
 /**
@@ -19,6 +22,8 @@ export class LevelBuilder {
   readonly overheadObstacles: OverheadObstacle[] = [];
   readonly credits: CreditEntry[] = [];
   readonly checkpoints: CheckpointEntry[] = [];
+  readonly breakables: BreakableEntry[] = [];
+  readonly abilityGates: AbilityGateEntry[] = [];
   private idCounter = 0;
 
   constructor(readonly groundY: number) {}
@@ -69,6 +74,35 @@ export class LevelBuilder {
 
   checkpointHere(): this {
     this.checkpoints.push({ id: this.nextId("checkpoint"), x: this.cursor });
+    return this;
+  }
+
+  breakableAt(offsetFromCursor: number, width = 48, height = 64, prompt?: string): this {
+    this.breakables.push({
+      id: this.nextId("breakable"),
+      x: this.cursor + offsetFromCursor,
+      width,
+      height,
+      prompt,
+    });
+    return this;
+  }
+
+  abilityGateAt(
+    ability: AbilityGateKind,
+    offsetFromCursor: number,
+    width = 48,
+    height = 80,
+    prompt?: string
+  ): this {
+    this.abilityGates.push({
+      id: this.nextId(`${ability}-gate`),
+      ability,
+      x: this.cursor + offsetFromCursor,
+      width,
+      height,
+      prompt,
+    });
     return this;
   }
 
