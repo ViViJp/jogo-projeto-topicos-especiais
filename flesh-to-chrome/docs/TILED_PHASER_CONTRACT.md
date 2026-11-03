@@ -1,7 +1,7 @@
 # Flesh to Chrome — Contrato Tiled ↔ Phaser
 
-**Versão:** 0.17
-**Data:** 2026-10-21
+**Versão:** 0.18
+**Data:** 2026-11-03
 **Status:** contrato vivo — atualizar sempre que uma nova classe, propriedade, camada ou valor de comportamento for criado no Tiled.
 
 ## 1. Objetivo
@@ -48,6 +48,23 @@ Para a Fase 3:
 > em array, sem `encoding: base64` e sem `compression: zlib`. O parser Tiled do
 > Phaser 4 ignora layers comprimidas e carregaria a fase sem chão.
 
+Para a Fase 4:
+
+- Grid: **32 × 32 px**
+- Setor: **Corporativo**
+- Arquivo autoral: **src/assets/maps/corporativo/fase-4.tmj**
+- Arquivo exportado: **src/assets/maps/corporativo/fase-4.json**
+- Status: **blockout integrado ao Phaser**
+
+Para a Fase 5:
+
+- Grid: **32 × 32 px**
+- Setor: **Topo**
+- Arquivo autoral: **src/assets/maps/topo/fase-5.tmj**
+- Arquivo exportado: **src/assets/maps/topo/fase-5.json**
+- Tileset principal: **cyber-purp**
+- Status: **blockout autoral pronto; integração ao Phaser pendente**
+
 ## 3. Camadas oficiais
 
 A ordem recomendada no painel do Tiled, de cima para baixo, é:
@@ -56,15 +73,17 @@ A ordem recomendada no painel do Tiled, de cima para baixo, é:
 2. **deco-low-ceilings** — visual deslocado dos canos baixos da Fase 2
 3. **deco** — decoração em primeiro plano
 4. **hazards** — representação visual de perigos
-5. **ground** — geometria sólida e plataformas
-6. **deco-back** — decoração atrás do jogador
-7. **background** — fundo visual sem colisão
+5. **scan-visuals** — visuais controlados pelo scan, sem colisão
+6. **ground** — geometria sólida e plataformas
+7. **deco-back** — decoração atrás do jogador
+8. **background** — fundo visual sem colisão
 
 ### Regras
 
 - **ground**: tudo que deve ter colisão física sólida com Alex.
 - **hazards**: apenas o visual do perigo; a lógica letal fica em **objects**.
 - **deco** e **deco-back**: sem colisão por padrão.
+- **scan-visuals**: sem colisão; usada nas Fases 4 e 5 para pisos e hazards reveláveis.
 - **deco-low-ceilings**: Tile Layer exclusiva da Fase 2, sem colisão, com deslocamento vertical de **12 px**.
 - **background**: sem colisão.
 - **objects**: nunca deve ser renderizada como parte visual do cenário final.
@@ -113,6 +132,7 @@ A integração trata esses valores como case-sensitive.
 - Retângulos ligados à geometria do mapa devem, sempre que possível, ficar alinhados ao grid.
 - Na Fase 1, dimensões de retângulos preferencialmente devem ser múltiplos de **16 px**.
 - Na Fase 2, dimensões de retângulos preferencialmente devem ser múltiplos de **32 px**.
+- Nas Fases 4 e 5, dimensões de retângulos preferencialmente devem ser múltiplos de **32 px**.
 - A hitbox de um hazard deve cobrir o trecho visual realmente letal, sem invadir área segura.
 - Um ajuste interno menor que o tile é permitido quando necessário para acompanhar a silhueta da arte, mas precisa ser validado no Phaser.
 - Objetos do tipo Point (**spawn**, **credit**) podem ficar centralizados sobre tiles e não precisam obrigatoriamente ter X/Y múltiplos de 16.
@@ -402,13 +422,45 @@ partir do Rectangle Object.
 Na Fase 4, `father_ad` identifica a propaganda corporativa do pai antes da
 clínica de George.
 
+### 6.14 Obstáculos da Fase 5
+
+A Fase 5 reutiliza `automatic_door`, `breakable`, `scan_reveal` e
+`hidden_spikes`, adicionando dois valores de `hazard.kind`:
+
+| kind | Representação | Regra planejada |
+| --- | --- | --- |
+| **laser_grid** | coluna contínua de emissores laser | morte imediata; dash não concede invencibilidade |
+| **rotating_barrier** | barreira mecânica rotativa | morte imediata durante o contato |
+
+As animações e janelas individuais dessas barreiras serão implementadas no
+runtime da Fase 5. Até lá, seus Rectangle Objects definem integralmente a área
+letal do blockout.
+
+### 6.15 **zone**
+
+**Função:** marca uma mudança de ritmo sem colisão própria.
+
+| Propriedade | Tipo | Valor atual | Obrigatória |
+| --- | --- | --- | --- |
+| **kind** | string | **contemplative** | sim |
+
+Na Fase 5, `contemplative` inicia o trecho sem desafio intenso que antecede o
+Portão.
+
+### 6.16 **gate** e **ending_choice**
+
+O Rectangle Object `gate` representa o Portão final. Sua propriedade string
+`choices` usa o valor `chrome,flesh`. Cada zona `ending_choice` possui a
+propriedade string `ending`, com valor `chrome` ou `flesh`.
+
+Esses objetos não são hazards. O runtime deve pausar ou desacelerar a corrida,
+apresentar a decisão e encaminhar a campanha conforme a escolha antes de
+acionar `phase_end`.
+
 ## 7. Classes planejadas / ainda não formalizadas
 
-Estas classes só entram no contrato oficial quando forem efetivamente criadas no mapa e implementadas:
+Esta classe só entra no contrato oficial quando for efetivamente criada no mapa e implementada:
 
-- **gate**
-- **ending_choice**
-- **zone**
 - **animated_prop**
 
 Ao criar uma delas, documentar:
@@ -618,6 +670,66 @@ O mapa possui **30.720 px** de comprimento. A **320 px/s**, o percurso linear
 equivale a aproximadamente **96 s sem mortes**, dentro da hipótese de 90–120 s
 do GDD. Existem 20 créditos: 4 na rota normal e 16 associados a plataformas,
 armadilhas, pisos falsos, lasers ou portas temporizadas.
+
+### 8.5 Fase 5 — esquema autoral
+
+#### Layers
+
+~~~text
+objects
+deco
+hazards
+scan-visuals
+ground
+deco-back
+background
+~~~
+
+#### Objetos usados
+
+~~~text
+spawn
+tutorial
+hazard
+automatic_door
+checkpoint
+scan_reveal
+breakable
+credit
+zone
+gate
+ending_choice
+phase_end
+~~~
+
+#### Valores usados
+
+~~~text
+tutorial.skill = dash
+hazard.kind = laser_grid | rotating_barrier | hidden_spikes
+automatic_door.cycle_ms = int
+automatic_door.open_ms = int
+automatic_door.phase_ms = int
+scan_reveal.kind = false_floor | hidden_hazard
+breakable.kind = barricade
+credit.route = normal | risk
+checkpoint.id = f5-cp1
+zone.kind = contemplative
+gate.choices = chrome,flesh
+ending_choice.ending = chrome | flesh
+phase_end.fase = 5
+~~~
+
+O mapa possui **38.400 px**. Os primeiros **28.800 px** correspondem a
+aproximadamente **90 s de desafio**, e os **9.600 px** finais reservam o trecho
+contemplativo e o Portão, totalizando cerca de **120 s** a 320 px/s. Há um
+checkpoint após as portas temporizadas.
+
+Os vãos obrigatórios de dash possuem **448 px (14 tiles)**. O piso falso possui
+**192 px (6 tiles)** e permanece desenhado somente em `scan-visuals`, enquanto
+o vão real permanece ausente de `ground`. Existem 30 créditos: 6 na rota
+normal e 24 ligados a vãos, plataformas, lasers, barreiras, portas, scan,
+ataque ou sequências finais.
 
 #### Auditoria de acessibilidade da Fase 4
 
