@@ -2,3 +2,8 @@ Fase 5 — Topo (Tiled)
 Layout: levelDesign.md Fase 5 + GDD §16.5
 ~90s desafio + ~30s contemplativo + Portão (Chrome/Flesh)
 Mapa preservado como referência para o futuro blockout da Fase 5.
+
+Tileset Cyber Purp
+Origem local: cyber-purp.zip
+Arquivo utilizado: tileset.png (512×1024, tiles de 32×32)
+Autor/licença: não informados no pacote; confirmar antes da distribuição.

@@ -10,7 +10,7 @@ Gerados a partir de `levelDesign.md` + GDD §16 (draft jogável; editável no Ti
 | 2 | Industrial | `industrial/fase-2.json` | 32×32 |
 | 3 | Meio Urbano | `meio-urbano/fase-3.json` | 16×16 |
 | 4 | Corporativo | `corporativo/fase-4.json` | 32×32 (Foozle Sci-Fi Labs) |
-| 5 | Topo | `topo/fase-5.json` | 32×32 |
+| 5 | Topo | `topo/fase-5.json` | 32×32 (Cyber Purp) |
 
 ## Camadas (todas as fases)
 
@@ -35,6 +35,9 @@ Object `hazard` com `kind = broken_pipe`.
 
 As Fases 1–4 possuem projetos `.tmj` autorais. O mapa JSON da Fase 5 continua
 como referência de produção e será migrado quando seu blockout for retomado.
+O tileset Cyber Purp da Fase 5 já está configurado em
+`topo/tileset-topo.tsj`; o JSON legado ainda mantém a arte provisória até essa
+migração para `.tmj`.
 Na Fase 4, `scan-visuals` deve permanecer sem colisão; somente `ground` recebe
 colisão sólida, enquanto a letalidade continua definida pelos objetos.
 
