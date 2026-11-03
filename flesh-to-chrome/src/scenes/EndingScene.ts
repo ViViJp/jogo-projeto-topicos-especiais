@@ -38,7 +38,7 @@ export class EndingScene extends Phaser.Scene {
       "  • Salto duplo e prévia da Fase 2 (Industrial): gaps e rota de risco",
       "  • Ataque/quebra e prévia da Fase 3 (Meio Urbano): tutorial com barricadas",
       "  • Visor/scan e Fase 4 (Corporativo): passagens e armadilhas ocultas",
-      "  • Dash e prévia da Fase 5 (Topo): barreiras cinéticas e grande vão",
+      "  • Dash e blockout Tiled da Fase 5 (Topo): kit completo, checkpoint e Portão",
       "  • Save em localStorage, HUD, câmera, sistema de créditos anti-farming",
       "",
       "Próximos marcos (ver README.md e Seção 24 do GDD):",

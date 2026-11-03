@@ -63,7 +63,7 @@ Para a Fase 5:
 - Arquivo autoral: **src/assets/maps/topo/fase-5.tmj**
 - Arquivo exportado: **src/assets/maps/topo/fase-5.json**
 - Tileset principal: **cyber-purp**
-- Status: **blockout autoral pronto; integração ao Phaser pendente**
+- Status: **blockout integrado ao Phaser e disponível no seletor temporário**
 
 ## 3. Camadas oficiais
 
@@ -432,9 +432,11 @@ A Fase 5 reutiliza `automatic_door`, `breakable`, `scan_reveal` e
 | **laser_grid** | coluna contínua de emissores laser | morte imediata; dash não concede invencibilidade |
 | **rotating_barrier** | barreira mecânica rotativa | morte imediata durante o contato |
 
-As animações e janelas individuais dessas barreiras serão implementadas no
-runtime da Fase 5. Até lá, seus Rectangle Objects definem integralmente a área
-letal do blockout.
+O runtime atual trata as grades e barreiras como volumes letais estáticos. As
+portas automáticas já respeitam `cycle_ms`, `open_ms` e `phase_ms`. A rotação
+visual e as janelas próprias das barreiras rotativas ainda são acabamento
+pendente; seus Rectangle Objects definem integralmente a área letal no
+blockout.
 
 ### 6.15 **zone**
 
@@ -456,6 +458,10 @@ propriedade string `ending`, com valor `chrome` ou `flesh`.
 Esses objetos não são hazards. O runtime deve pausar ou desacelerar a corrida,
 apresentar a decisão e encaminhar a campanha conforme a escolha antes de
 acionar `phase_end`.
+
+No runtime de playtest atual, o Portão e as duas opções são sinalizados
+visualmente, mas a escolha narrativa ainda não é interativa. Em modo de teste,
+alcançar `phase_end` encerra o percurso e retorna ao seletor de fases.
 
 ## 7. Classes planejadas / ainda não formalizadas
 
