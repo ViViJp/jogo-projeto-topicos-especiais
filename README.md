@@ -2,17 +2,28 @@
 
 Auto-runner 2D cyberpunk (projeto acadêmico). **Há um único jogo** neste repositório.
 
-## Como rodar (única entrada)
+## Como rodar
+
+A aplicação oficial fica em `flesh-to-chrome/` (TypeScript + Phaser 4 + Parcel).
+
+### Pela raiz do repositório
+
+Os scripts da raiz encaminham os comandos para o projeto principal:
+
+```bash
+npm install
+npm run dev
+```
+
+Outros comandos disponíveis na raiz: `npm run build`, `npm run typecheck` e `npm start`.
+
+### Diretamente na pasta do jogo
 
 ```bash
 cd flesh-to-chrome
 npm install
 npm run dev
 ```
-
-Stack oficial (GDD §22): **TypeScript + Phaser 4 + Parcel** em [`flesh-to-chrome/`](flesh-to-chrome/).
-
-Na raiz, `npm run dev` / `npm run build` apenas encaminham para essa pasta.
 
 ## Papéis do time
 
@@ -36,4 +47,4 @@ A pasta `src/` na raiz (Vite + Phaser 3) foi **removida** — era um segundo pro
 
 ## Referências
 
-Direção: GDD + estética **cyberpunk** (ascensão social / Glitch City). Level design e playtest de pulos usam o mapa do Victor integrado no `flesh-to-chrome` (responsabilidade do Motoca).
+Direção: GDD + estética **cyberpunk** (ascensão social / Glitch City). Level design e playtest de pulos usam os mapas de referência integrados ao runtime em `flesh-to-chrome/src/assets/`.
