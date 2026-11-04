@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { Player } from "../entities/Player";
 import {
+  TILED_FASE3_BARRICADE_TEXTURE_KEY,
   TILED_FASE3_MAP_KEY,
   TILED_FASE3_TILESET_KEY,
   TILED_FASE3_TILESET_NAME,
@@ -25,6 +26,17 @@ interface Phase3Checkpoint {
   width: number;
 }
 
+interface ElectricGateEffect {
+  graphics: Phaser.GameObjects.Graphics;
+  width: number;
+  height: number;
+}
+
+interface Phase3Breakable {
+  body: Phaser.GameObjects.Rectangle;
+  visual: Phaser.GameObjects.Image;
+}
+
 const URBAN_HAZARD_KINDS = new Set(["electric_gate"]);
 const URBAN_BREAKABLE_KINDS = new Set(["barricade"]);
 
@@ -43,9 +55,11 @@ export class TiledPhase3Runtime {
   private readonly checkpoints: Phase3Checkpoint[] = [];
   private readonly checkpointTriggered = new Set<string>();
   private readonly creditSprites = new Map<string, Phaser.Physics.Arcade.Sprite>();
-  private readonly breakables: Phaser.GameObjects.Rectangle[] = [];
+  private readonly breakables: Phase3Breakable[] = [];
   private readonly hazardZones: Phaser.GameObjects.Zone[] = [];
+  private readonly electricGateEffects: ElectricGateEffect[] = [];
   private readonly tutorialLabels: Phaser.GameObjects.Text[] = [];
+  private electricGateTimer?: Phaser.Time.TimerEvent;
   private endGateTriggered = false;
   private playerRef?: Player;
   private runtimeEnemy?: EnemyRuntime;
@@ -101,6 +115,7 @@ export class TiledPhase3Runtime {
     this.readCredits(byType("credit"));
     this.readCheckpoints(byType("checkpoint"));
     this.buildHazards(byType("hazard"));
+    this.startElectricGateAnimation();
     this.buildBreakables(byType("breakable"));
     this.buildTutorials(byType("tutorial"));
     this.buildCredits();
@@ -202,7 +217,55 @@ export class TiledPhase3Runtime {
       );
       this.scene.physics.add.existing(zone, true);
       this.hazardZones.push(zone);
+      if (kind === "electric_gate") {
+        const graphics = this.scene.add
+          .graphics()
+          .setPosition(object.x ?? 0, object.y ?? 0)
+          .setDepth(3)
+          .setBlendMode(Phaser.BlendModes.ADD);
+        this.electricGateEffects.push({ graphics, width, height });
+      }
     }
+  }
+
+  private startElectricGateAnimation(): void {
+    if (this.electricGateEffects.length === 0) return;
+    const redraw = () => {
+      for (const effect of this.electricGateEffects) {
+        const { graphics, width, height } = effect;
+        graphics.clear();
+        graphics.setAlpha(Phaser.Math.FloatBetween(0.62, 1));
+
+        // Duas descargas verticais irregulares reforçam que o portão é
+        // energia letal, sem encobrir a arte do tileset sob o efeito.
+        for (let bolt = 0; bolt < 2; bolt += 1) {
+          const centerX = width * (bolt === 0 ? 0.36 : 0.64);
+          graphics.lineStyle(bolt === 0 ? 2 : 1, bolt === 0 ? 0x5ffcff : 0xd75cff, 0.95);
+          graphics.beginPath();
+          graphics.moveTo(centerX, 2);
+          const steps = 6;
+          for (let step = 1; step < steps; step += 1) {
+            const y = (height * step) / steps;
+            const x = centerX + Phaser.Math.Between(-6, 6);
+            graphics.lineTo(x, y);
+          }
+          graphics.lineTo(centerX, height - 2);
+          graphics.strokePath();
+        }
+
+        if (Math.random() > 0.55) {
+          graphics.lineStyle(1, 0xffffff, 0.9);
+          const y = Phaser.Math.Between(8, Math.max(8, height - 8));
+          graphics.beginPath();
+          graphics.moveTo(4, y);
+          graphics.lineTo(width / 2, y + Phaser.Math.Between(-5, 5));
+          graphics.lineTo(width - 4, y + Phaser.Math.Between(-3, 3));
+          graphics.strokePath();
+        }
+      }
+    };
+    redraw();
+    this.electricGateTimer = this.scene.time.addEvent({ delay: 85, loop: true, callback: redraw });
   }
 
   private buildBreakables(objects: Phaser.Types.Tilemaps.TiledObject[]): void {
@@ -213,18 +276,27 @@ export class TiledPhase3Runtime {
       }
       const width = object.width ?? 64;
       const height = object.height ?? 64;
-      // Placeholder visual até existir arte dedicada de barricada.
-      const rectangle = this.scene.add.rectangle(
-        (object.x ?? 0) + width / 2,
-        (object.y ?? 0) + height / 2,
+      const x = object.x ?? 0;
+      const y = object.y ?? 0;
+      const visual = this.scene.add.image(
+        x + width / 2,
+        y + height + 4,
+        TILED_FASE3_BARRICADE_TEXTURE_KEY,
+      ).setOrigin(0.5, 1).setDisplaySize(width, height).setDepth(3);
+      // A imagem tem alguns pixels transparentes na base. O visual desce
+      // 4 px para tocar o piso, enquanto este corpo invisível continua
+      // exatamente no retângulo 64x64 definido no Tiled.
+      const bodyObject = this.scene.add.rectangle(
+        x + width / 2,
+        y + height / 2,
         width,
         height,
-        0xb64cff,
-        0.75,
-      ).setStrokeStyle(2, 0xe0a8ff).setDepth(3);
-      this.scene.physics.add.existing(rectangle, true);
-      rectangle.setData("breakableId", this.readString(object, "id") ?? object.name ?? String(object.id));
-      this.breakables.push(rectangle);
+        0x000000,
+        0.001,
+      );
+      this.scene.physics.add.existing(bodyObject, true);
+      bodyObject.setData("breakableId", this.readString(object, "id") ?? object.name ?? String(object.id));
+      this.breakables.push({ body: bodyObject, visual });
     }
   }
 
@@ -260,14 +332,14 @@ export class TiledPhase3Runtime {
       this.scene.physics.add.overlap(player.sprite, hazard, () => player.kill());
     }
     for (const breakable of this.breakables) {
-      this.scene.physics.add.collider(player.sprite, breakable, () => {
+      this.scene.physics.add.collider(player.sprite, breakable.body, () => {
         // O golpe pode ter começado poucos frames antes do contato. Nesse
         // caso Alex ainda está em `attacking` e a barricada deve quebrar,
         // em vez de trocar imediatamente para o estado `pressed`.
         if (player.getState() === "attacking") {
           this.destroyBreakable(breakable);
         } else {
-          player.enterPressedState(breakable);
+          player.enterPressedState(breakable.body);
         }
       });
     }
@@ -277,9 +349,9 @@ export class TiledPhase3Runtime {
 
     this.pressedAttackListener = (breakable) => {
       if (!breakable) return;
-      const rectangle = breakable as Phaser.GameObjects.Rectangle;
-      if (!this.breakables.includes(rectangle)) return;
-      this.destroyBreakable(rectangle);
+      const target = this.breakables.find((entry) => entry.body === breakable);
+      if (!target) return;
+      this.destroyBreakable(target);
     };
     this.scene.events.on("player-attack-attempt", this.pressedAttackListener);
 
@@ -295,32 +367,57 @@ export class TiledPhase3Runtime {
     return this.map.getObjectLayer("objects")?.objects.filter((object) => object.type === "enemy") ?? [];
   }
 
-  private destroyBreakable(breakable: Phaser.GameObjects.Rectangle): void {
+  private destroyBreakable(breakable: Phase3Breakable): void {
     const index = this.breakables.indexOf(breakable);
     if (index === -1) return;
     this.breakables.splice(index, 1);
-    const body = breakable.body as Phaser.Physics.Arcade.StaticBody | null;
+    const body = breakable.body.body as Phaser.Physics.Arcade.StaticBody | null;
     if (body) body.enable = false;
-    this.scene.tweens.add({
-      targets: breakable,
-      alpha: 0,
-      scaleX: 1.15,
-      scaleY: 0.85,
-      duration: 120,
-      onComplete: () => breakable.destroy(),
-    });
+    this.spawnBarricadeFragments(breakable.visual);
+    breakable.body.destroy();
+    breakable.visual.destroy();
     this.playerRef?.resolvePressedSuccess();
+  }
+
+  private spawnBarricadeFragments(barricade: Phaser.GameObjects.Image): void {
+    const fragmentWidth = 32;
+    const fragmentHeight = 32;
+    const visualTop = barricade.y - barricade.displayHeight;
+    for (let row = 0; row < 2; row += 1) {
+      for (let col = 0; col < 2; col += 1) {
+        const direction = col === 0 ? -1 : 1;
+        const fragment = this.scene.add
+          .image(
+            barricade.x + (col - 0.5) * fragmentWidth,
+            visualTop + (row + 0.5) * fragmentHeight,
+            TILED_FASE3_BARRICADE_TEXTURE_KEY,
+          )
+          .setCrop(col * fragmentWidth, row * fragmentHeight, fragmentWidth, fragmentHeight)
+          .setDisplaySize(fragmentWidth, fragmentHeight)
+          .setDepth(4);
+        this.scene.tweens.add({
+          targets: fragment,
+          x: fragment.x + direction * Phaser.Math.Between(14, 28),
+          y: fragment.y - Phaser.Math.Between(row === 0 ? 18 : 7, row === 0 ? 30 : 16),
+          angle: direction * Phaser.Math.Between(18, 55),
+          alpha: 0,
+          duration: Phaser.Math.Between(220, 310),
+          ease: "Quad.easeOut",
+          onComplete: () => fragment.destroy(),
+        });
+      }
+    }
   }
 
   private destroyBreakableInAttackRange(attackX: number, attackY: number): void {
     const attackRange = 62;
     const verticalRange = 58;
     const target = this.breakables.find((breakable) => {
-      if (!breakable.active) return false;
-      const leftEdge = breakable.x - breakable.displayWidth / 2;
+      if (!breakable.body.active) return false;
+      const leftEdge = breakable.body.x - breakable.body.displayWidth / 2;
       return leftEdge >= attackX - 8
         && leftEdge <= attackX + attackRange
-        && Math.abs(breakable.y - attackY) <= verticalRange;
+        && Math.abs(breakable.body.y - attackY) <= verticalRange;
     });
     if (target) this.destroyBreakable(target);
   }
@@ -364,9 +461,14 @@ export class TiledPhase3Runtime {
     this.scene.events.off("player-attack-attempt", this.pressedAttackListener);
     this.scene.events.off("player-attack", this.normalAttackListener);
     this.runtimeEnemy?.destroy();
+    this.electricGateTimer?.destroy();
     this.creditSprites.forEach((sprite) => sprite.destroy());
-    this.breakables.forEach((breakable) => breakable.destroy());
+    this.breakables.forEach((breakable) => {
+      breakable.body.destroy();
+      breakable.visual.destroy();
+    });
     this.hazardZones.forEach((hazard) => hazard.destroy());
+    this.electricGateEffects.forEach((effect) => effect.graphics.destroy());
     this.tutorialLabels.forEach((label) => label.destroy());
   }
 }

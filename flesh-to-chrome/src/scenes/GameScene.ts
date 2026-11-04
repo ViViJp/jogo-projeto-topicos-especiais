@@ -31,6 +31,7 @@ import {
   TILED_FASE3_MAP_DATA,
   TILED_FASE3_MAP_KEY,
   TILED_FASE3_NAME,
+  TILED_FASE3_BARRICADE_TEXTURE_KEY,
   TILED_FASE3_TILESET_KEY,
 } from "../levels/TiledFase3";
 import {
@@ -47,7 +48,14 @@ import {
   TILED_FASE5_TILESETS,
 } from "../levels/TiledFase5";
 import { generatePlaceholderTextures } from "../utils/PlaceholderTextures";
-import { ALEX_TEXTURE_KEY, ALEX_SHEET_CONFIG } from "../utils/AlexSprite";
+import {
+  ALEX_ARMS_TEXTURE_KEY,
+  ALEX_DASH_TEXTURE_KEY,
+  ALEX_EYES_TEXTURE_KEY,
+  ALEX_LEGS_TEXTURE_KEY,
+  ALEX_SHEET_CONFIG,
+  ALEX_TEXTURE_KEY,
+} from "../utils/AlexSprite";
 
 export interface GameSceneData {
   phaseId: string;
@@ -183,11 +191,17 @@ export class GameScene extends Phaser.Scene {
   preload(): void {
     // Alex usa o spritesheet LPC real (v0.2.0) em ambos os formatos de
     // nível (Tiled ou desenhado à mão - v0.2.1 revert não mexeu nisso).
-    if (!this.textures.exists(ALEX_TEXTURE_KEY)) {
-      this.load.spritesheet(ALEX_TEXTURE_KEY, this.alexUrl().href, ALEX_SHEET_CONFIG);
-    }
-    if (!this.textures.exists("alex-eyes")) {
-      this.load.spritesheet("alex-eyes", this.alexEyesUrl().href, ALEX_SHEET_CONFIG);
+    const alexStages: Array<{ key: string; url: URL }> = [
+      { key: ALEX_TEXTURE_KEY, url: new URL("../assets/player/alex-flesh/alex-flesh.png", import.meta.url) },
+      { key: ALEX_LEGS_TEXTURE_KEY, url: new URL("../assets/player/alex-legs/alex-legs.png", import.meta.url) },
+      { key: ALEX_ARMS_TEXTURE_KEY, url: new URL("../assets/player/alex-arms/alex-arms.png", import.meta.url) },
+      { key: ALEX_EYES_TEXTURE_KEY, url: new URL("../assets/player/alex-eyes/alex-eyes.png", import.meta.url) },
+      { key: ALEX_DASH_TEXTURE_KEY, url: new URL("../assets/player/alex-dash/alex-dash.png", import.meta.url) },
+    ];
+    for (const stage of alexStages) {
+      if (!this.textures.exists(stage.key)) {
+        this.load.spritesheet(stage.key, stage.url.href, ALEX_SHEET_CONFIG);
+      }
     }
 
     if (this.data$.phaseId === "fase1") {
@@ -260,6 +274,12 @@ export class GameScene extends Phaser.Scene {
     }
     if (!this.textures.exists("enemy-drone")) {
       this.load.spritesheet("enemy-drone", this.enemyDroneUrl().href, { frameWidth: 32, frameHeight: 32 });
+    }
+    if (!this.textures.exists(TILED_FASE3_BARRICADE_TEXTURE_KEY)) {
+      this.load.image(
+        TILED_FASE3_BARRICADE_TEXTURE_KEY,
+        new URL("../assets/props/obstacles/barricade.png", import.meta.url).href,
+      );
     }
     if (!this.textures.exists(TILED_CHECKPOINT_TEXTURE_KEY)) {
       this.load.image(TILED_CHECKPOINT_TEXTURE_KEY, this.checkpointTvUrl().href);
@@ -338,14 +358,6 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  private alexUrl(): URL {
-    return new URL("../assets/player/alex-flesh/alex-flesh.png", import.meta.url);
-  }
-
-  private alexEyesUrl(): URL {
-    return new URL("../assets/player/alex-eyes/alex-eyes.png", import.meta.url);
-  }
-
   private tilesetSewerUrl(): URL {
     return new URL("../assets/tiles/esgoto/tiles/tilesetSewer.png", import.meta.url);
   }
@@ -377,8 +389,13 @@ export class GameScene extends Phaser.Scene {
     this.input$ = new InputManager(this);
     this.credits = new CreditsSystem(this.data$.wallet, this.data$.consolidatedCreditIds);
     this.hud = new HUD(this);
+    this.hud.setDashUnlocked(this.activeAbilities.thrusters);
     this.events.on("player-attack", () => this.hud.flashPrompt("ATAQUE", 220));
-    this.events.on("player-dash-start", () => this.hud.flashPrompt("DASH", 220));
+    this.events.on("player-dash-start", (_x: number, _y: number, cooldownMs: number) => {
+      this.hud.flashPrompt("DASH", 220);
+      this.hud.beginDashCooldown(cooldownMs);
+    });
+    this.events.on("player-dash-ready", () => this.hud.setDashReady(true));
 
     if (this.data$.phaseId === "fase1") {
       this.createTiled();
