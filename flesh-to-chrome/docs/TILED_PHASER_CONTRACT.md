@@ -1,6 +1,6 @@
 # Flesh to Chrome — Contrato Tiled ↔ Phaser
 
-**Versão:** 0.18
+**Versão:** 0.20
 **Data:** 2026-11-03
 **Status:** contrato vivo — atualizar sempre que uma nova classe, propriedade, camada ou valor de comportamento for criado no Tiled.
 
@@ -800,6 +800,16 @@ Dependendo da versão/exportação do Tiled, a informação exibida na interface
 12. Somente depois bloquear **ground**, **hazards** e **objects** e iniciar **background → deco-back → deco**.
 
 ## 12. Histórico de alterações
+
+### v0.20 — 2026-11-03
+
+- integrada a versão atual da `main`, preservando seletor de fases e Multiplayer;
+- adicionada validação automatizada da sincronização TMJ/JSON, contratos de
+  objetos, propriedades, tilesets, GIDs e imagens das cinco fases;
+- auditados os fluxos de esteira, ataque antecipado, scan, portas, dash,
+  checkpoints, créditos, progressão e isolamento do modo de teste;
+- documentadas separadamente as mecânicas implementadas e as pendências de
+  blockout no roteiro de validação do PR #25.
 
 ### v0.19 — 2026-10-27
 

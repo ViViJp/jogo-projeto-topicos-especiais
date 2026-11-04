@@ -250,52 +250,28 @@ Stack conforme a Seção 22 do GDD: **TypeScript + Phaser `^4.2.1` + Parcel**.
 
 ## O que esta build entrega
 
-Esta entrega implementa o **Marco 2 — Vertical Slice** do cronograma (GDD
-seção 24.2), com toda a arquitetura de sistemas já pronta para os marcos
-seguintes. A **Fase 1** usa seu mapa Tiled de 16×16 px e a **Fase 2** usa
-agora o blockout Tiled industrial de 32×32 px. As duas integrações seguem
-`docs/TILED_PHASER_CONTRACT.md`; as fases seguintes ainda aguardam seus
-runtimes específicos:
+Esta branch entrega a **ascensão jogável pelas cinco fases**, cada uma
+carregada de seu blockout Tiled real e interpretada por um runtime próprio:
 
-- Corrida automática, pulo, slide, salto duplo — com os tempos/valores de
-  referência da Seção 14 do GDD (todos marcados como "provisório" onde o
-  GDD pede validação por playtest — Seção 26).
-- Matriz de compatibilidade de ações da Seção 14.11 (o que pode ser feito
-  em cada estado: correndo, no ar, em slide, em dash, preso em quebrável).
-- Ataque, scan e dash **já implementados no `PlayerController`**
-  (`src/entities/Player.ts`), prontos para ligar quando `abilities.arms`,
-  `abilities.eyes` e `abilities.thrusters` forem ativados nas próximas
-  fases — não é necessário reescrever a máquina de estados do jogador.
-- Sistema de créditos com consolidação por checkpoint, anti-farming por
-  ID único e descarte de créditos não consolidados ao morrer (Seção 14.4).
-- Checkpoints diegéticos (visual/trigger — a animação "jogando videogame"
-  fica para quando houver arte final).
-- Save único em `localStorage`, no formato descrito na Seção 20.1 (já com
-  os campos de descida/fragmentos/finais reservados para o Marco 4).
-- HUD (`Créditos da fase: X/Y`, `Total: Z`), câmera seguindo Alex a ~35%
-  da tela (Seção 22.4), pausa que congela física/tweens (Seção 19.2).
-- **Fase 1 — Esgoto/Periferia completa**, carregada a partir do mapa Tiled
-  real (`fase-1.json`, layers `ground`/`hazards`/`deco`/`objects` — ver
-  "Correções e decisões de v0.3.0"): spawn → gaps sobre água tóxica →
-  rota de créditos normal (chão) / risco (plataforma elevada) → checkpoint
-  → trecho final → saída para a Clínica de George → pernas mecânicas →
-  salto duplo liberado. Validada matemática e empiricamente de ponta a
-  ponta (ver metodologia abaixo) - nenhuma morte obrigatória em nenhuma
-  das 15 travessias de gap da fase.
-- **Início da Fase 2 — Industrial**: gap impossível de salto simples, teste
-  seguro do salto duplo e uma rota de risco com créditos, encerrando numa
-  tela de "fim do protótipo" com o roadmap restante (não é um final
-  narrativo — ver `src/scenes/EndingScene.ts`).
-- Alex usa o spritesheet LPC real (`alex-flesh.png`, seção 23.1, mantido
-  da v0.2.0), com corrida animada e hitbox medida a partir do
-  bounding-box alfa dos frames reais (`src/utils/AlexSprite.ts`). O
-  spritesheet não tem uma pose própria de "deslizar" (só um "sentar");
-  até a arte final trazer uma pose dedicada, o slide usa o frame existente
-  mais próximo — puramente cosmético, não afeta a hitbox nem a mecânica.
-  O resto do nível (chão, canos, água, quebráveis) continua em
-  placeholder gerado em runtime (`src/utils/PlaceholderTextures.ts`).
-- Todas as cenas da Seção 22.2 existem no código (`Boot`, `Menu`, `Game`,
-  `Clinic`, `Ending`, `Multiplayer`), inclusive as que ainda são stubs.
+- **Fase 1 — Esgoto/Periferia:** corrida, pulo, slide, água tóxica, fios,
+  canos rompidos, créditos, checkpoint e transição para a clínica.
+- **Fase 2 — Distrito Industrial:** salto duplo, esteiras com velocidade
+  apenas durante o contato, canos baixos e hazards industriais. Prensas,
+  vapor, braços mecânicos e trituradoras ainda são volumes de morte
+  imediata; os ciclos e animações individuais permanecem pendentes.
+- **Fase 3 — Meio Urbano:** ataque antecipado, barricadas destrutíveis com
+  fragmentação, bandidos derrotáveis, drones blindados e portões elétricos.
+- **Fase 4 — Distrito Corporativo:** scan, rotas/paredes/pisos falsos,
+  hazards ocultos, lasers e portas automáticas temporizadas.
+- **Fase 5 — Topo da Cidade:** dash com bateria no HUD, lasers, barreiras
+  rotativas, portas automáticas, quebráveis e trecho final do Portão.
+  A escolha narrativa Chrome/Flesh ainda está representada apenas no
+  blockout e não encaminha finais distintos.
+
+Também estão ativos o save único em `localStorage`, checkpoints com posição
+X/Y, consolidação e descarte de créditos, progressão de implantes nas quatro
+clínicas, sprites progressivos de Alex, seletor temporário de fases que não
+grava o save e a base de multiplayer MQTT/WebSocket integrada da `main`.
 
 ## Como rodar
 
@@ -310,17 +286,13 @@ Outros comandos:
 
 ```bash
 npm run typecheck   # tsc --noEmit
-npm run build        # build de produção em dist/
+npm run build       # build de produção em dist/
+npm run validate:assets  # valida mapas, objetos, tilesets e imagens
 ```
 
-Testado com Node 22 / npm 10. O build de produção foi verificado tanto por
-`tsc --noEmit` quanto rodando a build final num Chromium headless (boot do
-Phaser, navegação de menu, corrida, pulo, slide, morte e reinício do
-checkpoint — sem erros de console). A partir da v0.3.0, a Fase 1 (mapa
-Tiled real) tem validação adicional: percursos completos do spawn até a
-Clínica de George sem nenhuma morte, incluindo o mapa atual (v0.4.0) e
-seus hazards por objeto testados individualmente — ver "Correções e
-decisões de v0.4.0" e "Correções e decisões de v0.3.0".
+Antes de abrir ou atualizar o PR, execute os três comandos acima. O roteiro
+de playtest manual e o estado de cada mecânica ficam em
+`docs/PR_25_VALIDATION.md`.
 
 ## Controles (Seção 19.1 do GDD)
 
@@ -347,38 +319,34 @@ src/
   levels/                  # dados de fase (builder sequencial + registry)
   levels/TiledFase1.ts     # config/import estático do mapa Tiled da Fase 1
   levels/TiledFase2.ts     # config/import estático do mapa Tiled da Fase 2
+  levels/TiledFase3.ts     # config/import estático do mapa Tiled da Fase 3
+  levels/TiledFase4.ts     # config/import estático do mapa Tiled da Fase 4
+  levels/TiledFase5.ts     # config/import estático do mapa Tiled da Fase 5
   objects/LevelRuntime.ts        # runtime da(s) fase(s) desenhada(s) à mão
   objects/TiledLevelRuntime.ts   # runtime da Fase 1 a partir do mapa Tiled
   objects/TiledPhase2Runtime.ts  # runtime industrial da Fase 2
+  objects/TiledPhase3Runtime.ts  # ataque, barricadas e inimigos
+  objects/TiledPhase4Runtime.ts  # scan, revelações e portas
+  objects/TiledPhase5Runtime.ts  # dash e obstáculos do topo
   utils/AlexSprite.ts      # frames/animações do spritesheet LPC real
   utils/PlaceholderTextures.ts  # texturas placeholder do resto do nível
-  assets/maps/**/*.json    # mapas Tiled (Fases 1 e 2 carregadas pelo jogo;
-                           # mapas posteriores aguardam integração)
-  assets/tiles/**          # tilesets de cada fase (idem)
+  assets/maps/**/*.json    # exports de runtime das cinco fases Tiled
+  assets/maps/**/*.tmj     # fontes editáveis das cinco fases
+  assets/tiles/**          # tilesets usados pelas cinco fases
   assets/player/           # spritesheet LPC de Alex (em uso)
 ```
 
 ### Sobre o formato de nível
 
-O GDD define Tiled/JSON como ferramenta de level design (Seção 7.1). A
-v0.2.0 chegou a integrar os 5 mapas Tiled reais entregues pela equipe, mas
-a v0.2.1 reverteu tudo (ver Changelog) porque a gameplay resultante ficou
-pior; a v0.3.0 reintegrou a **Fase 1** e a integração atual também usa o
-blockout Tiled da **Fase 2**, ambos com a física original (320px/s,
-gravidade 1600). `GameScene.ts` decide por fase qual runtime usar:
-`fase1` carrega `TiledLevelRuntime` a partir de `fase-1.json` e
-`fase2-intro` carrega `TiledPhase2Runtime` a partir de `fase-2.json`.
+O GDD define Tiled/JSON como ferramenta de level design (Seção 7.1).
+`GameScene.ts` seleciona `TiledLevelRuntime` para a Fase 1 e os runtimes
+`TiledPhase2Runtime` a `TiledPhase5Runtime` para as demais. Os arquivos
+`.tmj` são as fontes editáveis; os `.json` sem compressão são os exports
+carregados estaticamente pelo Parcel/Phaser.
 
-Os mapas `.json` do Tiled e os tilesets das fases posteriores continuam no
-repositório (`src/assets/maps/`, `src/assets/tiles/`) para suas próximas
-integrações.
+### Critérios de jogabilidade dos mapas Tiled
 
-### Reintegrando os mapas Tiled das Fases 3-5
-
-A reintegração da Fase 1 na v0.3.0 confirma que **é possível usar os
-mapas Tiled reais sem reproduzir o problema da v0.2.0**, desde que dois
-cuidados sejam respeitados — os mesmos já identificados na v0.2.1 e agora
-validados na prática:
+As cinco fases seguem os mesmos cuidados de escala e física:
 
 - **Tile 32×32px** (o que a equipe já usa) está ótimo — o problema nunca
   foi o tamanho do tile.
@@ -412,8 +380,8 @@ reusar o script, porque a versão simples (só checar se o pouso alcança o
 **início** da próxima plataforma) pode aprovar erradamente uma travessia
 que na verdade **ultrapassa** uma plataforma curta e cai no vão seguinte.
 
-**Nota técnica sobre o JSON do mapa e o Parcel** (válida para as Fases 1
-e 2 já integradas e para quando as Fases 3-5 também forem):
+**Nota técnica sobre o JSON do mapa e o Parcel** (válida para as cinco
+fases integradas):
 `new URL('./mapa.json',
 import.meta.url)` faz o Parcel tratar o arquivo como módulo JS (roda pelo
 transformer de JSON padrão), não como asset estático copiável — o que
@@ -1202,21 +1170,13 @@ ambas as camadas — sem nenhuma morte obrigatória em nenhuma delas.
 
 ## Roadmap — o que falta (mapeado ao cronograma do GDD, Seção 24)
 
-Esta entrega cobre os Marcos 1 e 2. Os próximos passos, em ordem:
+Os blockouts da ascensão cobrem os Marcos 1–3 em nível de integração técnica.
+Os próximos passos, em ordem:
 
-- **Marco 3 — Ascensão completa** (Seção 24.3): completar as Fases 2–5 com
-  todos os obstáculos descritos no `levelDesign.md` (prensas, esteiras,
-  jatos de vapor, trituradoras na Fase 2; bandidos/drones na Fase 3;
-  rotas escondidas/scan na Fase 4; domínio do kit completo na Fase 5),
-  ligar `abilities.arms/eyes/thrusters` nas clínicas correspondentes,
-  implementar inimigos simples (`Bandido ciborgue`, `Drone policial` —
-  Seção 14.6) e objetos quebráveis (Seção 14.7, já suportados pela
-  máquina de estados do jogador via `enterPressedState`/
-  `resolvePressedSuccess`), e o Portão ao final da Fase 5. Os mapas Tiled
-  reais entregues pela equipe (`src/assets/maps/`) são o material natural
-  para desenhar essas fases — as Fases 1 e 2 já usam seus mapas reais;
-  ver "Reintegrando os mapas Tiled das Fases 3-5" para o que falta nas
-  demais.
+- **Marco 3 — fechamento da ascensão** (Seção 24.3): os cinco mapas,
+  implantes, inimigos, quebráveis, scan e dash já estão integrados. Faltam
+  os ciclos próprios dos hazards industriais, a rotação temporal da
+  barreira da Fase 5, decoração final e nova rodada de balanceamento.
 - **Marco 4 — Narrativa, descida e finais** (Seção 24.4): prólogo, arco de
   George, propagandas do pai, escolha Chrome/Flesh no Portão, glitches
   (Seção 18.3), retry especial, ReForge Industries e bioprinting (Seção

@@ -2,12 +2,7 @@ import Phaser from "phaser";
 import { SCREEN_WIDTH, SCREEN_HEIGHT } from "../config/GameConfig";
 import { InputManager } from "../systems/InputManager";
 
-/**
- * Fim do conteúdo implementado neste protótipo (Marco 2 - Vertical Slice).
- * Não é um dos finais narrativos do jogo completo (Chrome / Flesh / Hollow -
- * seção 18) - é uma tela de "fim de build" com o roadmap restante, para que
- * quem jogar o protótipo entenda exatamente o que falta.
- */
+/** Tela técnica ao fim da ascensão; os finais narrativos ainda são pendência. */
 export class EndingScene extends Phaser.Scene {
   private input$!: InputManager;
   private returning = false;
@@ -23,7 +18,7 @@ export class EndingScene extends Phaser.Scene {
     this.returning = false;
 
     this.add
-      .text(SCREEN_WIDTH / 2, 90, "FIM DO PROTÓTIPO (MARCO 2 — VERTICAL SLICE)", {
+      .text(SCREEN_WIDTH / 2, 90, "FIM DO BLOCKOUT — ASCENSÃO", {
         fontFamily: "Courier New, monospace",
         fontSize: "26px",
         color: "#7CFCEA",
@@ -33,19 +28,18 @@ export class EndingScene extends Phaser.Scene {
 
     const lines = [
       "Implementado nesta build:",
-      "  • Fase 1 completa (Esgoto/Periferia): corrida, pulo, slide, água tóxica, canos, créditos, checkpoint",
-      "  • Clínica de George e instalação das pernas mecânicas",
-      "  • Salto duplo e prévia da Fase 2 (Industrial): gaps e rota de risco",
-      "  • Ataque/quebra e prévia da Fase 3 (Meio Urbano): tutorial com barricadas",
-      "  • Visor/scan e Fase 4 (Corporativo): passagens e armadilhas ocultas",
-      "  • Dash e blockout Tiled da Fase 5 (Topo): kit completo, checkpoint e Portão",
-      "  • Save em localStorage, HUD, câmera, sistema de créditos anti-farming",
+      "  • Cinco fases Tiled jogáveis, do Esgoto ao Topo da Cidade",
+      "  • Slide, salto duplo, ataque/quebra, scan e dash",
+      "  • Esteiras, inimigos, barricadas, lasers, portas e hazards ocultos",
+      "  • Quatro clínicas com progressão dos implantes de Alex",
+      "  • Checkpoints, respawn, créditos consolidados e save em localStorage",
+      "  • Seletor de fases sem alteração do save e base de Multiplayer MQTT",
       "",
-      "Próximos marcos (ver README.md e Seção 24 do GDD):",
-      "  • Marco 3 — Fases 2-5 completas, inimigos e Portão",
-      "  • Marco 4 — Narrativa, descida Flesh/Hollow, ReForge Industries, finais",
-      "  • Marco 5 — Multiplayer competitivo",
-      "  • Marco 6 — Polimento, loja cosmética opcional",
+      "Pendências conhecidas (ver README.md e PR_25_VALIDATION.md):",
+      "  • Ciclos próprios dos hazards industriais e rotação temporal da barreira",
+      "  • Escolha Chrome/Flesh, descida Hollow e finais narrativos",
+      "  • Corrida multiplayer, pontuação, DNF e resultados",
+      "  • Decoração final, áudio, animações e calibração por playtest",
     ];
 
     this.add.text(SCREEN_WIDTH / 2, 320, lines.join("\n"), {

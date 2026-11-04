@@ -15,7 +15,8 @@ npm install
 npm run dev
 ```
 
-Outros comandos disponíveis na raiz: `npm run build`, `npm run typecheck` e `npm start`.
+Outros comandos disponíveis na raiz: `npm run build`, `npm run typecheck`,
+`npm run validate:assets` e `npm start`.
 
 ### Diretamente na pasta do jogo
 

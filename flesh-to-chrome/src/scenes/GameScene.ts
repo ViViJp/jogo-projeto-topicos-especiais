@@ -641,9 +641,8 @@ export class GameScene extends Phaser.Scene {
 
     const nextPhaseId = getNextPhaseId(this.data$.phaseId);
     // A clínica de George instala um novo implante ao final de cada uma das
-    // fases implementadas (seção 11.1). No fim da prévia da Fase 2, a clínica
-    // libera os braços e continua para a prévia da Fase 3 registrada em
-    // `PHASE_ORDER`.
+    // quatro primeiras fases (seção 11.1) e continua para o próximo blockout
+    // Tiled registrado em `PHASE_ORDER`.
     const phasesWithClinic = new Set(["fase1", "fase2-intro", "fase3", "fase4"]);
     const destination = destinationOverride ??
       (phasesWithClinic.has(this.data$.phaseId) ? "ClinicScene" : "EndingScene");

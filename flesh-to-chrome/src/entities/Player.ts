@@ -31,9 +31,8 @@ export type PlayerState =
  *
  * Implementa a matriz de compatibilidade de ações da seção 14.11 do GDD e
  * os valores de referência da seção 14 (durações, cooldowns). Ataque, scan
- * e dash já existem na máquina de estados para que a equipe só precise
- * ligar `abilities.arms/eyes/thrusters = true` quando as fases 2-4 forem
- * implementadas - a lógica de execução das habilidades não muda.
+ * e dash estão ligados aos implantes liberados pelas clínicas das Fases 2–4
+ * e são exercitados nos runtimes Tiled das Fases 3–5.
  */
 export class Player {
   readonly sprite: Phaser.Physics.Arcade.Sprite;

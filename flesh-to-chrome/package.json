@@ -7,7 +7,8 @@
     "start": "parcel src/index.html --open --no-cache",
     "dev": "parcel src/index.html --no-cache",
     "build": "parcel build src/index.html --dist-dir dist --no-cache",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "validate:assets": "node scripts/validate-assets.mjs"
   },
   "devDependencies": {
     "@types/node": "^20.14.0",
