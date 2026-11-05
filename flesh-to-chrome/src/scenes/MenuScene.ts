@@ -49,7 +49,7 @@ export class MenuScene extends Phaser.Scene {
       this.options.push({ label: "Continuar", action: () => this.continueGame() });
     }
     this.options.push({ label: "Novo Jogo", action: () => this.newGame(hasSave) });
-    this.options.push({ label: "Multiplayer (pós-MVP — não implementado)", action: () => {} });
+    this.options.push({ label: "Multiplayer (WebRTC experimental)", action: () => this.openMultiplayer() });
 
     this.options.forEach((opt, i) => {
       const text = this.add
@@ -122,6 +122,10 @@ export class MenuScene extends Phaser.Scene {
       wallet: data.wallet,
       abilities: data.abilities,
     } as GameSceneData);
+  }
+
+  private openMultiplayer(): void {
+    this.scene.start("MultiplayerScene");
   }
 
   private newGame(hasSave: boolean): void {
