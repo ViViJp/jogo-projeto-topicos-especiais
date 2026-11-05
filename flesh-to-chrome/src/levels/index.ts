@@ -5,6 +5,8 @@ import { PHASE_3_INTRO } from "./phase3Intro";
 import { PHASE_4_INTRO } from "./phase4Intro";
 import { PHASE_5_INTRO } from "./phase5Intro";
 
+export { MULTIPLAYER_RACE, MULTIPLAYER_CREDIT_COUNT } from "./multiplayerRace";
+
 export const LEVELS: Record<string, LevelData> = {
   [PHASE_1.id]: PHASE_1,
   [PHASE_2_INTRO.id]: PHASE_2_INTRO,

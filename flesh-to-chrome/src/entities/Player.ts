@@ -119,6 +119,27 @@ export class Player {
     this.onDeath();
   }
 
+  /** Reativa a mesma instancia sem reiniciar a cena ou o cronometro da corrida. */
+  respawn(x: number, y: number): void {
+    this.state = "running";
+    this.doubleJumpUsed = false;
+    this.slideTimer = 0;
+    this.slideElapsed = 0;
+    this.attackRecoveryTimer = 0;
+    this.dashTimer = 0;
+    this.dashCooldownTimer = 0;
+    this.pressedTimer = 0;
+    this.scanTimer = 0;
+    this.currentBreakable = null;
+    this.sprite.setVisible(true).setActive(true);
+    const body = this.sprite.body!;
+    body.enable = true;
+    body.reset(x, y);
+    this.applyRunningPose();
+    this.sprite.setVelocityX(BASE_RUN_SPEED);
+    this.updateVisorFx();
+  }
+
   update(deltaMs: number): void {
     if (this.state === "dead") return;
 

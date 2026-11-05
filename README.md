@@ -74,5 +74,15 @@ npm run dev:multiplayer
 
 O servidor publica essa configuração em `/ice-config`. Em produção, use
 credenciais TURN temporárias e exponha jogo e WebSocket com HTTPS/WSS por um
-proxy reverso. O servidor limita cada sala a 8 peers por padrão; altere com
-`MAX_PEERS_PER_ROOM` sabendo que um mesh NxN cresce quadraticamente.
+proxy reverso. O servidor limita cada sala aos 2 jogadores definidos no GDD por
+padrão; altere com `MAX_PEERS_PER_ROOM` sabendo que um mesh NxN cresce
+quadraticamente.
+
+### Corrida jogável
+
+A pista multiplayer é independente da campanha e dura aproximadamente 120 s.
+Os dois jogadores começam com os quatro implantes, têm cópias próprias dos 20
+créditos e não colidem entre si. Há um checkpoint central; morrer mantém os
+créditos coletados e não interrompe o cronômetro. Quando alguém termina, o outro
+recebe 20 s antes do DNF. O resultado usa `tempo bruto - 0,5 s por crédito`, com
+bônus máximo de 10 s, e aplica os desempates de créditos e tempo bruto do GDD.

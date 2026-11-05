@@ -5,7 +5,7 @@ import { WebSocket, WebSocketServer } from "ws";
 const host = process.env.SIGNALING_HOST || "0.0.0.0";
 const port = readPort(process.env.SIGNALING_PORT, 8080);
 const gamePort = readPort(process.env.GAME_PORT, 1234);
-const maxPeersPerRoom = readPositiveInteger(process.env.MAX_PEERS_PER_ROOM, 8);
+const maxPeersPerRoom = readPositiveInteger(process.env.MAX_PEERS_PER_ROOM, 2);
 const clients = new Map();
 
 const server = http.createServer((request, response) => {

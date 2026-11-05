@@ -4,7 +4,52 @@ export interface PeerStateMessage {
   sentAt: number;
 }
 
-export type MultiplayerMessage = PeerStateMessage;
+export type NetworkPlayerState =
+  | "running"
+  | "jumping"
+  | "sliding"
+  | "attacking"
+  | "scanning"
+  | "dashing"
+  | "pressed"
+  | "dead";
+
+export interface PlayerSnapshotMessage {
+  type: "player-snapshot";
+  sequence: number;
+  sentAt: number;
+  x: number;
+  y: number;
+  velocityX: number;
+  velocityY: number;
+  state: NetworkPlayerState;
+  credits: number;
+  checkpointReached: boolean;
+  finished: boolean;
+}
+
+export interface RaceStartMessage {
+  type: "race-start";
+  startAt: number;
+}
+
+export interface RaceFinishMessage {
+  type: "race-finish";
+  rawTimeMs: number;
+  credits: number;
+  deadlineAt: number;
+}
+
+export interface RaceDnfMessage {
+  type: "race-dnf";
+}
+
+export type MultiplayerMessage =
+  | PeerStateMessage
+  | PlayerSnapshotMessage
+  | RaceStartMessage
+  | RaceFinishMessage
+  | RaceDnfMessage;
 
 export type WebRtcSignal =
   | { type: "presence"; requestReply: boolean }
@@ -44,12 +89,47 @@ export function isSignalEnvelope(value: unknown): value is SignalEnvelope {
 }
 
 export function isMultiplayerMessage(value: unknown): value is MultiplayerMessage {
+  if (!isRecord(value) || typeof value.type !== "string") return false;
+  switch (value.type) {
+    case "peer-state":
+      return typeof value.ready === "boolean" && isFiniteNumber(value.sentAt);
+    case "player-snapshot":
+      return (
+        isFiniteNumber(value.sequence) &&
+        isFiniteNumber(value.sentAt) &&
+        isFiniteNumber(value.x) &&
+        isFiniteNumber(value.y) &&
+        isFiniteNumber(value.velocityX) &&
+        isFiniteNumber(value.velocityY) &&
+        isNetworkPlayerState(value.state) &&
+        isFiniteNumber(value.credits) &&
+        typeof value.checkpointReached === "boolean" &&
+        typeof value.finished === "boolean"
+      );
+    case "race-start":
+      return isFiniteNumber(value.startAt);
+    case "race-finish":
+      return (
+        isFiniteNumber(value.rawTimeMs) &&
+        isFiniteNumber(value.credits) &&
+        isFiniteNumber(value.deadlineAt)
+      );
+    case "race-dnf":
+      return true;
+    default:
+      return false;
+  }
+}
+
+function isNetworkPlayerState(value: unknown): value is NetworkPlayerState {
   return (
-    isRecord(value) &&
-    value.type === "peer-state" &&
-    typeof value.ready === "boolean" &&
-    typeof value.sentAt === "number"
+    typeof value === "string" &&
+    ["running", "jumping", "sliding", "attacking", "scanning", "dashing", "pressed", "dead"].includes(value)
   );
+}
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

@@ -8,7 +8,8 @@ import { SignalingTransport } from "./SignalingTransport";
 
 interface PeerConnectionState {
   connection: RTCPeerConnection;
-  channel?: RTCDataChannel;
+  controlChannel?: RTCDataChannel;
+  stateChannel?: RTCDataChannel;
   pendingCandidates: RTCIceCandidateInit[];
   connected: boolean;
   makingOffer: boolean;
@@ -63,7 +64,13 @@ export class WebRtcMesh extends EventTarget {
   broadcast(message: MultiplayerMessage): void {
     const serialized = JSON.stringify(message);
     this.peers.forEach((peer) => {
-      if (peer.channel?.readyState === "open") peer.channel.send(serialized);
+      const preferredChannel = message.type === "player-snapshot" ? peer.stateChannel : peer.controlChannel;
+      const fallbackChannel = message.type === "player-snapshot" ? peer.controlChannel : undefined;
+      if (preferredChannel?.readyState === "open" && preferredChannel.bufferedAmount < 64 * 1024) {
+        preferredChannel.send(serialized);
+      } else if (fallbackChannel?.readyState === "open" && fallbackChannel.bufferedAmount < 64 * 1024) {
+        fallbackChannel.send(serialized);
+      }
     });
   }
 
@@ -149,7 +156,10 @@ export class WebRtcMesh extends EventTarget {
 
     peer.makingOffer = true;
     try {
-      if (!peer.channel) {
+      if (!peer.controlChannel) {
+        this.configureDataChannel(peerId, peer, peer.connection.createDataChannel("control"));
+      }
+      if (!peer.stateChannel) {
         this.configureDataChannel(
           peerId,
           peer,
@@ -202,13 +212,18 @@ export class WebRtcMesh extends EventTarget {
     peer: PeerConnectionState,
     channel: RTCDataChannel
   ): void {
-    peer.channel = channel;
+    const isControlChannel = channel.label === "control";
+    if (isControlChannel) peer.controlChannel = channel;
+    else peer.stateChannel = channel;
     channel.onopen = () => {
-      if (peer.connected) return;
+      if (!isControlChannel || peer.connected) return;
       peer.connected = true;
       this.dispatchEvent(new CustomEvent("peerconnected", { detail: { peerId } }));
     };
-    channel.onclose = () => this.closePeer(peerId);
+    channel.onclose = () => {
+      if (isControlChannel) this.closePeer(peerId);
+      else if (peer.stateChannel === channel) peer.stateChannel = undefined;
+    };
     channel.onerror = () => {
       this.dispatchEvent(
         new CustomEvent("mesherror", { detail: new Error(`DataChannel de ${peerId} falhou.`) })
@@ -231,7 +246,8 @@ export class WebRtcMesh extends EventTarget {
     const peer = this.peers.get(peerId);
     if (!peer) return;
     this.peers.delete(peerId);
-    peer.channel?.close();
+    peer.controlChannel?.close();
+    peer.stateChannel?.close();
     peer.connection.close();
     if (peer.connected) this.dispatchEvent(new CustomEvent("peerdisconnected", { detail: { peerId } }));
   }

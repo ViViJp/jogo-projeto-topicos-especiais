@@ -331,8 +331,9 @@ export class LevelRuntime {
     const gate = this.scene.add.image(x, y, TEX.gate).setDepth(4);
     gate.setTint(0x36e2ff);
 
+    const endLabel = this.level.id === "multiplayer-race" ? "LINHA DE CHEGADA" : "FIM DA PRÉVIA";
     const label = this.scene.add
-      .text(x, this.level.groundY - 244, "FIM DA PRÉVIA", {
+      .text(x, this.level.groundY - 244, endLabel, {
         fontFamily: "Courier New, monospace",
         fontSize: "16px",
         color: "#36e2ff",
