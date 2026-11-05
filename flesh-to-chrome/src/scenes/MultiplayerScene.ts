@@ -1,7 +1,18 @@
 import Phaser from "phaser";
 import { CAMERA, GRAVITY_Y, SCREEN_HEIGHT, SCREEN_WIDTH } from "../config/GameConfig";
 import { Player } from "../entities/Player";
-import { MULTIPLAYER_CREDIT_COUNT, MULTIPLAYER_RACE } from "../levels/multiplayerRace";
+import {
+  TILED_MULTIPLAYER_BACKGROUND,
+  TILED_MULTIPLAYER_CREDIT_COUNT,
+  TILED_MULTIPLAYER_END_X,
+  TILED_MULTIPLAYER_LENGTH,
+  TILED_MULTIPLAYER_MAP_DATA,
+  TILED_MULTIPLAYER_MAP_KEY,
+  TILED_MULTIPLAYER_NAME,
+  TILED_MULTIPLAYER_OFFSET_Y,
+  TILED_MULTIPLAYER_SPAWN,
+  TILED_MULTIPLAYER_TILESETS,
+} from "../levels/TiledMultiplayer";
 import {
   MultiplayerMessage,
   PlayerSnapshotMessage,
@@ -14,13 +25,18 @@ import {
   WebSocketSignaling,
 } from "../multiplayer/SignalingTransport";
 import { WebRtcMesh } from "../multiplayer/WebRtcMesh";
-import { LevelRuntime } from "../objects/LevelRuntime";
+import { TILED_CHECKPOINT_TEXTURE_KEY } from "../objects/TiledLevelRuntime";
+import { TiledPhase5Runtime } from "../objects/TiledPhase5Runtime";
 import { InputManager } from "../systems/InputManager";
 import {
-  ALEX_RUN_ANIM,
+  ALEX_ARMS_TEXTURE_KEY,
+  ALEX_DASH_TEXTURE_KEY,
+  ALEX_EYES_TEXTURE_KEY,
+  ALEX_LEGS_TEXTURE_KEY,
   ALEX_SHEET_CONFIG,
   ALEX_SLIDE_FRAME,
   ALEX_TEXTURE_KEY,
+  alexRunAnimationKey,
 } from "../utils/AlexSprite";
 import { generatePlaceholderTextures } from "../utils/PlaceholderTextures";
 
@@ -43,7 +59,7 @@ export class MultiplayerScene extends Phaser.Scene {
   private input$!: InputManager;
   private mesh?: WebRtcMesh;
   private player?: Player;
-  private runtime?: LevelRuntime;
+  private runtime?: TiledPhase5Runtime;
   private opponentSprite?: Phaser.GameObjects.Sprite;
   private scanOverlay?: Phaser.GameObjects.Rectangle;
 
@@ -68,7 +84,10 @@ export class MultiplayerScene extends Phaser.Scene {
   private localDnf = false;
   private remoteDnf = false;
   private collectedCredits = new Set<string>();
-  private checkpoint = { x: MULTIPLAYER_RACE.playerSpawnX, y: MULTIPLAYER_RACE.groundY };
+  private checkpoint: { x: number; y: number } = { ...TILED_MULTIPLAYER_SPAWN };
+  private raceSpawn: { x: number; y: number } = { ...TILED_MULTIPLAYER_SPAWN };
+  private raceLength = TILED_MULTIPLAYER_LENGTH;
+  private raceEndX = TILED_MULTIPLAYER_END_X;
   private checkpointReached = false;
   private respawning = false;
   private returning = false;
@@ -86,17 +105,64 @@ export class MultiplayerScene extends Phaser.Scene {
   }
 
   preload(): void {
-    if (!this.textures.exists(ALEX_TEXTURE_KEY)) {
-      this.load.spritesheet(ALEX_TEXTURE_KEY, new URL("../assets/player/alex-flesh/alex-flesh.png", import.meta.url).href, ALEX_SHEET_CONFIG);
+    const spritesheets = [
+      { key: ALEX_TEXTURE_KEY, url: new URL("../assets/player/alex-flesh/alex-flesh.png", import.meta.url) },
+      { key: ALEX_LEGS_TEXTURE_KEY, url: new URL("../assets/player/alex-legs/alex-legs.png", import.meta.url) },
+      { key: ALEX_ARMS_TEXTURE_KEY, url: new URL("../assets/player/alex-arms/alex-arms.png", import.meta.url) },
+      { key: ALEX_EYES_TEXTURE_KEY, url: new URL("../assets/player/alex-eyes/alex-eyes.png", import.meta.url) },
+      { key: ALEX_DASH_TEXTURE_KEY, url: new URL("../assets/player/alex-dash/alex-dash.png", import.meta.url) },
+    ];
+    spritesheets.forEach(({ key, url }) => {
+      if (!this.textures.exists(key)) this.load.spritesheet(key, url.href, ALEX_SHEET_CONFIG);
+    });
+
+    const mapAssets = [
+      {
+        key: TILED_MULTIPLAYER_TILESETS[0].key,
+        url: new URL("../assets/tiles/topo/cyber-purp/tileset.png", import.meta.url),
+      },
+      {
+        key: TILED_MULTIPLAYER_TILESETS[1].key,
+        url: new URL("../assets/tiles/corporativo/foozle-scifi-lab/traps/laser_idle.png", import.meta.url),
+      },
+      {
+        key: TILED_MULTIPLAYER_TILESETS[2].key,
+        url: new URL("../assets/tiles/corporativo/foozle-scifi-lab/interactive/barrier_idle.png", import.meta.url),
+      },
+    ];
+    mapAssets.forEach(({ key, url }) => {
+      if (!this.textures.exists(key)) this.load.image(key, url.href);
+    });
+    if (!this.textures.exists(TILED_CHECKPOINT_TEXTURE_KEY)) {
+      this.load.image(
+        TILED_CHECKPOINT_TEXTURE_KEY,
+        new URL("../assets/props/checkpoint/tv-checkpoint.png", import.meta.url).href,
+      );
     }
-    if (!this.textures.exists("alex-eyes")) {
-      this.load.spritesheet("alex-eyes", new URL("../assets/player/alex-eyes/alex-eyes.png", import.meta.url).href, ALEX_SHEET_CONFIG);
+    if (!this.cache.tilemap.exists(TILED_MULTIPLAYER_MAP_KEY)) {
+      this.cache.tilemap.add(TILED_MULTIPLAYER_MAP_KEY, {
+        format: Phaser.Tilemaps.Formats.TILED_JSON,
+        data: TILED_MULTIPLAYER_MAP_DATA,
+      });
     }
   }
 
   create(): void {
     generatePlaceholderTextures(this);
-    this.cameras.main.setBackgroundColor(0x080d18);
+    this.cameras.main.setBackgroundColor(TILED_MULTIPLAYER_BACKGROUND);
+    this.cameras.main.setScroll(0, 0);
+    this.lobbyObjects = [];
+    this.player = undefined;
+    this.runtime = undefined;
+    this.opponentSprite = undefined;
+    this.scanOverlay = undefined;
+    this.statusText = undefined;
+    this.peersText = undefined;
+    this.timerText = undefined;
+    this.creditsText = undefined;
+    this.opponentText = undefined;
+    this.countdownText = undefined;
+    this.notificationText = undefined;
     this.input$ = new InputManager(this);
     this.resetSessionState();
     this.createLobby();
@@ -157,7 +223,10 @@ export class MultiplayerScene extends Phaser.Scene {
     this.localDnf = false;
     this.remoteDnf = false;
     this.collectedCredits.clear();
-    this.checkpoint = { x: MULTIPLAYER_RACE.playerSpawnX, y: MULTIPLAYER_RACE.groundY };
+    this.checkpoint = { ...TILED_MULTIPLAYER_SPAWN };
+    this.raceSpawn = { ...TILED_MULTIPLAYER_SPAWN };
+    this.raceLength = TILED_MULTIPLAYER_LENGTH;
+    this.raceEndX = TILED_MULTIPLAYER_END_X;
     this.checkpointReached = false;
     this.respawning = false;
     this.returning = false;
@@ -358,13 +427,35 @@ export class MultiplayerScene extends Phaser.Scene {
   private createRaceWorld(): void {
     this.lobbyObjects.forEach((object) => object.setVisible(false));
     this.physics.world.gravity.y = GRAVITY_Y;
-    this.physics.world.setBounds(0, 0, MULTIPLAYER_RACE.length + SCREEN_WIDTH, SCREEN_HEIGHT);
-    this.cameras.main.setBounds(0, 0, MULTIPLAYER_RACE.length + SCREEN_WIDTH, SCREEN_HEIGHT);
+    this.runtime = new TiledPhase5Runtime(
+      this,
+      new Set(),
+      {
+        onCreditCollected: (id) => this.handleCreditCollected(id),
+        onCheckpoint: (_id, x, y) => this.handleCheckpoint(x, y),
+        onEndGate: () => this.handleLocalFinish(),
+      },
+      {
+        mapKey: TILED_MULTIPLAYER_MAP_KEY,
+        tilesets: TILED_MULTIPLAYER_TILESETS,
+        offsetY: TILED_MULTIPLAYER_OFFSET_Y,
+        creditValue: 1,
+        contextLabel: TILED_MULTIPLAYER_NAME,
+        timeSource: () => Math.max(0, Date.now() - this.raceStartAt),
+        endLabel: "LINHA DE CHEGADA",
+      },
+    );
+    this.raceSpawn = { ...this.runtime.spawn };
+    this.checkpoint = { ...this.runtime.spawn };
+    this.raceLength = this.runtime.lengthPx;
+    this.raceEndX = this.runtime.endGateX;
+    this.physics.world.setBounds(0, 0, this.raceLength + SCREEN_WIDTH, SCREEN_HEIGHT);
+    this.cameras.main.setBounds(0, 0, this.raceLength + SCREEN_WIDTH, SCREEN_HEIGHT);
 
     this.player = new Player(
       this,
-      MULTIPLAYER_RACE.playerSpawnX,
-      MULTIPLAYER_RACE.groundY,
+      this.raceSpawn.x,
+      this.raceSpawn.y,
       ALL_ABILITIES,
       this.input$,
       {
@@ -372,35 +463,20 @@ export class MultiplayerScene extends Phaser.Scene {
         onScanPulse: (active) => this.handleScanPulse(active),
       }
     );
-    this.runtime = new LevelRuntime(this, MULTIPLAYER_RACE, new Set(), {
-      onCreditCollected: (id) => this.handleCreditCollected(id),
-      onCheckpoint: (_id, x, y) => this.handleCheckpoint(x, y),
-      onEndGate: () => this.handleLocalFinish(),
-    });
-    this.runtime.registerBreakablePhysics(this.player);
-    this.runtime.registerAbilityGatePhysics(this.player);
-
-    this.physics.add.collider(this.player.sprite, this.runtime.groundGroup, () => {
-      const body = this.player?.sprite.body as Phaser.Physics.Arcade.Body | null;
-      if (body && !body.blocked.down && (body.blocked.left || body.blocked.right || body.blocked.up)) {
-        this.player?.kill();
-      }
-    });
-    this.physics.add.overlap(this.player.sprite, this.runtime.overheadGroup, () => {
-      if (this.player?.getState() !== "sliding") this.player?.kill();
-    });
+    this.player.sprite.setDepth(20);
+    this.runtime.registerPhysics(this.player);
 
     const body = this.player.sprite.body as Phaser.Physics.Arcade.Body;
     body.setAllowGravity(false);
     this.player.sprite.setVelocity(0, 0);
 
     this.opponentSprite = this.add
-      .sprite(MULTIPLAYER_RACE.playerSpawnX, MULTIPLAYER_RACE.groundY, ALEX_TEXTURE_KEY)
+      .sprite(this.raceSpawn.x, this.raceSpawn.y, ALEX_DASH_TEXTURE_KEY)
       .setOrigin(0.5, 1)
       .setTint(0xff67d4)
       .setAlpha(0.68)
       .setDepth(20);
-    this.opponentSprite.anims.play(ALEX_RUN_ANIM, true);
+    this.opponentSprite.anims.play(alexRunAnimationKey(ALEX_DASH_TEXTURE_KEY), true);
 
     this.createRaceHud();
   }
@@ -417,7 +493,7 @@ export class MultiplayerScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(1001);
     this.creditsText = this.add
-      .text(24, 18, `CREDITOS 0/${MULTIPLAYER_CREDIT_COUNT}`, textStyle("#7CFCEA", "18px"))
+      .text(24, 18, `CREDITOS 0/${TILED_MULTIPLAYER_CREDIT_COUNT}`, textStyle("#7CFCEA", "18px"))
       .setScrollFactor(0)
       .setDepth(1001);
     this.opponentText = this.add
@@ -464,14 +540,14 @@ export class MultiplayerScene extends Phaser.Scene {
     this.time.delayedCall(650, () => this.countdownText?.setVisible(false));
     if (this.player) {
       (this.player.sprite.body as Phaser.Physics.Arcade.Body).setAllowGravity(true);
-      this.player.respawn(MULTIPLAYER_RACE.playerSpawnX, MULTIPLAYER_RACE.groundY);
+      this.player.respawn(this.raceSpawn.x, this.raceSpawn.y);
     }
   }
 
   private handleCreditCollected(id: string): void {
     if (this.collectedCredits.has(id)) return;
     this.collectedCredits.add(id);
-    this.creditsText?.setText(`CREDITOS ${this.collectedCredits.size}/${MULTIPLAYER_CREDIT_COUNT}`);
+    this.creditsText?.setText(`CREDITOS ${this.collectedCredits.size}/${TILED_MULTIPLAYER_CREDIT_COUNT}`);
   }
 
   private handleCheckpoint(x: number, y: number): void {
@@ -488,6 +564,7 @@ export class MultiplayerScene extends Phaser.Scene {
     this.flashRaceMessage("FALHA — CRONOMETRO CONTINUA");
     this.time.delayedCall(700, () => {
       if (this.phase !== "racing" || this.localResult || this.localDnf || !this.player) return;
+      this.runtime?.resetMutableObstacles();
       this.player.respawn(this.checkpoint.x, this.checkpoint.y);
       this.respawning = false;
     });
@@ -503,10 +580,10 @@ export class MultiplayerScene extends Phaser.Scene {
           .setDepth(900);
       }
       this.scanOverlay.setVisible(true);
-      this.runtime?.setScanActive(true, this.player?.sprite.x ?? 0);
+      this.runtime?.setScanActive(true);
     } else {
       this.scanOverlay?.setVisible(false);
-      this.runtime?.setScanActive(false, this.player?.sprite.x ?? 0);
+      this.runtime?.setScanActive(false);
     }
   }
 
@@ -544,7 +621,7 @@ export class MultiplayerScene extends Phaser.Scene {
     }
     this.remoteResult = {
       rawTimeMs: Math.max(0, message.rawTimeMs),
-      credits: Phaser.Math.Clamp(Math.floor(message.credits), 0, MULTIPLAYER_CREDIT_COUNT),
+      credits: Phaser.Math.Clamp(Math.floor(message.credits), 0, TILED_MULTIPLAYER_CREDIT_COUNT),
     };
     this.finishDeadlineAt ??= message.deadlineAt + (this.remoteClockOffsetMs ?? 0);
     if (this.localResult || this.localDnf) this.showResults();
@@ -647,10 +724,10 @@ export class MultiplayerScene extends Phaser.Scene {
     if (snapshot.sequence <= this.lastRemoteSequence) return;
     this.lastRemoteSequence = snapshot.sequence;
     this.remoteTarget = {
-      x: Phaser.Math.Clamp(snapshot.x, 0, MULTIPLAYER_RACE.length),
+      x: Phaser.Math.Clamp(snapshot.x, 0, this.raceLength),
       y: Phaser.Math.Clamp(snapshot.y, -500, SCREEN_HEIGHT + 500),
       state: snapshot.state,
-      credits: Phaser.Math.Clamp(Math.floor(snapshot.credits), 0, MULTIPLAYER_CREDIT_COUNT),
+      credits: Phaser.Math.Clamp(Math.floor(snapshot.credits), 0, TILED_MULTIPLAYER_CREDIT_COUNT),
     };
   }
 
@@ -671,7 +748,7 @@ export class MultiplayerScene extends Phaser.Scene {
       this.opponentSprite.anims.stop();
       this.opponentSprite.setFrame(ALEX_SLIDE_FRAME);
     } else {
-      this.opponentSprite.anims.play(ALEX_RUN_ANIM, true);
+      this.opponentSprite.anims.play(alexRunAnimationKey(ALEX_DASH_TEXTURE_KEY), true);
     }
   }
 
@@ -681,7 +758,7 @@ export class MultiplayerScene extends Phaser.Scene {
       Phaser.Math.Clamp(
         this.player.sprite.x - SCREEN_WIDTH * CAMERA.playerScreenRatioX,
         0,
-        Math.max(0, MULTIPLAYER_RACE.length - SCREEN_WIDTH)
+        Math.max(0, this.raceLength - SCREEN_WIDTH)
       )
     );
   }
@@ -694,7 +771,7 @@ export class MultiplayerScene extends Phaser.Scene {
         : "";
     this.timerText?.setText(`${formatTime(elapsed)}${deadlineSuffix}`);
     const remoteProgress = this.remoteTarget
-      ? Phaser.Math.Clamp(Math.floor((this.remoteTarget.x / MULTIPLAYER_RACE.endGateX) * 100), 0, 100)
+      ? Phaser.Math.Clamp(Math.floor((this.remoteTarget.x / this.raceEndX) * 100), 0, 100)
       : 0;
     const remoteCredits = this.remoteTarget?.credits ?? 0;
     this.opponentText?.setText(`OPONENTE ${remoteProgress}% | ${remoteCredits} cr`);

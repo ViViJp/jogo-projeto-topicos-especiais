@@ -737,6 +737,29 @@ o vão real permanece ausente de `ground`. Existem 30 créditos: 6 na rota
 normal e 24 ligados a vãos, plataformas, lasers, barreiras, portas, scan,
 ataque ou sequências finais.
 
+### 8.6 Pista multiplayer — esquema derivado da Fase 5
+
+O arquivo editável é `src/assets/maps/multiplayer/multiplayer-race.tmj`, com
+exportação de runtime em `multiplayer-race.json`. A pista reutiliza a linguagem
+visual e os desafios de kit completo da Fase 5, mas é independente da campanha.
+
+- Grade: **32 × 32 px**.
+- Comprimento: **38.400 px**, aproximadamente 120 s a 320 px/s.
+- Créditos: **20**, com IDs `mp-credit-01` a `mp-credit-20`.
+- Checkpoint único e central: `mp-cp1`, em **x = 19.200 px**.
+- Linha de chegada: objeto `phase_end` em **x = 38.272 px**.
+- Não contém `gate`, `ending_choice`, clínica ou trecho contemplativo.
+
+Os primeiros 28.800 px usam o percurso mecânico da Fase 5. Os 9.600 px que
+antes levavam ao Portão foram substituídos por uma extensão competitiva com
+scan, barricadas, grades de laser, barreiras rotativas e porta temporizada. O
+mapa termina em uma linha de chegada neutra, sem decisões ou progressão
+narrativa.
+
+Cada cliente instancia sua própria cópia lógica da pista. Após morte, o
+cronômetro e os créditos coletados permanecem, enquanto barricadas destruídas e
+revelações de scan são restauradas para a nova tentativa do trecho.
+
 #### Auditoria de acessibilidade da Fase 4
 
 | Intervalo horizontal | Largura | Leitura | Movimento exigido |

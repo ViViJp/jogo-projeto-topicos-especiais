@@ -52,6 +52,20 @@ const phases = [
     objects: ["spawn", "checkpoint", "credit", "hazard", "automatic_door", "breakable", "tutorial", "phase_end"],
     hazards: ["laser_grid", "rotating_barrier", "hidden_spikes"],
   },
+  {
+    id: "multiplayer",
+    map: "src/assets/maps/multiplayer/multiplayer-race",
+    tile: 32,
+    layers: ["background", "deco-back", "ground", "scan-visuals", "hazards", "deco", "objects"],
+    objects: ["spawn", "checkpoint", "credit", "hazard", "automatic_door", "breakable", "tutorial", "phase_end"],
+    hazards: ["laser_grid", "rotating_barrier", "hidden_spikes"],
+    expectedCredits: 20,
+    expectedCheckpoints: 1,
+    expectedCheckpointX: 19200,
+    expectedEndX: 38272,
+    expectedWidth: 1200,
+    forbiddenObjects: ["zone", "gate", "ending_choice", "clinic"],
+  },
 ];
 
 const runtimeImages = [
@@ -143,6 +157,24 @@ for (const phase of phases) {
   const objects = objectLayer?.type === "objectgroup" ? objectLayer.objects : [];
   for (const type of phase.objects) {
     if (!objects.some((object) => object.type === type)) fail(`${phase.id}: objeto obrigatório ausente: ${type}`);
+  }
+  if (phase.expectedCredits !== undefined && objects.filter((object) => object.type === "credit").length !== phase.expectedCredits) {
+    fail(`${phase.id}: deve possuir exatamente ${phase.expectedCredits} créditos`);
+  }
+  if (phase.expectedCheckpoints !== undefined && objects.filter((object) => object.type === "checkpoint").length !== phase.expectedCheckpoints) {
+    fail(`${phase.id}: deve possuir exatamente ${phase.expectedCheckpoints} checkpoint`);
+  }
+  if (phase.expectedCheckpointX !== undefined && objects.find((object) => object.type === "checkpoint")?.x !== phase.expectedCheckpointX) {
+    fail(`${phase.id}: checkpoint deve estar em x=${phase.expectedCheckpointX}`);
+  }
+  if (phase.expectedEndX !== undefined && objects.find((object) => object.type === "phase_end")?.x !== phase.expectedEndX) {
+    fail(`${phase.id}: chegada deve estar em x=${phase.expectedEndX}`);
+  }
+  if (phase.expectedWidth !== undefined && map.width !== phase.expectedWidth) {
+    fail(`${phase.id}: largura deve ser ${phase.expectedWidth} tiles`);
+  }
+  for (const type of phase.forbiddenObjects ?? []) {
+    if (objects.some((object) => object.type === type)) fail(`${phase.id}: objeto proibido presente: ${type}`);
   }
 
   const objectIds = new Set();

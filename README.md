@@ -93,7 +93,10 @@ quadraticamente.
 
 ### Corrida jogável
 
-A pista multiplayer é independente da campanha e dura aproximadamente 120 s.
+A pista multiplayer usa o mapa Tiled próprio
+`flesh-to-chrome/src/assets/maps/multiplayer/multiplayer-race.tmj`, derivado da
+Fase 5 e estendido no lugar do trecho contemplativo/Portão. Ela é independente
+da campanha e dura aproximadamente 120 s.
 Os dois jogadores começam com os quatro implantes, têm cópias próprias dos 20
 créditos e não colidem entre si. Há um checkpoint central; morrer mantém os
 créditos coletados e não interrompe o cronômetro. Quando alguém termina, o outro

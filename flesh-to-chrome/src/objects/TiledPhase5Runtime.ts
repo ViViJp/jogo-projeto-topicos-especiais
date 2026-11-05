@@ -53,11 +53,29 @@ interface AutomaticDoor {
 }
 
 interface RuntimeBreakable {
+  id: string;
   body: Phaser.GameObjects.Rectangle;
   startCol: number;
   endCol: number;
   startRow: number;
   endRow: number;
+}
+
+interface RuntimeBreakableDefinition extends Omit<RuntimeBreakable, "body"> {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface TiledPhase5RuntimeOptions {
+  mapKey?: string;
+  tilesets?: ReadonlyArray<{ name: string; key: string }>;
+  offsetY?: number;
+  creditValue?: number;
+  contextLabel?: string;
+  timeSource?: () => number;
+  endLabel?: string;
 }
 
 const TOP_HAZARD_KINDS = new Set(["laser_grid", "rotating_barrier", "hidden_spikes"]);
@@ -86,7 +104,13 @@ export class TiledPhase5Runtime {
   private readonly revealedGroups = new Set<string>();
   private readonly doors: AutomaticDoor[] = [];
   private readonly breakables: RuntimeBreakable[] = [];
+  private readonly breakableDefinitions: RuntimeBreakableDefinition[] = [];
   private readonly labels: Phaser.GameObjects.Text[] = [];
+  private readonly endMarkerObjects: Array<{ destroy(): void }> = [];
+  private readonly offsetY: number;
+  private readonly creditValue: number;
+  private readonly contextLabel: string;
+  private readonly timeSource: () => number;
   private endGateTriggered = false;
   private playerRef?: Player;
   private pressedAttackListener: (breakable: Phaser.GameObjects.GameObject | null) => void = () => undefined;
@@ -100,11 +124,16 @@ export class TiledPhase5Runtime {
       onCheckpoint: (id: string, x: number, y: number) => void;
       onEndGate: () => void;
     },
+    options: TiledPhase5RuntimeOptions = {},
   ) {
-    this.map = scene.make.tilemap({ key: TILED_FASE5_MAP_KEY });
-    const tilesets = TILED_FASE5_TILESETS.map(({ name, key }) => {
+    this.offsetY = options.offsetY ?? TILED_FASE5_OFFSET_Y;
+    this.creditValue = options.creditValue ?? 10;
+    this.contextLabel = options.contextLabel ?? "Fase 5";
+    this.timeSource = options.timeSource ?? (() => this.scene.time.now);
+    this.map = scene.make.tilemap({ key: options.mapKey ?? TILED_FASE5_MAP_KEY });
+    const tilesets = (options.tilesets ?? TILED_FASE5_TILESETS).map(({ name, key }) => {
       const tileset = this.map.addTilesetImage(name, key);
-      if (!tileset) throw new Error(`Tileset "${name}" não encontrado na Fase 5`);
+      if (!tileset) throw new Error(`Tileset "${name}" não encontrado em ${this.contextLabel}`);
       return tileset;
     });
 
@@ -112,8 +141,8 @@ export class TiledPhase5Runtime {
     this.createVisualLayer("deco-back", tilesets, -10);
 
     const ground = this.map.createLayer("ground", tilesets) as Phaser.Tilemaps.TilemapLayer | null;
-    if (!ground) throw new Error('Fase 5 (Tiled): camada "ground" ausente');
-    ground.setPosition(ground.x, ground.y + TILED_FASE5_OFFSET_Y);
+    if (!ground) throw new Error(`${this.contextLabel} (Tiled): camada "ground" ausente`);
+    ground.setPosition(ground.x, ground.y + this.offsetY);
     ground.setCollisionByExclusion([-1, 0]);
     ground.setDepth(0);
     this.groundLayer = ground;
@@ -123,14 +152,14 @@ export class TiledPhase5Runtime {
     this.createVisualLayer("deco", tilesets, 3);
 
     this.lengthPx = this.map.widthInPixels;
-    this.fallDeathY = TILED_FASE5_OFFSET_Y + this.map.heightInPixels + 150;
+    this.fallDeathY = this.offsetY + this.map.heightInPixels + 150;
 
     const objects = this.map.getObjectLayer("objects")?.objects ?? [];
     const byType = (type: string) => objects.filter((object) => object.type === type);
 
     const spawnObject = byType("spawn")[0];
     this.spawn = spawnObject
-      ? { x: spawnObject.x ?? 80, y: (spawnObject.y ?? 384) + TILED_FASE5_OFFSET_Y }
+      ? { x: spawnObject.x ?? 80, y: (spawnObject.y ?? 384) + this.offsetY }
       : { x: 80, y: 560 };
 
     const endObject = byType("phase_end")[0];
@@ -144,6 +173,7 @@ export class TiledPhase5Runtime {
     this.buildBreakables(byType("breakable"));
     this.buildTutorials(byType("tutorial"));
     this.buildMilestoneLabels(byType("zone"), byType("gate"));
+    if (endObject && options.endLabel) this.buildEndMarker(endObject, options.endLabel);
     this.buildCredits();
     this.buildCheckpoints();
   }
@@ -155,7 +185,7 @@ export class TiledPhase5Runtime {
   ): Phaser.Tilemaps.TilemapLayer | undefined {
     const layer = this.map.createLayer(name, tilesets) as Phaser.Tilemaps.TilemapLayer | null;
     if (!layer) return undefined;
-    layer.setPosition(layer.x, layer.y + TILED_FASE5_OFFSET_Y);
+    layer.setPosition(layer.x, layer.y + this.offsetY);
     layer.setDepth(depth);
     return layer;
   }
@@ -183,8 +213,8 @@ export class TiledPhase5Runtime {
       this.credits.push({
         id,
         x: object.x ?? 0,
-        y: (object.y ?? 0) + TILED_FASE5_OFFSET_Y,
-        value: 10,
+        y: (object.y ?? 0) + this.offsetY,
+        value: this.creditValue,
         route: this.readString(object, "route") === "risk" ? "risk" : "normal",
       });
     }
@@ -202,7 +232,7 @@ export class TiledPhase5Runtime {
     const col = Phaser.Math.Clamp(Math.floor(worldX / this.map.tileWidth), 0, this.map.width - 1);
     for (let row = 0; row < this.map.height; row += 1) {
       const tile = this.groundLayer.getTileAt(col, row);
-      if (tile && tile.index !== -1) return TILED_FASE5_OFFSET_Y + row * this.map.tileHeight;
+      if (tile && tile.index !== -1) return this.offsetY + row * this.map.tileHeight;
     }
     return this.spawn?.y ?? 560;
   }
@@ -240,7 +270,7 @@ export class TiledPhase5Runtime {
       const kind = this.readString(object, "kind");
       const group = this.readString(object, "group");
       if (!kind || !REVEAL_KINDS.has(kind as RevealKind) || !group) {
-        console.warn(`Fase 5: scan_reveal "${object.name ?? object.id}" inválido.`);
+        console.warn(`${this.contextLabel}: scan_reveal "${object.name ?? object.id}" inválido.`);
         continue;
       }
       const width = object.width ?? 32;
@@ -250,7 +280,7 @@ export class TiledPhase5Runtime {
       const outline = this.scene.add
         .rectangle(
           x + width / 2,
-          y + TILED_FASE5_OFFSET_Y + height / 2,
+          y + this.offsetY + height / 2,
           width,
           height,
           0x36e2ff,
@@ -267,7 +297,7 @@ export class TiledPhase5Runtime {
     for (const object of objects) {
       const kind = this.readString(object, "kind");
       if (!kind || !TOP_HAZARD_KINDS.has(kind)) {
-        console.warn(`Fase 5: hazard "${object.name ?? object.id}" usa kind desconhecido "${kind ?? "ausente"}"; tratado como letal.`);
+        console.warn(`${this.contextLabel}: hazard "${object.name ?? object.id}" usa kind desconhecido "${kind ?? "ausente"}"; tratado como letal.`);
       }
       const width = object.width ?? 32;
       const height = object.height ?? 32;
@@ -275,7 +305,7 @@ export class TiledPhase5Runtime {
       const y = object.y ?? 0;
       const zone = this.scene.add.zone(
         x + width / 2,
-        y + TILED_FASE5_OFFSET_Y + height / 2,
+        y + this.offsetY + height / 2,
         width,
         height,
       );
@@ -301,7 +331,7 @@ export class TiledPhase5Runtime {
       const y = object.y ?? 128;
       const zone = this.scene.add.zone(
         x + width / 2,
-        y + TILED_FASE5_OFFSET_Y + height / 2,
+        y + this.offsetY + height / 2,
         width,
         height,
       );
@@ -322,25 +352,54 @@ export class TiledPhase5Runtime {
       const height = object.height ?? 64;
       const x = object.x ?? 0;
       const y = object.y ?? 0;
-      const body = this.scene.add
-        .rectangle(
-          x + width / 2,
-          y + TILED_FASE5_OFFSET_Y + height / 2,
-          width,
-          height,
-          0x000000,
-          0.001,
-        )
-        .setDepth(4);
-      this.scene.physics.add.existing(body, true);
-      body.setData("breakableId", this.readString(object, "id") ?? object.name ?? String(object.id));
-      this.breakables.push({
-        body,
+      const definition: RuntimeBreakableDefinition = {
+        id: this.readString(object, "id") ?? object.name ?? String(object.id),
+        x,
+        y,
+        width,
+        height,
         startCol: Math.floor(x / this.map.tileWidth),
         endCol: Math.ceil((x + width) / this.map.tileWidth),
         startRow: Math.floor(y / this.map.tileHeight),
         endRow: Math.ceil((y + height) / this.map.tileHeight),
-      });
+      };
+      this.breakableDefinitions.push(definition);
+      this.createBreakable(definition);
+    }
+  }
+
+  private createBreakable(definition: RuntimeBreakableDefinition): void {
+    this.setBreakableTilesVisible(definition, true);
+    const body = this.scene.add
+      .rectangle(
+        definition.x + definition.width / 2,
+        definition.y + this.offsetY + definition.height / 2,
+        definition.width,
+        definition.height,
+        0x000000,
+        0.001,
+      )
+      .setDepth(4);
+    this.scene.physics.add.existing(body, true);
+    body.setData("breakableId", definition.id);
+    const breakable = { ...definition, body };
+    this.breakables.push(breakable);
+    if (this.playerRef) this.registerBreakableCollider(breakable, this.playerRef);
+  }
+
+  private registerBreakableCollider(breakable: RuntimeBreakable, player: Player): void {
+    this.scene.physics.add.collider(player.sprite, breakable.body, () => {
+      if (player.getState() === "attacking") this.destroyBreakable(breakable);
+      else player.enterPressedState(breakable.body);
+    });
+  }
+
+  private setBreakableTilesVisible(breakable: Omit<RuntimeBreakable, "body">, visible: boolean): void {
+    for (let row = breakable.startRow; row < breakable.endRow; row += 1) {
+      for (let col = breakable.startCol; col < breakable.endCol; col += 1) {
+        const tile = this.hazardsLayer?.getTileAt(col, row);
+        if (tile && tile.index !== -1) tile.alpha = visible ? 1 : 0;
+      }
     }
   }
 
@@ -350,7 +409,7 @@ export class TiledPhase5Runtime {
       const label = this.scene.add
         .text(
           (object.x ?? 0) + (object.width ?? 0) / 2,
-          (object.y ?? 0) + TILED_FASE5_OFFSET_Y - 20,
+          (object.y ?? 0) + this.offsetY - 20,
           "DASH: K / SHIFT / RB (CONTROLE)\nuse no chão ou no ar; não concede invencibilidade",
           {
             fontFamily: "Courier New, monospace",
@@ -377,7 +436,7 @@ export class TiledPhase5Runtime {
         this.scene.add
           .text(
             (object.x ?? 0) + 360,
-            (object.y ?? 0) + TILED_FASE5_OFFSET_Y - 40,
+            (object.y ?? 0) + this.offsetY - 40,
             "FIM DOS OBSTÁCULOS\nTRECHO CONTEMPLATIVO",
             {
               fontFamily: "Courier New, monospace",
@@ -397,7 +456,7 @@ export class TiledPhase5Runtime {
         this.scene.add
           .text(
             (object.x ?? 0) + (object.width ?? 0) / 2,
-            (object.y ?? 0) + TILED_FASE5_OFFSET_Y - 24,
+            (object.y ?? 0) + this.offsetY - 24,
             "PORTÃO\nCHROME  ←   |   →  FLESH",
             {
               fontFamily: "Courier New, monospace",
@@ -414,6 +473,26 @@ export class TiledPhase5Runtime {
     }
   }
 
+  private buildEndMarker(object: Phaser.Types.Tilemaps.TiledObject, label: string): void {
+    const x = (object.x ?? this.lengthPx - 128) + (object.width ?? 0) / 2;
+    const groundY = this.groundSurfaceYAt(x);
+    const marker = this.scene.add
+      .rectangle(x, groundY - 96, 10, 192, 0x7cfcea, 0.72)
+      .setStrokeStyle(2, 0xe8ecff, 0.9)
+      .setDepth(5);
+    const text = this.scene.add
+      .text(x, groundY - 215, label, {
+        fontFamily: "Courier New, monospace",
+        fontSize: "20px",
+        color: "#7CFCEA",
+        backgroundColor: "#08121ddd",
+        padding: { x: 12, y: 7 },
+      })
+      .setOrigin(0.5, 1)
+      .setDepth(7);
+    this.endMarkerObjects.push(marker, text);
+  }
+
   registerPhysics(player: Player): void {
     this.playerRef = player;
     this.scene.physics.add.collider(player.sprite, this.groundLayer);
@@ -424,10 +503,7 @@ export class TiledPhase5Runtime {
       this.scene.physics.add.overlap(player.sprite, door.zone, () => player.kill());
     }
     for (const breakable of this.breakables) {
-      this.scene.physics.add.collider(player.sprite, breakable.body, () => {
-        if (player.getState() === "attacking") this.destroyBreakable(breakable);
-        else player.enterPressedState(breakable.body);
-      });
+      this.registerBreakableCollider(breakable, player);
     }
 
     this.pressedAttackListener = (object) => {
@@ -445,12 +521,7 @@ export class TiledPhase5Runtime {
     this.breakables.splice(index, 1);
     const physicsBody = target.body.body as Phaser.Physics.Arcade.StaticBody | null;
     if (physicsBody) physicsBody.enable = false;
-    for (let row = target.startRow; row < target.endRow; row += 1) {
-      for (let col = target.startCol; col < target.endCol; col += 1) {
-        const tile = this.hazardsLayer?.getTileAt(col, row);
-        if (tile && tile.index !== -1) tile.alpha = 0;
-      }
-    }
+    this.setBreakableTilesVisible(target, false);
     target.body.destroy();
     this.playerRef?.resolvePressedSuccess();
   }
@@ -559,8 +630,23 @@ export class TiledPhase5Runtime {
     groups.forEach((group) => this.revealGroup(group));
   }
 
+  /** Restaura o trecho após uma morte sem recriar créditos, checkpoint ou cronômetro. */
+  resetMutableObstacles(): void {
+    const activeBreakableIds = new Set(this.breakables.map((breakable) => breakable.id));
+    for (const definition of this.breakableDefinitions) {
+      if (!activeBreakableIds.has(definition.id)) this.createBreakable(definition);
+    }
+
+    for (const region of this.revealRegions) {
+      region.outline.setVisible(false);
+      this.setRegionTiles(region, false);
+    }
+    for (const hidden of this.hiddenVisualRegions) this.setHiddenVisual(hidden, false);
+    this.revealedGroups.clear();
+  }
+
   update(player: Player): void {
-    this.updateDoors(this.scene.time.now);
+    this.updateDoors(this.timeSource());
     this.clearPassedRevealGroups(player.sprite.x);
 
     this.creditSprites.forEach((sprite, id) => {
@@ -599,5 +685,6 @@ export class TiledPhase5Runtime {
     this.breakables.forEach((breakable) => breakable.body.destroy());
     this.revealRegions.forEach((region) => region.outline.destroy());
     this.labels.forEach((label) => label.destroy());
+    this.endMarkerObjects.forEach((object) => object.destroy());
   }
 }
