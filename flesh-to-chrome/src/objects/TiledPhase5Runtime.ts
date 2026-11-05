@@ -55,6 +55,7 @@ interface AutomaticDoor {
 interface RuntimeBreakable {
   id: string;
   body: Phaser.GameObjects.Rectangle;
+  collider?: Phaser.Physics.Arcade.Collider;
   startCol: number;
   endCol: number;
   startRow: number;
@@ -369,6 +370,7 @@ export class TiledPhase5Runtime {
   }
 
   private createBreakable(definition: RuntimeBreakableDefinition): void {
+    if (this.breakables.some((breakable) => breakable.id === definition.id)) return;
     this.setBreakableTilesVisible(definition, true);
     const body = this.scene.add
       .rectangle(
@@ -382,13 +384,14 @@ export class TiledPhase5Runtime {
       .setDepth(4);
     this.scene.physics.add.existing(body, true);
     body.setData("breakableId", definition.id);
-    const breakable = { ...definition, body };
+    const breakable: RuntimeBreakable = { ...definition, body };
     this.breakables.push(breakable);
     if (this.playerRef) this.registerBreakableCollider(breakable, this.playerRef);
   }
 
   private registerBreakableCollider(breakable: RuntimeBreakable, player: Player): void {
-    this.scene.physics.add.collider(player.sprite, breakable.body, () => {
+    breakable.collider?.destroy();
+    breakable.collider = this.scene.physics.add.collider(player.sprite, breakable.body, () => {
       if (player.getState() === "attacking") this.destroyBreakable(breakable);
       else player.enterPressedState(breakable.body);
     });
@@ -521,6 +524,8 @@ export class TiledPhase5Runtime {
     this.breakables.splice(index, 1);
     const physicsBody = target.body.body as Phaser.Physics.Arcade.StaticBody | null;
     if (physicsBody) physicsBody.enable = false;
+    target.collider?.destroy();
+    target.collider = undefined;
     this.setBreakableTilesVisible(target, false);
     target.body.destroy();
     this.playerRef?.resolvePressedSuccess();
@@ -643,6 +648,37 @@ export class TiledPhase5Runtime {
     }
     for (const hidden of this.hiddenVisualRegions) this.setHiddenVisual(hidden, false);
     this.revealedGroups.clear();
+
+    // Portas não são recriadas: o mesmo corpo estático é reposicionado no
+    // estado determinístico do cronômetro, evitando zonas/colliders duplicados.
+    for (const door of this.doors) door.open = undefined;
+    this.updateDoors(this.timeSource());
+
+    const restored = this.mutableObstacleState();
+    if (
+      restored.breakables !== restored.breakableDefinitions ||
+      restored.activeBreakableColliders !== restored.breakableDefinitions ||
+      restored.revealedGroups !== 0
+    ) {
+      throw new Error(`${this.contextLabel}: restauração de obstáculos ficou inconsistente.`);
+    }
+  }
+
+  /** Estado pequeno usado por playtests para detectar duplicações após respawns. */
+  mutableObstacleState(): {
+    breakables: number;
+    breakableDefinitions: number;
+    activeBreakableColliders: number;
+    doors: number;
+    revealedGroups: number;
+  } {
+    return {
+      breakables: this.breakables.length,
+      breakableDefinitions: this.breakableDefinitions.length,
+      activeBreakableColliders: this.breakables.filter((breakable) => breakable.collider?.active).length,
+      doors: this.doors.length,
+      revealedGroups: this.revealedGroups.size,
+    };
   }
 
   update(player: Player): void {
@@ -682,7 +718,10 @@ export class TiledPhase5Runtime {
     this.creditSprites.forEach((sprite) => sprite.destroy());
     this.hazardZones.forEach((zone) => zone.destroy());
     this.doors.forEach((door) => door.zone.destroy());
-    this.breakables.forEach((breakable) => breakable.body.destroy());
+    this.breakables.forEach((breakable) => {
+      breakable.collider?.destroy();
+      breakable.body.destroy();
+    });
     this.revealRegions.forEach((region) => region.outline.destroy());
     this.labels.forEach((label) => label.destroy());
     this.endMarkerObjects.forEach((object) => object.destroy());

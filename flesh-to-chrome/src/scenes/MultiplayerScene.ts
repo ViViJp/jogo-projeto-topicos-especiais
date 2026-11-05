@@ -14,6 +14,8 @@ import {
   TILED_MULTIPLAYER_TILESETS,
 } from "../levels/TiledMultiplayer";
 import {
+  MAX_RACE_DURATION_MS,
+  MULTIPLAYER_PROTOCOL_VERSION,
   MultiplayerMessage,
   PlayerSnapshotMessage,
   RaceFinishMessage,
@@ -45,6 +47,11 @@ const SNAPSHOT_INTERVAL_MS = 1000 / 15;
 const SECOND_PLAYER_LIMIT_MS = 20_000;
 const RESULT_NETWORK_GRACE_MS = 1_000;
 const START_COUNTDOWN_MS = 4_000;
+const START_HANDSHAKE_TIMEOUT_MS = 8_000;
+const START_MIN_LEAD_MS = 2_000;
+const START_MAX_LEAD_MS = 15_000;
+const FINISH_CONSISTENCY_TOLERANCE_MS = 2_500;
+const MIN_PLAUSIBLE_RACE_TIME_MS = 15_000;
 const ALL_ABILITIES = { legs: true, arms: true, eyes: true, thrusters: true } as const;
 
 type RacePhase = "lobby" | "countdown" | "racing" | "finished";
@@ -76,6 +83,9 @@ export class MultiplayerScene extends Phaser.Scene {
   private roomId = "";
   private opponentPeerId?: string;
   private remoteReady = false;
+  private preparedRaceId?: string;
+  private startHandshakeTimer?: Phaser.Time.TimerEvent;
+  private nextStartAttemptAt = 0;
   private phase: RacePhase = "lobby";
   private raceStartAt = 0;
   private finishDeadlineAt?: number;
@@ -97,6 +107,9 @@ export class MultiplayerScene extends Phaser.Scene {
   private lastSnapshotAt = 0;
   private snapshotSequence = 0;
   private lastRemoteSequence = -1;
+  private lastRemoteSentAt = 0;
+  private lastRemoteCredits = 0;
+  private remoteCheckpointReached = false;
   private remoteClockOffsetMs?: number;
   private remoteTarget?: { x: number; y: number; state: PlayerSnapshotMessage["state"]; credits: number };
 
@@ -170,6 +183,7 @@ export class MultiplayerScene extends Phaser.Scene {
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.meshStartId += 1;
+      this.clearStartHandshakeTimer();
       this.runtime?.destroy();
       this.mesh?.stop();
       this.mesh = undefined;
@@ -215,6 +229,9 @@ export class MultiplayerScene extends Phaser.Scene {
     this.roomId = roomFromUrl();
     this.opponentPeerId = undefined;
     this.remoteReady = false;
+    this.preparedRaceId = undefined;
+    this.clearStartHandshakeTimer();
+    this.nextStartAttemptAt = 0;
     this.phase = "lobby";
     this.raceStartAt = 0;
     this.finishDeadlineAt = undefined;
@@ -232,6 +249,9 @@ export class MultiplayerScene extends Phaser.Scene {
     this.returning = false;
     this.snapshotSequence = 0;
     this.lastRemoteSequence = -1;
+    this.lastRemoteSentAt = 0;
+    this.lastRemoteCredits = 0;
+    this.remoteCheckpointReached = false;
     this.remoteTarget = undefined;
     this.remoteClockOffsetMs = undefined;
   }
@@ -319,8 +339,12 @@ export class MultiplayerScene extends Phaser.Scene {
         rtcConfiguration,
       });
       this.mesh.addEventListener("peerconnected", (event) => {
+        const { peerId, recovered } = (event as CustomEvent<{ peerId: string; recovered: boolean }>).detail;
+        this.handlePeerConnected(peerId, recovered);
+      });
+      this.mesh.addEventListener("peerreconnecting", (event) => {
         const { peerId } = (event as CustomEvent<{ peerId: string }>).detail;
-        this.handlePeerConnected(peerId);
+        this.handlePeerReconnecting(peerId);
       });
       this.mesh.addEventListener("peerdisconnected", (event) => {
         const { peerId } = (event as CustomEvent<{ peerId: string }>).detail;
@@ -340,6 +364,10 @@ export class MultiplayerScene extends Phaser.Scene {
           this.statusText?.setText("Falha ao negociar a conexao WebRTC.").setColor("#ff8a8a");
         }
       });
+      this.mesh.addEventListener("protocolerror", (event) => {
+        const detail = (event as CustomEvent<{ peerId: string; reason: string }>).detail;
+        console.warn(`Pacote multiplayer rejeitado de ${detail.peerId}: ${detail.reason}`);
+      });
       this.mesh.start();
     } catch (error) {
       console.error("Falha ao abrir a sinalizacao WebRTC", error);
@@ -348,12 +376,26 @@ export class MultiplayerScene extends Phaser.Scene {
     }
   }
 
-  private handlePeerConnected(peerId: string): void {
+  private handlePeerConnected(peerId: string, recovered: boolean): void {
     if (this.opponentPeerId && this.opponentPeerId !== peerId) return;
     this.opponentPeerId = peerId;
+    if (recovered && this.phase !== "lobby") {
+      this.flashRaceMessage("CONEXAO WEBRTC RECUPERADA");
+      this.resendRaceState();
+      return;
+    }
     this.peersText?.setText(`Oponente conectado: ${peerId}`);
     this.statusText?.setText("Sincronizando largada...").setColor("#7CFCEA");
     this.sendReady();
+  }
+
+  private handlePeerReconnecting(peerId: string): void {
+    if (peerId !== this.opponentPeerId) return;
+    if (this.phase === "lobby") {
+      this.statusText?.setText("Recuperando conexao WebRTC...").setColor("#FFD37C");
+    } else if (this.phase !== "finished") {
+      this.flashRaceMessage("CONEXAO INSTAVEL — RECONECTANDO (10 S)");
+    }
   }
 
   private handlePeerDisconnected(peerId: string): void {
@@ -363,6 +405,8 @@ export class MultiplayerScene extends Phaser.Scene {
       return;
     }
     if (this.phase === "lobby") {
+      this.clearStartHandshakeTimer();
+      this.preparedRaceId = undefined;
       this.opponentPeerId = undefined;
       this.remoteReady = false;
       this.peersText?.setText("Aguardando oponente");
@@ -376,21 +420,37 @@ export class MultiplayerScene extends Phaser.Scene {
 
     switch (message.type) {
       case "peer-state":
+        if (!this.isRemoteTimestampCurrent(message.sentAt)) return;
         this.updateRemoteClock(message.sentAt);
         this.remoteReady = message.ready;
         this.tryScheduleRace();
         break;
+      case "race-prepare":
+        if (this.isRemoteTimestampCurrent(message.sentAt)) {
+          this.updateRemoteClock(message.sentAt);
+          this.handleRacePrepare(peerId, message.raceId);
+        }
+        break;
+      case "race-ready":
+        if (this.isRemoteTimestampCurrent(message.sentAt)) {
+          this.updateRemoteClock(message.sentAt);
+          this.handleRaceReady(peerId, message.raceId);
+        }
+        break;
       case "race-start":
-        this.scheduleRace(message.startAt + (this.remoteClockOffsetMs ?? 0));
+        this.handleRaceStart(peerId, message.raceId, message.startAt);
         break;
       case "player-snapshot":
-        this.updateRemoteClock(message.sentAt);
-        this.applyRemoteSnapshot(message);
+        if (this.isSnapshotConsistent(message)) {
+          this.updateRemoteClock(message.sentAt);
+          this.applyRemoteSnapshot(message);
+        }
         break;
       case "race-finish":
-        this.handleRemoteFinish(message);
+        if (this.isRaceMessageCurrent(message.raceId)) this.handleRemoteFinish(message);
         break;
       case "race-dnf":
+        if (!this.isRaceMessageCurrent(message.raceId)) return;
         this.remoteDnf = true;
         this.showResults();
         break;
@@ -398,7 +458,12 @@ export class MultiplayerScene extends Phaser.Scene {
   }
 
   private sendReady(): void {
-    this.mesh?.broadcast({ type: "peer-state", ready: true, sentAt: Date.now() });
+    this.mesh?.broadcast({
+      type: "peer-state",
+      protocolVersion: MULTIPLAYER_PROTOCOL_VERSION,
+      ready: true,
+      sentAt: Date.now(),
+    });
     this.tryScheduleRace();
   }
 
@@ -407,17 +472,108 @@ export class MultiplayerScene extends Phaser.Scene {
       this.phase !== "lobby" ||
       !this.opponentPeerId ||
       !this.remoteReady ||
+      this.preparedRaceId ||
+      Date.now() < this.nextStartAttemptAt ||
       this.localPeerId.localeCompare(this.opponentPeerId) >= 0
     ) {
       return;
     }
-    const startAt = Date.now() + START_COUNTDOWN_MS;
-    this.mesh?.broadcast({ type: "race-start", startAt });
-    this.scheduleRace(startAt);
+    const raceId = randomToken(12);
+    this.preparedRaceId = raceId;
+    this.statusText?.setText("Aguardando confirmacao do oponente...").setColor("#FFD37C");
+    this.mesh?.broadcast({
+      type: "race-prepare",
+      protocolVersion: MULTIPLAYER_PROTOCOL_VERSION,
+      raceId,
+      sentAt: Date.now(),
+    });
+    this.armStartHandshakeTimeout(raceId);
   }
 
-  private scheduleRace(startAt: number): void {
+  private handleRacePrepare(peerId: string, raceId: string): void {
+    if (
+      this.phase !== "lobby" ||
+      !this.remoteReady ||
+      peerId !== this.opponentPeerId ||
+      peerId.localeCompare(this.localPeerId) >= 0
+    ) {
+      return;
+    }
+    this.preparedRaceId = raceId;
+    this.statusText?.setText("Pronto. Aguardando confirmacao da largada...").setColor("#7CFCEA");
+    this.mesh?.broadcast({
+      type: "race-ready",
+      protocolVersion: MULTIPLAYER_PROTOCOL_VERSION,
+      raceId,
+      sentAt: Date.now(),
+    });
+    this.armStartHandshakeTimeout(raceId);
+  }
+
+  private handleRaceReady(peerId: string, raceId: string): void {
+    if (
+      this.phase !== "lobby" ||
+      raceId !== this.preparedRaceId ||
+      peerId !== this.opponentPeerId ||
+      this.localPeerId.localeCompare(peerId) >= 0
+    ) {
+      return;
+    }
+    this.clearStartHandshakeTimer();
+    const startAt = Date.now() + START_COUNTDOWN_MS;
+    this.mesh?.broadcast({
+      type: "race-start",
+      protocolVersion: MULTIPLAYER_PROTOCOL_VERSION,
+      raceId,
+      startAt,
+    });
+    this.scheduleRace(raceId, startAt);
+  }
+
+  private handleRaceStart(peerId: string, raceId: string, remoteStartAt: number): void {
+    if (
+      this.phase !== "lobby" ||
+      raceId !== this.preparedRaceId ||
+      peerId !== this.opponentPeerId ||
+      peerId.localeCompare(this.localPeerId) >= 0
+    ) {
+      return;
+    }
+    const localStartAt = remoteStartAt + (this.remoteClockOffsetMs ?? 0);
+    const leadTime = localStartAt - Date.now();
+    if (leadTime < START_MIN_LEAD_MS || leadTime > START_MAX_LEAD_MS) {
+      this.failStartHandshake("Largada rejeitada por horario inconsistente.");
+      return;
+    }
+    this.clearStartHandshakeTimer();
+    this.scheduleRace(raceId, localStartAt);
+  }
+
+  private armStartHandshakeTimeout(raceId: string): void {
+    this.clearStartHandshakeTimer();
+    this.startHandshakeTimer = this.time.delayedCall(START_HANDSHAKE_TIMEOUT_MS, () => {
+      if (this.phase === "lobby" && this.preparedRaceId === raceId) {
+        this.failStartHandshake("Oponente nao confirmou a largada. Tentando novamente...");
+      }
+    });
+  }
+
+  private clearStartHandshakeTimer(): void {
+    this.startHandshakeTimer?.remove(false);
+    this.startHandshakeTimer = undefined;
+  }
+
+  private failStartHandshake(message: string): void {
+    this.clearStartHandshakeTimer();
+    this.preparedRaceId = undefined;
+    this.remoteReady = false;
+    this.nextStartAttemptAt = Date.now() + 2_000;
+    this.statusText?.setText(message).setColor("#FFD37C");
+  }
+
+  private scheduleRace(raceId: string, startAt: number): void {
     if (this.phase !== "lobby") return;
+    this.preparedRaceId = raceId;
     this.phase = "countdown";
     this.raceStartAt = startAt;
     this.createRaceWorld();
@@ -592,7 +748,7 @@ export class MultiplayerScene extends Phaser.Scene {
     const rawTimeMs = Math.max(0, Date.now() - this.raceStartAt);
     if (this.remoteResult && rawTimeMs > this.remoteResult.rawTimeMs + SECOND_PLAYER_LIMIT_MS) {
       this.localDnf = true;
-      this.mesh?.broadcast({ type: "race-dnf" });
+      this.broadcastDnf();
       this.showResults();
       return;
     }
@@ -603,6 +759,8 @@ export class MultiplayerScene extends Phaser.Scene {
     this.finishDeadlineAt ??= Date.now() + SECOND_PLAYER_LIMIT_MS;
     this.mesh?.broadcast({
       type: "race-finish",
+      protocolVersion: MULTIPLAYER_PROTOCOL_VERSION,
+      raceId: this.preparedRaceId!,
       rawTimeMs,
       credits: this.collectedCredits.size,
       deadlineAt: this.finishDeadlineAt,
@@ -614,6 +772,23 @@ export class MultiplayerScene extends Phaser.Scene {
 
   private handleRemoteFinish(message: RaceFinishMessage): void {
     if (this.phase !== "racing" && this.phase !== "countdown") return;
+    if (this.remoteResult || this.remoteDnf) return;
+    const convertedDeadline = message.deadlineAt + (this.remoteClockOffsetMs ?? 0);
+    const expectedDeadline =
+      this.finishDeadlineAt ?? this.raceStartAt + message.rawTimeMs + SECOND_PLAYER_LIMIT_MS;
+    const elapsedNow = Math.max(0, Date.now() - this.raceStartAt);
+    if (
+      message.credits > TILED_MULTIPLAYER_CREDIT_COUNT ||
+      message.credits < this.lastRemoteCredits ||
+      message.rawTimeMs < MIN_PLAUSIBLE_RACE_TIME_MS ||
+      message.rawTimeMs > MAX_RACE_DURATION_MS ||
+      message.rawTimeMs > elapsedNow + FINISH_CONSISTENCY_TOLERANCE_MS ||
+      Math.abs(convertedDeadline - expectedDeadline) > FINISH_CONSISTENCY_TOLERANCE_MS ||
+      (this.remoteTarget !== undefined && this.remoteTarget.x < this.raceEndX - SCREEN_WIDTH * 2)
+    ) {
+      console.warn("race-finish rejeitado por valores inconsistentes", message);
+      return;
+    }
     if (this.localResult && message.rawTimeMs > this.localResult.rawTimeMs + SECOND_PLAYER_LIMIT_MS) {
       this.remoteDnf = true;
       this.showResults();
@@ -623,7 +798,7 @@ export class MultiplayerScene extends Phaser.Scene {
       rawTimeMs: Math.max(0, message.rawTimeMs),
       credits: Phaser.Math.Clamp(Math.floor(message.credits), 0, TILED_MULTIPLAYER_CREDIT_COUNT),
     };
-    this.finishDeadlineAt ??= message.deadlineAt + (this.remoteClockOffsetMs ?? 0);
+    this.finishDeadlineAt ??= convertedDeadline;
     if (this.localResult || this.localDnf) this.showResults();
     else this.flashRaceMessage("OPONENTE TERMINOU — VOCE TEM 20 S");
   }
@@ -634,7 +809,7 @@ export class MultiplayerScene extends Phaser.Scene {
       this.localDnf = true;
       this.player?.sprite.setVelocity(0, 0);
       if (this.player?.sprite.body) this.player.sprite.body.enable = false;
-      this.mesh?.broadcast({ type: "race-dnf" });
+      this.broadcastDnf();
     } else if (this.localResult && !this.remoteResult) {
       if (Date.now() < this.finishDeadlineAt + RESULT_NETWORK_GRACE_MS) return;
       this.remoteDnf = true;
@@ -702,10 +877,12 @@ export class MultiplayerScene extends Phaser.Scene {
   }
 
   private sendSnapshot(): void {
-    if (!this.player) return;
+    if (!this.player || !this.preparedRaceId) return;
     const body = this.player.sprite.body!;
     this.mesh?.broadcast({
       type: "player-snapshot",
+      protocolVersion: MULTIPLAYER_PROTOCOL_VERSION,
+      raceId: this.preparedRaceId,
       sequence: this.snapshotSequence,
       sentAt: Date.now(),
       x: this.player.sprite.x,
@@ -721,8 +898,10 @@ export class MultiplayerScene extends Phaser.Scene {
   }
 
   private applyRemoteSnapshot(snapshot: PlayerSnapshotMessage): void {
-    if (snapshot.sequence <= this.lastRemoteSequence) return;
     this.lastRemoteSequence = snapshot.sequence;
+    this.lastRemoteSentAt = snapshot.sentAt;
+    this.lastRemoteCredits = snapshot.credits;
+    this.remoteCheckpointReached ||= snapshot.checkpointReached;
     this.remoteTarget = {
       x: Phaser.Math.Clamp(snapshot.x, 0, this.raceLength),
       y: Phaser.Math.Clamp(snapshot.y, -500, SCREEN_HEIGHT + 500),
@@ -731,11 +910,67 @@ export class MultiplayerScene extends Phaser.Scene {
     };
   }
 
+  private isSnapshotConsistent(snapshot: PlayerSnapshotMessage): boolean {
+    if (!this.isRaceMessageCurrent(snapshot.raceId)) return false;
+    if (this.phase !== "countdown" && this.phase !== "racing") return false;
+    if (snapshot.sequence <= this.lastRemoteSequence || snapshot.sentAt < this.lastRemoteSentAt) return false;
+    if (!this.isRemoteTimestampCurrent(snapshot.sentAt)) return false;
+    if (snapshot.x < -64 || snapshot.x > this.raceLength + SCREEN_WIDTH) return false;
+    if (snapshot.y < -500 || snapshot.y > SCREEN_HEIGHT + 500) return false;
+    if (snapshot.credits > TILED_MULTIPLAYER_CREDIT_COUNT || snapshot.credits < this.lastRemoteCredits) return false;
+    if (this.remoteCheckpointReached && !snapshot.checkpointReached) return false;
+    if (snapshot.finished && !this.remoteResult) return false;
+    return true;
+  }
+
+  private isRaceMessageCurrent(raceId: string): boolean {
+    return this.preparedRaceId !== undefined && raceId === this.preparedRaceId;
+  }
+
+  private broadcastDnf(): void {
+    if (!this.preparedRaceId) return;
+    this.mesh?.broadcast({
+      type: "race-dnf",
+      protocolVersion: MULTIPLAYER_PROTOCOL_VERSION,
+      raceId: this.preparedRaceId,
+    });
+  }
+
+  private resendRaceState(): void {
+    if (!this.preparedRaceId) return;
+    if (this.phase === "countdown" || this.phase === "racing") {
+      this.mesh?.broadcast({
+        type: "race-start",
+        protocolVersion: MULTIPLAYER_PROTOCOL_VERSION,
+        raceId: this.preparedRaceId,
+        startAt: this.raceStartAt,
+      });
+      this.sendSnapshot();
+    }
+    if (this.localResult && this.finishDeadlineAt) {
+      this.mesh?.broadcast({
+        type: "race-finish",
+        protocolVersion: MULTIPLAYER_PROTOCOL_VERSION,
+        raceId: this.preparedRaceId,
+        rawTimeMs: this.localResult.rawTimeMs,
+        credits: this.localResult.credits,
+        deadlineAt: this.finishDeadlineAt,
+      });
+    } else if (this.localDnf) {
+      this.broadcastDnf();
+    }
+  }
+
   private updateRemoteClock(remoteSentAt: number): void {
     const candidate = Date.now() - remoteSentAt;
     // O menor valor observado reduz a parcela de latencia de rede da estimativa.
     this.remoteClockOffsetMs =
       this.remoteClockOffsetMs === undefined ? candidate : Math.min(this.remoteClockOffsetMs, candidate);
+  }
+
+  private isRemoteTimestampCurrent(remoteTimestamp: number): boolean {
+    if (this.remoteClockOffsetMs === undefined) return true;
+    return Math.abs(remoteTimestamp + this.remoteClockOffsetMs - Date.now()) <= 5_000;
   }
 
   private updateOpponent(delta: number): void {

@@ -49,7 +49,13 @@ export class BroadcastChannelSignaling implements SignalingTransport {
   }
 }
 
-/** Sinalizacao remota com fila de abertura e reconexao exponencial. */
+/**
+ * Sinalizacao remota com fila apenas durante a primeira abertura.
+ *
+ * SDP e ICE perdem validade quando o WebSocket cai. Em uma reconexao eles sao
+ * descartados; o WebRtcMesh recebe o novo estado "open" e inicia uma negociacao
+ * limpa, em vez de reproduzir uma fila pertencente ao RTCPeerConnection antigo.
+ */
 export class WebSocketSignaling implements SignalingTransport {
   private socket?: WebSocket;
   private onMessage?: (message: SignalEnvelope) => void;
@@ -81,7 +87,11 @@ export class WebSocketSignaling implements SignalingTransport {
       return;
     }
 
-    // Evita crescimento ilimitado caso o servidor fique indisponivel.
+    // Depois da primeira conexao, qualquer SDP/ICE enfileirado seria obsoleto.
+    // A presenca armazenada sera reenviada para disparar uma negociacao limpa.
+    if (this.hasOpened) return;
+
+    // Limita tambem a fila inicial caso o servidor fique indisponivel.
     if (this.queue.length >= 256) this.queue.shift();
     this.queue.push(message);
   }
@@ -116,9 +126,13 @@ export class WebSocketSignaling implements SignalingTransport {
       this.reconnectAttempt = 0;
       this.onStateChange?.("open");
 
-      if (isReconnect && this.presence) socket.send(JSON.stringify(this.presence));
-      const pending = this.queue.splice(0);
-      pending.forEach((message) => socket.send(JSON.stringify(message)));
+      if (isReconnect) {
+        this.queue = [];
+        if (this.presence) socket.send(JSON.stringify(this.presence));
+      } else {
+        const pending = this.queue.splice(0);
+        pending.forEach((message) => socket.send(JSON.stringify(message)));
+      }
     };
     socket.onmessage = ({ data }: MessageEvent<unknown>) => {
       if (typeof data !== "string") return;
@@ -133,6 +147,7 @@ export class WebSocketSignaling implements SignalingTransport {
     socket.onclose = () => {
       if (this.socket === socket) this.socket = undefined;
       if (this.manuallyClosed) return;
+      this.queue = [];
       this.onStateChange?.("closed");
       this.scheduleReconnect();
     };

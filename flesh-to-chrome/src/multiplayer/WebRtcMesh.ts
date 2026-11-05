@@ -25,12 +25,15 @@ export interface WebRtcMeshOptions {
 const DEFAULT_RTC_CONFIGURATION: RTCConfiguration = {
   iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
 };
+const PEER_RECOVERY_TIMEOUT_MS = 10_000;
 
 /** Um RTCPeerConnection e um DataChannel direto para cada participante. */
 export class WebRtcMesh extends EventTarget {
   private readonly peers = new Map<string, PeerConnectionState>();
+  private readonly recoveringPeers = new Map<string, number>();
   private readonly configuration: RTCConfiguration;
   private started = false;
+  private signalingOpened = false;
 
   constructor(private readonly options: WebRtcMeshOptions) {
     super();
@@ -43,7 +46,13 @@ export class WebRtcMesh extends EventTarget {
     try {
       this.options.signaling.open(
         (message) => void this.handleSignal(message),
-        (state) => this.dispatchEvent(new CustomEvent("signalingstate", { detail: { state } }))
+        (state) => {
+          if (state === "open") {
+            if (this.signalingOpened) this.recoverAllPeers();
+            this.signalingOpened = true;
+          }
+          this.dispatchEvent(new CustomEvent("signalingstate", { detail: { state } }));
+        }
       );
       this.sendSignal({ type: "presence", requestReply: true });
     } catch (error) {
@@ -57,7 +66,10 @@ export class WebRtcMesh extends EventTarget {
     if (!this.started) return;
     this.sendSignal({ type: "leave" });
     this.started = false;
-    this.peers.forEach((_, peerId) => this.closePeer(peerId));
+    this.peers.forEach((peer, peerId) => this.closePeer(peerId, peer, false));
+    this.recoveringPeers.forEach((timer) => window.clearTimeout(timer));
+    this.recoveringPeers.clear();
+    this.signalingOpened = false;
     this.options.signaling.close();
   }
 
@@ -111,7 +123,7 @@ export class WebRtcMesh extends EventTarget {
           await this.acceptCandidate(peerId, envelope.signal.candidate);
           break;
         case "leave":
-          this.closePeer(peerId);
+          this.beginPeerRecovery(peerId);
           break;
       }
     } catch (error) {
@@ -143,7 +155,7 @@ export class WebRtcMesh extends EventTarget {
         })
       );
       if (connection.connectionState === "failed" || connection.connectionState === "closed") {
-        this.closePeer(peerId);
+        if (this.peers.get(peerId) === state) this.beginPeerRecovery(peerId);
       }
     };
 
@@ -218,10 +230,15 @@ export class WebRtcMesh extends EventTarget {
     channel.onopen = () => {
       if (!isControlChannel || peer.connected) return;
       peer.connected = true;
-      this.dispatchEvent(new CustomEvent("peerconnected", { detail: { peerId } }));
+      const recoveryTimer = this.recoveringPeers.get(peerId);
+      const recovered = recoveryTimer !== undefined;
+      if (recoveryTimer !== undefined) window.clearTimeout(recoveryTimer);
+      this.recoveringPeers.delete(peerId);
+      this.dispatchEvent(new CustomEvent("peerconnected", { detail: { peerId, recovered } }));
     };
     channel.onclose = () => {
-      if (isControlChannel) this.closePeer(peerId);
+      if (this.peers.get(peerId) !== peer) return;
+      if (isControlChannel) this.beginPeerRecovery(peerId);
       else if (peer.stateChannel === channel) peer.stateChannel = undefined;
     };
     channel.onerror = () => {
@@ -235,21 +252,68 @@ export class WebRtcMesh extends EventTarget {
         const message: unknown = JSON.parse(data);
         if (isMultiplayerMessage(message)) {
           this.dispatchEvent(new CustomEvent("message", { detail: { peerId, message } }));
+        } else {
+          this.dispatchEvent(
+            new CustomEvent("protocolerror", {
+              detail: { peerId, reason: "Mensagem de jogo fora do contrato." },
+            }),
+          );
         }
       } catch {
-        // Um pacote invalido nao deve derrubar a partida local.
+        this.dispatchEvent(
+          new CustomEvent("protocolerror", {
+            detail: { peerId, reason: "Mensagem de jogo não é JSON válido." },
+          }),
+        );
       }
     };
   }
 
-  private closePeer(peerId: string): void {
+  private recoverAllPeers(): void {
+    const peerIds = new Set([...this.peers.keys(), ...this.recoveringPeers.keys()]);
+    peerIds.forEach((peerId) => this.beginPeerRecovery(peerId));
+    this.sendSignal({ type: "presence", requestReply: true });
+  }
+
+  private beginPeerRecovery(peerId: string): void {
+    if (!this.started) return;
     const peer = this.peers.get(peerId);
-    if (!peer) return;
+    if (peer) this.closePeer(peerId, peer, false);
+    if (this.recoveringPeers.has(peerId)) return;
+
+    this.dispatchEvent(new CustomEvent("peerreconnecting", { detail: { peerId } }));
+    const timer = window.setTimeout(() => {
+      if (!this.recoveringPeers.has(peerId)) return;
+      this.recoveringPeers.delete(peerId);
+      this.dispatchEvent(new CustomEvent("peerdisconnected", { detail: { peerId } }));
+    }, PEER_RECOVERY_TIMEOUT_MS);
+    this.recoveringPeers.set(peerId, timer);
+    this.sendSignal({ type: "presence", requestReply: true });
+  }
+
+  private closePeer(
+    peerId: string,
+    expectedPeer?: PeerConnectionState,
+    notify = true,
+  ): void {
+    const peer = this.peers.get(peerId);
+    if (!peer || (expectedPeer && peer !== expectedPeer)) return;
     this.peers.delete(peerId);
+    if (peer.controlChannel) {
+      peer.controlChannel.onclose = null;
+      peer.controlChannel.onmessage = null;
+    }
+    if (peer.stateChannel) {
+      peer.stateChannel.onclose = null;
+      peer.stateChannel.onmessage = null;
+    }
+    peer.connection.onconnectionstatechange = null;
     peer.controlChannel?.close();
     peer.stateChannel?.close();
     peer.connection.close();
-    if (peer.connected) this.dispatchEvent(new CustomEvent("peerdisconnected", { detail: { peerId } }));
+    if (notify && peer.connected) {
+      this.dispatchEvent(new CustomEvent("peerdisconnected", { detail: { peerId } }));
+    }
   }
 
   private sendSignal(signal: WebRtcSignal, to?: string): void {

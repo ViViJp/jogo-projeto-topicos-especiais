@@ -103,3 +103,19 @@ créditos coletados e não interrompe o cronômetro. Quando alguém termina, o o
 recebe 20 s antes do DNF. O resultado usa `tempo bruto - 0,5 s por crédito`, com
 bônus máximo de 10 s, e aplica os desempates de créditos e tempo bruto do GDD.
 Direção: GDD + estética **cyberpunk** (ascensão social / Glitch City). Level design e playtest de pulos usam os mapas de referência integrados ao runtime em `flesh-to-chrome/src/assets/`.
+
+### Segurança e aceite do multiplayer
+
+O modo WebRTC é cliente-autoritativo. As mensagens são validadas por versão,
+identificador da corrida, limites e consistência, mas um cliente modificado ainda
+pode falsificar ações plausíveis; o servidor de sinalização não certifica o
+resultado. A descrição da largada em duas fases, renegociação dos DataChannels,
+restauração após morte e o roteiro de teste em dois dispositivos está em
+[`flesh-to-chrome/docs/MULTIPLAYER_SECURITY_AND_PLAYTEST.md`](flesh-to-chrome/docs/MULTIPLAYER_SECURITY_AND_PLAYTEST.md).
+
+Validação automatizada específica:
+
+```bash
+cd flesh-to-chrome
+npm run test:multiplayer
+```

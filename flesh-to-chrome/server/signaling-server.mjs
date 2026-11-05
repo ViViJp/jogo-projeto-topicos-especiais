@@ -146,17 +146,44 @@ function parseEnvelope(serialized) {
     case "presence":
       return typeof value.signal.requestReply === "boolean" ? value : undefined;
     case "offer":
+      return validSessionDescription(value.signal.description, "offer")
+        ? value
+        : undefined;
     case "answer":
-      return isRecord(value.signal.description) && typeof value.signal.description.type === "string"
+      return validSessionDescription(value.signal.description, "answer")
         ? value
         : undefined;
     case "ice-candidate":
-      return isRecord(value.signal.candidate) ? value : undefined;
+      return validIceCandidate(value.signal.candidate) ? value : undefined;
     case "leave":
       return value;
     default:
       return undefined;
   }
+}
+
+function validSessionDescription(value, expectedType) {
+  return (
+    isRecord(value) &&
+    value.type === expectedType &&
+    typeof value.sdp === "string" &&
+    value.sdp.length > 0 &&
+    value.sdp.length <= 64 * 1024
+  );
+}
+
+function validIceCandidate(value) {
+  if (!isRecord(value) || typeof value.candidate !== "string" || value.candidate.length > 4096) {
+    return false;
+  }
+  if (value.sdpMid !== undefined && value.sdpMid !== null && typeof value.sdpMid !== "string") {
+    return false;
+  }
+  return (
+    value.sdpMLineIndex === undefined ||
+    value.sdpMLineIndex === null ||
+    (Number.isInteger(value.sdpMLineIndex) && value.sdpMLineIndex >= 0 && value.sdpMLineIndex <= 65535)
+  );
 }
 
 function validIdentifier(value) {
