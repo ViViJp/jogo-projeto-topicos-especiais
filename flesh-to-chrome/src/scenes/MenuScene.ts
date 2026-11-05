@@ -33,19 +33,15 @@ export class MenuScene extends Phaser.Scene {
   }
 
   create(): void {
-    // O Phaser reaproveita a MESMA instância da cena a cada `scene.start`, então
-    // estes campos sobrevivem entre visitas. Sem zerar, `optionTexts` ainda
-    // guardava os textos DESTRUÍDOS da visita anterior e `setSelected()` chamava
-    // `setColor` neles — exceção que derrubava o menu inteiro (tela vazia) ao
-    // voltar do Multiplayer com ESC.
+    // A instancia da cena e reutilizada ao voltar do jogo/multiplayer.
     this.optionTexts = [];
     this.selectedIndex = 0;
     this.confirmVisible = false;
     this.confirmText = undefined;
+    this.mode = "main";
 
     this.cameras.main.setBackgroundColor(0x05050a);
     this.input$ = new InputManager(this);
-    this.optionTexts = [];
 
     this.add
       .text(SCREEN_WIDTH / 2, 150, "FLESH TO CHROME", {
@@ -75,73 +71,17 @@ export class MenuScene extends Phaser.Scene {
     this.showMainMenu();
 
     this.add
-      .text(SCREEN_WIDTH / 2, SCREEN_HEIGHT - 40, "↑↓ / W S ou DIRECIONAL navegar   ENTER / A confirmar   ESC / B voltar", {
-        fontFamily: "Courier New, monospace",
-        fontSize: "14px",
-        color: "#565f80",
-      })
-      .setOrigin(0.5);
-  }
-
-  private renderOptions(): void {
-    this.optionTexts.forEach((text) => text.destroy());
-    this.optionTexts = [];
-
-    const startY = this.mode === "phase-select" ? 320 : 340;
-    const spacing = this.mode === "phase-select" ? 48 : 56;
-    this.options.forEach((opt, i) => {
-      const text = this.add
-        .text(SCREEN_WIDTH / 2, startY + i * spacing, opt.label, {
+      .text(
+        SCREEN_WIDTH / 2,
+        SCREEN_HEIGHT - 40,
+        "↑↓ / W S ou DIRECIONAL navegar   ENTER / A confirmar   ESC / B voltar",
+        {
           fontFamily: "Courier New, monospace",
-          fontSize: this.mode === "phase-select" ? "23px" : "28px",
-          color: "#e8ecff",
-        })
-        .setOrigin(0.5)
-        .setInteractive({ useHandCursor: true })
-        .on("pointerover", () => this.setSelected(i))
-        .on("pointerdown", () => {
-          this.setSelected(i);
-          this.confirmSelection();
-        });
-      this.optionTexts.push(text);
-    });
-
-    this.setSelected(0);
-  }
-
-  private showMainMenu(): void {
-    this.mode = "main";
-    this.menuHint?.setText("MENU PRINCIPAL");
-    this.options = [];
-    if (this.hasSave) {
-      this.options.push({ label: "Continuar", action: () => this.continueGame() });
-    }
-    this.options.push({ label: "Novo Jogo", action: () => this.newGame(this.hasSave) });
-    this.options.push({ label: "Selecionar Fase (teste)", action: () => this.showPhaseSelect() });
-    this.options.push({ label: "Multiplayer", action: () => this.multiplayer() });
-    this.renderOptions();
-  }
-
-  private showPhaseSelect(): void {
-    this.mode = "phase-select";
-    this.menuHint?.setText("SELEÇÃO TEMPORÁRIA — NÃO ALTERA O SAVE");
-    this.options = TEST_PHASES.map((phase) => ({
-      label: phase.label,
-      action: () => this.startTestPhase(phase.id),
-    }));
-    this.options.push({ label: "← Voltar", action: () => this.showMainMenu() });
-    this.renderOptions();
-  }
-
-  private startTestPhase(phaseId: string): void {
-    this.scene.start("GameScene", {
-      phaseId,
-      checkpointX: 0,
-      checkpointY: 0,
-      consolidatedCreditIds: [],
-      wallet: 0,
-      testMode: true,
-    } as GameSceneData);
+          fontSize: "14px",
+          color: "#565f80",
+        }
+      )
+      .setOrigin(0.5);
   }
 
   update(): void {
@@ -172,11 +112,73 @@ export class MenuScene extends Phaser.Scene {
     this.input$.postUpdate();
   }
 
+  private renderOptions(): void {
+    this.optionTexts.forEach((text) => text.destroy());
+    this.optionTexts = [];
+    this.selectedIndex = 0;
+
+    const startY = this.mode === "phase-select" ? 320 : 340;
+    const spacing = this.mode === "phase-select" ? 48 : 56;
+    this.options.forEach((option, index) => {
+      const text = this.add
+        .text(SCREEN_WIDTH / 2, startY + index * spacing, option.label, {
+          fontFamily: "Courier New, monospace",
+          fontSize: this.mode === "phase-select" ? "23px" : "28px",
+          color: "#e8ecff",
+        })
+        .setOrigin(0.5)
+        .setInteractive({ useHandCursor: true })
+        .on("pointerover", () => this.setSelected(index))
+        .on("pointerdown", () => {
+          this.setSelected(index);
+          this.confirmSelection();
+        });
+      this.optionTexts.push(text);
+    });
+
+    if (this.options.length > 0) this.setSelected(0);
+  }
+
+  private showMainMenu(): void {
+    this.mode = "main";
+    this.menuHint?.setText("MENU PRINCIPAL");
+    this.options = [];
+    if (this.hasSave) {
+      this.options.push({ label: "Continuar", action: () => this.continueGame() });
+    }
+    this.options.push({ label: "Novo Jogo", action: () => this.newGame(this.hasSave) });
+    this.options.push({ label: "Selecionar Fase (teste)", action: () => this.showPhaseSelect() });
+    this.options.push({ label: "Multiplayer", action: () => this.openMultiplayer() });
+    this.renderOptions();
+  }
+
+  private showPhaseSelect(): void {
+    this.mode = "phase-select";
+    this.menuHint?.setText("SELEÇÃO TEMPORÁRIA — NÃO ALTERA O SAVE");
+    this.options = TEST_PHASES.map((phase) => ({
+      label: phase.label,
+      action: () => this.startTestPhase(phase.id),
+    }));
+    this.options.push({ label: "← Voltar", action: () => this.showMainMenu() });
+    this.renderOptions();
+  }
+
+  private startTestPhase(phaseId: string): void {
+    this.scene.start("GameScene", {
+      phaseId,
+      checkpointX: 0,
+      checkpointY: 0,
+      consolidatedCreditIds: [],
+      wallet: 0,
+      testMode: true,
+    } as GameSceneData);
+  }
+
   private setSelected(index: number): void {
     this.selectedIndex = index;
-    this.optionTexts.forEach((t, i) => {
-      t.setColor(i === index ? "#FFD37C" : "#e8ecff");
-      t.setScale(i === index ? 1.06 : 1);
+    this.optionTexts.forEach((text, optionIndex) => {
+      text.setColor(optionIndex === index ? "#FFD37C" : "#e8ecff");
+      text.setScale(optionIndex === index ? 1.06 : 1);
     });
   }
 
@@ -185,7 +187,7 @@ export class MenuScene extends Phaser.Scene {
     this.options[this.selectedIndex]?.action();
   }
 
-  private multiplayer(): void {
+  private openMultiplayer(): void {
     this.scene.start("MultiplayerScene");
   }
 
@@ -227,7 +229,6 @@ export class MenuScene extends Phaser.Scene {
         }
       )
       .setOrigin(0.5);
-
   }
 
   private confirmNewGame(): void {

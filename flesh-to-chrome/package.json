@@ -6,9 +6,13 @@
   "scripts": {
     "start": "parcel src/index.html --open --no-cache",
     "dev": "parcel src/index.html --no-cache",
+    "dev:network": "parcel src/index.html --host 0.0.0.0 --no-cache",
+    "dev:multiplayer": "node server/start-multiplayer-dev.mjs",
+    "signaling": "node server/signaling-server.mjs",
     "build": "parcel build src/index.html --dist-dir dist --no-cache",
     "typecheck": "tsc --noEmit",
-    "validate:assets": "node scripts/validate-assets.mjs"
+    "validate:assets": "node scripts/validate-assets.mjs",
+    "test:multiplayer": "node scripts/test-multiplayer-protocol.mjs"
   },
   "devDependencies": {
     "@types/node": "^20.14.0",
@@ -17,7 +21,8 @@
     "typescript": "^5.5.0"
   },
   "dependencies": {
-    "mqtt": "^5.14.1",
-    "phaser": "^4.2.1"
+    "phaser": "^4.2.1",
+    "ws": "^8.22.1",
+    "mqtt": "^5.14.1"
   }
 }

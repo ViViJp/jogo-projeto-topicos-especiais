@@ -8,6 +8,7 @@ export class BootScene extends Phaser.Scene {
 
   create(): void {
     generatePlaceholderTextures(this);
-    this.scene.start("MenuScene");
+    const hasMultiplayerInvite = new URL(window.location.href).searchParams.has("room");
+    this.scene.start(hasMultiplayerInvite ? "MultiplayerScene" : "MenuScene");
   }
 }
