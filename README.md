@@ -36,3 +36,15 @@ A pasta `src/` na raiz (Vite + Phaser 3) foi **removida** — era um segundo pro
 ## Referências
 
 Direção: GDD + estética **cyberpunk** (ascensão social / Glitch City). Level design e playtest de pulos usam o mapa do Victor integrado no `flesh-to-chrome` (responsabilidade do Motoca).
+
+## Multiplayer WebRTC (experimental)
+
+O menu já expõe um lobby técnico com topologia WebRTC NxN: cada participante
+abre um `RTCPeerConnection` e um DataChannel direto para cada outro participante.
+Nesta primeira etapa, a sinalização usa `BroadcastChannel`, portanto o teste é
+feito abrindo o link da sala em duas ou mais abas da mesma origem/navegador.
+
+A camada de sinalização é injetável (`flesh-to-chrome/src/multiplayer/SignalingTransport.ts`),
+deixando a troca futura por WebSocket isolada do mesh e do protocolo do jogo.
+Para conexão entre dispositivos ainda será necessário implementar esse servidor
+de sinalização e disponibilizar TURN para redes que bloqueiem conexão P2P direta.
