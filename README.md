@@ -41,10 +41,38 @@ Direção: GDD + estética **cyberpunk** (ascensão social / Glitch City). Level
 
 O menu já expõe um lobby técnico com topologia WebRTC NxN: cada participante
 abre um `RTCPeerConnection` e um DataChannel direto para cada outro participante.
-Nesta primeira etapa, a sinalização usa `BroadcastChannel`, portanto o teste é
-feito abrindo o link da sala em duas ou mais abas da mesma origem/navegador.
+A sinalização usa um servidor WebSocket apenas para presença, SDP e candidatos
+ICE; o estado do jogo continua trafegando diretamente entre os dispositivos.
 
-A camada de sinalização é injetável (`flesh-to-chrome/src/multiplayer/SignalingTransport.ts`),
-deixando a troca futura por WebSocket isolada do mesh e do protocolo do jogo.
-Para conexão entre dispositivos ainda será necessário implementar esse servidor
-de sinalização e disponibilizar TURN para redes que bloqueiem conexão P2P direta.
+### Teste entre dispositivos na mesma rede
+
+```bash
+npm run dev:multiplayer
+```
+
+O comando inicia o jogo em `0.0.0.0:1234` e a sinalização em `0.0.0.0:8080`.
+O terminal mostra um endereço como `http://192.168.1.10:1234`: abra exatamente
+esse endereço nos dois dispositivos, entre em **Multiplayer** no primeiro e use
+o botão de copiar convite. As portas 1234 e 8080 precisam estar liberadas no
+firewall da máquina que executa o projeto.
+
+O cliente deduz `ws://<host-do-jogo>:8080/ws`. Outro servidor pode ser escolhido
+com `?signal=wss%3A%2F%2Fmeu-dominio%2Fws`. Para manter o teste antigo somente
+entre abas, use `?signal=local`.
+
+### Redes diferentes e TURN
+
+O STUN público configurado atende conexões diretas compatíveis. Para redes com
+NAT simétrico ou bloqueio de P2P, configure um relay TURN antes de iniciar:
+
+```bash
+TURN_URL=turn:turn.exemplo.com:3478 \
+TURN_USERNAME=usuario \
+TURN_CREDENTIAL=segredo \
+npm run dev:multiplayer
+```
+
+O servidor publica essa configuração em `/ice-config`. Em produção, use
+credenciais TURN temporárias e exponha jogo e WebSocket com HTTPS/WSS por um
+proxy reverso. O servidor limita cada sala a 8 peers por padrão; altere com
+`MAX_PEERS_PER_ROOM` sabendo que um mesh NxN cresce quadraticamente.

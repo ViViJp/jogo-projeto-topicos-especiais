@@ -40,7 +40,10 @@ export class WebRtcMesh extends EventTarget {
     if (this.started) return;
     this.started = true;
     try {
-      this.options.signaling.open((message) => void this.handleSignal(message));
+      this.options.signaling.open(
+        (message) => void this.handleSignal(message),
+        (state) => this.dispatchEvent(new CustomEvent("signalingstate", { detail: { state } }))
+      );
       this.sendSignal({ type: "presence", requestReply: true });
     } catch (error) {
       this.started = false;

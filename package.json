@@ -5,6 +5,8 @@
   "description": "Monorepo wrapper — o jogo oficial está em ./flesh-to-chrome",
   "scripts": {
     "dev": "npm --prefix flesh-to-chrome run dev",
+    "dev:multiplayer": "npm --prefix flesh-to-chrome run dev:multiplayer",
+    "signaling": "npm --prefix flesh-to-chrome run signaling",
     "start": "npm --prefix flesh-to-chrome run start",
     "build": "npm --prefix flesh-to-chrome run build",
     "typecheck": "npm --prefix flesh-to-chrome run typecheck",

@@ -1,7 +1,12 @@
 import Phaser from "phaser";
 import { SCREEN_HEIGHT, SCREEN_WIDTH } from "../config/GameConfig";
 import { MultiplayerMessage } from "../multiplayer/MultiplayerProtocol";
-import { BroadcastChannelSignaling } from "../multiplayer/SignalingTransport";
+import {
+  BroadcastChannelSignaling,
+  SignalingState,
+  SignalingTransport,
+  WebSocketSignaling,
+} from "../multiplayer/SignalingTransport";
 import { WebRtcMesh } from "../multiplayer/WebRtcMesh";
 import { InputManager } from "../systems/InputManager";
 
@@ -17,6 +22,7 @@ export class MultiplayerScene extends Phaser.Scene {
   private roomId = "";
   private lastHeartbeatAt = 0;
   private returning = false;
+  private meshStartId = 0;
 
   constructor() {
     super("MultiplayerScene");
@@ -47,14 +53,14 @@ export class MultiplayerScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.statusText = this.add
-      .text(SCREEN_WIDTH / 2, 255, "Abrindo sinalizacao local...", textStyle("#FFD37C", "22px"))
+      .text(SCREEN_WIDTH / 2, 255, "Conectando ao servidor de sinalizacao...", textStyle("#FFD37C", "22px"))
       .setOrigin(0.5);
     this.peersText = this.add
       .text(SCREEN_WIDTH / 2, 325, "0 peers conectados", textStyle("#e8ecff", "26px"))
       .setOrigin(0.5);
 
     const copyButton = this.add
-      .text(SCREEN_WIDTH / 2, 425, "[ COPIAR LINK PARA OUTRA ABA ]", {
+      .text(SCREEN_WIDTH / 2, 425, "[ COPIAR CONVITE PARA OUTRO DISPOSITIVO ]", {
         ...textStyle("#7CFCEA", "20px"),
         backgroundColor: "#102824",
         padding: { x: 16, y: 10 },
@@ -69,8 +75,8 @@ export class MultiplayerScene extends Phaser.Scene {
       .text(
         SCREEN_WIDTH / 2,
         510,
-        "Abra o link em outras abas deste navegador para testar o mesh.\n" +
-          "Cada participante estabelece um DataChannel direto com todos os demais.",
+        "Abra o link em outro computador ou celular conectado a rede.\n" +
+          "Apos a sinalizacao, os DataChannels conectam os jogadores diretamente.",
         { ...textStyle("#8892b0", "16px"), align: "center" }
       )
       .setOrigin(0.5);
@@ -84,7 +90,7 @@ export class MultiplayerScene extends Phaser.Scene {
       )
       .setOrigin(0.5);
 
-    this.startMesh();
+    void this.startMesh();
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.stopMesh());
   }
 
@@ -99,39 +105,68 @@ export class MultiplayerScene extends Phaser.Scene {
     this.input$.postUpdate();
   }
 
-  private startMesh(): void {
-    if (!("RTCPeerConnection" in window) || !("BroadcastChannel" in window)) {
+  private async startMesh(): Promise<void> {
+    const startId = ++this.meshStartId;
+    if (!("RTCPeerConnection" in window) || !("WebSocket" in window)) {
       this.statusText
         ?.setText("Este navegador nao oferece as APIs WebRTC necessarias.")
         .setColor("#ff8a8a");
       return;
     }
 
-    this.mesh = new WebRtcMesh({
-      localPeerId: this.localPeerId,
-      roomId: this.roomId,
-      signaling: new BroadcastChannelSignaling(SIGNALING_CHANNEL),
-    });
-    this.mesh.addEventListener("peerconnected", () => this.refreshPeerStatus());
-    this.mesh.addEventListener("peerdisconnected", () => this.refreshPeerStatus());
-    this.mesh.addEventListener("message", (event) => {
-      const detail = (event as CustomEvent<{ peerId: string; message: MultiplayerMessage }>).detail;
-      if (detail.message.type === "peer-state") {
-        this.statusText?.setText(`Estado recebido de ${detail.peerId}`).setColor("#7CFCEA");
-      }
-    });
-    this.mesh.addEventListener("mesherror", (event) => {
-      const error = (event as CustomEvent<unknown>).detail;
-      console.error("Falha no mesh WebRTC", error);
-      this.statusText?.setText("Falha ao negociar uma conexao WebRTC.").setColor("#ff8a8a");
-    });
     try {
+      const signaling = resolveSignaling();
+      const rtcConfiguration = signaling.serverUrl
+        ? await loadIceConfiguration(signaling.serverUrl)
+        : undefined;
+      if (startId !== this.meshStartId) return;
+
+      this.mesh = new WebRtcMesh({
+        localPeerId: this.localPeerId,
+        roomId: this.roomId,
+        signaling: signaling.transport,
+        rtcConfiguration,
+      });
+      this.mesh.addEventListener("peerconnected", () => this.refreshPeerStatus());
+      this.mesh.addEventListener("peerdisconnected", () => this.refreshPeerStatus());
+      this.mesh.addEventListener("signalingstate", (event) => {
+        const { state } = (event as CustomEvent<{ state: SignalingState }>).detail;
+        this.updateSignalingStatus(state);
+      });
+      this.mesh.addEventListener("message", (event) => {
+        const detail = (event as CustomEvent<{ peerId: string; message: MultiplayerMessage }>).detail;
+        if (detail.message.type === "peer-state") {
+          this.statusText?.setText(`Estado recebido de ${detail.peerId}`).setColor("#7CFCEA");
+        }
+      });
+      this.mesh.addEventListener("mesherror", (event) => {
+        const error = (event as CustomEvent<unknown>).detail;
+        console.error("Falha no mesh WebRTC", error);
+        this.statusText?.setText("Falha ao negociar uma conexao WebRTC.").setColor("#ff8a8a");
+      });
       this.mesh.start();
-      this.statusText?.setText("Aguardando peers na sala...");
     } catch (error) {
       console.error("Falha ao abrir a sinalizacao WebRTC", error);
       this.mesh = undefined;
-      this.statusText?.setText("Nao foi possivel abrir a sinalizacao local.").setColor("#ff8a8a");
+      this.statusText?.setText("Nao foi possivel abrir a sinalizacao.").setColor("#ff8a8a");
+    }
+  }
+
+  private updateSignalingStatus(state: SignalingState): void {
+    if ((this.mesh?.connectedPeerIds().length ?? 0) > 0) return;
+    switch (state) {
+      case "connecting":
+        this.statusText?.setText("Conectando ao servidor de sinalizacao...").setColor("#FFD37C");
+        break;
+      case "open":
+        this.statusText?.setText("Servidor conectado. Aguardando peers...").setColor("#7CFCEA");
+        break;
+      case "closed":
+        this.statusText?.setText("Sinalizacao desconectada. Tentando novamente...").setColor("#FFD37C");
+        break;
+      case "error":
+        this.statusText?.setText("Servidor indisponivel. Verifique npm run dev:multiplayer.").setColor("#ff8a8a");
+        break;
     }
   }
 
@@ -146,15 +181,21 @@ export class MultiplayerScene extends Phaser.Scene {
   }
 
   private async copyInviteLink(): Promise<void> {
-    try {
-      await navigator.clipboard.writeText(window.location.href);
-      this.statusText?.setText("Link copiado. Abra-o em uma nova aba.").setColor("#7CFCEA");
-    } catch {
-      this.statusText?.setText(`Use esta sala em outra aba: ${this.roomId}`).setColor("#FFD37C");
+    if (isLoopbackHost(window.location.hostname)) {
+      this.statusText
+        ?.setText("Abra o jogo pelo IP da rede local antes de copiar o convite.")
+        .setColor("#FFD37C");
+      return;
+    }
+    if (await copyText(window.location.href)) {
+      this.statusText?.setText("Convite copiado. Abra-o no outro dispositivo.").setColor("#7CFCEA");
+    } else {
+      this.statusText?.setText(`Copie a URL do navegador. Sala: ${this.roomId}`).setColor("#FFD37C");
     }
   }
 
   private stopMesh(): void {
+    this.meshStartId += 1;
     this.mesh?.stop();
     this.mesh = undefined;
   }
@@ -180,6 +221,82 @@ function roomFromUrl(): string {
 
 function createPeerId(): string {
   return `alex-${randomToken(5)}`;
+}
+
+interface ResolvedSignaling {
+  transport: SignalingTransport;
+  serverUrl?: string;
+}
+
+function resolveSignaling(): ResolvedSignaling {
+  const configuredServer = new URL(window.location.href).searchParams.get("signal");
+  if (configuredServer === "local") {
+    if (!("BroadcastChannel" in window)) throw new Error("BroadcastChannel indisponivel.");
+    return { transport: new BroadcastChannelSignaling(SIGNALING_CHANNEL) };
+  }
+
+  const serverUrl = configuredServer || defaultSignalingUrl();
+  const parsedUrl = new URL(serverUrl);
+  if (parsedUrl.protocol !== "ws:" && parsedUrl.protocol !== "wss:") {
+    throw new Error("A URL de sinalizacao precisa usar ws:// ou wss://.");
+  }
+  return { transport: new WebSocketSignaling(parsedUrl.toString()), serverUrl: parsedUrl.toString() };
+}
+
+function defaultSignalingUrl(): string {
+  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  return `${protocol}//${window.location.hostname}:8080/ws`;
+}
+
+async function loadIceConfiguration(serverUrl: string): Promise<RTCConfiguration | undefined> {
+  const configurationUrl = new URL(serverUrl);
+  configurationUrl.protocol = configurationUrl.protocol === "wss:" ? "https:" : "http:";
+  configurationUrl.pathname = "/ice-config";
+  configurationUrl.search = "";
+  configurationUrl.hash = "";
+
+  const abortController = new AbortController();
+  const timeout = window.setTimeout(() => abortController.abort(), 2500);
+  try {
+    const response = await fetch(configurationUrl, { signal: abortController.signal });
+    if (!response.ok) return undefined;
+    const value: unknown = await response.json();
+    if (!isRecord(value) || !Array.isArray(value.iceServers)) return undefined;
+    return value as RTCConfiguration;
+  } catch {
+    return undefined;
+  } finally {
+    window.clearTimeout(timeout);
+  }
+}
+
+function isLoopbackHost(hostname: string): boolean {
+  return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]";
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+async function copyText(value: string): Promise<boolean> {
+  try {
+    if (navigator.clipboard) {
+      await navigator.clipboard.writeText(value);
+      return true;
+    }
+  } catch {
+    // Em HTTP na rede local a Clipboard API moderna pode ser bloqueada.
+  }
+
+  const textArea = document.createElement("textarea");
+  textArea.value = value;
+  textArea.style.position = "fixed";
+  textArea.style.opacity = "0";
+  document.body.appendChild(textArea);
+  textArea.select();
+  const copied = document.execCommand("copy");
+  textArea.remove();
+  return copied;
 }
 
 function randomToken(length: number): string {
