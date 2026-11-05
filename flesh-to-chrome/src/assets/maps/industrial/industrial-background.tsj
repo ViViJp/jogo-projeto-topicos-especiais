@@ -1,0 +1,15 @@
+{
+  "columns": 6,
+  "image": "../../tiles/industrial/backgrounds/2_Industrial_Tileset_1_Background.png",
+  "imageheight": 128,
+  "imagewidth": 192,
+  "margin": 0,
+  "name": "industrial-background",
+  "spacing": 0,
+  "tilecount": 24,
+  "tiledversion": "1.12.2",
+  "tileheight": 32,
+  "tilewidth": 32,
+  "type": "tileset",
+  "version": "1.10"
+}

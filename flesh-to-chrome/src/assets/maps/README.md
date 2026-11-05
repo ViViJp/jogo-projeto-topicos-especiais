@@ -8,29 +8,36 @@ Gerados a partir de `levelDesign.md` + GDD §16 (draft jogável; editável no Ti
 | --- | --- | --- | --- |
 | 1 | Esgoto | `esgoto/fase-1.json` | 16×16 |
 | 2 | Industrial | `industrial/fase-2.json` | 32×32 |
-| 3 | Meio Urbano | `meio-urbano/fase-3.json` | 32×32 |
-| 4 | Corporativo | `corporativo/fase-4.json` | 32×32 |
-| 5 | Topo | `topo/fase-5.json` | 32×32 |
+| 3 | Meio Urbano | `meio-urbano/fase-3.json` | 16×16 |
+| 4 | Corporativo | `corporativo/fase-4.json` | 32×32 (Foozle Sci-Fi Labs) |
+| 5 | Topo | `topo/fase-5.json` | 32×32 (Cyber Purp) |
 
 ## Camadas (todas as fases)
 
 - `deco` — decoração / teto
 - `ground` — colisão, plataformas, gaps
+- `scan-visuals` — visuais das Fases 4 e 5 controlados pelo scan, sem colisão
 - `hazards` — canos, prensas, barricadas (tiles)
 - `objects` — spawn, checkpoint, créditos, inimigos, clínica, Portão
-
-## Regenerar
-
-```bash
-python3 scripts/generate_tiled_maps.py          # todas
-python3 scripts/generate_tiled_maps.py --fase 3 # uma fase
-```
 
 ## Abrir no Tiled
 
 1. Instale https://www.mapeditor.org/
-2. **File → Open** → `public/assets/maps/<setor>/fase-N.json`
-3. Edite e salve
+2. Abra o projeto `.tmj` da fase desejada, por exemplo
+   `flesh-to-chrome/src/assets/maps/topo/fase-5.tmj`
+3. Edite, salve e exporte o `fase-N.json` na mesma pasta; essa é a versão
+   preparada para ser carregada pelo jogo
+
+Antes de editar objetos ou hazards, consulte
+[`docs/TILED_PHASER_CONTRACT.md`](../../../docs/TILED_PHASER_CONTRACT.md).
+Todo cano rompido tocável deve ter arte em `hazards` e um Rectangle
+Object `hazard` com `kind = broken_pipe`.
+
+As cinco fases possuem projetos `.tmj` autorais. A Fase 5 utiliza o tileset
+Cyber Purp configurado em `topo/tileset-topo.tsj` e reutiliza os visuais de
+laser e porta automática da Fase 4.
+Nas Fases 4 e 5, `scan-visuals` deve permanecer sem colisão; somente `ground` recebe
+colisão sólida, enquanto a letalidade continua definida pelos objetos.
 
 ## Phaser (Vitor)
 
@@ -41,4 +48,5 @@ const map = this.make.tilemap({ key: 'fase-1' });
 ```
 
 Object types úteis: `spawn`, `checkpoint`, `credit`, `clinic`, `enemy`,
-`hazard`, `breakable`, `scan_reveal`, `gate`, `ending_choice`, `phase_end`.
+`hazard`, `breakable`, `scan_reveal`, `automatic_door`, `narrative`,
+`ending_choice`, `phase_end`.

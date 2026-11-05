@@ -59,7 +59,7 @@
         "npcs/enemies/bandido",
         "npcs/enemies/drone"
       ],
-      "notas": "Rode scripts/setup_meio_urbano.py. Inimigos: compose_meio_urbano_enemies.py.",
+      "notas": "Assets urbanos e inimigos já incluídos nas respectivas pastas do projeto.",
       "mapa": "maps/meio-urbano/fase-3.json"
     },
     {

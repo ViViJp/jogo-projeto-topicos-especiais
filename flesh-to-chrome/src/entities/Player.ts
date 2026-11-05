@@ -9,10 +9,12 @@ import {
 } from "../config/GameConfig";
 import { AbilityState } from "../systems/AbilityState";
 import { InputManager } from "../systems/InputManager";
-import { ALEX_TEXTURE_KEY, ALEX_RUN_ANIM, ALEX_SLIDE_FRAME, ensureAlexAnimations } from "../utils/AlexSprite";
-
-const ALEX_EYES_TEXTURE_KEY = "alex-eyes";
-const ALEX_EYES_RUN_ANIM = "alex-eyes-run";
+import {
+  ALEX_SLIDE_FRAME,
+  alexRunAnimationKey,
+  alexTextureForAbilities,
+  ensureAlexAnimations,
+} from "../utils/AlexSprite";
 
 export type PlayerState =
   | "running"
@@ -29,15 +31,15 @@ export type PlayerState =
  *
  * Implementa a matriz de compatibilidade de ações da seção 14.11 do GDD e
  * os valores de referência da seção 14 (durações, cooldowns). Ataque, scan
- * e dash já existem na máquina de estados para que a equipe só precise
- * ligar `abilities.arms/eyes/thrusters = true` quando as fases 2-4 forem
- * implementadas - a lógica de execução das habilidades não muda.
+ * e dash estão ligados aos implantes liberados pelas clínicas das Fases 2–4
+ * e são exercitados nos runtimes Tiled das Fases 3–5.
  */
 export class Player {
   readonly sprite: Phaser.Physics.Arcade.Sprite;
   private scene: Phaser.Scene;
   private input: InputManager;
   private abilities: AbilityState;
+  private readonly runAnimationKey: string;
 
   private state: PlayerState = "running";
   private doubleJumpUsed = false;
@@ -52,7 +54,6 @@ export class Player {
   private onDeath: () => void;
   private onScanPulse: (active: boolean) => void;
   private currentBreakable: Phaser.GameObjects.GameObject | null = null;
-  private visorFx?: Phaser.GameObjects.Graphics;
 
   constructor(
     scene: Phaser.Scene,
@@ -68,20 +69,13 @@ export class Player {
     this.onDeath = callbacks.onDeath;
     this.onScanPulse = callbacks.onScanPulse;
 
-    ensureAlexAnimations(scene);
-    if (abilities.eyes && scene.textures.exists(ALEX_EYES_TEXTURE_KEY) && !scene.anims.exists(ALEX_EYES_RUN_ANIM)) {
-      scene.anims.create({
-        key: ALEX_EYES_RUN_ANIM,
-        frames: scene.anims.generateFrameNumbers(ALEX_EYES_TEXTURE_KEY, { start: 11 * 13, end: 11 * 13 + 8 }),
-        frameRate: 12,
-        repeat: -1,
-      });
-    }
-    this.sprite = scene.physics.add.sprite(x, y, abilities.eyes && scene.textures.exists(ALEX_EYES_TEXTURE_KEY) ? ALEX_EYES_TEXTURE_KEY : ALEX_TEXTURE_KEY);
+    const textureKey = alexTextureForAbilities(abilities);
+    ensureAlexAnimations(scene, textureKey);
+    this.runAnimationKey = alexRunAnimationKey(textureKey);
+    this.sprite = scene.physics.add.sprite(x, y, textureKey);
     this.sprite.setOrigin(0.5, 1);
     this.sprite.setCollideWorldBounds(false);
     this.applyRunningPose();
-    this.createVisorFx();
 
     this.sprite.setVelocityX(BASE_RUN_SPEED);
   }
@@ -123,7 +117,6 @@ export class Player {
     if (this.state === "dead") return;
 
     this.updateTimers(deltaMs);
-    this.updateVisorFx();
 
     if (this.state === "pressed") {
       if (this.input.isAttackJustDown() && this.abilities.arms) {
@@ -163,7 +156,12 @@ export class Player {
   private updateTimers(deltaMs: number): void {
     if (this.slideTimer > 0) this.slideTimer -= deltaMs;
     if (this.attackRecoveryTimer > 0) this.attackRecoveryTimer -= deltaMs;
-    if (this.dashCooldownTimer > 0) this.dashCooldownTimer -= deltaMs;
+    if (this.dashCooldownTimer > 0) {
+      this.dashCooldownTimer = Math.max(0, this.dashCooldownTimer - deltaMs);
+      if (this.dashCooldownTimer === 0) {
+        this.scene.events.emit("player-dash-ready");
+      }
+    }
     if (this.pressedTimer > 0) this.pressedTimer -= deltaMs;
 
     if (this.dashTimer > 0) {
@@ -234,25 +232,8 @@ export class Player {
    * "slide atravessa o chão"), agora com os números certos para a arte
    * final em vez do retângulo placeholder.
    */
-  private createVisorFx(): void {
-    if (!this.abilities.eyes) return;
-    this.visorFx?.destroy();
-    this.visorFx = this.scene.add.graphics();
-    this.visorFx.setDepth(this.sprite.depth + 3);
-    this.visorFx.lineStyle(2, 0x36e2ff, 0.95);
-    this.visorFx.fillStyle(0x36e2ff, 0.16);
-    this.visorFx.fillRoundedRect(-8, -55, 18, 8, 3);
-    this.visorFx.strokeRoundedRect(-8, -55, 18, 8, 3);
-  }
-
-  private updateVisorFx(): void {
-    if (!this.visorFx) return;
-    this.visorFx.setPosition(this.sprite.x + 10, this.sprite.y);
-    this.visorFx.setVisible(this.state !== "dead");
-  }
-
   private applyRunningPose(): void {
-    this.sprite.anims.play(this.sprite.texture.key === ALEX_EYES_TEXTURE_KEY ? ALEX_EYES_RUN_ANIM : ALEX_RUN_ANIM, true);
+    this.sprite.anims.play(this.runAnimationKey, true);
     this.sprite.body!.setSize(PLAYER_SIZE.width, PLAYER_SIZE.height);
     this.sprite.body!.setOffset(PLAYER_BODY_OFFSET.x, PLAYER_BODY_OFFSET.y);
   }
@@ -340,17 +321,20 @@ export class Player {
     this.dashTimer = PHYSICS.dash.durationMs;
     this.dashCooldownTimer = PHYSICS.dash.cooldownMs;
     this.sprite.setVelocityX(PHYSICS.dash.speed);
-    this.scene.events.emit("player-dash-start", this.sprite.x, this.sprite.y);
+    this.scene.events.emit(
+      "player-dash-start",
+      this.sprite.x,
+      this.sprite.y,
+      PHYSICS.dash.cooldownMs,
+    );
     this.scene.time.delayedCall(PHYSICS.dash.durationMs, () => {
       if (this.state === "dashing") {
         this.state = this.isGrounded() ? "running" : "jumping";
       }
-      this.scene.events.emit("player-dash-ready");
     });
   }
 
   destroy(): void {
-    this.visorFx?.destroy();
     this.sprite.destroy();
   }
 }

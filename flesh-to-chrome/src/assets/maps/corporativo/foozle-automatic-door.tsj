@@ -1,0 +1,40 @@
+{
+  "columns": 18,
+  "image": "../../tiles/corporativo/foozle-scifi-lab/interactive/barrier_idle.png",
+  "imageheight": 64,
+  "imagewidth": 576,
+  "margin": 0,
+  "name": "foozle-automatic-door",
+  "spacing": 0,
+  "tilecount": 18,
+  "tiledversion": "1.10.2",
+  "tileheight": 64,
+  "tiles": [
+    {
+      "animation": [
+        { "duration": 80, "tileid": 0 },
+        { "duration": 80, "tileid": 1 },
+        { "duration": 80, "tileid": 2 },
+        { "duration": 80, "tileid": 3 },
+        { "duration": 80, "tileid": 4 },
+        { "duration": 80, "tileid": 5 },
+        { "duration": 80, "tileid": 6 },
+        { "duration": 80, "tileid": 7 },
+        { "duration": 80, "tileid": 8 },
+        { "duration": 80, "tileid": 9 },
+        { "duration": 80, "tileid": 10 },
+        { "duration": 80, "tileid": 11 },
+        { "duration": 80, "tileid": 12 },
+        { "duration": 80, "tileid": 13 },
+        { "duration": 80, "tileid": 14 },
+        { "duration": 80, "tileid": 15 },
+        { "duration": 80, "tileid": 16 },
+        { "duration": 80, "tileid": 17 }
+      ],
+      "id": 0
+    }
+  ],
+  "tilewidth": 32,
+  "type": "tileset",
+  "version": "1.10"
+}

@@ -9,4 +9,4 @@ recycling/    — unidade-reciclagem, holograma-pai (§14.5, §17.8)
 gate/         — portao (decisão Chrome)
 fragments/    — 4 fragmentos da descida (§17.4)
 
-Robô final: usar public/assets/player/alex-chrome/
+Robô final: usar flesh-to-chrome/src/assets/player/alex-chrome/

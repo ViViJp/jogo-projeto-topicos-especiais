@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { PLAYER_FRAME } from "../config/GameConfig";
+import type { AbilityState } from "../systems/AbilityState";
 
 /**
  * Integração da arte real de Alex (LPC - Universal LPC Spritesheet,
@@ -20,6 +21,10 @@ function frameIndex(row: number, col: number): number {
 }
 
 export const ALEX_TEXTURE_KEY = "alex-flesh";
+export const ALEX_LEGS_TEXTURE_KEY = "alex-legs";
+export const ALEX_ARMS_TEXTURE_KEY = "alex-arms";
+export const ALEX_EYES_TEXTURE_KEY = "alex-eyes";
+export const ALEX_DASH_TEXTURE_KEY = "alex-dash";
 export const ALEX_RUN_ANIM = "alex-run";
 export const ALEX_HURT_ANIM = "alex-hurt";
 export const ALEX_SLIDE_FRAME = frameIndex(33, 2);
@@ -27,28 +32,44 @@ export const ALEX_SLIDE_FRAME = frameIndex(33, 2);
 const WALK_RIGHT = { row: 11, frames: 9 };
 const HURT = { row: 20, frames: 6 };
 
-export function ensureAlexAnimations(scene: Phaser.Scene): void {
-  if (scene.anims.exists(ALEX_RUN_ANIM)) return;
+export function alexTextureForAbilities(abilities: AbilityState): string {
+  if (abilities.thrusters) return ALEX_DASH_TEXTURE_KEY;
+  if (abilities.eyes) return ALEX_EYES_TEXTURE_KEY;
+  if (abilities.arms) return ALEX_ARMS_TEXTURE_KEY;
+  if (abilities.legs) return ALEX_LEGS_TEXTURE_KEY;
+  return ALEX_TEXTURE_KEY;
+}
 
-  scene.anims.create({
-    key: ALEX_RUN_ANIM,
-    frames: scene.anims.generateFrameNumbers(ALEX_TEXTURE_KEY, {
-      start: frameIndex(WALK_RIGHT.row, 0),
-      end: frameIndex(WALK_RIGHT.row, WALK_RIGHT.frames - 1),
-    }),
-    frameRate: 12,
-    repeat: -1,
-  });
+export function alexRunAnimationKey(textureKey: string): string {
+  return textureKey === ALEX_TEXTURE_KEY ? ALEX_RUN_ANIM : `${textureKey}-run`;
+}
 
-  scene.anims.create({
-    key: ALEX_HURT_ANIM,
-    frames: scene.anims.generateFrameNumbers(ALEX_TEXTURE_KEY, {
-      start: frameIndex(HURT.row, 0),
-      end: frameIndex(HURT.row, HURT.frames - 1),
-    }),
-    frameRate: 8,
-    repeat: 0,
-  });
+export function ensureAlexAnimations(scene: Phaser.Scene, textureKey = ALEX_TEXTURE_KEY): void {
+  const runAnimationKey = alexRunAnimationKey(textureKey);
+  if (!scene.anims.exists(runAnimationKey)) {
+    scene.anims.create({
+      key: runAnimationKey,
+      frames: scene.anims.generateFrameNumbers(textureKey, {
+        start: frameIndex(WALK_RIGHT.row, 0),
+        end: frameIndex(WALK_RIGHT.row, WALK_RIGHT.frames - 1),
+      }),
+      frameRate: 12,
+      repeat: -1,
+    });
+  }
+
+  const hurtAnimationKey = textureKey === ALEX_TEXTURE_KEY ? ALEX_HURT_ANIM : `${textureKey}-hurt`;
+  if (!scene.anims.exists(hurtAnimationKey)) {
+    scene.anims.create({
+      key: hurtAnimationKey,
+      frames: scene.anims.generateFrameNumbers(textureKey, {
+        start: frameIndex(HURT.row, 0),
+        end: frameIndex(HURT.row, HURT.frames - 1),
+      }),
+      frameRate: 8,
+      repeat: 0,
+    });
+  }
 }
 
 export const ALEX_SHEET_CONFIG = { frameWidth: PLAYER_FRAME, frameHeight: PLAYER_FRAME };
