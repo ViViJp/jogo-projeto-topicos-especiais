@@ -8,6 +8,10 @@ import { SaveState } from "../systems/SaveState";
 import { Player } from "../entities/Player";
 import { LevelRuntime } from "../objects/LevelRuntime";
 import { TILED_CHECKPOINT_TEXTURE_KEY, TiledLevelRuntime } from "../objects/TiledLevelRuntime";
+import { TiledPhase2Runtime } from "../objects/TiledPhase2Runtime";
+import { TiledPhase3Runtime } from "../objects/TiledPhase3Runtime";
+import { TiledPhase4Runtime } from "../objects/TiledPhase4Runtime";
+import { TiledPhase5Runtime } from "../objects/TiledPhase5Runtime";
 import { LEVELS, getNextPhaseId } from "../levels";
 import {
   TILED_FASE1_MAP_KEY,
@@ -17,11 +21,46 @@ import {
   TILED_FASE1_BACKGROUND,
   TILED_FASE1_NAME,
 } from "../levels/TiledFase1";
+import {
+  TILED_FASE2_MAP_DATA,
+  TILED_FASE2_MAP_KEY,
+  TILED_FASE2_NAME,
+  TILED_FASE2_TILESETS,
+} from "../levels/TiledFase2";
+import {
+  TILED_FASE3_MAP_DATA,
+  TILED_FASE3_MAP_KEY,
+  TILED_FASE3_NAME,
+  TILED_FASE3_BARRICADE_TEXTURE_KEY,
+  TILED_FASE3_TILESET_KEY,
+} from "../levels/TiledFase3";
+import {
+  TILED_FASE4_MAP_DATA,
+  TILED_FASE4_MAP_KEY,
+  TILED_FASE4_NAME,
+  TILED_FASE4_TILESETS,
+} from "../levels/TiledFase4";
+import {
+  TILED_FASE5_BACKGROUND,
+  TILED_FASE5_MAP_DATA,
+  TILED_FASE5_MAP_KEY,
+  TILED_FASE5_NAME,
+  TILED_FASE5_TILESETS,
+} from "../levels/TiledFase5";
 import { generatePlaceholderTextures } from "../utils/PlaceholderTextures";
-import { ALEX_TEXTURE_KEY, ALEX_SHEET_CONFIG } from "../utils/AlexSprite";
+import {
+  ALEX_ARMS_TEXTURE_KEY,
+  ALEX_DASH_TEXTURE_KEY,
+  ALEX_EYES_TEXTURE_KEY,
+  ALEX_LEGS_TEXTURE_KEY,
+  ALEX_SHEET_CONFIG,
+  ALEX_TEXTURE_KEY,
+} from "../utils/AlexSprite";
 
 export interface GameSceneData {
   phaseId: string;
+  /** Execução iniciada pelo seletor temporário; não altera o save da campanha. */
+  testMode?: boolean;
   checkpointX?: number;
   /**
    * v0.4.0 bugfix: o mapa novo da Fase 1 tem duas elevações de chão
@@ -71,23 +110,27 @@ const PHASE_BACKGROUND: Record<string, number> = {
   "fase2-intro": TILED_FASE1_BACKGROUND,
   fase3: TILED_FASE1_BACKGROUND,
   fase4: TILED_FASE1_BACKGROUND,
-  fase5: TILED_FASE1_BACKGROUND,
+  fase5: TILED_FASE5_BACKGROUND,
 };
 
 /**
  * v0.3.0 - a Fase 1 volta a usar o mapa Tiled real
  * (`src/assets/maps/esgoto/fase-1.json`), desta vez seguindo o contrato
- * `TILED_PHASER_CONTRACT1.md` entregue pelo level designer (ver
+ * `docs/TILED_PHASER_CONTRACT.md` entregue pelo level designer (ver
  * `TiledLevelRuntime.ts`/`TiledFase1.ts`). A física NÃO foi recalibrada
  * (continua 320px/s / gravidade 1600, os valores "bons" da v0.2.1) - só o
- * chão/objetos passam a vir do mapa real; a Fase 2 em diante continua no
- * formato desenhado à mão até terem seu próprio contrato.
+ * chão/objetos passam a vir do mapa real. As Fases 2, 3, 4 e 5 também usam
+ * agora seus blockouts Tiled.
  */
 export class GameScene extends Phaser.Scene {
   private input$!: InputManager;
   private player!: Player;
   private legacyRuntime?: LevelRuntime;
   private tiledRuntime?: TiledLevelRuntime;
+  private tiledPhase2Runtime?: TiledPhase2Runtime;
+  private tiledPhase3Runtime?: TiledPhase3Runtime;
+  private tiledPhase4Runtime?: TiledPhase4Runtime;
+  private tiledPhase5Runtime?: TiledPhase5Runtime;
   private credits!: CreditsSystem;
   private hud!: HUD;
   private save!: SaveState;
@@ -104,8 +147,21 @@ export class GameScene extends Phaser.Scene {
   }
 
   init(data: GameSceneData): void {
+    // A instância da Scene é reutilizada pelo Phaser entre fases. Limpa as
+    // referências do runtime anterior para a seleção abaixo não continuar
+    // atualizando/consultando uma fase que já sofreu shutdown.
+    this.legacyRuntime = undefined;
+    this.tiledRuntime = undefined;
+    this.tiledPhase2Runtime = undefined;
+    this.tiledPhase3Runtime = undefined;
+    this.tiledPhase4Runtime = undefined;
+    this.tiledPhase5Runtime = undefined;
+    this.isPaused = false;
+    this.pauseText = undefined;
+    this.scanOverlay = undefined;
     this.data$ = {
       phaseId: data.phaseId,
+      testMode: data.testMode ?? false,
       checkpointX: data.checkpointX ?? 0,
       checkpointY: data.checkpointY ?? 0,
       consolidatedCreditIds: data.consolidatedCreditIds ?? [],
@@ -135,11 +191,17 @@ export class GameScene extends Phaser.Scene {
   preload(): void {
     // Alex usa o spritesheet LPC real (v0.2.0) em ambos os formatos de
     // nível (Tiled ou desenhado à mão - v0.2.1 revert não mexeu nisso).
-    if (!this.textures.exists(ALEX_TEXTURE_KEY)) {
-      this.load.spritesheet(ALEX_TEXTURE_KEY, this.alexUrl().href, ALEX_SHEET_CONFIG);
-    }
-    if (!this.textures.exists("alex-eyes")) {
-      this.load.spritesheet("alex-eyes", this.alexEyesUrl().href, ALEX_SHEET_CONFIG);
+    const alexStages: Array<{ key: string; url: URL }> = [
+      { key: ALEX_TEXTURE_KEY, url: new URL("../assets/player/alex-flesh/alex-flesh.png", import.meta.url) },
+      { key: ALEX_LEGS_TEXTURE_KEY, url: new URL("../assets/player/alex-legs/alex-legs.png", import.meta.url) },
+      { key: ALEX_ARMS_TEXTURE_KEY, url: new URL("../assets/player/alex-arms/alex-arms.png", import.meta.url) },
+      { key: ALEX_EYES_TEXTURE_KEY, url: new URL("../assets/player/alex-eyes/alex-eyes.png", import.meta.url) },
+      { key: ALEX_DASH_TEXTURE_KEY, url: new URL("../assets/player/alex-dash/alex-dash.png", import.meta.url) },
+    ];
+    for (const stage of alexStages) {
+      if (!this.textures.exists(stage.key)) {
+        this.load.spritesheet(stage.key, stage.url.href, ALEX_SHEET_CONFIG);
+      }
     }
 
     if (this.data$.phaseId === "fase1") {
@@ -164,15 +226,136 @@ export class GameScene extends Phaser.Scene {
           data: TILED_FASE1_MAP_DATA,
         });
       }
+    } else if (this.data$.phaseId === "fase2-intro") {
+      this.preloadPhase2Map();
+    } else if (this.data$.phaseId === "fase3") {
+      this.preloadPhase3Map();
+    } else if (this.data$.phaseId === "fase4") {
+      this.preloadPhase4Map();
+    } else if (this.data$.phaseId === "fase5") {
+      this.preloadPhase5Map();
     }
   }
 
-  private alexUrl(): URL {
-    return new URL("../assets/player/alex-flesh/alex-flesh.png", import.meta.url);
+  private preloadPhase2Map(): void {
+    const assets: Array<{ key: string; url: URL }> = [
+      { key: TILED_FASE2_TILESETS[0].key, url: new URL("../assets/tiles/industrial/tiles/1_Industrial_Tileset_1.png", import.meta.url) },
+      { key: TILED_FASE2_TILESETS[1].key, url: new URL("../assets/tiles/industrial/tiles/1_Industrial_Tileset_1B.png", import.meta.url) },
+      { key: TILED_FASE2_TILESETS[2].key, url: new URL("../assets/tiles/industrial/tiles/1_Industrial_Tileset_1C.png", import.meta.url) },
+      { key: TILED_FASE2_TILESETS[3].key, url: new URL("../assets/tiles/industrial/backgrounds/2_Industrial_Tileset_1_Background.png", import.meta.url) },
+      { key: TILED_FASE2_TILESETS[4].key, url: new URL("../assets/tiles/industrial/backgrounds/2_Industrial_Tileset_1B_Background.png", import.meta.url) },
+      { key: TILED_FASE2_TILESETS[5].key, url: new URL("../assets/tiles/industrial/backgrounds/2_Industrial_Tileset_1C_Background_Violet.png", import.meta.url) },
+      { key: TILED_FASE2_TILESETS[6].key, url: new URL("../assets/tiles/industrial/backgrounds/3_Far_Background_Tile.png", import.meta.url) },
+    ];
+
+    for (const asset of assets) {
+      if (!this.textures.exists(asset.key)) this.load.image(asset.key, asset.url.href);
+    }
+    if (!this.textures.exists(TILED_CHECKPOINT_TEXTURE_KEY)) {
+      this.load.image(TILED_CHECKPOINT_TEXTURE_KEY, this.checkpointTvUrl().href);
+    }
+    if (!this.cache.tilemap.exists(TILED_FASE2_MAP_KEY)) {
+      this.cache.tilemap.add(TILED_FASE2_MAP_KEY, {
+        format: Phaser.Tilemaps.Formats.TILED_JSON,
+        data: TILED_FASE2_MAP_DATA,
+      });
+    }
   }
 
-  private alexEyesUrl(): URL {
-    return new URL("../assets/player/alex-eyes/alex-eyes.png", import.meta.url);
+  private preloadPhase3Map(): void {
+    if (!this.textures.exists(TILED_FASE3_TILESET_KEY)) {
+      this.load.image(
+        TILED_FASE3_TILESET_KEY,
+        new URL("../assets/tiles/meio-urbano/ENVIRONMENT/tileset.png", import.meta.url).href,
+      );
+    }
+    if (!this.textures.exists("enemy-bandido")) {
+      this.load.spritesheet("enemy-bandido", this.enemyBandidoUrl().href, { frameWidth: 48, frameHeight: 48 });
+    }
+    if (!this.textures.exists("enemy-drone")) {
+      this.load.spritesheet("enemy-drone", this.enemyDroneUrl().href, { frameWidth: 32, frameHeight: 32 });
+    }
+    if (!this.textures.exists(TILED_FASE3_BARRICADE_TEXTURE_KEY)) {
+      this.load.image(
+        TILED_FASE3_BARRICADE_TEXTURE_KEY,
+        new URL("../assets/props/obstacles/barricade.png", import.meta.url).href,
+      );
+    }
+    if (!this.textures.exists(TILED_CHECKPOINT_TEXTURE_KEY)) {
+      this.load.image(TILED_CHECKPOINT_TEXTURE_KEY, this.checkpointTvUrl().href);
+    }
+    if (!this.cache.tilemap.exists(TILED_FASE3_MAP_KEY)) {
+      this.cache.tilemap.add(TILED_FASE3_MAP_KEY, {
+        format: Phaser.Tilemaps.Formats.TILED_JSON,
+        data: TILED_FASE3_MAP_DATA,
+      });
+    }
+  }
+
+  private preloadPhase4Map(): void {
+    const assets: Array<{ key: string; url: URL }> = [
+      {
+        key: TILED_FASE4_TILESETS[0].key,
+        url: new URL("../assets/tiles/corporativo/foozle-scifi-lab/tiles/level_tileset.png", import.meta.url),
+      },
+      {
+        key: TILED_FASE4_TILESETS[1].key,
+        url: new URL("../assets/tiles/corporativo/foozle-scifi-lab/decor/full-decor-tiles.png", import.meta.url),
+      },
+      {
+        key: TILED_FASE4_TILESETS[2].key,
+        url: new URL("../assets/tiles/corporativo/foozle-scifi-lab/traps/laser_idle.png", import.meta.url),
+      },
+      {
+        key: TILED_FASE4_TILESETS[3].key,
+        url: new URL("../assets/tiles/corporativo/foozle-scifi-lab/traps/laser_spikes_idle.png", import.meta.url),
+      },
+      {
+        key: TILED_FASE4_TILESETS[4].key,
+        url: new URL("../assets/tiles/corporativo/foozle-scifi-lab/interactive/barrier_idle.png", import.meta.url),
+      },
+    ];
+    for (const asset of assets) {
+      if (!this.textures.exists(asset.key)) this.load.image(asset.key, asset.url.href);
+    }
+    if (!this.textures.exists(TILED_CHECKPOINT_TEXTURE_KEY)) {
+      this.load.image(TILED_CHECKPOINT_TEXTURE_KEY, this.checkpointTvUrl().href);
+    }
+    if (!this.cache.tilemap.exists(TILED_FASE4_MAP_KEY)) {
+      this.cache.tilemap.add(TILED_FASE4_MAP_KEY, {
+        format: Phaser.Tilemaps.Formats.TILED_JSON,
+        data: TILED_FASE4_MAP_DATA,
+      });
+    }
+  }
+
+  private preloadPhase5Map(): void {
+    const assets: Array<{ key: string; url: URL }> = [
+      {
+        key: TILED_FASE5_TILESETS[0].key,
+        url: new URL("../assets/tiles/topo/cyber-purp/tileset.png", import.meta.url),
+      },
+      {
+        key: TILED_FASE5_TILESETS[1].key,
+        url: new URL("../assets/tiles/corporativo/foozle-scifi-lab/traps/laser_idle.png", import.meta.url),
+      },
+      {
+        key: TILED_FASE5_TILESETS[2].key,
+        url: new URL("../assets/tiles/corporativo/foozle-scifi-lab/interactive/barrier_idle.png", import.meta.url),
+      },
+    ];
+    for (const asset of assets) {
+      if (!this.textures.exists(asset.key)) this.load.image(asset.key, asset.url.href);
+    }
+    if (!this.textures.exists(TILED_CHECKPOINT_TEXTURE_KEY)) {
+      this.load.image(TILED_CHECKPOINT_TEXTURE_KEY, this.checkpointTvUrl().href);
+    }
+    if (!this.cache.tilemap.exists(TILED_FASE5_MAP_KEY)) {
+      this.cache.tilemap.add(TILED_FASE5_MAP_KEY, {
+        format: Phaser.Tilemaps.Formats.TILED_JSON,
+        data: TILED_FASE5_MAP_DATA,
+      });
+    }
   }
 
   private tilesetSewerUrl(): URL {
@@ -206,11 +389,24 @@ export class GameScene extends Phaser.Scene {
     this.input$ = new InputManager(this);
     this.credits = new CreditsSystem(this.data$.wallet, this.data$.consolidatedCreditIds);
     this.hud = new HUD(this);
+    this.hud.setDashUnlocked(this.activeAbilities.thrusters);
     this.events.on("player-attack", () => this.hud.flashPrompt("ATAQUE", 220));
-    this.events.on("player-dash-start", () => this.hud.flashPrompt("DASH", 220));
+    this.events.on("player-dash-start", (_x: number, _y: number, cooldownMs: number) => {
+      this.hud.flashPrompt("DASH", 220);
+      this.hud.beginDashCooldown(cooldownMs);
+    });
+    this.events.on("player-dash-ready", () => this.hud.setDashReady(true));
 
     if (this.data$.phaseId === "fase1") {
       this.createTiled();
+    } else if (this.data$.phaseId === "fase2-intro") {
+      this.createTiledPhase2();
+    } else if (this.data$.phaseId === "fase3") {
+      this.createTiledPhase3();
+    } else if (this.data$.phaseId === "fase4") {
+      this.createTiledPhase4();
+    } else if (this.data$.phaseId === "fase5") {
+      this.createTiledPhase5();
     } else {
       this.createLegacy();
     }
@@ -225,7 +421,7 @@ export class GameScene extends Phaser.Scene {
     const runtime = new TiledLevelRuntime(this, new Set(this.data$.consolidatedCreditIds), {
       onCreditCollected: (id, value) => this.handleCreditCollected(id, value),
       onCheckpoint: (_id, x, y) => this.handleCheckpoint(x, y),
-      onEndGate: (destination) => this.handleEndGate(destination),
+      onEndGate: (destination, implant) => this.handleEndGate(destination, implant),
     });
     this.tiledRuntime = runtime;
     this.levelLengthPx = runtime.lengthPx;
@@ -238,8 +434,93 @@ export class GameScene extends Phaser.Scene {
     });
 
     runtime.registerPhysics(this.player);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => runtime.destroy());
 
     this.hud.flashPrompt(TILED_FASE1_NAME, 1800);
+  }
+
+  private createTiledPhase2(): void {
+    const runtime = new TiledPhase2Runtime(this, new Set(this.data$.consolidatedCreditIds), {
+      onCreditCollected: (id, value) => this.handleCreditCollected(id, value),
+      onCheckpoint: (_id, x, y) => this.handleCheckpoint(x, y),
+      onEndGate: (destination, implant) => this.handleEndGate(destination, implant),
+    });
+    this.tiledPhase2Runtime = runtime;
+    this.levelLengthPx = runtime.lengthPx;
+
+    const spawnX = this.data$.checkpointX > 0 ? this.data$.checkpointX : runtime.spawn.x;
+    const spawnY = this.data$.checkpointX > 0 ? this.data$.checkpointY : runtime.spawn.y;
+    this.player = new Player(this, spawnX, spawnY, this.activeAbilities, this.input$, {
+      onDeath: () => this.handlePlayerDeath(),
+      onScanPulse: (active) => this.handleScanPulse(active),
+    });
+
+    runtime.registerPhysics(this.player);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => runtime.destroy());
+    this.hud.flashPrompt(TILED_FASE2_NAME, 1800);
+  }
+
+  private createTiledPhase3(): void {
+    const runtime = new TiledPhase3Runtime(this, new Set(this.data$.consolidatedCreditIds), {
+      onCreditCollected: (id, value) => this.handleCreditCollected(id, value),
+      onCheckpoint: (_id, x, y) => this.handleCheckpoint(x, y),
+      onEndGate: (destination, implant) => this.handleEndGate(destination, implant),
+    });
+    this.tiledPhase3Runtime = runtime;
+    this.levelLengthPx = runtime.lengthPx;
+
+    const spawnX = this.data$.checkpointX > 0 ? this.data$.checkpointX : runtime.spawn.x;
+    const spawnY = this.data$.checkpointX > 0 ? this.data$.checkpointY : runtime.spawn.y;
+    this.player = new Player(this, spawnX, spawnY, this.activeAbilities, this.input$, {
+      onDeath: () => this.handlePlayerDeath(),
+      onScanPulse: (active) => this.handleScanPulse(active),
+    });
+
+    runtime.registerPhysics(this.player);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => runtime.destroy());
+    this.hud.flashPrompt(TILED_FASE3_NAME, 1800);
+  }
+
+  private createTiledPhase4(): void {
+    const runtime = new TiledPhase4Runtime(this, new Set(this.data$.consolidatedCreditIds), {
+      onCreditCollected: (id, value) => this.handleCreditCollected(id, value),
+      onCheckpoint: (_id, x, y) => this.handleCheckpoint(x, y),
+      onEndGate: (destination, implant) => this.handleEndGate(destination, implant),
+    });
+    this.tiledPhase4Runtime = runtime;
+    this.levelLengthPx = runtime.lengthPx;
+
+    const spawnX = this.data$.checkpointX > 0 ? this.data$.checkpointX : runtime.spawn.x;
+    const spawnY = this.data$.checkpointX > 0 ? this.data$.checkpointY : runtime.spawn.y;
+    this.player = new Player(this, spawnX, spawnY, this.activeAbilities, this.input$, {
+      onDeath: () => this.handlePlayerDeath(),
+      onScanPulse: (active) => this.handleScanPulse(active),
+    });
+
+    runtime.registerPhysics(this.player);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => runtime.destroy());
+    this.hud.flashPrompt(TILED_FASE4_NAME, 1800);
+  }
+
+  private createTiledPhase5(): void {
+    const runtime = new TiledPhase5Runtime(this, new Set(this.data$.consolidatedCreditIds), {
+      onCreditCollected: (id, value) => this.handleCreditCollected(id, value),
+      onCheckpoint: (_id, x, y) => this.handleCheckpoint(x, y),
+      onEndGate: () => this.handleEndGate(),
+    });
+    this.tiledPhase5Runtime = runtime;
+    this.levelLengthPx = runtime.lengthPx;
+
+    const spawnX = this.data$.checkpointX > 0 ? this.data$.checkpointX : runtime.spawn.x;
+    const spawnY = this.data$.checkpointX > 0 ? this.data$.checkpointY : runtime.spawn.y;
+    this.player = new Player(this, spawnX, spawnY, this.activeAbilities, this.input$, {
+      onDeath: () => this.handlePlayerDeath(),
+      onScanPulse: (active) => this.handleScanPulse(active),
+    });
+
+    runtime.registerPhysics(this.player);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => runtime.destroy());
+    this.hud.flashPrompt(TILED_FASE5_NAME, 1800);
   }
 
   private createLegacy(): void {
@@ -291,6 +572,10 @@ export class GameScene extends Phaser.Scene {
   /** Créditos da fase atual, num formato comum aos dois formatos de nível (Tiled/desenhado à mão). */
   private phaseCredits(): Array<{ id: string; value: number }> {
     if (this.tiledRuntime) return this.tiledRuntime.credits;
+    if (this.tiledPhase2Runtime) return this.tiledPhase2Runtime.credits;
+    if (this.tiledPhase3Runtime) return this.tiledPhase3Runtime.credits;
+    if (this.tiledPhase4Runtime) return this.tiledPhase4Runtime.credits;
+    if (this.tiledPhase5Runtime) return this.tiledPhase5Runtime.credits;
     return LEVELS[this.data$.phaseId].credits;
   }
 
@@ -322,7 +607,9 @@ export class GameScene extends Phaser.Scene {
 
   private handleCheckpoint(x: number, y: number): void {
     this.credits.consolidate();
-    this.save.updateCheckpoint(x, y, this.credits.getConsolidatedIds(), this.credits.getTotal());
+    if (!this.data$.testMode) {
+      this.save.updateCheckpoint(x, y, this.credits.getConsolidatedIds(), this.credits.getTotal());
+    }
     this.data$.checkpointX = x;
     this.data$.checkpointY = y;
     this.updateHud();
@@ -331,25 +618,31 @@ export class GameScene extends Phaser.Scene {
 
   /**
    * `destinationOverride` vem do objeto `clinic` do mapa Tiled (propriedade
-   * `next`, ainda não formalizada no contrato - ver `TiledLevelRuntime.ts`);
-   * o nível desenhado à mão não tem esse objeto, então usa a mesma regra
-   * fixa de antes.
+   * `next` e `implant`); o nível desenhado à mão não tem esse objeto, então
+   * usa a mesma regra fixa de antes.
    */
-  private handleEndGate(destinationOverride?: string): void {
+  private handleEndGate(destinationOverride?: string, implantOverride?: keyof AbilityState): void {
     this.credits.consolidate();
-    this.save.updateCheckpoint(
-      this.player.sprite.x,
-      this.player.sprite.y,
-      this.credits.getConsolidatedIds(),
-      this.credits.getTotal()
-    );
+    if (!this.data$.testMode) {
+      this.save.updateCheckpoint(
+        this.player.sprite.x,
+        this.player.sprite.y,
+        this.credits.getConsolidatedIds(),
+        this.credits.getTotal()
+      );
+    }
     this.updateHud();
+
+    if (this.data$.testMode) {
+      this.hud.flashPrompt("Teste concluído — retornando ao seletor", 900);
+      this.time.delayedCall(700, () => this.scene.start("MenuScene"));
+      return;
+    }
 
     const nextPhaseId = getNextPhaseId(this.data$.phaseId);
     // A clínica de George instala um novo implante ao final de cada uma das
-    // fases implementadas (seção 11.1). No fim da prévia da Fase 2, a clínica
-    // libera os braços e continua para a prévia da Fase 3 registrada em
-    // `PHASE_ORDER`.
+    // quatro primeiras fases (seção 11.1) e continua para o próximo blockout
+    // Tiled registrado em `PHASE_ORDER`.
     const phasesWithClinic = new Set(["fase1", "fase2-intro", "fase3", "fase4"]);
     const destination = destinationOverride ??
       (phasesWithClinic.has(this.data$.phaseId) ? "ClinicScene" : "EndingScene");
@@ -360,6 +653,7 @@ export class GameScene extends Phaser.Scene {
         nextPhaseId,
         wallet: this.credits.getTotal(),
         abilities: this.activeAbilities,
+        implant: implantOverride,
       });
     });
   }
@@ -374,6 +668,7 @@ export class GameScene extends Phaser.Scene {
     this.time.delayedCall(700, () => {
       this.scene.restart({
         phaseId: this.data$.phaseId,
+        testMode: this.data$.testMode,
         checkpointX: this.data$.checkpointX,
         checkpointY: this.data$.checkpointY,
         consolidatedCreditIds: this.credits.getConsolidatedIds(),
@@ -396,10 +691,18 @@ export class GameScene extends Phaser.Scene {
       this.scanOverlay.setAlpha(0.16);
       this.hud.flashPrompt("VISOR ATIVO — rotas e armadilhas detectadas", 750);
       this.tiledRuntime?.setScanActive(true);
+      this.tiledPhase2Runtime?.setScanActive(true);
+      this.tiledPhase3Runtime?.setScanActive(true);
+      this.tiledPhase4Runtime?.setScanActive(true);
+      this.tiledPhase5Runtime?.setScanActive(true);
       this.legacyRuntime?.setScanActive(true, this.player.sprite.x);
     } else {
       this.scanOverlay?.setVisible(false);
       this.tiledRuntime?.setScanActive(false);
+      this.tiledPhase2Runtime?.setScanActive(false);
+      this.tiledPhase3Runtime?.setScanActive(false);
+      this.tiledPhase4Runtime?.setScanActive(false);
+      this.tiledPhase5Runtime?.setScanActive(false);
       this.legacyRuntime?.setScanActive(false, this.player.sprite.x);
     }
   }
@@ -409,8 +712,11 @@ export class GameScene extends Phaser.Scene {
     if (this.isPaused) {
       this.physics.world.pause();
       this.tweens.pauseAll();
+      const testModeHelp = this.data$.testMode
+        ? "\nS / ↓ para voltar ao seletor de fases"
+        : "";
       this.pauseText = this.add
-        .text(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, "PAUSADO\nESC / START para voltar | ENTER / A para reiniciar a fase", {
+        .text(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, `PAUSADO\nESC / START para voltar | ENTER / A para reiniciar a fase${testModeHelp}`, {
           fontFamily: "Courier New, monospace",
           fontSize: "26px",
           color: "#ffffff",
@@ -437,10 +743,17 @@ export class GameScene extends Phaser.Scene {
     }
 
     if (this.isPaused) {
+      if (this.data$.testMode && this.input$.isMenuDownJustDown()) {
+        this.togglePause();
+        this.scene.start("MenuScene");
+        this.input$.postUpdate();
+        return;
+      }
       if (this.isPaused && this.input$.isConfirmJustDown()) {
         this.togglePause();
         this.scene.restart({
           phaseId: this.data$.phaseId,
+          testMode: this.data$.testMode,
           checkpointX: this.data$.checkpointX,
           checkpointY: this.data$.checkpointY,
           consolidatedCreditIds: this.credits.getConsolidatedIds(),
@@ -455,6 +768,14 @@ export class GameScene extends Phaser.Scene {
     this.player.update(delta);
     if (this.tiledRuntime) {
       this.tiledRuntime.update(this.player);
+    } else if (this.tiledPhase2Runtime) {
+      this.tiledPhase2Runtime.update(this.player);
+    } else if (this.tiledPhase3Runtime) {
+      this.tiledPhase3Runtime.update(this.player);
+    } else if (this.tiledPhase4Runtime) {
+      this.tiledPhase4Runtime.update(this.player);
+    } else if (this.tiledPhase5Runtime) {
+      this.tiledPhase5Runtime.update(this.player);
     } else {
       this.legacyRuntime!.update(this.player);
     }

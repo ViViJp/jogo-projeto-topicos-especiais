@@ -2,7 +2,23 @@
 
 Auto-runner 2D cyberpunk (projeto acadêmico). **Há um único jogo** neste repositório.
 
-## Como rodar (única entrada)
+## Como rodar
+
+A aplicação oficial fica em `flesh-to-chrome/` (TypeScript + Phaser 4 + Parcel).
+
+### Pela raiz do repositório
+
+Os scripts da raiz encaminham os comandos para o projeto principal:
+
+```bash
+npm install
+npm run dev
+```
+
+Outros comandos disponíveis na raiz: `npm run build`, `npm run typecheck`,
+`npm run validate:assets` e `npm start`.
+
+### Diretamente na pasta do jogo
 
 ```bash
 cd flesh-to-chrome
@@ -10,24 +26,21 @@ npm install
 npm run dev
 ```
 
-Stack oficial (GDD §22): **TypeScript + Phaser 4 + Parcel** em [`flesh-to-chrome/`](flesh-to-chrome/).
-
-Na raiz, `npm run dev` / `npm run build` apenas encaminham para essa pasta.
-
 ## Papéis do time
 
 | Pessoa | Foco |
 | --- | --- |
-| **João Pedro** | Arte 2D / UI / áudio → `public/assets/` (+ cópia usada pelo protótipo em `flesh-to-chrome/public/assets/`) |
-| **Victor Blum** | Game / level design → mapas Tiled em `public/assets/maps/` |
+| **João Pedro** | Arte 2D / UI / áudio → `flesh-to-chrome/src/assets/` |
+| **Victor Blum** | Game / level design → mapas Tiled em `flesh-to-chrome/src/assets/maps/` |
 | **Vitor Nascimento (Motoca)** | Phaser / integração → código em `flesh-to-chrome/src/` (carregar tilemaps, física, cenas) |
 
 ## Assets
 
-- Sprites, tiles, áudio, mapas: [`public/assets/`](public/assets/)
-- Mapa Fase 1 (blockout Victor): [`public/assets/maps/esgoto/fase-1.tmj`](public/assets/maps/esgoto/fase-1.tmj)
+- Sprites, tiles, áudio e mapas: [`flesh-to-chrome/src/assets/`](flesh-to-chrome/src/assets/)
+- Mapa Fase 1 (blockout Victor): [`flesh-to-chrome/src/assets/maps/esgoto/fase-1.tmj`](flesh-to-chrome/src/assets/maps/esgoto/fase-1.tmj)
 - Integração Phaser do mapa: issue [#15](https://github.com/ViViJp/jogo-projeto-topicos-especiais/issues/15) (Motoca)
 - Docs: [`gdd.md`](gdd.md), [`levelDesign.md`](levelDesign.md), [`Cyberpunk.md`](Cyberpunk.md)
+- Contrato Tiled ↔ Phaser: [`flesh-to-chrome/docs/TILED_PHASER_CONTRACT.md`](flesh-to-chrome/docs/TILED_PHASER_CONTRACT.md)
 
 ## O que **não** é o jogo
 
@@ -86,3 +99,4 @@ créditos e não colidem entre si. Há um checkpoint central; morrer mantém os
 créditos coletados e não interrompe o cronômetro. Quando alguém termina, o outro
 recebe 20 s antes do DNF. O resultado usa `tempo bruto - 0,5 s por crédito`, com
 bônus máximo de 10 s, e aplica os desempates de créditos e tempo bruto do GDD.
+Direção: GDD + estética **cyberpunk** (ascensão social / Glitch City). Level design e playtest de pulos usam os mapas de referência integrados ao runtime em `flesh-to-chrome/src/assets/`.

@@ -1,19 +1,28 @@
 Meio Urbano — Flesh to Chrome (Fase 3)
 
-INTERIM (até importar pack urbano dedicado):
-- tileset-interim.png — Industrial 1C cyber (Atomic Realm)
+PRINCIPAL — Warped City (ansimuz, CC0-1.0):
+- https://ansimuz.itch.io/warped-city
+- ENVIRONMENT/tileset.png — tileset nativo 16 × 16
+- ENVIRONMENT/background/ — componentes para parallax
+- ENVIRONMENT/props/ — decoração urbana
+- SPRITES/misc/ — drone, torre, projéteis e efeitos
+
+Configuração Tiled:
+- ../../maps/meio-urbano/warped-city-environment.tsj
+
+INTERIM (preservado apenas para a prévia antiga 32 × 32):
+- tiles/tileset-interim.png — Industrial 1C cyber (Atomic Realm)
 - backgrounds/ — parallax interim
 
 OPCIONAL — Future City 27 (knekko, CC0):
 Baixe em https://opengameart.org/content/future-city-27
-Coloque em public/assets/tiles/_downloads/:
+Os assets baixados usados no jogo ficam nesta pasta.
   future_city_27_gritty.png  (recomendado — slum/cyberpunk)
   alley-tiles.png
   urban-characters.png (renomeie characters.png)
-Rode: python3 scripts/setup_meio_urbano.py
 
 OPCIONAL — Kenney RPG Urban Kit (CC0):
 https://kenney-assets.itch.io/rpg-urban-kit
-Zip em _downloads/kenney_rpgUrbanKit.zip → import_tilesets.py
+Se utilizado futuramente, inclua apenas os arquivos efetivamente usados e preserve a licença.
 
 GDD Fase 3: ataque, bandido, drone, objetos quebráveis

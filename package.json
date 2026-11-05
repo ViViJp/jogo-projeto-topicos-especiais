@@ -10,6 +10,7 @@
     "start": "npm --prefix flesh-to-chrome run start",
     "build": "npm --prefix flesh-to-chrome run build",
     "typecheck": "npm --prefix flesh-to-chrome run typecheck",
+    "validate:assets": "npm --prefix flesh-to-chrome run validate:assets",
     "postinstall": "npm --prefix flesh-to-chrome install"
   }
 }
