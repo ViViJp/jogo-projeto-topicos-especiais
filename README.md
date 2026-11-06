@@ -119,3 +119,18 @@ Validação automatizada específica:
 cd flesh-to-chrome
 npm run test:multiplayer
 ```
+
+## Nuvem (ISN)
+
+A infraestrutura da campanha fica em [`pulumi/`](pulumi/). É o que se executa com Pulumi; o cliente do jogo continua em `flesh-to-chrome/`.
+
+```bash
+cd pulumi
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+pulumi stack select prod --create
+pulumi up
+```
+
+A stack tem que se chamar `prod`. Instruções em [`pulumi/README.md`](pulumi/README.md).
