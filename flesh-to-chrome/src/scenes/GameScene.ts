@@ -7,7 +7,11 @@ import { HUD } from "../systems/HUD";
 import { SaveState } from "../systems/SaveState";
 import { Player } from "../entities/Player";
 import { LevelRuntime } from "../objects/LevelRuntime";
-import { TILED_CHECKPOINT_TEXTURE_KEY, TiledLevelRuntime } from "../objects/TiledLevelRuntime";
+import {
+  TILED_CHECKPOINT_TEXTURE_KEY,
+  TILED_ELECTRIC_WIRE_TEXTURE_KEY,
+  TiledLevelRuntime,
+} from "../objects/TiledLevelRuntime";
 import { TiledPhase2Runtime } from "../objects/TiledPhase2Runtime";
 import { TiledPhase3Runtime } from "../objects/TiledPhase3Runtime";
 import { TiledPhase4Runtime } from "../objects/TiledPhase4Runtime";
@@ -229,6 +233,12 @@ export class GameScene extends Phaser.Scene {
       }
       if (!this.textures.exists(TILED_CHECKPOINT_TEXTURE_KEY)) {
         this.load.image(TILED_CHECKPOINT_TEXTURE_KEY, this.checkpointTvUrl().href);
+      }
+      if (!this.textures.exists(TILED_ELECTRIC_WIRE_TEXTURE_KEY)) {
+        this.load.image(
+          TILED_ELECTRIC_WIRE_TEXTURE_KEY,
+          new URL("../assets/props/hazards/electric-wire-loose.png", import.meta.url).href,
+        );
       }
       if (!this.cache.tilemap.exists(TILED_FASE1_MAP_KEY)) {
         this.cache.tilemap.add(TILED_FASE1_MAP_KEY, {

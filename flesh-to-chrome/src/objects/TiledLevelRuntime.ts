@@ -30,6 +30,9 @@ export interface TiledCheckpointObj {
 
 export { TILED_CHECKPOINT_TEXTURE_KEY } from "./CheckpointMarker";
 
+/** Sprite dedicado ao fio desencapado da Fase 1. */
+export const TILED_ELECTRIC_WIRE_TEXTURE_KEY = "hazard-electric-wire-loose";
+
 /** `hazard.kind` oficiais do contrato em `docs/TILED_PHASER_CONTRACT.md`. */
 type HazardBehavior = "floor" | "overhead";
 const HAZARD_KIND_BEHAVIOR: Record<string, HazardBehavior> = {
@@ -37,6 +40,11 @@ const HAZARD_KIND_BEHAVIOR: Record<string, HazardBehavior> = {
   electric_wire: "overhead",
   broken_pipe: "floor",
 };
+
+// GIDs do fio provisório de 32 x 16 px que ainda está desenhado na layer
+// `hazards` do mapa. O runtime o oculta quando instancia o sprite novo nas
+// mesmas coordenadas dos objetos `electric_wire`.
+const LEGACY_ELECTRIC_WIRE_GIDS = new Set([733, 734]);
 
 /**
  * Instancia a Fase 1 a partir do mapa Tiled real, seguindo
@@ -101,6 +109,8 @@ export class TiledLevelRuntime {
   readonly checkpointTriggered = new Set<string>();
   private readonly checkpointMarkers = new Map<string, CheckpointMarker>();
   private readonly hazardZones: Array<{ zone: Phaser.GameObjects.Zone; behavior: HazardBehavior; kind: string }> = [];
+  private readonly electricWireVisuals: Phaser.GameObjects.Image[] = [];
+  private readonly electricWireTweens: Phaser.Tweens.Tween[] = [];
   private enemyRuntime?: EnemyRuntime;
   private playerRef?: Player;
 
@@ -214,7 +224,9 @@ export class TiledLevelRuntime {
 
     this.buildCredits();
     this.buildCheckpoints();
-    this.buildObjectHazards(byType("hazard"), offsetY);
+    const hazardObjects = byType("hazard");
+    this.buildObjectHazards(hazardObjects, offsetY);
+    this.buildElectricWireVisuals(hazardObjects, offsetY);
   }
 
   private propString(o: Phaser.Types.Tilemaps.TiledObject | undefined, name: string): string | undefined {
@@ -350,6 +362,61 @@ export class TiledLevelRuntime {
     }
   }
 
+  /**
+   * Substitui o cabo provisório do tileset pelo sprite dedicado, usando os
+   * próprios Rectangle Objects do Tiled como fonte de posição. A hitbox
+   * continua sendo o retângulo autorado no mapa; o brilho pode ultrapassar
+   * levemente essa área, mas a parte física do cabo permanece alinhada com
+   * ela e a regra de atravessar deslizando não muda.
+   */
+  private buildElectricWireVisuals(
+    hazardObjs: Phaser.Types.Tilemaps.TiledObject[],
+    offsetY: number,
+  ): void {
+    for (const o of hazardObjs) {
+      if (this.propString(o, "kind") !== "electric_wire") continue;
+
+      const x = o.x ?? 0;
+      const y = o.y ?? 0;
+      const w = o.width ?? 32;
+      const h = o.height ?? 16;
+
+      // Remove somente os dois tiles do cabo antigo. Outros hazards que
+      // eventualmente compartilhem a mesma região da layer são preservados.
+      if (this.hazardsLayer) {
+        const firstCol = Math.floor(x / this.map.tileWidth);
+        const lastCol = Math.ceil((x + w) / this.map.tileWidth) - 1;
+        const firstRow = Math.floor(y / this.map.tileHeight);
+        const lastRow = Math.ceil((y + h) / this.map.tileHeight) - 1;
+        for (let row = firstRow; row <= lastRow; row++) {
+          for (let col = firstCol; col <= lastCol; col++) {
+            const tile = this.hazardsLayer.getTileAt(col, row);
+            if (tile && LEGACY_ELECTRIC_WIRE_GIDS.has(tile.index)) tile.setAlpha(0);
+          }
+        }
+      }
+
+      const visual = this.scene.add
+        .image(x + w / 2, y + offsetY + h, TILED_ELECTRIC_WIRE_TEXTURE_KEY)
+        // O arquivo mantém uma margem transparente curta para o halo
+        // elétrico. O ponto de apoio em 84% encosta o corpo do cabo no chão.
+        .setOrigin(0.5, 0.84)
+        .setDisplaySize(Math.max(48, w * 1.5), Math.max(32, h * 2))
+        .setDepth(3);
+      this.electricWireVisuals.push(visual);
+
+      // Uma oscilação curta deixa a descarga legível sem alterar colisão.
+      this.electricWireTweens.push(this.scene.tweens.add({
+        targets: visual,
+        alpha: { from: 0.86, to: 1 },
+        duration: 150 + ((o.id ?? 0) % 4) * 35,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.easeInOut",
+      }));
+    }
+  }
+
   /** Colisão/overlap do jogador com o chão e os perigos reais do tilemap. */
   registerPhysics(player: Player): void {
     this.playerRef = player;
@@ -448,6 +515,8 @@ export class TiledLevelRuntime {
 
   destroy(): void {
     this.enemyRuntime?.destroy();
+    this.electricWireTweens.forEach((tween) => tween.remove());
+    this.electricWireVisuals.forEach((visual) => visual.destroy());
     this.hazardZones.forEach((hz) => hz.zone.destroy());
     this.creditSprites.forEach((s) => s.destroy());
     this.checkpointMarkers.forEach((marker) => marker.destroy());

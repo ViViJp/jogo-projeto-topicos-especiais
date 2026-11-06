@@ -322,11 +322,11 @@ sobrescrever `cycle_ms`, `active_ms`, `warning_ms` e `phase_ms` no Tiled.
 
 ### 6.5 **low_ceiling**
 
-**Função:** mantém um obstáculo baixo atravessável somente durante o slide, sem obrigar a arte do cano a invadir a silhueta agachada de Alex.
+**Função:** mantém um obstáculo baixo que pode ser superado saltando inteiramente por cima ou atravessado por baixo durante o slide, sem obrigar a arte do cano a invadir a silhueta agachada de Alex.
 
 **Geometria Tiled:** Rectangle Object cobrindo apenas a faixa superior ocupada pela hitbox em pé. Não usa propriedades personalizadas.
 
-No mapa atual, a arte fica na Tile Layer **deco-low-ceilings**, desenhada na linha 9 e deslocada **12 px** para baixo. A base visual permanece em **Y = 332**, deixando **52 px** entre o piso em Y = 384 e o cano. O retângulo lógico **low_ceiling** possui **24 px** de altura e mata Alex somente quando o estado não é `sliding`. A hitbox agachada de **30 px** passa abaixo dele.
+No mapa atual, a arte fica na Tile Layer **deco-low-ceilings**, desenhada na linha 9 e deslocada **12 px** para baixo. Cada obstáculo usa duas repetições do módulo de duto industrial formado pelos GIDs **25, 26 e 27**, evitando reaproveitar os tiles estruturais do chão e comunicar visualmente que não existe uma plataforma sólida. A base visual permanece em **Y = 332**, deixando **52 px** entre o piso em Y = 384 e o cano. O retângulo lógico **low_ceiling** possui **24 px** de altura e mata Alex somente quando o estado não é `sliding`. A hitbox agachada de **30 px** passa abaixo dele.
 
 Cada cano baixo da Fase 2 possui **192 px de comprimento (6 tiles de 32 px)**, tanto no visual quanto no Rectangle Object lógico. Esse comprimento foi validado em playtest como atravessável ao manter o comando de slide pressionado durante todo o obstáculo. Alterações futuras na duração ou na renovação do slide exigem um novo teste dessa medida.
 

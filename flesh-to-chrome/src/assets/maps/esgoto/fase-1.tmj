@@ -499,7 +499,7 @@
                  "y":256
                 }, 
                 {
-                 "height":16,
+                 "height":20,
                  "id":20,
                  "name":"electric_wire_01",
                  "opacity":1,
@@ -512,12 +512,12 @@
                  "rotation":0,
                  "type":"hazard",
                  "visible":true,
-                 "width":32,
-                 "x":3392,
-                 "y":320
+                 "width":56,
+                 "x":3380,
+                 "y":316
                 }, 
                 {
-                 "height":16,
+                 "height":20,
                  "id":27,
                  "name":"electric_wire_02",
                  "opacity":1,
@@ -530,9 +530,9 @@
                  "rotation":0,
                  "type":"hazard",
                  "visible":true,
-                 "width":32,
-                 "x":4032,
-                 "y":320
+                 "width":56,
+                 "x":4020,
+                 "y":316
                 }, 
                 {
                  "height":48,
@@ -571,7 +571,7 @@
                  "y":368
                 }, 
                 {
-                 "height":16,
+                 "height":20,
                  "id":32,
                  "name":"electric_wire_03",
                  "opacity":1,
@@ -584,9 +584,9 @@
                  "rotation":0,
                  "type":"hazard",
                  "visible":true,
-                 "width":32,
-                 "x":8176,
-                 "y":320
+                 "width":56,
+                 "x":8164,
+                 "y":316
                 }, 
                 {
                  "height":0,
@@ -727,7 +727,7 @@
                  "y":368
                 }, 
                 {
-                 "height":16,
+                 "height":20,
                  "id":44,
                  "name":"electric_wire_04",
                  "opacity":1,
@@ -740,12 +740,12 @@
                  "rotation":0,
                  "type":"hazard",
                  "visible":true,
-                 "width":32,
-                 "x":11808,
-                 "y":320
+                 "width":56,
+                 "x":11796,
+                 "y":316
                 }, 
                 {
-                 "height":16,
+                 "height":20,
                  "id":46,
                  "name":"electric_wire_05",
                  "opacity":1,
@@ -758,9 +758,9 @@
                  "rotation":0,
                  "type":"hazard",
                  "visible":true,
-                 "width":32,
-                 "x":15824,
-                 "y":320
+                 "width":56,
+                 "x":15812,
+                 "y":316
                 }, 
                 {
                  "height":48,
@@ -901,7 +901,7 @@
                  "y":200
                 }, 
                 {
-                 "height":16,
+                 "height":20,
                  "id":56,
                  "name":"electric_wire_06",
                  "opacity":1,
@@ -914,9 +914,9 @@
                  "rotation":0,
                  "type":"hazard",
                  "visible":true,
-                 "width":32,
-                 "x":18528,
-                 "y":320
+                 "width":56,
+                 "x":18516,
+                 "y":316
                 }, 
                 {
                  "height":48,
@@ -937,7 +937,7 @@
                  "y":368
                 }, 
                 {
-                 "height":16,
+                 "height":20,
                  "id":58,
                  "name":"electric_wire_07",
                  "opacity":1,
@@ -950,9 +950,9 @@
                  "rotation":0,
                  "type":"hazard",
                  "visible":true,
-                 "width":32,
-                 "x":20432,
-                 "y":320
+                 "width":56,
+                 "x":20420,
+                 "y":316
                 }, 
                 {
                  "height":48,
@@ -973,7 +973,7 @@
                  "y":368
                 }, 
                 {
-                 "height":16,
+                 "height":20,
                  "id":60,
                  "name":"electric_wire_08",
                  "opacity":1,
@@ -986,9 +986,9 @@
                  "rotation":0,
                  "type":"hazard",
                  "visible":true,
-                 "width":32,
-                 "x":24080,
-                 "y":320
+                 "width":56,
+                 "x":24068,
+                 "y":316
                 }, 
                 {
                  "height":48,
@@ -1009,7 +1009,7 @@
                  "y":368
                 }, 
                 {
-                 "height":16,
+                 "height":20,
                  "id":62,
                  "name":"electric_wire_09",
                  "opacity":1,
@@ -1022,12 +1022,12 @@
                  "rotation":0,
                  "type":"hazard",
                  "visible":true,
-                 "width":32,
-                 "x":26000,
-                 "y":320
+                 "width":56,
+                 "x":25988,
+                 "y":316
                 }, 
                 {
-                 "height":16,
+                 "height":20,
                  "id":64,
                  "name":"electric_wire_10",
                  "opacity":1,
@@ -1040,9 +1040,9 @@
                  "rotation":0,
                  "type":"hazard",
                  "visible":true,
-                 "width":32,
-                 "x":27968,
-                 "y":320
+                 "width":56,
+                 "x":27956,
+                 "y":316
                 }, 
                 {
                  "height":27,

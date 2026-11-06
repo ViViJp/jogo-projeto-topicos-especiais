@@ -75,6 +75,14 @@ const industrialKinds = new Set(
   phase2Objects.filter((object) => object.type === "hazard").map((object) => objectProperty(object, "kind")),
 );
 assert.deepEqual([...industrialKinds].sort(), ["crusher", "mech_arm", "press", "steam"]);
+const lowCeilingLayer = phase2.layers.find((layer) => layer.name === "deco-low-ceilings");
+const lowCeilingTiles = lowCeilingLayer.data.filter((gid) => gid !== 0);
+assert.equal(lowCeilingTiles.length, 42, "fase2: sete obstáculos baixos com seis tiles cada");
+assert.deepEqual(
+  [...new Set(lowCeilingTiles)].sort((left, right) => left - right),
+  [25, 26, 27],
+  "fase2: obstáculos baixos devem usar o duto industrial, não os tiles do chão",
+);
 
 const phase5 = JSON.parse(fs.readFileSync(path.join(projectDirectory, maps[4]), "utf8"));
 const phase5Objects = phase5.layers.find((layer) => layer.name === "objects").objects;
