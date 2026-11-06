@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { CheckpointMarker } from "./CheckpointMarker";
 import { Player } from "../entities/Player";
 import { EnemyRuntime } from "./EnemyRuntime";
 import { AbilityState } from "../systems/AbilityState";
@@ -27,7 +28,7 @@ export interface TiledCheckpointObj {
   width: number;
 }
 
-export const TILED_CHECKPOINT_TEXTURE_KEY = "checkpoint-tv";
+export { TILED_CHECKPOINT_TEXTURE_KEY } from "./CheckpointMarker";
 
 /** `hazard.kind` oficiais do contrato em `docs/TILED_PHASER_CONTRACT.md`. */
 type HazardBehavior = "floor" | "overhead";
@@ -98,6 +99,7 @@ export class TiledLevelRuntime {
   readonly checkpoints: TiledCheckpointObj[] = [];
   readonly creditSprites = new Map<string, Phaser.Physics.Arcade.Sprite>();
   readonly checkpointTriggered = new Set<string>();
+  private readonly checkpointMarkers = new Map<string, CheckpointMarker>();
   private readonly hazardZones: Array<{ zone: Phaser.GameObjects.Zone; behavior: HazardBehavior; kind: string }> = [];
   private enemyRuntime?: EnemyRuntime;
   private playerRef?: Player;
@@ -312,11 +314,10 @@ export class TiledLevelRuntime {
     // usa pra colisão, então o marcador visual e o ponto de respawn sempre
     // concordam com o chão de verdade, em qualquer elevação.
     for (const cp of this.checkpoints) {
-      this.scene.add
-        .image(cp.x + cp.width / 2, cp.y, TILED_CHECKPOINT_TEXTURE_KEY)
-        .setOrigin(0.5, 1)
-        .setDisplaySize(72, 61)
-        .setDepth(2);
+      this.checkpointMarkers.set(
+        cp.id,
+        new CheckpointMarker(this.scene, cp.x + cp.width / 2, cp.y, 2),
+      );
     }
   }
 
@@ -427,6 +428,7 @@ export class TiledLevelRuntime {
       if (this.checkpointTriggered.has(cp.id)) continue;
       if (Math.abs(px - cp.x) < 26) {
         this.checkpointTriggered.add(cp.id);
+        this.checkpointMarkers.get(cp.id)?.activate();
         this.callbacks.onCheckpoint(cp.id, cp.x, cp.y);
       }
     }
@@ -448,6 +450,7 @@ export class TiledLevelRuntime {
     this.enemyRuntime?.destroy();
     this.hazardZones.forEach((hz) => hz.zone.destroy());
     this.creditSprites.forEach((s) => s.destroy());
+    this.checkpointMarkers.forEach((marker) => marker.destroy());
     this.creditSprites.clear();
   }
 }

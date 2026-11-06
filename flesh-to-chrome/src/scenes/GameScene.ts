@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { SCREEN_WIDTH, SCREEN_HEIGHT, CAMERA, GRAVITY_Y } from "../config/GameConfig";
+import { SCREEN_WIDTH, SCREEN_HEIGHT, CAMERA, GRAVITY_Y, GAMEPLAY_TIMING } from "../config/GameConfig";
 import { AbilityState, createInitialAbilityState } from "../systems/AbilityState";
 import { InputManager } from "../systems/InputManager";
 import { CreditsSystem } from "../systems/CreditsSystem";
@@ -113,6 +113,8 @@ const PHASE_BACKGROUND: Record<string, number> = {
   fase5: TILED_FASE5_BACKGROUND,
 };
 
+const CHECKPOINT_SFX_KEY = "sfx-checkpoint";
+
 /**
  * v0.3.0 - a Fase 1 volta a usar o mapa Tiled real
  * (`src/assets/maps/esgoto/fase-1.json`), desta vez seguindo o contrato
@@ -141,6 +143,7 @@ export class GameScene extends Phaser.Scene {
   private activeAbilities!: AbilityState;
   private restarting = false;
   private levelLengthPx = 0;
+  private checkpointInteraction?: Phaser.Time.TimerEvent;
 
   constructor() {
     super("GameScene");
@@ -159,6 +162,7 @@ export class GameScene extends Phaser.Scene {
     this.isPaused = false;
     this.pauseText = undefined;
     this.scanOverlay = undefined;
+    this.checkpointInteraction = undefined;
     this.data$ = {
       phaseId: data.phaseId,
       testMode: data.testMode ?? false,
@@ -202,6 +206,12 @@ export class GameScene extends Phaser.Scene {
       if (!this.textures.exists(stage.key)) {
         this.load.spritesheet(stage.key, stage.url.href, ALEX_SHEET_CONFIG);
       }
+    }
+    if (!this.cache.audio.exists(CHECKPOINT_SFX_KEY)) {
+      this.load.audio(
+        CHECKPOINT_SFX_KEY,
+        new URL("../assets/audio/sfx/sfx-checkpoint.wav", import.meta.url).href,
+      );
     }
 
     if (this.data$.phaseId === "fase1") {
@@ -420,7 +430,7 @@ export class GameScene extends Phaser.Scene {
   private createTiled(): void {
     const runtime = new TiledLevelRuntime(this, new Set(this.data$.consolidatedCreditIds), {
       onCreditCollected: (id, value) => this.handleCreditCollected(id, value),
-      onCheckpoint: (_id, x, y) => this.handleCheckpoint(x, y),
+      onCheckpoint: (id, x, y) => this.handleCheckpoint(id, x, y),
       onEndGate: (destination, implant) => this.handleEndGate(destination, implant),
     });
     this.tiledRuntime = runtime;
@@ -442,7 +452,7 @@ export class GameScene extends Phaser.Scene {
   private createTiledPhase2(): void {
     const runtime = new TiledPhase2Runtime(this, new Set(this.data$.consolidatedCreditIds), {
       onCreditCollected: (id, value) => this.handleCreditCollected(id, value),
-      onCheckpoint: (_id, x, y) => this.handleCheckpoint(x, y),
+      onCheckpoint: (id, x, y) => this.handleCheckpoint(id, x, y),
       onEndGate: (destination, implant) => this.handleEndGate(destination, implant),
     });
     this.tiledPhase2Runtime = runtime;
@@ -463,7 +473,7 @@ export class GameScene extends Phaser.Scene {
   private createTiledPhase3(): void {
     const runtime = new TiledPhase3Runtime(this, new Set(this.data$.consolidatedCreditIds), {
       onCreditCollected: (id, value) => this.handleCreditCollected(id, value),
-      onCheckpoint: (_id, x, y) => this.handleCheckpoint(x, y),
+      onCheckpoint: (id, x, y) => this.handleCheckpoint(id, x, y),
       onEndGate: (destination, implant) => this.handleEndGate(destination, implant),
     });
     this.tiledPhase3Runtime = runtime;
@@ -484,7 +494,7 @@ export class GameScene extends Phaser.Scene {
   private createTiledPhase4(): void {
     const runtime = new TiledPhase4Runtime(this, new Set(this.data$.consolidatedCreditIds), {
       onCreditCollected: (id, value) => this.handleCreditCollected(id, value),
-      onCheckpoint: (_id, x, y) => this.handleCheckpoint(x, y),
+      onCheckpoint: (id, x, y) => this.handleCheckpoint(id, x, y),
       onEndGate: (destination, implant) => this.handleEndGate(destination, implant),
     });
     this.tiledPhase4Runtime = runtime;
@@ -505,7 +515,7 @@ export class GameScene extends Phaser.Scene {
   private createTiledPhase5(): void {
     const runtime = new TiledPhase5Runtime(this, new Set(this.data$.consolidatedCreditIds), {
       onCreditCollected: (id, value) => this.handleCreditCollected(id, value),
-      onCheckpoint: (_id, x, y) => this.handleCheckpoint(x, y),
+      onCheckpoint: (id, x, y) => this.handleCheckpoint(id, x, y),
       onEndGate: () => this.handleEndGate(),
     });
     this.tiledPhase5Runtime = runtime;
@@ -539,7 +549,7 @@ export class GameScene extends Phaser.Scene {
 
     const runtime = new LevelRuntime(this, level, new Set(this.data$.consolidatedCreditIds), {
       onCreditCollected: (id, value) => this.handleCreditCollected(id, value),
-      onCheckpoint: (_id, x, y) => this.handleCheckpoint(x, y),
+      onCheckpoint: (id, x, y) => this.handleCheckpoint(id, x, y),
       onEndGate: () => this.handleEndGate(),
     });
     this.legacyRuntime = runtime;
@@ -605,7 +615,7 @@ export class GameScene extends Phaser.Scene {
     this.updateHud();
   }
 
-  private handleCheckpoint(x: number, y: number): void {
+  private handleCheckpoint(id: string, x: number, y: number): void {
     this.credits.consolidate();
     if (!this.data$.testMode) {
       this.save.updateCheckpoint(x, y, this.credits.getConsolidatedIds(), this.credits.getTotal());
@@ -613,7 +623,17 @@ export class GameScene extends Phaser.Scene {
     this.data$.checkpointX = x;
     this.data$.checkpointY = y;
     this.updateHud();
-    this.hud.flashPrompt("Checkpoint alcançado — créditos consolidados");
+    this.player.beginCheckpointInteraction();
+    this.sound.play(CHECKPOINT_SFX_KEY, { volume: 0.55 });
+    this.hud.flashPrompt(`Checkpoint ${id} sincronizado — créditos consolidados`);
+    this.checkpointInteraction?.destroy();
+    this.checkpointInteraction = this.time.delayedCall(
+      GAMEPLAY_TIMING.checkpointInteractionMs,
+      () => {
+        this.player.endCheckpointInteraction();
+        this.checkpointInteraction = undefined;
+      },
+    );
   }
 
   /**
@@ -678,6 +698,28 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  /** Reinício manual sempre volta ao spawn, mas preserva créditos já consolidados. */
+  private restartFromPhaseStart(): void {
+    if (this.restarting) return;
+    this.restarting = true;
+    this.credits.discardUncollected();
+    const consolidatedIds = this.credits.getConsolidatedIds();
+    const wallet = this.credits.getTotal();
+    if (!this.data$.testMode) {
+      this.save.updateCheckpoint(0, 0, consolidatedIds, wallet);
+    }
+    if (this.isPaused) this.togglePause();
+    this.scene.restart({
+      phaseId: this.data$.phaseId,
+      testMode: this.data$.testMode,
+      checkpointX: 0,
+      checkpointY: 0,
+      consolidatedCreditIds: consolidatedIds,
+      wallet,
+      abilities: this.data$.abilities,
+    } as GameSceneData);
+  }
+
   private handleScanPulse(active: boolean): void {
     if (active) {
       if (!this.scanOverlay) {
@@ -712,6 +754,8 @@ export class GameScene extends Phaser.Scene {
     if (this.isPaused) {
       this.physics.world.pause();
       this.tweens.pauseAll();
+      this.time.paused = true;
+      this.anims.pauseAll();
       const testModeHelp = this.data$.testMode
         ? "\nS / ↓ para voltar ao seletor de fases"
         : "";
@@ -730,6 +774,8 @@ export class GameScene extends Phaser.Scene {
     } else {
       this.physics.world.resume();
       this.tweens.resumeAll();
+      this.time.paused = false;
+      this.anims.resumeAll();
       this.pauseText?.destroy();
       this.pauseText = undefined;
     }
@@ -750,16 +796,7 @@ export class GameScene extends Phaser.Scene {
         return;
       }
       if (this.isPaused && this.input$.isConfirmJustDown()) {
-        this.togglePause();
-        this.scene.restart({
-          phaseId: this.data$.phaseId,
-          testMode: this.data$.testMode,
-          checkpointX: this.data$.checkpointX,
-          checkpointY: this.data$.checkpointY,
-          consolidatedCreditIds: this.credits.getConsolidatedIds(),
-          wallet: this.credits.getTotal(),
-          abilities: this.data$.abilities,
-        } as GameSceneData);
+        this.restartFromPhaseStart();
       }
       this.input$.postUpdate();
       return;
@@ -769,13 +806,13 @@ export class GameScene extends Phaser.Scene {
     if (this.tiledRuntime) {
       this.tiledRuntime.update(this.player);
     } else if (this.tiledPhase2Runtime) {
-      this.tiledPhase2Runtime.update(this.player);
+      this.tiledPhase2Runtime.update(this.player, delta);
     } else if (this.tiledPhase3Runtime) {
       this.tiledPhase3Runtime.update(this.player);
     } else if (this.tiledPhase4Runtime) {
-      this.tiledPhase4Runtime.update(this.player);
+      this.tiledPhase4Runtime.update(this.player, delta);
     } else if (this.tiledPhase5Runtime) {
-      this.tiledPhase5Runtime.update(this.player);
+      this.tiledPhase5Runtime.update(this.player, delta);
     } else {
       this.legacyRuntime!.update(this.player);
     }

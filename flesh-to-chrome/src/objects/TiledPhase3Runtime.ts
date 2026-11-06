@@ -9,7 +9,7 @@ import {
 import { AbilityState } from "../systems/AbilityState";
 import { TEX } from "../utils/PlaceholderTextures";
 import { EnemyRuntime } from "./EnemyRuntime";
-import { TILED_CHECKPOINT_TEXTURE_KEY } from "./TiledLevelRuntime";
+import { CheckpointMarker } from "./CheckpointMarker";
 
 interface Phase3Credit {
   id: string;
@@ -54,6 +54,7 @@ export class TiledPhase3Runtime {
   private readonly fallDeathY: number;
   private readonly checkpoints: Phase3Checkpoint[] = [];
   private readonly checkpointTriggered = new Set<string>();
+  private readonly checkpointMarkers = new Map<string, CheckpointMarker>();
   private readonly creditSprites = new Map<string, Phaser.Physics.Arcade.Sprite>();
   private readonly breakables: Phase3Breakable[] = [];
   private readonly hazardZones: Phaser.GameObjects.Zone[] = [];
@@ -193,11 +194,10 @@ export class TiledPhase3Runtime {
 
   private buildCheckpoints(): void {
     for (const checkpoint of this.checkpoints) {
-      this.scene.add
-        .image(checkpoint.x + checkpoint.width / 2, checkpoint.y, TILED_CHECKPOINT_TEXTURE_KEY)
-        .setOrigin(0.5, 1)
-        .setDisplaySize(72, 61)
-        .setDepth(3);
+      this.checkpointMarkers.set(
+        checkpoint.id,
+        new CheckpointMarker(this.scene, checkpoint.x + checkpoint.width / 2, checkpoint.y, 3),
+      );
     }
   }
 
@@ -438,6 +438,7 @@ export class TiledPhase3Runtime {
       if (this.checkpointTriggered.has(checkpoint.id)) continue;
       if (Math.abs(player.sprite.x - checkpoint.x) < 28) {
         this.checkpointTriggered.add(checkpoint.id);
+        this.checkpointMarkers.get(checkpoint.id)?.activate();
         this.callbacks.onCheckpoint(checkpoint.id, checkpoint.x, checkpoint.y);
       }
     }
@@ -463,6 +464,7 @@ export class TiledPhase3Runtime {
     this.runtimeEnemy?.destroy();
     this.electricGateTimer?.destroy();
     this.creditSprites.forEach((sprite) => sprite.destroy());
+    this.checkpointMarkers.forEach((marker) => marker.destroy());
     this.breakables.forEach((breakable) => {
       breakable.body.destroy();
       breakable.visual.destroy();

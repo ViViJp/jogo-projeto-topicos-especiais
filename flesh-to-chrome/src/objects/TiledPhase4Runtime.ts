@@ -7,7 +7,7 @@ import {
 } from "../levels/TiledFase4";
 import { AbilityState } from "../systems/AbilityState";
 import { TEX } from "../utils/PlaceholderTextures";
-import { TILED_CHECKPOINT_TEXTURE_KEY } from "./TiledLevelRuntime";
+import { CheckpointMarker } from "./CheckpointMarker";
 
 interface Phase4Credit {
   id: string;
@@ -73,6 +73,7 @@ export class TiledPhase4Runtime {
   private readonly fallDeathY: number;
   private readonly checkpoints: Phase4Checkpoint[] = [];
   private readonly checkpointTriggered = new Set<string>();
+  private readonly checkpointMarkers = new Map<string, CheckpointMarker>();
   private readonly creditSprites = new Map<string, Phaser.Physics.Arcade.Sprite>();
   private readonly hazardZones: Phaser.GameObjects.Zone[] = [];
   private readonly hiddenHazardVisuals: HiddenHazardVisual[] = [];
@@ -83,6 +84,7 @@ export class TiledPhase4Runtime {
   private readonly narrativeLabels: Phaser.GameObjects.Text[] = [];
   private endGateTriggered = false;
   private playerRef?: Player;
+  private elapsedMs = 0;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -225,11 +227,10 @@ export class TiledPhase4Runtime {
 
   private buildCheckpoints(): void {
     for (const checkpoint of this.checkpoints) {
-      this.scene.add
-        .image(checkpoint.x + checkpoint.width / 2, checkpoint.y, TILED_CHECKPOINT_TEXTURE_KEY)
-        .setOrigin(0.5, 1)
-        .setDisplaySize(72, 61)
-        .setDepth(5);
+      this.checkpointMarkers.set(
+        checkpoint.id,
+        new CheckpointMarker(this.scene, checkpoint.x + checkpoint.width / 2, checkpoint.y, 5),
+      );
     }
   }
 
@@ -458,8 +459,9 @@ export class TiledPhase4Runtime {
     groups.forEach((group) => this.revealGroup(group));
   }
 
-  update(player: Player): void {
-    this.updateDoors(this.scene.time.now);
+  update(player: Player, deltaMs = 0): void {
+    this.elapsedMs += Math.max(0, deltaMs);
+    this.updateDoors(this.elapsedMs);
     this.clearPassedRevealGroups(player.sprite.x);
 
     this.creditSprites.forEach((sprite, id) => {
@@ -475,6 +477,7 @@ export class TiledPhase4Runtime {
       if (this.checkpointTriggered.has(checkpoint.id)) continue;
       if (Math.abs(player.sprite.x - checkpoint.x) < 28) {
         this.checkpointTriggered.add(checkpoint.id);
+        this.checkpointMarkers.get(checkpoint.id)?.activate();
         this.callbacks.onCheckpoint(checkpoint.id, checkpoint.x, checkpoint.y);
       }
     }
@@ -497,6 +500,7 @@ export class TiledPhase4Runtime {
 
   destroy(): void {
     this.creditSprites.forEach((sprite) => sprite.destroy());
+    this.checkpointMarkers.forEach((marker) => marker.destroy());
     this.hazardZones.forEach((zone) => zone.destroy());
     this.doors.forEach((door) => door.zone.destroy());
     this.revealRegions.forEach((region) => region.outline.destroy());

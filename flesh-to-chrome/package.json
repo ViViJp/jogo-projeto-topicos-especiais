@@ -12,6 +12,7 @@
     "build": "parcel build src/index.html --dist-dir dist --no-cache",
     "typecheck": "tsc --noEmit",
     "validate:assets": "node scripts/validate-assets.mjs",
+    "test:gameplay": "node scripts/test-gameplay-flow.mjs",
     "test:multiplayer": "node scripts/test-multiplayer-protocol.mjs"
   },
   "devDependencies": {

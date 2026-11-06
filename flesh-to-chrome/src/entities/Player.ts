@@ -23,6 +23,7 @@ export type PlayerState =
   | "attacking"
   | "scanning"
   | "dashing"
+  | "checkpoint"
   | "pressed" // preso contra um quebrável (seção 14.7)
   | "dead";
 
@@ -105,6 +106,28 @@ export class Player {
     this.sprite.setVelocityX(BASE_RUN_SPEED);
   }
 
+  /** Parada diegética do GDD: Alex se senta diante da TV do checkpoint. */
+  beginCheckpointInteraction(): void {
+    if (this.state === "dead" || this.state === "checkpoint") return;
+    if (this.scanTimer > 0) this.onScanPulse(false);
+    this.scanTimer = 0;
+    this.dashTimer = 0;
+    this.currentBreakable = null;
+    this.state = "checkpoint";
+    this.sprite.setVelocity(0, 0);
+    (this.sprite.body as Phaser.Physics.Arcade.Body).setAllowGravity(false);
+    this.sprite.anims.stop();
+    this.sprite.setFrame(ALEX_SLIDE_FRAME);
+  }
+
+  endCheckpointInteraction(): void {
+    if (this.state !== "checkpoint") return;
+    this.state = "running";
+    (this.sprite.body as Phaser.Physics.Arcade.Body).setAllowGravity(true);
+    this.applyRunningPose();
+    this.sprite.setVelocityX(BASE_RUN_SPEED);
+  }
+
   kill(): void {
     if (this.state === "dead") return;
     this.state = "dead";
@@ -134,7 +157,7 @@ export class Player {
   }
 
   update(deltaMs: number): void {
-    if (this.state === "dead") return;
+    if (this.state === "dead" || this.state === "checkpoint") return;
 
     this.updateTimers(deltaMs);
 

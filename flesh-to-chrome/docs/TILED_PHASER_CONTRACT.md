@@ -307,14 +307,18 @@ No runtime atual, a velocidade é aplicada somente enquanto o corpo de Alex est�
 
 ### 6.4 Novos valores de **hazard.kind**
 
-| kind | Representação planejada | Regra provisória atual |
+| kind | Representação | Regra atual |
 | --- | --- | --- |
 | **press** | prensa industrial | morte imediata ao contato |
 | **steam** | jato de vapor | morte imediata ao contato |
 | **mech_arm** | braço mecânico | morte imediata ao contato |
 | **crusher** | trituradora | morte ao contato |
 
-Os quatro valores são reconhecidos explicitamente pelo runtime da Fase 2. Seus ciclos, estados ativos e animações continuam pendentes; até que sejam definidos, toda a área retangular autorada em `objects` permanece letal em qualquer estado de Alex.
+Os quatro valores usam o ciclo determinístico **inativo → aviso → ativo** do
+`TiledPhase2Runtime`. Tint, indicador e corpo físico são atualizados pelo
+mesmo estado, e o contato só é fatal durante a janela ativa. Os valores
+padrão ficam em `GAMEPLAY_TIMING.industrialHazards`; cada objeto pode
+sobrescrever `cycle_ms`, `active_ms`, `warning_ms` e `phase_ms` no Tiled.
 
 ### 6.5 **low_ceiling**
 
@@ -432,11 +436,12 @@ A Fase 5 reutiliza `automatic_door`, `breakable`, `scan_reveal` e
 | **laser_grid** | coluna contínua de emissores laser | morte imediata; dash não concede invencibilidade |
 | **rotating_barrier** | barreira mecânica rotativa | morte imediata durante o contato |
 
-O runtime atual trata as grades e barreiras como volumes letais estáticos. As
-portas automáticas já respeitam `cycle_ms`, `open_ms` e `phase_ms`. A rotação
-visual e as janelas próprias das barreiras rotativas ainda são acabamento
-pendente; seus Rectangle Objects definem integralmente a área letal no
-blockout.
+As grades continuam usando o volume letal autorado. Cada barreira rotativa
+instancia um braço visual e uma cadeia de corpos físicos que percorrem o mesmo
+ângulo a cada frame. O Rectangle Object define centro e comprimento; o período
+padrão fica em `GAMEPLAY_TIMING.rotatingBarrier` e pode ser sobrescrito por
+`cycle_ms` e `phase_ms`. As portas automáticas continuam respeitando
+`cycle_ms`, `open_ms` e `phase_ms`.
 
 ### 6.15 **zone**
 

@@ -38,6 +38,7 @@ export type NetworkPlayerState =
   | "attacking"
   | "scanning"
   | "dashing"
+  | "checkpoint"
   | "pressed"
   | "dead";
 
@@ -191,7 +192,7 @@ function isIceCandidate(value: unknown): boolean {
 function isNetworkPlayerState(value: unknown): value is NetworkPlayerState {
   return (
     typeof value === "string" &&
-    ["running", "jumping", "sliding", "attacking", "scanning", "dashing", "pressed", "dead"].includes(value)
+    ["running", "jumping", "sliding", "attacking", "scanning", "dashing", "checkpoint", "pressed", "dead"].includes(value)
   );
 }
 
