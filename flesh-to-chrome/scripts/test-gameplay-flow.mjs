@@ -21,6 +21,7 @@ function loadTypeScriptModule(relativePath) {
 
 const motion = loadTypeScriptModule("src/objects/HazardMotion.ts");
 const config = loadTypeScriptModule("src/config/GameConfig.ts");
+const { CreditsSystem } = loadTypeScriptModule("src/systems/CreditsSystem.ts");
 const timing = { cycleMs: 1000, activeMs: 200, warningMs: 100, phaseMs: 0 };
 assert.equal(motion.hazardCycleState(0, timing), "active");
 assert.equal(motion.hazardCycleState(199, timing), "active");
@@ -47,6 +48,15 @@ for (const [kind, values] of Object.entries(config.GAMEPLAY_TIMING.industrialHaz
   assert.ok(values.warningMs >= 300, `${kind}: aviso deve ser legível`);
   assert.ok(values.cycleMs - values.activeMs - values.warningMs >= 700, `${kind}: janela segura`);
 }
+
+const credits = new CreditsSystem(30, ["old-phase-credit"]);
+credits.collect("current-phase-credit", 10);
+assert.equal(credits.getPhaseDisplayValue(0), 10);
+assert.equal(credits.getTotal(), 30, "crédito só entra na carteira ao consolidar");
+credits.consolidate();
+assert.equal(credits.getTotal(), 40);
+assert.equal(credits.getPhaseDisplayValue(10), 10, "HUD preserva consolidado da fase após respawn");
+assert.deepEqual([...credits.getConsolidatedIds()].sort(), ["current-phase-credit", "old-phase-credit"]);
 
 const horizontal = motion.rotatingBarrierPoints(100, 200, 96, 7, 0);
 assert.equal(horizontal.length, 7);
@@ -126,10 +136,33 @@ assert.ok(
 for (const kind of ["press", "steam", "mech_arm", "crusher"]) {
   assert.match(phase2Runtime, new RegExp(`hazard\\.kind === "${kind}"`), `fase2: movimento de ${kind}`);
 }
+for (const runtime of [
+  "TiledLevelRuntime.ts",
+  "TiledPhase2Runtime.ts",
+  "TiledPhase3Runtime.ts",
+  "TiledPhase4Runtime.ts",
+  "TiledPhase5Runtime.ts",
+]) {
+  const source = fs.readFileSync(path.join(projectDirectory, "src/objects", runtime), "utf8");
+  assert.match(source, /if \(this\.consolidatedThisPhase\.has\([^)]*\.id\)\) continue/,
+    `${runtime}: crédito consolidado deve sumir apenas da criação do sprite`);
+  const creditCatalog = source.slice(
+    source.indexOf(runtime === "TiledLevelRuntime.ts" ? 'for (const o of byType("credit"))' : "private readCredits"),
+    source.indexOf(runtime === "TiledLevelRuntime.ts" ? 'for (const o of byType("checkpoint"))' : "private readCheckpoints"),
+  );
+  assert.doesNotMatch(creditCatalog, /consolidatedThisPhase/,
+    `${runtime}: catálogo usado pelo HUD precisa manter créditos já consolidados`);
+}
 for (const runtime of ["TiledPhase4Runtime.ts", "TiledPhase5Runtime.ts"]) {
   const source = fs.readFileSync(path.join(projectDirectory, "src/objects", runtime), "utf8");
   assert.match(source, /nearestScanObstacleIndex/);
   assert.match(source, /setDoorDisabled/);
+  assert.match(source, /physics\.add\.overlap\(player\.sprite, door\.zone, \(\) => player\.kill\(\)\)/);
+  assert.doesNotMatch(source, /collider\(player\.sprite, door\.zone/);
+  assert.match(source, /const collisionTop =/);
+  assert.match(source, /const collisionBottom = this\.groundSurfaceYAt\(x\)/);
+  assert.match(source, /tile\.alpha = disabled \? 0 : 1/);
+  assert.match(source, /\.setVisible\(!disabled\)/);
   assert.doesNotMatch(source, /% door\.cycleMs/, `${runtime}: porta não pode depender do relógio`);
 }
 const phase4Runtime = fs.readFileSync(path.join(projectDirectory, "src/objects/TiledPhase4Runtime.ts"), "utf8");
@@ -160,7 +193,26 @@ const checkpointMethod = playerSource.slice(
 );
 assert.doesNotMatch(checkpointMethod, /ALEX_SLIDE_FRAME/, "checkpoint não pode reutilizar a pose de slide");
 const alexSpriteSource = fs.readFileSync(path.join(projectDirectory, "src/utils/AlexSprite.ts"), "utf8");
-assert.match(alexSpriteSource, /CHECKPOINT_PLAY_RIGHT = \{ row: 35, frames: 3 \}/);
-assert.match(gameScene, /beginCheckpointInteraction\(x - 8, y\)/);
+assert.match(alexSpriteSource, /CHECKPOINT_PLAY_RIGHT = \{ row: 33, frames: 2 \}/);
+assert.match(gameScene, /beginCheckpointInteraction\(x - 24, y\)/);
+assert.match(gameScene, /const alreadyActive = this\.data\$\.checkpointX > 0/);
+assert.match(gameScene, /if \(alreadyActive\) return false/);
+assert.match(gameScene, /checkpointX: 0/);
+assert.match(gameScene, /checkpointY: 0/);
+const pausedBranch = gameScene.slice(gameScene.indexOf("if (this.isPaused)"), gameScene.indexOf("this.player.update(delta)"));
+assert.match(pausedBranch, /return;/, "pausa deve retornar antes de atualizar Player e cooldowns");
+const checkpointMarker = fs.readFileSync(path.join(projectDirectory, "src/objects/CheckpointMarker.ts"), "utf8");
+assert.match(checkpointMarker, /activate\(withFeedback = true\)/);
+assert.match(checkpointMarker, /if \(!withFeedback\) return/);
+for (const runtime of [
+  "TiledLevelRuntime.ts",
+  "TiledPhase2Runtime.ts",
+  "TiledPhase3Runtime.ts",
+  "TiledPhase4Runtime.ts",
+  "TiledPhase5Runtime.ts",
+]) {
+  const source = fs.readFileSync(path.join(projectDirectory, "src/objects", runtime), "utf8");
+  assert.match(source, /activate\(withFeedback\)/, `${runtime}: respawn deve restaurar TV sem feedback`);
+}
 
 console.log("Gameplay flow: movimentos, barreiras por scan e estrutura das cinco fases validados.");

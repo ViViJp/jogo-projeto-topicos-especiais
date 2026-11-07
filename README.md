@@ -16,7 +16,12 @@ npm run dev
 ```
 
 Outros comandos disponíveis na raiz: `npm run build`, `npm run typecheck`,
-`npm run validate:assets` e `npm start`.
+`npm run validate:assets`, `npm run test:gameplay`, `npm run test:multiplayer`
+e `npm start`. Para executar toda a validação automatizada, use:
+
+```bash
+npm test
+```
 
 ### Diretamente na pasta do jogo
 
@@ -41,6 +46,7 @@ npm run dev
 - Integração Phaser do mapa: issue [#15](https://github.com/ViViJp/jogo-projeto-topicos-especiais/issues/15) (Motoca)
 - Docs: [`gdd.md`](gdd.md), [`levelDesign.md`](levelDesign.md), [`Cyberpunk.md`](Cyberpunk.md)
 - Contrato Tiled ↔ Phaser: [`flesh-to-chrome/docs/TILED_PHASER_CONTRACT.md`](flesh-to-chrome/docs/TILED_PHASER_CONTRACT.md)
+- Roteiro e resultados de gameplay: [`flesh-to-chrome/docs/GAMEPLAY_HAZARDS_PLAYTEST.md`](flesh-to-chrome/docs/GAMEPLAY_HAZARDS_PLAYTEST.md)
 
 ## O que **não** é o jogo
 
@@ -119,6 +125,8 @@ Validação automatizada específica:
 cd flesh-to-chrome
 npm run test:multiplayer
 ```
+
+Os mesmos testes podem ser executados pela raiz com `npm test`.
 
 ## Nuvem (ISN)
 

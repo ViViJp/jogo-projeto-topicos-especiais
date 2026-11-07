@@ -30,11 +30,15 @@ export class CheckpointMarker {
     });
   }
 
-  activate(): void {
+  activate(withFeedback = true): void {
     if (this.activated) return;
     this.activated = true;
     this.idleTween.stop();
     this.image.setAlpha(1).setTint(0x7cfcea);
+
+    // No respawn, o checkpoint já está salvo. Mantém a TV no estado ativo,
+    // mas não repete texto, pulso, som nem a interação do personagem.
+    if (!withFeedback) return;
 
     const glow = this.scene.add
       .circle(this.image.x, this.image.y - 31, 28, 0x36e2ff, 0.18)

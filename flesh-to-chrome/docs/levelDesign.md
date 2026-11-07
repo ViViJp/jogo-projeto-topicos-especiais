@@ -350,9 +350,9 @@
                            timing
                               │
                               ↓
-                    PORTAS AUTOMATIZADAS
+                    BARREIRAS LETAIS
                               │
-                           timing
+                    scan antes do contato
                               │
                               ↓
                         PISOS FALSOS
@@ -441,7 +441,7 @@
                      leitura + timing
                             │
                             ↓
-                    PORTAS TEMPORIZADAS
+                 BARREIRAS LETAIS VIA SCAN
                             │
                             ↓
                         CHECKPOINT

@@ -412,9 +412,11 @@ mesmo antes da revelação.
 
 ### 6.12 **automatic_door**
 
-**Função:** barreira corporativa controlada pelo visor. Ela permanece sólida e
-letal até um pulso de scan desativar a barreira ainda ativa mais próxima à
-frente. A desativação persiste durante a tentativa e é restaurada após morte.
+**Função:** barreira corporativa letal controlada pelo visor. O contato enquanto
+ela está visível causa morte imediata. Um pulso de scan desativa a barreira
+ainda ativa mais próxima à frente, torna toda a sua arte invisível e remove o
+volume letal. A desativação persiste durante a tentativa e é restaurada após
+morte.
 
 **Geometria Tiled:** Rectangle Object cobrindo toda a passagem vertical.
 
@@ -425,9 +427,12 @@ frente. A desativação persiste durante a tentativa e é restaurada após morte
 | **open_ms** | int | legado do protótipo temporizado; ignorado pelo runtime | não |
 | **phase_ms** | int | legado do protótipo temporizado; ignorado pelo runtime | não |
 
-O visual fica na layer `hazards` e a colisão é criada pelo Rectangle Object. O
-runtime destaca cada barreira com `SCAN`; após a desativação, reduz sua
-opacidade, aplica o ciano do visor e desliga o mesmo corpo físico. Um único
+O visual fica na layer `hazards` e a zona letal é criada a partir do topo
+do primeiro tile visível até a superfície real do chão, eliminando faixas
+invisíveis acima ou abaixo da arte. O Rectangle Object continua definindo a
+coluna e a largura da porta. O runtime destaca cada barreira com `SCAN`; após
+a desativação, oculta completamente os tiles e o aviso, além de desligar o
+mesmo corpo físico. Um único
 pulso afeta somente a próxima barreira em até 900 px, evitando abrir sequências
 inteiras com uma ação. O segmento decorativo inferior é movido um tile para
 cima e sua posição antiga é ocultada para a arte não invadir o piso; o volume

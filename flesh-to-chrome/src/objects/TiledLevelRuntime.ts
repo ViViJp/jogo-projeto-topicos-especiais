@@ -121,7 +121,7 @@ export class TiledLevelRuntime {
     private consolidatedThisPhase: Set<string>,
     private callbacks: {
       onCreditCollected: (id: string, value: number) => void;
-      onCheckpoint: (id: string, x: number, y: number) => void;
+      onCheckpoint: (id: string, x: number, y: number) => boolean | void;
       onEndGate: (destination: string, implant?: keyof AbilityState) => void;
     }
   ) {
@@ -190,7 +190,6 @@ export class TiledLevelRuntime {
 
     for (const o of byType("credit")) {
       const id = this.propString(o, "id") ?? o.name ?? `credit-${o.id}`;
-      if (this.consolidatedThisPhase.has(id)) continue; // já consolidado - não reaparece
       const route = this.propString(o, "route") === "risk" ? "risk" : "normal";
       this.credits.push({ id, x: o.x ?? 0, y: (o.y ?? 0) + offsetY, value: 10, route });
     }
@@ -295,6 +294,7 @@ export class TiledLevelRuntime {
 
   private buildCredits(): void {
     for (const c of this.credits) {
+      if (this.consolidatedThisPhase.has(c.id)) continue;
       const sprite = this.scene.physics.add.sprite(c.x, c.y, TEX.credit);
       sprite.body!.setAllowGravity(false);
       sprite.setData("creditId", c.id);
@@ -495,8 +495,8 @@ export class TiledLevelRuntime {
       if (this.checkpointTriggered.has(cp.id)) continue;
       if (Math.abs(px - cp.x) < 26) {
         this.checkpointTriggered.add(cp.id);
-        this.checkpointMarkers.get(cp.id)?.activate();
-        this.callbacks.onCheckpoint(cp.id, cp.x, cp.y);
+        const withFeedback = this.callbacks.onCheckpoint(cp.id, cp.x, cp.y) !== false;
+        this.checkpointMarkers.get(cp.id)?.activate(withFeedback);
       }
     }
 

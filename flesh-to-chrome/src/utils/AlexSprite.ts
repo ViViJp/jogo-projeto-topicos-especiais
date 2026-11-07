@@ -32,9 +32,10 @@ export const ALEX_SLIDE_FRAME = frameIndex(33, 2);
 
 const WALK_RIGHT = { row: 11, frames: 9 };
 const HURT = { row: 20, frames: 6 };
-// Bloco LPC de personagem sentado, linha DIREITA: Alex fica de perfil para
-// a TV, com três frames próprios de mãos/controle. Não reutiliza o slide.
-const CHECKPOINT_PLAY_RIGHT = { row: 35, frames: 3 };
+// Bloco LPC de personagem sentado, voltado para a DIREITA: Alex fica de
+// perfil para a TV. A linha 35 usada anteriormente é uma pose em pé; os dois
+// frames sentados corretos estão na linha 33.
+const CHECKPOINT_PLAY_RIGHT = { row: 33, frames: 2 };
 
 export function alexTextureForAbilities(abilities: AbilityState): string {
   if (abilities.thrusters) return ALEX_DASH_TEXTURE_KEY;

@@ -103,7 +103,7 @@ export class TiledPhase4Runtime {
     private readonly consolidatedThisPhase: Set<string>,
     private readonly callbacks: {
       onCreditCollected: (id: string, value: number) => void;
-      onCheckpoint: (id: string, x: number, y: number) => void;
+      onCheckpoint: (id: string, x: number, y: number) => boolean | void;
       onEndGate: (destination: string, implant?: keyof AbilityState) => void;
     },
   ) {
@@ -187,7 +187,6 @@ export class TiledPhase4Runtime {
   private readCredits(objects: Phaser.Types.Tilemaps.TiledObject[]): void {
     for (const object of objects) {
       const id = this.readString(object, "id") ?? object.name ?? `credit-${object.id}`;
-      if (this.consolidatedThisPhase.has(id)) continue;
       this.credits.push({
         id,
         x: object.x ?? 0,
@@ -217,6 +216,7 @@ export class TiledPhase4Runtime {
 
   private buildCredits(): void {
     for (const credit of this.credits) {
+      if (this.consolidatedThisPhase.has(credit.id)) continue;
       const sprite = this.scene.physics.add.sprite(credit.x, credit.y, TEX.credit);
       sprite.body!.setAllowGravity(false);
       sprite.setData("creditValue", credit.value);
@@ -356,14 +356,25 @@ export class TiledPhase4Runtime {
       const height = object.height ?? 256;
       const x = object.x ?? 0;
       const y = object.y ?? 128;
+      const doorCol = Math.floor(x / this.map.tileWidth);
+      let firstDoorTileRow: number | undefined;
+      for (let row = 0; row < this.map.height; row += 1) {
+        if (this.hazardsLayer?.getTileAt(doorCol, row)?.index === DOOR_FIRST_GID) {
+          firstDoorTileRow = row;
+          break;
+        }
+      }
+      const collisionTop = (firstDoorTileRow ?? Math.floor(y / this.map.tileHeight))
+        * this.map.tileHeight + TILED_FASE4_OFFSET_Y;
+      const collisionBottom = this.groundSurfaceYAt(x);
+      const collisionHeight = Math.max(this.map.tileHeight, collisionBottom - collisionTop);
       const zone = this.scene.add.zone(
         x + width / 2,
-        y + TILED_FASE4_OFFSET_Y + height / 2,
+        collisionTop + collisionHeight / 2,
         width,
-        height,
+        collisionHeight,
       );
       this.scene.physics.add.existing(zone, true);
-      const doorCol = Math.floor(x / this.map.tileWidth);
       const bottomTileRow = Math.ceil((y + height) / this.map.tileHeight) - 1;
       const bottomTile = this.hazardsLayer?.getTileAt(doorCol, bottomTileRow);
       if (bottomTile?.index === DOOR_FIRST_GID) {
@@ -377,7 +388,7 @@ export class TiledPhase4Runtime {
         zone,
         col: doorCol,
         prompt: this.scene.add
-          .text(x + width / 2, y + TILED_FASE4_OFFSET_Y - 8, "SCAN", {
+          .text(x + width / 2, collisionTop - 8, "SCAN", {
             fontFamily: "Courier New, monospace",
             fontSize: "12px",
             color: "#7cfcea",
@@ -482,13 +493,14 @@ export class TiledPhase4Runtime {
     const body = door.zone.body as Phaser.Physics.Arcade.StaticBody | null;
     if (body) body.enable = !disabled;
     door.prompt
-      .setText(disabled ? "DESATIVADA" : "SCAN")
-      .setColor(disabled ? "#bff8ff" : "#7cfcea");
+      .setText("SCAN")
+      .setColor("#7cfcea")
+      .setVisible(!disabled);
     for (let row = 0; row < this.map.height; row += 1) {
       const tile = this.hazardsLayer?.getTileAt(door.col, row);
       if (tile?.index !== DOOR_FIRST_GID) continue;
-      tile.alpha = disabled ? 0.16 : 1;
-      tile.tint = disabled ? 0x36e2ff : 0xffffff;
+      tile.alpha = disabled ? 0 : 1;
+      tile.tint = 0xffffff;
     }
   }
 
@@ -590,8 +602,8 @@ export class TiledPhase4Runtime {
       if (this.checkpointTriggered.has(checkpoint.id)) continue;
       if (Math.abs(player.sprite.x - checkpoint.x) < 28) {
         this.checkpointTriggered.add(checkpoint.id);
-        this.checkpointMarkers.get(checkpoint.id)?.activate();
-        this.callbacks.onCheckpoint(checkpoint.id, checkpoint.x, checkpoint.y);
+        const withFeedback = this.callbacks.onCheckpoint(checkpoint.id, checkpoint.x, checkpoint.y) !== false;
+        this.checkpointMarkers.get(checkpoint.id)?.activate(withFeedback);
       }
     }
 

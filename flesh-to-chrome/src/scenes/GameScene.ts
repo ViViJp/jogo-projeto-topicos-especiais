@@ -641,7 +641,12 @@ export class GameScene extends Phaser.Scene {
     this.updateHud();
   }
 
-  private handleCheckpoint(id: string, x: number, y: number): void {
+  private handleCheckpoint(id: string, x: number, y: number): boolean {
+    const alreadyActive = this.data$.checkpointX > 0
+      && Math.abs(this.data$.checkpointX - x) < 1
+      && Math.abs(this.data$.checkpointY - y) < 1;
+    if (alreadyActive) return false;
+
     this.credits.consolidate();
     if (!this.data$.testMode) {
       this.save.updateCheckpoint(x, y, this.credits.getConsolidatedIds(), this.credits.getTotal());
@@ -649,9 +654,10 @@ export class GameScene extends Phaser.Scene {
     this.data$.checkpointX = x;
     this.data$.checkpointY = y;
     this.updateHud();
-    // A TV fica à direita do objeto de checkpoint. Alex senta ao lado do
-    // gabinete e usa a sequência LPC voltada para a tela.
-    this.player.beginCheckpointInteraction(x - 8, y);
+    // A TV fica à direita do objeto de checkpoint. A pose sentada se projeta
+    // para a direita, então Alex é deslocado para que rosto e mãos fiquem
+    // diante da tela, sem o corpo atravessar o gabinete.
+    this.player.beginCheckpointInteraction(x - 24, y);
     this.sound.play(CHECKPOINT_SFX_KEY, { volume: 0.55 });
     this.hud.flashPrompt(`Checkpoint ${id} sincronizado — créditos consolidados`);
     this.checkpointInteraction?.destroy();
@@ -662,6 +668,7 @@ export class GameScene extends Phaser.Scene {
         this.checkpointInteraction = undefined;
       },
     );
+    return true;
   }
 
   /**
