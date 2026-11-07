@@ -135,7 +135,14 @@ for (const runtime of ["TiledPhase4Runtime.ts", "TiledPhase5Runtime.ts"]) {
 const phase4Runtime = fs.readFileSync(path.join(projectDirectory, "src/objects/TiledPhase4Runtime.ts"), "utf8");
 assert.match(phase4Runtime, /this\.scene\.physics\.add\.collider\(player\.sprite, wall\.zone\)/);
 assert.match(phase4Runtime, /body\.enable = !intangible/);
-assert.match(phase4Runtime, /this\.falseWalls\.forEach\(\(wall\) => this\.setFalseWallIntangible\(wall, false\)\)/);
+assert.match(phase4Runtime, /if \(!active\) return/);
+assert.match(phase4Runtime, /\.forEach\(\(wall\) => this\.setFalseWallIntangible\(wall, true\)\)/);
+assert.match(phase4Runtime, /tile\.alpha = intangible \? 0 : 1/);
+assert.doesNotMatch(
+  phase4Runtime,
+  /setFalseWallIntangible\(wall, false\)/,
+  "fase4: parede resolvida pelo scan não pode recuperar colisão durante a tentativa",
+);
 assert.match(phase4Runtime, /BACKGROUND_TOWER_GID/);
 assert.match(phase4Runtime, /FLOATING_TERMINAL_GID/);
 assert.match(phase4Runtime, /putTileAt\(DOOR_FIRST_GID, doorCol, bottomTileRow - 1\)/);

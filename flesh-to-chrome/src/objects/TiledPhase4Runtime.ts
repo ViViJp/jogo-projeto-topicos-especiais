@@ -469,11 +469,11 @@ export class TiledPhase4Runtime {
       for (let col = startCol; col < endCol; col += 1) {
         const tile = this.scanVisualsLayer?.getTileAt(col, row);
         if (!tile || tile.index === -1) continue;
-        tile.alpha = intangible ? 0.08 : 1;
+        tile.alpha = intangible ? 0 : 1;
         tile.tint = intangible ? 0x36e2ff : 0xffffff;
       }
     }
-    region.outline.setVisible(intangible);
+    region.outline.setVisible(false);
   }
 
   private setDoorDisabled(door: AutomaticDoor, disabled: boolean): void {
@@ -556,10 +556,10 @@ export class TiledPhase4Runtime {
   }
 
   setScanActive(active: boolean): void {
-    if (!active) {
-      this.falseWalls.forEach((wall) => this.setFalseWallIntangible(wall, false));
-      return;
-    }
+    // Paredes falsas resolvidas permanecem invisíveis e intangíveis durante
+    // toda a tentativa. O callback `false` apenas encerra o efeito visual
+    // global do visor; a cena recria as paredes ao morrer/reiniciar a fase.
+    if (!active) return;
     if (!this.playerRef) return;
     const playerX = this.playerRef.sprite.x;
     this.disableNearestDoor(playerX);
@@ -569,9 +569,9 @@ export class TiledPhase4Runtime {
         .map((region) => region.group),
     );
     groups.forEach((group) => this.revealGroup(group));
-    this.falseWalls.forEach((wall) => {
-      this.setFalseWallIntangible(wall, groups.has(wall.region.group));
-    });
+    this.falseWalls
+      .filter((wall) => groups.has(wall.region.group))
+      .forEach((wall) => this.setFalseWallIntangible(wall, true));
   }
 
   update(player: Player, _deltaMs = 0): void {

@@ -381,7 +381,7 @@ O objeto da classe **tutorial** usa `skill = attack`. Ele marca a área segura a
 
 **Função:** associa uma região visual ou lógica da Fase 4 à revelação produzida
 pelos olhos mecânicos. Regiões `false_wall` também definem o volume sólido da
-parede enquanto o pulso não está ativo.
+parede até o primeiro pulso válido que resolva o grupo.
 
 **Geometria Tiled:** Rectangle Object envolvendo o elemento ou trecho revelável.
 
@@ -393,10 +393,11 @@ parede enquanto o pulso não está ativo.
 
 Ao receber um scan válido, o runtime deve destacar os objetos do grupo e manter
 a revelação até Alex sair do trecho. Após morte e respawn, o grupo volta ao
-estado oculto. `false_wall` mantém colisão sólida normalmente e reduz sua arte
-quase a zero enquanto desliga o corpo físico durante os 750 ms do pulso; ao
-terminar o scan, arte e colisão retornam. `false_floor` marca arte sem colisão
-sobre uma abertura real da layer `ground`.
+estado oculto. `false_wall` mantém colisão sólida normalmente; o primeiro scan
+válido torna seus tiles totalmente invisíveis e desliga o corpo físico pelo
+restante da tentativa. O fim dos 750 ms do pulso não restaura a parede — ela só
+é recriada junto com a cena após morte ou reinício da fase. `false_floor` marca
+arte sem colisão sobre uma abertura real da layer `ground`.
 
 ### 6.11 Novos valores de **hazard.kind** da Fase 4
 
