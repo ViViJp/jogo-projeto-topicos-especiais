@@ -202,10 +202,13 @@ for (const phase of phases) {
   }
 
   for (const door of objects.filter((object) => object.type === "automatic_door")) {
+    if (typeof property(door, "id") !== "string") fail(`${phase.id}: porta ${door.name} sem id`);
     const cycle = property(door, "cycle_ms");
     const open = property(door, "open_ms");
-    if (typeof cycle !== "number" || cycle <= 0 || typeof open !== "number" || open < 0 || open > cycle) {
-      fail(`${phase.id}: ciclo inválido na porta ${door.name}`);
+    if (cycle !== undefined || open !== undefined) {
+      if (typeof cycle !== "number" || cycle <= 0 || typeof open !== "number" || open < 0 || open > cycle) {
+        fail(`${phase.id}: propriedades legadas de ciclo inválidas na porta ${door.name}`);
+      }
     }
   }
 

@@ -63,10 +63,11 @@ mutáveis da pista:
 - uma restauração repetida nunca cria uma segunda barricada/collider para o
   mesmo ID;
 - grupos revelados por scan voltam ao estado oculto;
-- portas reutilizam as zonas existentes e recalculam o estado pelo relógio da
-  corrida, sem recriar corpos físicos;
+- barreiras desativadas por scan reutilizam as zonas existentes e voltam ao
+  estado sólido, sem recriar corpos físicos;
 - ao final da restauração, o runtime verifica quantidade de barricadas,
-  colliders ativos e grupos de scan. Uma inconsistência gera erro explícito.
+  colliders ativos, barreiras desativadas e grupos de scan. Uma inconsistência
+  gera erro explícito.
 
 ## Testes automatizados
 
@@ -116,7 +117,8 @@ Use dois dispositivos reais e marque cada item no comentário do PR:
 - [ ] o checkpoint central muda o local de respawn;
 - [ ] antes e depois do checkpoint, destruir/revelar obstáculos e morrer os
       restaura sem objetos sobrepostos nem colisão invisível;
-- [ ] portas continuam sincronizadas após o respawn;
+- [ ] cada scan desativa somente a próxima barreira local e todas voltam após
+      o respawn;
 - [ ] interromper a sinalização por menos de dez segundos renegocia os
       DataChannels e mantém a corrida;
 - [ ] desconectar um dispositivo por mais de dez segundos concede vitória;

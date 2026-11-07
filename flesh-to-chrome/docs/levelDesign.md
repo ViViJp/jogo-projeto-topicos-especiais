@@ -380,7 +380,7 @@
                               ↓
                            lasers
                               ↓
-                   portas automatizadas
+                  barreiras via scan
                               ↓
                         pisos falsos
                               │

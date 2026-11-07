@@ -51,6 +51,7 @@ export class Player {
   private dashCooldownTimer = 0;
   private pressedTimer = 0;
   private scanTimer = 0;
+  private depthBeforeCheckpoint = 0;
 
   private onDeath: () => void;
   private onScanPulse: (active: boolean) => void;
@@ -118,11 +119,16 @@ export class Player {
     (this.sprite.body as Phaser.Physics.Arcade.Body).setAllowGravity(false);
     this.sprite.anims.stop();
     this.sprite.setFrame(ALEX_SLIDE_FRAME);
+    this.depthBeforeCheckpoint = this.sprite.depth;
+    // A TV é um objeto de primeiro plano (depth 2–3 conforme a fase).
+    // Durante a pose de interação Alex precisa aparecer sentado diante dela.
+    this.sprite.setDepth(10);
   }
 
   endCheckpointInteraction(): void {
     if (this.state !== "checkpoint") return;
     this.state = "running";
+    this.sprite.setDepth(this.depthBeforeCheckpoint);
     (this.sprite.body as Phaser.Physics.Arcade.Body).setAllowGravity(true);
     this.applyRunningPose();
     this.sprite.setVelocityX(BASE_RUN_SPEED);

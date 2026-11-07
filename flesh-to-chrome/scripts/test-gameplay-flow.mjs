@@ -30,6 +30,18 @@ assert.equal(motion.hazardCycleState(900, timing), "warning");
 assert.equal(motion.hazardCycleState(999, timing), "warning");
 assert.equal(motion.hazardCycleState(1000, timing), "active");
 assert.equal(motion.hazardCycleState(900, { ...timing, phaseMs: 100 }), "active");
+assert.equal(motion.hazardCycleSample(100, timing).progress, 0.5);
+assert.equal(motion.hazardCycleSample(900, timing).progress, 0);
+assert.ok(Math.abs(motion.hazardCycleSample(950, timing).progress - 0.5) < 0.000001);
+const scanDoors = [
+  { x: 500, width: 32, disabled: false },
+  { x: 820, width: 32, disabled: false },
+];
+assert.equal(motion.nearestScanObstacleIndex(100, 900, scanDoors), 0);
+scanDoors[0].disabled = true;
+assert.equal(motion.nearestScanObstacleIndex(100, 900, scanDoors), 1);
+assert.equal(motion.nearestScanObstacleIndex(900, 900, scanDoors), -1, "porta ultrapassada não consome scan");
+assert.equal(motion.nearestScanObstacleIndex(0, 400, scanDoors), -1, "porta fora do alcance não abre");
 for (const [kind, values] of Object.entries(config.GAMEPLAY_TIMING.industrialHazards)) {
   assert.ok(values.activeMs > 0, `${kind}: precisa de janela ativa`);
   assert.ok(values.warningMs >= 300, `${kind}: aviso deve ser legível`);
@@ -101,5 +113,22 @@ for (const runtime of ["TiledPhase2Runtime.ts", "TiledPhase4Runtime.ts", "TiledP
   const source = fs.readFileSync(path.join(projectDirectory, "src/objects", runtime), "utf8");
   assert.doesNotMatch(source, /scene\.time\.now/, `${runtime}: timer absoluto avança durante a pausa`);
 }
+const phase2Runtime = fs.readFileSync(path.join(projectDirectory, "src/objects/TiledPhase2Runtime.ts"), "utf8");
+assert.match(phase2Runtime, /hazardCycleSample/);
+assert.match(phase2Runtime, /updateFromGameObject/);
+for (const kind of ["press", "steam", "mech_arm", "crusher"]) {
+  assert.match(phase2Runtime, new RegExp(`hazard\\.kind === "${kind}"`), `fase2: movimento de ${kind}`);
+}
+for (const runtime of ["TiledPhase4Runtime.ts", "TiledPhase5Runtime.ts"]) {
+  const source = fs.readFileSync(path.join(projectDirectory, "src/objects", runtime), "utf8");
+  assert.match(source, /nearestScanObstacleIndex/);
+  assert.match(source, /setDoorDisabled/);
+  assert.doesNotMatch(source, /% door\.cycleMs/, `${runtime}: porta não pode depender do relógio`);
+}
+const phase5Runtime = fs.readFileSync(path.join(projectDirectory, "src/objects/TiledPhase5Runtime.ts"), "utf8");
+assert.match(phase5Runtime, /disabledDoors !== 0/);
+const playerSource = fs.readFileSync(path.join(projectDirectory, "src/entities/Player.ts"), "utf8");
+assert.match(playerSource, /this\.sprite\.setDepth\(10\)/);
+assert.match(playerSource, /this\.sprite\.setDepth\(this\.depthBeforeCheckpoint\)/);
 
-console.log("Gameplay flow: ciclos, barreiras e estrutura das cinco fases validados.");
+console.log("Gameplay flow: movimentos, barreiras por scan e estrutura das cinco fases validados.");

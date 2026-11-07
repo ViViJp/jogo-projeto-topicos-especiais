@@ -256,9 +256,10 @@ carregada de seu blockout Tiled real e interpretada por um runtime próprio:
 - **Fase 1 — Esgoto/Periferia:** corrida, pulo, slide, água tóxica, fios,
   canos rompidos, créditos, checkpoint e transição para a clínica.
 - **Fase 2 — Distrito Industrial:** salto duplo, esteiras com velocidade
-  apenas durante o contato, canos baixos e hazards industriais. Prensas,
-  vapor, braços mecânicos e trituradoras ainda são volumes de morte
-  imediata; os ciclos e animações individuais permanecem pendentes.
+  apenas durante o contato, canos baixos e hazards industriais. Prensas
+  descem e recolhem, vapor é emitido pelos bocais, braços mecânicos se
+  estendem e trituradoras fecham suas mandíbulas; as hitboxes acompanham o
+  movimento e só ficam letais durante a janela ativa.
 - **Fase 3 — Meio Urbano:** ataque antecipado, barricadas destrutíveis com
   fragmentação, bandidos derrotáveis, drones blindados e portões elétricos.
 - **Fase 4 — Distrito Corporativo:** scan, rotas/paredes/pisos falsos,

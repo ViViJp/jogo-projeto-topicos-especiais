@@ -8,7 +8,7 @@ import {
 } from "../levels/TiledFase5";
 import { TEX } from "../utils/PlaceholderTextures";
 import { CheckpointMarker } from "./CheckpointMarker";
-import { rotatingBarrierPoints } from "./HazardMotion";
+import { nearestScanObstacleIndex, rotatingBarrierPoints } from "./HazardMotion";
 
 interface Phase5Credit {
   id: string;
@@ -46,12 +46,13 @@ interface HiddenVisualRegion {
 }
 
 interface AutomaticDoor {
+  id: string;
+  x: number;
+  width: number;
   zone: Phaser.GameObjects.Zone;
   col: number;
-  cycleMs: number;
-  openMs: number;
-  phaseMs: number;
-  open?: boolean;
+  prompt: Phaser.GameObjects.Text;
+  disabled: boolean;
 }
 
 interface RotatingBarrier {
@@ -436,11 +437,22 @@ export class TiledPhase5Runtime {
       );
       this.scene.physics.add.existing(zone, true);
       this.doors.push({
+        id: this.readString(object, "id") ?? object.name ?? `door-${object.id}`,
+        x,
+        width,
         zone,
         col: Math.floor(x / this.map.tileWidth),
-        cycleMs: Math.max(1, this.readNumber(object, "cycle_ms") ?? 1800),
-        openMs: Math.max(0, this.readNumber(object, "open_ms") ?? 760),
-        phaseMs: this.readNumber(object, "phase_ms") ?? 0,
+        prompt: this.scene.add
+          .text(x + width / 2, y + this.offsetY - 8, "SCAN", {
+            fontFamily: "Courier New, monospace",
+            fontSize: "12px",
+            color: "#7cfcea",
+            backgroundColor: "#071b25dd",
+            padding: { x: 5, y: 3 },
+          })
+          .setOrigin(0.5, 1)
+          .setDepth(7),
+        disabled: false,
       });
     }
   }
@@ -645,18 +657,25 @@ export class TiledPhase5Runtime {
     if (target) this.destroyBreakable(target);
   }
 
-  private updateDoors(now: number): void {
-    for (const door of this.doors) {
-      const open = (now + door.phaseMs) % door.cycleMs < Math.min(door.openMs, door.cycleMs);
-      if (door.open === open) continue;
-      door.open = open;
-      const physicsBody = door.zone.body as Phaser.Physics.Arcade.StaticBody | null;
-      if (physicsBody) physicsBody.enable = !open;
-      for (let row = 0; row < this.map.height; row += 1) {
-        const tile = this.hazardsLayer?.getTileAt(door.col, row);
-        if (tile?.index === DOOR_FIRST_GID) tile.alpha = open ? 0.12 : 1;
-      }
+  private setDoorDisabled(door: AutomaticDoor, disabled: boolean): void {
+    if (door.disabled === disabled) return;
+    door.disabled = disabled;
+    const physicsBody = door.zone.body as Phaser.Physics.Arcade.StaticBody | null;
+    if (physicsBody) physicsBody.enable = !disabled;
+    door.prompt
+      .setText(disabled ? "DESATIVADA" : "SCAN")
+      .setColor(disabled ? "#bff8ff" : "#7cfcea");
+    for (let row = 0; row < this.map.height; row += 1) {
+      const tile = this.hazardsLayer?.getTileAt(door.col, row);
+      if (tile?.index !== DOOR_FIRST_GID) continue;
+      tile.alpha = disabled ? 0.16 : 1;
+      tile.tint = disabled ? 0x36e2ff : 0xffffff;
     }
+  }
+
+  private disableNearestDoor(playerX: number): void {
+    const index = nearestScanObstacleIndex(playerX, SCAN_RANGE, this.doors);
+    if (index >= 0) this.setDoorDisabled(this.doors[index], true);
   }
 
   private distanceToRegion(playerX: number, region: RevealRegion): number {
@@ -730,6 +749,7 @@ export class TiledPhase5Runtime {
   setScanActive(active: boolean): void {
     if (!active || !this.playerRef) return;
     const playerX = this.playerRef.sprite.x;
+    this.disableNearestDoor(playerX);
     const groups = new Set(
       this.revealRegions
         .filter((region) => this.distanceToRegion(playerX, region) <= SCAN_RANGE)
@@ -752,15 +772,15 @@ export class TiledPhase5Runtime {
     for (const hidden of this.hiddenVisualRegions) this.setHiddenVisual(hidden, false);
     this.revealedGroups.clear();
 
-    // Portas não são recriadas: o mesmo corpo estático é reposicionado no
-    // estado determinístico do cronômetro, evitando zonas/colliders duplicados.
-    for (const door of this.doors) door.open = undefined;
-    this.updateDoors(this.timeSource());
+    // Portas reutilizam os mesmos corpos: o respawn apenas religa colisão e
+    // visual, sem criar zonas ou overlaps duplicados.
+    for (const door of this.doors) this.setDoorDisabled(door, false);
 
     const restored = this.mutableObstacleState();
     if (
       restored.breakables !== restored.breakableDefinitions ||
       restored.activeBreakableColliders !== restored.breakableDefinitions ||
+      restored.disabledDoors !== 0 ||
       restored.revealedGroups !== 0
     ) {
       throw new Error(`${this.contextLabel}: restauração de obstáculos ficou inconsistente.`);
@@ -773,6 +793,7 @@ export class TiledPhase5Runtime {
     breakableDefinitions: number;
     activeBreakableColliders: number;
     doors: number;
+    disabledDoors: number;
     revealedGroups: number;
   } {
     return {
@@ -780,6 +801,7 @@ export class TiledPhase5Runtime {
       breakableDefinitions: this.breakableDefinitions.length,
       activeBreakableColliders: this.breakables.filter((breakable) => breakable.collider?.active).length,
       doors: this.doors.length,
+      disabledDoors: this.doors.filter((door) => door.disabled).length,
       revealedGroups: this.revealedGroups.size,
     };
   }
@@ -787,7 +809,6 @@ export class TiledPhase5Runtime {
   update(player: Player, deltaMs = 0): void {
     if (this.usesInternalTime) this.elapsedMs += Math.max(0, deltaMs);
     const now = this.timeSource();
-    this.updateDoors(now);
     this.updateRotatingBarriers(now);
     this.clearPassedRevealGroups(player.sprite.x);
 
@@ -830,7 +851,10 @@ export class TiledPhase5Runtime {
       barrier.hub.destroy();
       barrier.collisionNodes.forEach((node) => node.destroy());
     });
-    this.doors.forEach((door) => door.zone.destroy());
+    this.doors.forEach((door) => {
+      door.zone.destroy();
+      door.prompt.destroy();
+    });
     this.breakables.forEach((breakable) => {
       breakable.collider?.destroy();
       breakable.body.destroy();

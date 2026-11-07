@@ -309,16 +309,19 @@ No runtime atual, a velocidade é aplicada somente enquanto o corpo de Alex est�
 
 | kind | Representação | Regra atual |
 | --- | --- | --- |
-| **press** | prensa industrial | morte imediata ao contato |
-| **steam** | jato de vapor | morte imediata ao contato |
-| **mech_arm** | braço mecânico | morte imediata ao contato |
-| **crusher** | trituradora | morte ao contato |
+| **press** | prensa industrial | desce na janela ativa; hitbox acompanha o cabeçote |
+| **steam** | jato de vapor | pluma cresce a partir do bocal; hitbox acompanha a altura emitida |
+| **mech_arm** | braço mecânico | segmentos se estendem e recolhem; hitbox acompanha a ponta |
+| **crusher** | trituradora | mandíbulas fecham na janela ativa; hitbox acompanha o fechamento |
 
 Os quatro valores usam o ciclo determinístico **inativo → aviso → ativo** do
-`TiledPhase2Runtime`. Tint, indicador e corpo físico são atualizados pelo
-mesmo estado, e o contato só é fatal durante a janela ativa. Os valores
-padrão ficam em `GAMEPLAY_TIMING.industrialHazards`; cada objeto pode
-sobrescrever `cycle_ms`, `active_ms`, `warning_ms` e `phase_ms` no Tiled.
+`TiledPhase2Runtime`. O aviso mantém um contorno amarelo, enquanto a janela
+ativa executa movimento contínuo com entrada, sustentação e retração. A zona
+física é reposicionada e redimensionada a cada frame pela mesma amostra de
+tempo que move a arte; o contato só é fatal onde a máquina ou a pluma está
+visualmente presente. Os valores padrão ficam em
+`GAMEPLAY_TIMING.industrialHazards`; cada objeto pode sobrescrever
+`cycle_ms`, `active_ms`, `warning_ms` e `phase_ms` no Tiled.
 
 ### 6.5 **low_ceiling**
 
@@ -397,20 +400,24 @@ mesmo antes da revelação.
 
 ### 6.12 **automatic_door**
 
-**Função:** barreira corporativa que alterna entre fechada e aberta. Fechada,
-bloqueia e mata Alex ao contato; aberta, permite a passagem.
+**Função:** barreira corporativa controlada pelo visor. Ela permanece sólida e
+letal até um pulso de scan desativar a barreira ainda ativa mais próxima à
+frente. A desativação persiste durante a tentativa e é restaurada após morte.
 
 **Geometria Tiled:** Rectangle Object cobrindo toda a passagem vertical.
 
 | Propriedade | Tipo | Regra | Obrigatória |
 | --- | --- | --- | --- |
 | **id** | string | identificador único | sim |
-| **cycle_ms** | int | duração total do ciclo | sim |
-| **open_ms** | int | janela aberta dentro do ciclo | sim |
-| **phase_ms** | int | deslocamento inicial do ciclo | sim |
+| **cycle_ms** | int | legado do protótipo temporizado; ignorado pelo runtime | não |
+| **open_ms** | int | legado do protótipo temporizado; ignorado pelo runtime | não |
+| **phase_ms** | int | legado do protótipo temporizado; ignorado pelo runtime | não |
 
-O visual fica na layer `hazards`, mas sua colisão temporizada deve ser criada a
-partir do Rectangle Object.
+O visual fica na layer `hazards` e a colisão é criada pelo Rectangle Object. O
+runtime destaca cada barreira com `SCAN`; após a desativação, reduz sua
+opacidade, aplica o ciano do visor e desliga o mesmo corpo físico. Um único
+pulso afeta somente a próxima barreira em até 900 px, evitando abrir sequências
+inteiras com uma ação.
 
 ### 6.13 **narrative**
 
@@ -440,8 +447,8 @@ As grades continuam usando o volume letal autorado. Cada barreira rotativa
 instancia um braço visual e uma cadeia de corpos físicos que percorrem o mesmo
 ângulo a cada frame. O Rectangle Object define centro e comprimento; o período
 padrão fica em `GAMEPLAY_TIMING.rotatingBarrier` e pode ser sobrescrito por
-`cycle_ms` e `phase_ms`. As portas automáticas continuam respeitando
-`cycle_ms`, `open_ms` e `phase_ms`.
+`cycle_ms` e `phase_ms`. As portas automáticas seguem a regra determinística
+de desativação por scan da seção 6.12.
 
 ### 6.15 **zone**
 
@@ -666,9 +673,7 @@ phase_end
 tutorial.skill = scan
 scan_reveal.kind = hidden_route | false_wall | hidden_hazard | false_floor
 hazard.kind = laser | hidden_spikes
-automatic_door.cycle_ms = int
-automatic_door.open_ms = int
-automatic_door.phase_ms = int
+automatic_door.id = string
 credit.route = normal | risk
 checkpoint.id = f4-cp1
 narrative.kind = father_ad
@@ -680,7 +685,7 @@ phase_end.fase = 4
 O mapa possui **30.720 px** de comprimento. A **320 px/s**, o percurso linear
 equivale a aproximadamente **96 s sem mortes**, dentro da hipótese de 90–120 s
 do GDD. Existem 20 créditos: 4 na rota normal e 16 associados a plataformas,
-armadilhas, pisos falsos, lasers ou portas temporizadas.
+armadilhas, pisos falsos, lasers ou barreiras desativáveis por scan.
 
 ### 8.5 Fase 5 — esquema autoral
 
@@ -718,9 +723,7 @@ phase_end
 ~~~text
 tutorial.skill = dash
 hazard.kind = laser_grid | rotating_barrier | hidden_spikes
-automatic_door.cycle_ms = int
-automatic_door.open_ms = int
-automatic_door.phase_ms = int
+automatic_door.id = string
 scan_reveal.kind = false_floor | hidden_hazard
 breakable.kind = barricade
 credit.route = normal | risk
@@ -734,7 +737,7 @@ phase_end.fase = 5
 O mapa possui **38.400 px**. Os primeiros **28.800 px** correspondem a
 aproximadamente **90 s de desafio**, e os **9.600 px** finais reservam o trecho
 contemplativo e o Portão, totalizando cerca de **120 s** a 320 px/s. Há um
-checkpoint após as portas temporizadas.
+checkpoint após as barreiras controladas por scan.
 
 Os vãos obrigatórios de dash possuem **448 px (14 tiles)**. O piso falso possui
 **192 px (6 tiles)** e permanece desenhado somente em `scan-visuals`, enquanto
@@ -757,13 +760,14 @@ visual e os desafios de kit completo da Fase 5, mas é independente da campanha.
 
 Os primeiros 28.800 px usam o percurso mecânico da Fase 5. Os 9.600 px que
 antes levavam ao Portão foram substituídos por uma extensão competitiva com
-scan, barricadas, grades de laser, barreiras rotativas e porta temporizada. O
+scan, barricadas, grades de laser, barreiras rotativas e barreira desativável. O
 mapa termina em uma linha de chegada neutra, sem decisões ou progressão
 narrativa.
 
 Cada cliente instancia sua própria cópia lógica da pista. Após morte, o
-cronômetro e os créditos coletados permanecem, enquanto barricadas destruídas e
-revelações de scan são restauradas para a nova tentativa do trecho.
+cronômetro e os créditos coletados permanecem, enquanto barricadas destruídas,
+barreiras desativadas e revelações de scan são restauradas para a nova
+tentativa do trecho.
 
 #### Auditoria de acessibilidade da Fase 4
 

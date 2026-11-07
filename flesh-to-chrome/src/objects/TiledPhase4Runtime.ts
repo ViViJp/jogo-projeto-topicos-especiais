@@ -8,6 +8,7 @@ import {
 import { AbilityState } from "../systems/AbilityState";
 import { TEX } from "../utils/PlaceholderTextures";
 import { CheckpointMarker } from "./CheckpointMarker";
+import { nearestScanObstacleIndex } from "./HazardMotion";
 
 interface Phase4Credit {
   id: string;
@@ -43,12 +44,13 @@ interface HiddenHazardVisual {
 }
 
 interface AutomaticDoor {
+  id: string;
+  x: number;
+  width: number;
   zone: Phaser.GameObjects.Zone;
   col: number;
-  cycleMs: number;
-  openMs: number;
-  phaseMs: number;
-  open?: boolean;
+  prompt: Phaser.GameObjects.Text;
+  disabled: boolean;
 }
 
 const CORPORATE_HAZARD_KINDS = new Set(["laser", "hidden_spikes"]);
@@ -84,7 +86,6 @@ export class TiledPhase4Runtime {
   private readonly narrativeLabels: Phaser.GameObjects.Text[] = [];
   private endGateTriggered = false;
   private playerRef?: Player;
-  private elapsedMs = 0;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -168,12 +169,6 @@ export class TiledPhase4Runtime {
     const props = (object.properties ?? []) as Array<{ name: string; value: unknown }>;
     const value = props.find((property) => property.name === name)?.value;
     return typeof value === "string" ? value : undefined;
-  }
-
-  private readNumber(object: Phaser.Types.Tilemaps.TiledObject, name: string): number | undefined {
-    const props = (object.properties ?? []) as Array<{ name: string; value: unknown }>;
-    const value = props.find((property) => property.name === name)?.value;
-    return typeof value === "number" && Number.isFinite(value) ? value : undefined;
   }
 
   private readCredits(objects: Phaser.Types.Tilemaps.TiledObject[]): void {
@@ -308,11 +303,22 @@ export class TiledPhase4Runtime {
       );
       this.scene.physics.add.existing(zone, true);
       this.doors.push({
+        id: this.readString(object, "id") ?? object.name ?? `door-${object.id}`,
+        x,
+        width,
         zone,
         col: Math.floor(x / this.map.tileWidth),
-        cycleMs: Math.max(1, this.readNumber(object, "cycle_ms") ?? 1800),
-        openMs: Math.max(0, this.readNumber(object, "open_ms") ?? 760),
-        phaseMs: this.readNumber(object, "phase_ms") ?? 0,
+        prompt: this.scene.add
+          .text(x + width / 2, y + TILED_FASE4_OFFSET_Y - 8, "SCAN", {
+            fontFamily: "Courier New, monospace",
+            fontSize: "12px",
+            color: "#7cfcea",
+            backgroundColor: "#071b25dd",
+            padding: { x: 5, y: 3 },
+          })
+          .setOrigin(0.5, 1)
+          .setDepth(7),
+        disabled: false,
       });
     }
   }
@@ -324,7 +330,7 @@ export class TiledPhase4Runtime {
         .text(
           (object.x ?? 0) + (object.width ?? 0) / 2,
           (object.y ?? 0) + TILED_FASE4_OFFSET_Y - 20,
-          "SCAN: E / L / Y ou SELECT (CONTROLE)\nrevela rotas, pisos e armadilhas ocultas",
+          "SCAN: E / L / Y ou SELECT (CONTROLE)\nrevela segredos e desativa a próxima barreira",
           {
             fontFamily: "Courier New, monospace",
             fontSize: "15px",
@@ -377,18 +383,25 @@ export class TiledPhase4Runtime {
     }
   }
 
-  private updateDoors(now: number): void {
-    for (const door of this.doors) {
-      const open = (now + door.phaseMs) % door.cycleMs < Math.min(door.openMs, door.cycleMs);
-      if (door.open === open) continue;
-      door.open = open;
-      const body = door.zone.body as Phaser.Physics.Arcade.StaticBody | null;
-      if (body) body.enable = !open;
-      for (let row = 0; row < this.map.height; row += 1) {
-        const tile = this.hazardsLayer?.getTileAt(door.col, row);
-        if (tile?.index === DOOR_FIRST_GID) tile.alpha = open ? 0.12 : 1;
-      }
+  private setDoorDisabled(door: AutomaticDoor, disabled: boolean): void {
+    if (door.disabled === disabled) return;
+    door.disabled = disabled;
+    const body = door.zone.body as Phaser.Physics.Arcade.StaticBody | null;
+    if (body) body.enable = !disabled;
+    door.prompt
+      .setText(disabled ? "DESATIVADA" : "SCAN")
+      .setColor(disabled ? "#bff8ff" : "#7cfcea");
+    for (let row = 0; row < this.map.height; row += 1) {
+      const tile = this.hazardsLayer?.getTileAt(door.col, row);
+      if (tile?.index !== DOOR_FIRST_GID) continue;
+      tile.alpha = disabled ? 0.16 : 1;
+      tile.tint = disabled ? 0x36e2ff : 0xffffff;
     }
+  }
+
+  private disableNearestDoor(playerX: number): void {
+    const index = nearestScanObstacleIndex(playerX, SCAN_RANGE, this.doors);
+    if (index >= 0) this.setDoorDisabled(this.doors[index], true);
   }
 
   private distanceToRegion(playerX: number, region: RevealRegion): number {
@@ -451,6 +464,7 @@ export class TiledPhase4Runtime {
   setScanActive(active: boolean): void {
     if (!active || !this.playerRef) return;
     const playerX = this.playerRef.sprite.x;
+    this.disableNearestDoor(playerX);
     const groups = new Set(
       this.revealRegions
         .filter((region) => this.distanceToRegion(playerX, region) <= SCAN_RANGE)
@@ -459,9 +473,7 @@ export class TiledPhase4Runtime {
     groups.forEach((group) => this.revealGroup(group));
   }
 
-  update(player: Player, deltaMs = 0): void {
-    this.elapsedMs += Math.max(0, deltaMs);
-    this.updateDoors(this.elapsedMs);
+  update(player: Player, _deltaMs = 0): void {
     this.clearPassedRevealGroups(player.sprite.x);
 
     this.creditSprites.forEach((sprite, id) => {
@@ -502,7 +514,10 @@ export class TiledPhase4Runtime {
     this.creditSprites.forEach((sprite) => sprite.destroy());
     this.checkpointMarkers.forEach((marker) => marker.destroy());
     this.hazardZones.forEach((zone) => zone.destroy());
-    this.doors.forEach((door) => door.zone.destroy());
+    this.doors.forEach((door) => {
+      door.zone.destroy();
+      door.prompt.destroy();
+    });
     this.revealRegions.forEach((region) => region.outline.destroy());
     this.tutorialLabels.forEach((label) => label.destroy());
     this.narrativeLabels.forEach((label) => label.destroy());

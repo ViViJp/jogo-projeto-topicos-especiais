@@ -12,7 +12,7 @@ import {
   TILED_ELECTRIC_WIRE_TEXTURE_KEY,
   TiledLevelRuntime,
 } from "../objects/TiledLevelRuntime";
-import { TiledPhase2Runtime } from "../objects/TiledPhase2Runtime";
+import { TILED_PHASE2_STEAM_TEXTURE_KEY, TiledPhase2Runtime } from "../objects/TiledPhase2Runtime";
 import { TiledPhase3Runtime } from "../objects/TiledPhase3Runtime";
 import { TiledPhase4Runtime } from "../objects/TiledPhase4Runtime";
 import { TiledPhase5Runtime } from "../objects/TiledPhase5Runtime";
@@ -270,6 +270,12 @@ export class GameScene extends Phaser.Scene {
 
     for (const asset of assets) {
       if (!this.textures.exists(asset.key)) this.load.image(asset.key, asset.url.href);
+    }
+    if (!this.textures.exists(TILED_PHASE2_STEAM_TEXTURE_KEY)) {
+      this.load.image(
+        TILED_PHASE2_STEAM_TEXTURE_KEY,
+        new URL("../assets/props/hazards/steam-jet.png", import.meta.url).href,
+      );
     }
     if (!this.textures.exists(TILED_CHECKPOINT_TEXTURE_KEY)) {
       this.load.image(TILED_CHECKPOINT_TEXTURE_KEY, this.checkpointTvUrl().href);
@@ -741,7 +747,7 @@ export class GameScene extends Phaser.Scene {
       }
       this.scanOverlay.setVisible(true);
       this.scanOverlay.setAlpha(0.16);
-      this.hud.flashPrompt("VISOR ATIVO — rotas e armadilhas detectadas", 750);
+      this.hud.flashPrompt("VISOR ATIVO — segredos detectados e barreira analisada", 750);
       this.tiledRuntime?.setScanActive(true);
       this.tiledPhase2Runtime?.setScanActive(true);
       this.tiledPhase3Runtime?.setScanActive(true);
