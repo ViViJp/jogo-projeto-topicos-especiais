@@ -63,7 +63,8 @@ Firefox headless, Phaser real e mapas Tiled carregados pelo Parcel:
 | 5 | 0/300 | 10/300 | não | aprovada em x=37.888 |
 
 Em todas as fases, o catálogo manteve a quantidade total de créditos depois do
-respawn, a TV permaneceu ativada e `checkpointInteraction` ficou ausente. Nas
+respawn, a TV permaneceu ativada e `checkpointInteraction` ficou ausente.
+
 O comportamento anterior de apenas bloquear Alex foi substituído pela regra
 definitiva: tocar uma barreira visível causa morte; usar o scan antes do contato
 oculta a arte e o aviso, desliga o corpo letal e libera a passagem.
