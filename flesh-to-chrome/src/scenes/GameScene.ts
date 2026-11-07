@@ -12,7 +12,11 @@ import {
   TILED_ELECTRIC_WIRE_TEXTURE_KEY,
   TiledLevelRuntime,
 } from "../objects/TiledLevelRuntime";
-import { TILED_PHASE2_STEAM_TEXTURE_KEY, TiledPhase2Runtime } from "../objects/TiledPhase2Runtime";
+import {
+  TILED_PHASE2_PRESS_TEXTURE_KEY,
+  TILED_PHASE2_STEAM_TEXTURE_KEY,
+  TiledPhase2Runtime,
+} from "../objects/TiledPhase2Runtime";
 import { TiledPhase3Runtime } from "../objects/TiledPhase3Runtime";
 import { TiledPhase4Runtime } from "../objects/TiledPhase4Runtime";
 import { TiledPhase5Runtime } from "../objects/TiledPhase5Runtime";
@@ -275,6 +279,12 @@ export class GameScene extends Phaser.Scene {
       this.load.image(
         TILED_PHASE2_STEAM_TEXTURE_KEY,
         new URL("../assets/props/hazards/steam-jet.png", import.meta.url).href,
+      );
+    }
+    if (!this.textures.exists(TILED_PHASE2_PRESS_TEXTURE_KEY)) {
+      this.load.image(
+        TILED_PHASE2_PRESS_TEXTURE_KEY,
+        new URL("../assets/props/hazards/hydraulic-press.png", import.meta.url).href,
       );
     }
     if (!this.textures.exists(TILED_CHECKPOINT_TEXTURE_KEY)) {
@@ -639,7 +649,9 @@ export class GameScene extends Phaser.Scene {
     this.data$.checkpointX = x;
     this.data$.checkpointY = y;
     this.updateHud();
-    this.player.beginCheckpointInteraction();
+    // A TV fica à direita do objeto de checkpoint. Alex senta ao lado do
+    // gabinete e usa a sequência LPC voltada para a tela.
+    this.player.beginCheckpointInteraction(x - 8, y);
     this.sound.play(CHECKPOINT_SFX_KEY, { volume: 0.55 });
     this.hud.flashPrompt(`Checkpoint ${id} sincronizado — créditos consolidados`);
     this.checkpointInteraction?.destroy();

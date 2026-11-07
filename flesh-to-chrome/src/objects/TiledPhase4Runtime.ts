@@ -43,6 +43,12 @@ interface HiddenHazardVisual {
   row: number;
 }
 
+interface FalseWall {
+  region: RevealRegion;
+  zone: Phaser.GameObjects.Zone;
+  intangible: boolean;
+}
+
 interface AutomaticDoor {
   id: string;
   x: number;
@@ -58,6 +64,8 @@ const REVEAL_KINDS = new Set<RevealKind>(["hidden_route", "false_wall", "hidden_
 const SCAN_RANGE = 900;
 const SPIKES_FIRST_GID = 99;
 const DOOR_FIRST_GID = 109;
+const BACKGROUND_TOWER_GID = 30;
+const FLOATING_TERMINAL_GID = 86;
 
 /** Runtime jogável do blockout corporativo da Fase 4. */
 export class TiledPhase4Runtime {
@@ -72,6 +80,8 @@ export class TiledPhase4Runtime {
 
   private readonly scanVisualsLayer?: Phaser.Tilemaps.TilemapLayer;
   private readonly hazardsLayer?: Phaser.Tilemaps.TilemapLayer;
+  private readonly decoBackLayer?: Phaser.Tilemaps.TilemapLayer;
+  private readonly decoLayer?: Phaser.Tilemaps.TilemapLayer;
   private readonly fallDeathY: number;
   private readonly checkpoints: Phase4Checkpoint[] = [];
   private readonly checkpointTriggered = new Set<string>();
@@ -80,6 +90,7 @@ export class TiledPhase4Runtime {
   private readonly hazardZones: Phaser.GameObjects.Zone[] = [];
   private readonly hiddenHazardVisuals: HiddenHazardVisual[] = [];
   private readonly revealRegions: RevealRegion[] = [];
+  private readonly falseWalls: FalseWall[] = [];
   private readonly revealedGroups = new Set<string>();
   private readonly doors: AutomaticDoor[] = [];
   private readonly tutorialLabels: Phaser.GameObjects.Text[] = [];
@@ -104,7 +115,7 @@ export class TiledPhase4Runtime {
     });
 
     this.createVisualLayer("background", tilesets, -20);
-    this.createVisualLayer("deco-back", tilesets, -10);
+    this.decoBackLayer = this.createVisualLayer("deco-back", tilesets, -10);
 
     const ground = this.map.createLayer("ground", tilesets) as Phaser.Tilemaps.TilemapLayer | null;
     if (!ground) throw new Error('Fase 4 (Tiled): camada "ground" ausente');
@@ -115,13 +126,15 @@ export class TiledPhase4Runtime {
 
     this.scanVisualsLayer = this.createVisualLayer("scan-visuals", tilesets, 1);
     this.hazardsLayer = this.createVisualLayer("hazards", tilesets, 2);
-    this.createVisualLayer("deco", tilesets, 3);
+    this.decoLayer = this.createVisualLayer("deco", tilesets, 3);
 
     this.lengthPx = this.map.widthInPixels;
     this.fallDeathY = TILED_FASE4_OFFSET_Y + this.map.heightInPixels + 150;
 
     const objects = this.map.getObjectLayer("objects")?.objects ?? [];
     const byType = (type: string) => objects.filter((object) => object.type === type);
+
+    this.removeObsoleteDecorations(byType("checkpoint"), byType("narrative"));
 
     const spawnObject = byType("spawn")[0];
     this.spawn = spawnObject
@@ -253,7 +266,55 @@ export class TiledPhase4Runtime {
         .setStrokeStyle(2, 0x36e2ff, 0.72)
         .setDepth(4)
         .setVisible(false);
-      this.revealRegions.push({ kind: kind as RevealKind, group, x, y, width, height, outline });
+      const region = { kind: kind as RevealKind, group, x, y, width, height, outline };
+      this.revealRegions.push(region);
+      if (region.kind === "false_wall") {
+        const zone = this.scene.add.zone(
+          x + width / 2,
+          y + TILED_FASE4_OFFSET_Y + height / 2,
+          width,
+          height,
+        );
+        this.scene.physics.add.existing(zone, true);
+        this.falseWalls.push({ region, zone, intangible: false });
+      }
+    }
+  }
+
+  /**
+   * Remove os blockouts que competiam com elementos de gameplay: as torres
+   * atrás da TV e da propaganda e os terminais que flutuavam ao redor do
+   * texto narrativo. As posições continuam derivadas dos objetos Tiled.
+   */
+  private removeObsoleteDecorations(
+    checkpoints: Phaser.Types.Tilemaps.TiledObject[],
+    narratives: Phaser.Types.Tilemaps.TiledObject[],
+  ): void {
+    for (const checkpoint of checkpoints) {
+      this.hideGidsInObjectBounds(this.decoBackLayer, checkpoint, new Set([BACKGROUND_TOWER_GID]), 0);
+    }
+    for (const narrative of narratives) {
+      this.hideGidsInObjectBounds(this.decoBackLayer, narrative, new Set([BACKGROUND_TOWER_GID]), 0);
+      this.hideGidsInObjectBounds(this.decoLayer, narrative, new Set([FLOATING_TERMINAL_GID]));
+    }
+  }
+
+  private hideGidsInObjectBounds(
+    layer: Phaser.Tilemaps.TilemapLayer | undefined,
+    object: Phaser.Types.Tilemaps.TiledObject,
+    gids: ReadonlySet<number>,
+    startY = object.y ?? 0,
+  ): void {
+    if (!layer) return;
+    const startCol = Math.floor((object.x ?? 0) / this.map.tileWidth);
+    const endCol = Math.ceil(((object.x ?? 0) + (object.width ?? 0)) / this.map.tileWidth);
+    const startRow = Math.floor(startY / this.map.tileHeight);
+    const endRow = Math.ceil(((object.y ?? 0) + (object.height ?? 0)) / this.map.tileHeight);
+    for (let row = startRow; row < endRow; row += 1) {
+      for (let col = startCol; col < endCol; col += 1) {
+        const tile = layer.getTileAt(col, row);
+        if (tile && gids.has(tile.index)) tile.visible = false;
+      }
     }
   }
 
@@ -302,12 +363,19 @@ export class TiledPhase4Runtime {
         height,
       );
       this.scene.physics.add.existing(zone, true);
+      const doorCol = Math.floor(x / this.map.tileWidth);
+      const bottomTileRow = Math.ceil((y + height) / this.map.tileHeight) - 1;
+      const bottomTile = this.hazardsLayer?.getTileAt(doorCol, bottomTileRow);
+      if (bottomTile?.index === DOOR_FIRST_GID) {
+        this.hazardsLayer?.putTileAt(DOOR_FIRST_GID, doorCol, bottomTileRow - 1);
+        bottomTile.visible = false;
+      }
       this.doors.push({
         id: this.readString(object, "id") ?? object.name ?? `door-${object.id}`,
         x,
         width,
         zone,
-        col: Math.floor(x / this.map.tileWidth),
+        col: doorCol,
         prompt: this.scene.add
           .text(x + width / 2, y + TILED_FASE4_OFFSET_Y - 8, "SCAN", {
             fontFamily: "Courier New, monospace",
@@ -365,7 +433,7 @@ export class TiledPhase4Runtime {
         )
         .setOrigin(0.5, 0)
         .setDepth(7)
-        .setVisible(false);
+        .setVisible(true);
       label.setData("triggerX", object.x ?? 0);
       label.setData("triggerWidth", object.width ?? 0);
       this.narrativeLabels.push(label);
@@ -381,6 +449,31 @@ export class TiledPhase4Runtime {
     for (const door of this.doors) {
       this.scene.physics.add.overlap(player.sprite, door.zone, () => player.kill());
     }
+    for (const wall of this.falseWalls) {
+      this.scene.physics.add.collider(player.sprite, wall.zone);
+    }
+  }
+
+  private setFalseWallIntangible(wall: FalseWall, intangible: boolean): void {
+    if (wall.intangible === intangible) return;
+    wall.intangible = intangible;
+    const body = wall.zone.body as Phaser.Physics.Arcade.StaticBody | null;
+    if (body) body.enable = !intangible;
+
+    const region = wall.region;
+    const startCol = Math.floor(region.x / this.map.tileWidth);
+    const endCol = Math.ceil((region.x + region.width) / this.map.tileWidth);
+    const startRow = Math.floor(region.y / this.map.tileHeight);
+    const endRow = Math.ceil((region.y + region.height) / this.map.tileHeight);
+    for (let row = startRow; row < endRow; row += 1) {
+      for (let col = startCol; col < endCol; col += 1) {
+        const tile = this.scanVisualsLayer?.getTileAt(col, row);
+        if (!tile || tile.index === -1) continue;
+        tile.alpha = intangible ? 0.08 : 1;
+        tile.tint = intangible ? 0x36e2ff : 0xffffff;
+      }
+    }
+    region.outline.setVisible(intangible);
   }
 
   private setDoorDisabled(door: AutomaticDoor, disabled: boolean): void {
@@ -411,6 +504,7 @@ export class TiledPhase4Runtime {
   }
 
   private setRegionTiles(region: RevealRegion, revealed: boolean): void {
+    if (region.kind === "false_wall") return;
     if (!this.scanVisualsLayer) return;
     const startCol = Math.floor(region.x / this.map.tileWidth);
     const endCol = Math.ceil((region.x + region.width) / this.map.tileWidth);
@@ -421,7 +515,7 @@ export class TiledPhase4Runtime {
         const tile = this.scanVisualsLayer.getTileAt(col, row);
         if (!tile || tile.index === -1) continue;
         tile.tint = revealed ? 0x36e2ff : 0xffffff;
-        if (region.kind === "false_wall" || region.kind === "false_floor") {
+        if (region.kind === "false_floor") {
           tile.alpha = revealed ? 0.42 : 1;
         }
       }
@@ -462,7 +556,11 @@ export class TiledPhase4Runtime {
   }
 
   setScanActive(active: boolean): void {
-    if (!active || !this.playerRef) return;
+    if (!active) {
+      this.falseWalls.forEach((wall) => this.setFalseWallIntangible(wall, false));
+      return;
+    }
+    if (!this.playerRef) return;
     const playerX = this.playerRef.sprite.x;
     this.disableNearestDoor(playerX);
     const groups = new Set(
@@ -471,6 +569,9 @@ export class TiledPhase4Runtime {
         .map((region) => region.group),
     );
     groups.forEach((group) => this.revealGroup(group));
+    this.falseWalls.forEach((wall) => {
+      this.setFalseWallIntangible(wall, groups.has(wall.region.group));
+    });
   }
 
   update(player: Player, _deltaMs = 0): void {
@@ -494,12 +595,6 @@ export class TiledPhase4Runtime {
       }
     }
 
-    for (const label of this.narrativeLabels) {
-      const start = label.getData("triggerX") as number;
-      const width = label.getData("triggerWidth") as number;
-      label.setVisible(player.sprite.x >= start - 400 && player.sprite.x <= start + width + 200);
-    }
-
     if (player.sprite.y > this.fallDeathY && player.getState() !== "dead") {
       player.kill();
       return;
@@ -519,6 +614,7 @@ export class TiledPhase4Runtime {
       door.prompt.destroy();
     });
     this.revealRegions.forEach((region) => region.outline.destroy());
+    this.falseWalls.forEach((wall) => wall.zone.destroy());
     this.tutorialLabels.forEach((label) => label.destroy());
     this.narrativeLabels.forEach((label) => label.destroy());
   }

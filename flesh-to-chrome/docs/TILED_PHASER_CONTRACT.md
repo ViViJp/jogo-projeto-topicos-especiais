@@ -309,8 +309,8 @@ No runtime atual, a velocidade é aplicada somente enquanto o corpo de Alex est�
 
 | kind | Representação | Regra atual |
 | --- | --- | --- |
-| **press** | prensa industrial | desce na janela ativa; hitbox acompanha o cabeçote |
-| **steam** | jato de vapor | pluma cresce a partir do bocal; hitbox acompanha a altura emitida |
+| **press** | prensa hidráulica dedicada | desce na janela ativa; hitbox acompanha o cabeçote |
+| **steam** | jato de vapor sobre bocal fixo | pluma nasce no topo do cano; hitbox acompanha a altura emitida |
 | **mech_arm** | braço mecânico | segmentos se estendem e recolhem; hitbox acompanha a ponta |
 | **crusher** | trituradora | mandíbulas fecham na janela ativa; hitbox acompanha o fechamento |
 
@@ -322,6 +322,14 @@ tempo que move a arte; o contato só é fatal onde a máquina ou a pluma está
 visualmente presente. Os valores padrão ficam em
 `GAMEPLAY_TIMING.industrialHazards`; cada objeto pode sobrescrever
 `cycle_ms`, `active_ms`, `warning_ms` e `phase_ms` no Tiled.
+
+A prensa oculta os antigos GIDs estruturais e instancia
+`props/hazards/hydraulic-press.png` com placa de impacto legível. No vapor, o
+último tile da coluna continua como cano fixo; a base da pluma e o limite
+inferior da zona letal coincidem com a borda superior desse tile.
+Quando recolhida, a prensa usa 96% da altura autorada como curso, deixando a
+silhueta em pé de Alex visualmente livre; ao ativar, a placa continua chegando
+ao piso e a zona letal acompanha o mesmo deslocamento.
 
 ### 6.5 **low_ceiling**
 
@@ -372,7 +380,8 @@ O objeto da classe **tutorial** usa `skill = attack`. Ele marca a área segura a
 ### 6.10 **scan_reveal**
 
 **Função:** associa uma região visual ou lógica da Fase 4 à revelação produzida
-pelos olhos mecânicos. O objeto não possui colisão própria.
+pelos olhos mecânicos. Regiões `false_wall` também definem o volume sólido da
+parede enquanto o pulso não está ativo.
 
 **Geometria Tiled:** Rectangle Object envolvendo o elemento ou trecho revelável.
 
@@ -384,8 +393,10 @@ pelos olhos mecânicos. O objeto não possui colisão própria.
 
 Ao receber um scan válido, o runtime deve destacar os objetos do grupo e manter
 a revelação até Alex sair do trecho. Após morte e respawn, o grupo volta ao
-estado oculto. `false_wall` não cria colisão; `false_floor` marca arte sem
-colisão sobre uma abertura real da layer `ground`.
+estado oculto. `false_wall` mantém colisão sólida normalmente e reduz sua arte
+quase a zero enquanto desliga o corpo físico durante os 750 ms do pulso; ao
+terminar o scan, arte e colisão retornam. `false_floor` marca arte sem colisão
+sobre uma abertura real da layer `ground`.
 
 ### 6.11 Novos valores de **hazard.kind** da Fase 4
 
@@ -417,7 +428,9 @@ O visual fica na layer `hazards` e a colisão é criada pelo Rectangle Object. O
 runtime destaca cada barreira com `SCAN`; após a desativação, reduz sua
 opacidade, aplica o ciano do visor e desliga o mesmo corpo físico. Um único
 pulso afeta somente a próxima barreira em até 900 px, evitando abrir sequências
-inteiras com uma ação.
+inteiras com uma ação. O segmento decorativo inferior é movido um tile para
+cima e sua posição antiga é ocultada para a arte não invadir o piso; o volume
+lógico continua fechando a passagem até o chão.
 
 ### 6.13 **narrative**
 
@@ -431,7 +444,9 @@ inteiras com uma ação.
 | **kind** | string | **father_ad** | sim |
 
 Na Fase 4, `father_ad` identifica a propaganda corporativa do pai antes da
-clínica de George.
+clínica de George. O texto permanece visível e não depende do scan. Torres e
+terminais de blockout dentro dessa região são ocultados para não competir com a
+mensagem; a mesma limpeza remove a torre que ficava atrás da TV do checkpoint.
 
 ### 6.14 Obstáculos da Fase 5
 

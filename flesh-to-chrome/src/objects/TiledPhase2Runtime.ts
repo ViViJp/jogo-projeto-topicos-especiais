@@ -12,6 +12,7 @@ import { CheckpointMarker } from "./CheckpointMarker";
 import { HazardCycleState, HazardCycleTiming, hazardCycleSample } from "./HazardMotion";
 
 export const TILED_PHASE2_STEAM_TEXTURE_KEY = "hazard-steam-jet";
+export const TILED_PHASE2_PRESS_TEXTURE_KEY = "hazard-hydraulic-press";
 
 interface Phase2Credit {
   id: string;
@@ -307,9 +308,10 @@ export class TiledPhase2Runtime {
         if (!tile || tile.index === -1) continue;
         tile.visible = false;
 
-        // Para o vapor, o último tile permanece como bocal fixo. A coluna
-        // superior antiga é substituída pela pluma dedicada.
+        // Vapor e prensa recebem arte dedicada; os tiles autorados continuam
+        // servindo apenas para posição e geometria do objeto no Tiled.
         if (kind === "steam" && row < endRow - 1) continue;
+        if (kind === "press") continue;
         const frame = this.frameForTileGid(tile.index);
         if (!frame) continue;
         const baseX = (col - firstCol) * this.map.tileWidth + this.map.tileWidth / 2;
@@ -320,10 +322,21 @@ export class TiledPhase2Runtime {
       }
     }
 
+    if (kind === "press") {
+      const press = this.scene.add
+        .image(width / 2, height, TILED_PHASE2_PRESS_TEXTURE_KEY)
+        .setOrigin(0.5, 1)
+        .setDisplaySize(Math.max(48, width * 1.5), Math.max(96, height * 1.5));
+      visual.add(press);
+      tileParts.push({ image: press, baseX: width / 2, baseY: height });
+      return { visual, tileParts };
+    }
+
     if (kind !== "steam") return { visual, tileParts };
 
+    const nozzleY = height - this.map.tileHeight;
     const steamPlume = this.scene.add
-      .image(width / 2, height, TILED_PHASE2_STEAM_TEXTURE_KEY)
+      .image(width / 2, nozzleY, TILED_PHASE2_STEAM_TEXTURE_KEY)
       .setOrigin(0.5, 1)
       .setDisplaySize(Math.max(40, width * 1.25), height)
       .setVisible(false);
@@ -378,7 +391,10 @@ export class TiledPhase2Runtime {
 
     if (hazard.kind === "press") {
       const extension = state === "active" ? activeMotion : state === "warning" ? 0.08 + warningMotion * 0.12 : 0.08;
-      const travel = hazard.height * 0.72;
+      // A placa recolhida precisa deixar a silhueta em pé completamente
+      // livre. O curso maior evita o contato visual com o cabelo de Alex;
+      // na janela ativa a placa ainda termina exatamente no piso.
+      const travel = hazard.height * 0.96;
       hazard.visual.setPosition(hazard.x, hazard.y - travel * (1 - extension));
       this.syncHazardBody(
         hazard,
@@ -430,10 +446,11 @@ export class TiledPhase2Runtime {
           );
       }
       const steamHeight = Math.max(2, hazard.height * strength);
+      const nozzleY = hazard.y + hazard.height - this.map.tileHeight;
       this.syncHazardBody(
         hazard,
         hazard.x + hazard.width / 2,
-        hazard.y + hazard.height - steamHeight / 2,
+        nozzleY - steamHeight / 2,
         hazard.width,
         steamHeight,
         state === "active" && strength > 0.16,

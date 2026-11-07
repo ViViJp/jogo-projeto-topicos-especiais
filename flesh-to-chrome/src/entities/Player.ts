@@ -11,6 +11,7 @@ import { AbilityState } from "../systems/AbilityState";
 import { InputManager } from "../systems/InputManager";
 import {
   ALEX_SLIDE_FRAME,
+  alexCheckpointAnimationKey,
   alexRunAnimationKey,
   alexTextureForAbilities,
   ensureAlexAnimations,
@@ -41,6 +42,7 @@ export class Player {
   private input: InputManager;
   private abilities: AbilityState;
   private readonly runAnimationKey: string;
+  private readonly checkpointAnimationKey: string;
 
   private state: PlayerState = "running";
   private doubleJumpUsed = false;
@@ -74,6 +76,7 @@ export class Player {
     const textureKey = alexTextureForAbilities(abilities);
     ensureAlexAnimations(scene, textureKey);
     this.runAnimationKey = alexRunAnimationKey(textureKey);
+    this.checkpointAnimationKey = alexCheckpointAnimationKey(textureKey);
     this.sprite = scene.physics.add.sprite(x, y, textureKey);
     this.sprite.setOrigin(0.5, 1);
     this.sprite.setCollideWorldBounds(false);
@@ -108,17 +111,18 @@ export class Player {
   }
 
   /** Parada diegética do GDD: Alex se senta diante da TV do checkpoint. */
-  beginCheckpointInteraction(): void {
+  beginCheckpointInteraction(x = this.sprite.x, y = this.sprite.y): void {
     if (this.state === "dead" || this.state === "checkpoint") return;
     if (this.scanTimer > 0) this.onScanPulse(false);
     this.scanTimer = 0;
     this.dashTimer = 0;
     this.currentBreakable = null;
     this.state = "checkpoint";
+    const body = this.sprite.body as Phaser.Physics.Arcade.Body;
+    body.setAllowGravity(false);
+    body.reset(x, y);
     this.sprite.setVelocity(0, 0);
-    (this.sprite.body as Phaser.Physics.Arcade.Body).setAllowGravity(false);
-    this.sprite.anims.stop();
-    this.sprite.setFrame(ALEX_SLIDE_FRAME);
+    this.sprite.anims.play(this.checkpointAnimationKey, true);
     this.depthBeforeCheckpoint = this.sprite.depth;
     // A TV é um objeto de primeiro plano (depth 2–3 conforme a fase).
     // Durante a pose de interação Alex precisa aparecer sentado diante dela.

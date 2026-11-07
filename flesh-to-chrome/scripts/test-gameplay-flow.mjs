@@ -116,6 +116,13 @@ for (const runtime of ["TiledPhase2Runtime.ts", "TiledPhase4Runtime.ts", "TiledP
 const phase2Runtime = fs.readFileSync(path.join(projectDirectory, "src/objects/TiledPhase2Runtime.ts"), "utf8");
 assert.match(phase2Runtime, /hazardCycleSample/);
 assert.match(phase2Runtime, /updateFromGameObject/);
+assert.match(phase2Runtime, /TILED_PHASE2_PRESS_TEXTURE_KEY/);
+assert.match(phase2Runtime, /const nozzleY = hazard\.y \+ hazard\.height - this\.map\.tileHeight/);
+assert.match(phase2Runtime, /const travel = hazard\.height \* 0\.96/);
+assert.ok(
+  fs.existsSync(path.join(projectDirectory, "src/assets/props/hazards/hydraulic-press.png")),
+  "fase2: sprite dedicado da prensa",
+);
 for (const kind of ["press", "steam", "mech_arm", "crusher"]) {
   assert.match(phase2Runtime, new RegExp(`hazard\\.kind === "${kind}"`), `fase2: movimento de ${kind}`);
 }
@@ -125,10 +132,28 @@ for (const runtime of ["TiledPhase4Runtime.ts", "TiledPhase5Runtime.ts"]) {
   assert.match(source, /setDoorDisabled/);
   assert.doesNotMatch(source, /% door\.cycleMs/, `${runtime}: porta não pode depender do relógio`);
 }
+const phase4Runtime = fs.readFileSync(path.join(projectDirectory, "src/objects/TiledPhase4Runtime.ts"), "utf8");
+assert.match(phase4Runtime, /this\.scene\.physics\.add\.collider\(player\.sprite, wall\.zone\)/);
+assert.match(phase4Runtime, /body\.enable = !intangible/);
+assert.match(phase4Runtime, /this\.falseWalls\.forEach\(\(wall\) => this\.setFalseWallIntangible\(wall, false\)\)/);
+assert.match(phase4Runtime, /BACKGROUND_TOWER_GID/);
+assert.match(phase4Runtime, /FLOATING_TERMINAL_GID/);
+assert.match(phase4Runtime, /putTileAt\(DOOR_FIRST_GID, doorCol, bottomTileRow - 1\)/);
+assert.match(phase4Runtime, /bottomTile\.visible = false/);
+assert.match(phase4Runtime, /\.setVisible\(true\)/);
 const phase5Runtime = fs.readFileSync(path.join(projectDirectory, "src/objects/TiledPhase5Runtime.ts"), "utf8");
 assert.match(phase5Runtime, /disabledDoors !== 0/);
 const playerSource = fs.readFileSync(path.join(projectDirectory, "src/entities/Player.ts"), "utf8");
 assert.match(playerSource, /this\.sprite\.setDepth\(10\)/);
 assert.match(playerSource, /this\.sprite\.setDepth\(this\.depthBeforeCheckpoint\)/);
+assert.match(playerSource, /this\.sprite\.anims\.play\(this\.checkpointAnimationKey, true\)/);
+const checkpointMethod = playerSource.slice(
+  playerSource.indexOf("beginCheckpointInteraction"),
+  playerSource.indexOf("endCheckpointInteraction"),
+);
+assert.doesNotMatch(checkpointMethod, /ALEX_SLIDE_FRAME/, "checkpoint não pode reutilizar a pose de slide");
+const alexSpriteSource = fs.readFileSync(path.join(projectDirectory, "src/utils/AlexSprite.ts"), "utf8");
+assert.match(alexSpriteSource, /CHECKPOINT_PLAY_RIGHT = \{ row: 35, frames: 3 \}/);
+assert.match(gameScene, /beginCheckpointInteraction\(x - 8, y\)/);
 
 console.log("Gameplay flow: movimentos, barreiras por scan e estrutura das cinco fases validados.");
