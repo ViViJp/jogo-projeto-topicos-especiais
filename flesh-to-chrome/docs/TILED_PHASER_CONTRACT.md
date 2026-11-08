@@ -488,13 +488,12 @@ O Rectangle Object `gate` representa o Portão final. Sua propriedade string
 `choices` usa o valor `chrome,flesh`. Cada zona `ending_choice` possui a
 propriedade string `ending`, com valor `chrome` ou `flesh`.
 
-Esses objetos não são hazards. O runtime deve pausar ou desacelerar a corrida,
-apresentar a decisão e encaminhar a campanha conforme a escolha antes de
-acionar `phase_end`.
-
-No runtime de playtest atual, o Portão e as duas opções são sinalizados
-visualmente, mas a escolha narrativa ainda não é interativa. Em modo de teste,
-alcançar `phase_end` encerra o percurso e retorna ao seletor de fases.
+Esses objetos não são hazards. Ao concluir a Fase 5, a campanha consolida os
+créditos, cria o save narrativo pré-Portão e abre `GateScene`. A cena apresenta
+as opções Chrome e Flesh com teclado, controle ou ponteiro. Chrome encaminha ao
+Final Chrome; Flesh permanece sinalizado como conteúdo em desenvolvimento até
+a implementação da descida. Em modo de teste, alcançar `phase_end` continua
+retornando ao seletor sem alterar o save.
 
 ## 7. Classes planejadas / ainda não formalizadas
 

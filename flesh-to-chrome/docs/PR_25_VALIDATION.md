@@ -67,7 +67,7 @@ Resultado da rodada de 2026-11-03:
   individuais; o retângulo autorado é sempre letal.
 - Fase 5: a barreira rotativa usa volume letal estático; rotação visual e
   janela temporal própria ainda não foram implementadas.
-- Fase 5: escolhas Chrome/Flesh e os finais narrativos ainda são sinalização
-  de blockout, sem ramificação interativa.
+- Fase 5: a escolha do Portão está interativa; Chrome possui final completo e
+  Flesh informa que a descida será implementada na próxima etapa.
 - As fases ainda precisam do passe final de decoração, áudio, animações e
   calibração por playtest humano completo após cada alteração de geometria.

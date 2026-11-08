@@ -66,6 +66,7 @@ const SPIKES_FIRST_GID = 99;
 const DOOR_FIRST_GID = 109;
 const BACKGROUND_TOWER_GID = 30;
 const FLOATING_TERMINAL_GID = 86;
+export const TILED_FATHER_AD_TEXTURE_KEY = "phase4-father-ad";
 
 /** Runtime jogável do blockout corporativo da Fase 4. */
 export class TiledPhase4Runtime {
@@ -95,6 +96,7 @@ export class TiledPhase4Runtime {
   private readonly doors: AutomaticDoor[] = [];
   private readonly tutorialLabels: Phaser.GameObjects.Text[] = [];
   private readonly narrativeLabels: Phaser.GameObjects.Text[] = [];
+  private readonly narrativeVisuals: Phaser.GameObjects.Image[] = [];
   private endGateTriggered = false;
   private playerRef?: Player;
 
@@ -428,25 +430,35 @@ export class TiledPhase4Runtime {
   private buildNarrative(objects: Phaser.Types.Tilemaps.TiledObject[]): void {
     for (const object of objects) {
       if (this.readString(object, "kind") !== "father_ad") continue;
+      const x = object.x ?? 0;
+      const y = (object.y ?? 0) + TILED_FASE4_OFFSET_Y;
+      const width = object.width ?? 1024;
+      const height = object.height ?? 224;
+      const propaganda = this.scene.add
+        .image(x + 210, y + height / 2, TILED_FATHER_AD_TEXTURE_KEY)
+        .setDisplaySize(320, 192)
+        .setDepth(6);
+      this.narrativeVisuals.push(propaganda);
       const label = this.scene.add
         .text(
-          (object.x ?? 0) + (object.width ?? 0) / 2,
-          (object.y ?? 0) + TILED_FASE4_OFFSET_Y + 24,
-          "REFORGE INDUSTRIES\n\"O futuro exige que você deixe algo para trás.\"\n— campanha com o rosto do pai de Alex",
+          x + 430,
+          y + height / 2,
+          "REFORGE INDUSTRIES\n\"O FUTURO EXIGE QUE VOCÊ DEIXE ALGO PARA TRÁS.\"\n\nO rosto da campanha é familiar.\nAlex reconhece o homem que veio procurar.",
           {
             fontFamily: "Courier New, monospace",
-            fontSize: "18px",
+            fontSize: "17px",
             color: "#f2e5ff",
-            align: "center",
+            align: "left",
             backgroundColor: "#240d35e6",
             padding: { x: 14, y: 9 },
+            wordWrap: { width: Math.max(420, width - 460) },
           },
         )
-        .setOrigin(0.5, 0)
+        .setOrigin(0, 0.5)
         .setDepth(7)
         .setVisible(true);
-      label.setData("triggerX", object.x ?? 0);
-      label.setData("triggerWidth", object.width ?? 0);
+      label.setData("triggerX", x);
+      label.setData("triggerWidth", width);
       this.narrativeLabels.push(label);
     }
   }
@@ -629,5 +641,6 @@ export class TiledPhase4Runtime {
     this.falseWalls.forEach((wall) => wall.zone.destroy());
     this.tutorialLabels.forEach((label) => label.destroy());
     this.narrativeLabels.forEach((label) => label.destroy());
+    this.narrativeVisuals.forEach((visual) => visual.destroy());
   }
 }

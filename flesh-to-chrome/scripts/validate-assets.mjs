@@ -86,6 +86,19 @@ const runtimeImages = [
   "src/assets/props/checkpoint/tv-checkpoint.png",
   "src/assets/npcs/enemies/bandido/bandido.png",
   "src/assets/npcs/enemies/drone/drone.png",
+  "src/assets/narrative/prologue/familia.png",
+  "src/assets/narrative/prologue/jornal.png",
+  "src/assets/narrative/father/pai-portrait.png",
+  "src/assets/narrative/father/propaganda-pai.png",
+  "src/assets/narrative/gate/portao.png",
+  "src/assets/npcs/george/george/george.png",
+  "src/assets/npcs/george/george-nervous/george-nervous.png",
+  "src/assets/npcs/george/george-proud/george-proud.png",
+  "src/assets/scenes/clinic/clinic-bg.png",
+  "src/assets/player/alex-chrome/alex-chrome.png",
+  "src/assets/audio/music/bgm-clinic.wav",
+  "src/assets/audio/music/bgm-portao.wav",
+  "src/assets/audio/sfx/sfx-implant.wav",
 ];
 
 const readJson = (filename) => JSON.parse(fs.readFileSync(filename, "utf8"));

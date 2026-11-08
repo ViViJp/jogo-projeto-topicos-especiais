@@ -16,7 +16,7 @@ npm run dev
 ```
 
 Outros comandos disponíveis na raiz: `npm run build`, `npm run typecheck`,
-`npm run validate:assets`, `npm run test:gameplay`, `npm run test:multiplayer`
+`npm run validate:assets`, `npm run test:gameplay`, `npm run test:narrative`, `npm run test:multiplayer`
 e `npm start`. Para executar toda a validação automatizada, use:
 
 ```bash
@@ -47,6 +47,7 @@ npm run dev
 - Docs: [`gdd.md`](gdd.md), [`levelDesign.md`](levelDesign.md), [`Cyberpunk.md`](Cyberpunk.md)
 - Contrato Tiled ↔ Phaser: [`flesh-to-chrome/docs/TILED_PHASER_CONTRACT.md`](flesh-to-chrome/docs/TILED_PHASER_CONTRACT.md)
 - Roteiro e resultados de gameplay: [`flesh-to-chrome/docs/GAMEPLAY_HAZARDS_PLAYTEST.md`](flesh-to-chrome/docs/GAMEPLAY_HAZARDS_PLAYTEST.md)
+- Roteiro do fluxo narrativo: [`flesh-to-chrome/docs/NARRATIVE_FLOW_PLAYTEST.md`](flesh-to-chrome/docs/NARRATIVE_FLOW_PLAYTEST.md)
 
 ## O que **não** é o jogo
 

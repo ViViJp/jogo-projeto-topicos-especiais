@@ -201,6 +201,17 @@ assert.match(gameScene, /checkpointX: 0/);
 assert.match(gameScene, /checkpointY: 0/);
 const pausedBranch = gameScene.slice(gameScene.indexOf("if (this.isPaused)"), gameScene.indexOf("this.player.update(delta)"));
 assert.match(pausedBranch, /return;/, "pausa deve retornar antes de atualizar Player e cooldowns");
+assert.match(gameScene, /S \/ ↓ para voltar ao menu principal/);
+assert.match(
+  pausedBranch,
+  /if \(this\.input\$\.isMenuDownJustDown\(\)\)/,
+  "retorno ao menu durante a pausa deve funcionar também na campanha",
+);
+assert.doesNotMatch(
+  pausedBranch,
+  /this\.data\$\.testMode\s*&&\s*this\.input\$\.isMenuDownJustDown/,
+  "retorno ao menu não pode ficar restrito ao seletor de fases",
+);
 const checkpointMarker = fs.readFileSync(path.join(projectDirectory, "src/objects/CheckpointMarker.ts"), "utf8");
 assert.match(checkpointMarker, /activate\(withFeedback = true\)/);
 assert.match(checkpointMarker, /if \(!withFeedback\) return/);

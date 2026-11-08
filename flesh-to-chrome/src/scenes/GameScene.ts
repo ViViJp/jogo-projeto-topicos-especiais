@@ -18,7 +18,7 @@ import {
   TiledPhase2Runtime,
 } from "../objects/TiledPhase2Runtime";
 import { TiledPhase3Runtime } from "../objects/TiledPhase3Runtime";
-import { TiledPhase4Runtime } from "../objects/TiledPhase4Runtime";
+import { TILED_FATHER_AD_TEXTURE_KEY, TiledPhase4Runtime } from "../objects/TiledPhase4Runtime";
 import { TiledPhase5Runtime } from "../objects/TiledPhase5Runtime";
 import { LEVELS, getNextPhaseId } from "../levels";
 import {
@@ -356,6 +356,12 @@ export class GameScene extends Phaser.Scene {
     }
     if (!this.textures.exists(TILED_CHECKPOINT_TEXTURE_KEY)) {
       this.load.image(TILED_CHECKPOINT_TEXTURE_KEY, this.checkpointTvUrl().href);
+    }
+    if (!this.textures.exists(TILED_FATHER_AD_TEXTURE_KEY)) {
+      this.load.image(
+        TILED_FATHER_AD_TEXTURE_KEY,
+        new URL("../assets/narrative/father/propaganda-pai.png", import.meta.url).href,
+      );
     }
     if (!this.cache.tilemap.exists(TILED_FASE4_MAP_KEY)) {
       this.cache.tilemap.add(TILED_FASE4_MAP_KEY, {
@@ -699,8 +705,13 @@ export class GameScene extends Phaser.Scene {
     // quatro primeiras fases (seção 11.1) e continua para o próximo blockout
     // Tiled registrado em `PHASE_ORDER`.
     const phasesWithClinic = new Set(["fase1", "fase2-intro", "fase3", "fase4"]);
-    const destination = destinationOverride ??
-      (phasesWithClinic.has(this.data$.phaseId) ? "ClinicScene" : "EndingScene");
+    const destination = destinationOverride ?? (
+      phasesWithClinic.has(this.data$.phaseId)
+        ? "ClinicScene"
+        : this.data$.phaseId === "fase5"
+          ? "GateScene"
+          : "EndingScene"
+    );
 
     this.time.delayedCall(300, () => {
       this.scene.start(destination, {
@@ -791,11 +802,11 @@ export class GameScene extends Phaser.Scene {
       this.tweens.pauseAll();
       this.time.paused = true;
       this.anims.pauseAll();
-      const testModeHelp = this.data$.testMode
+      const menuHelp = this.data$.testMode
         ? "\nS / ↓ para voltar ao seletor de fases"
-        : "";
+        : "\nS / ↓ para voltar ao menu principal";
       this.pauseText = this.add
-        .text(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, `PAUSADO\nESC / START para voltar | ENTER / A para reiniciar a fase${testModeHelp}`, {
+        .text(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, `PAUSADO\nESC / START para voltar | ENTER / A para reiniciar a fase${menuHelp}`, {
           fontFamily: "Courier New, monospace",
           fontSize: "26px",
           color: "#ffffff",
@@ -824,7 +835,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     if (this.isPaused) {
-      if (this.data$.testMode && this.input$.isMenuDownJustDown()) {
+      if (this.input$.isMenuDownJustDown()) {
         this.togglePause();
         this.scene.start("MenuScene");
         this.input$.postUpdate();
