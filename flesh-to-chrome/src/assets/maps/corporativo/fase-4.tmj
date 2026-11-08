@@ -93215,6 +93215,19 @@
         },
         {
           "height": 0,
+          "id": 9004,
+          "name": "memory_glitch",
+          "point": true,
+          "properties": [{ "name": "descent_only", "type": "bool", "value": true }],
+          "rotation": 0,
+          "type": "memory_glitch",
+          "visible": true,
+          "width": 0,
+          "x": 28544,
+          "y": 352
+        },
+        {
+          "height": 0,
           "id": 41,
           "name": "credit_risk_01",
           "point": true,
@@ -93606,7 +93619,7 @@
     }
   ],
   "nextlayerid": 8,
-  "nextobjectid": 57,
+  "nextobjectid": 9005,
   "orientation": "orthogonal",
   "properties": [
     {

@@ -23,6 +23,14 @@ export function createInitialAbilityState(): AbilityState {
   };
 }
 
+export function removeAbility(state: AbilityState, key: keyof AbilityState): AbilityState {
+  return { ...state, [key]: false };
+}
+
+export function hasAbility(state: AbilityState, key: keyof AbilityState): boolean {
+  return state[key] === true;
+}
+
 export function abilityStateToBodyStage(state: AbilityState): number {
   // 0 = humano original ... 4 = robô completo (seção 23.1)
   let stage = 0;

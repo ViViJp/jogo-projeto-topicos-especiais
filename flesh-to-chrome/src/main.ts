@@ -8,6 +8,9 @@ import { EndingScene } from "./scenes/EndingScene";
 import { MultiplayerScene } from "./scenes/MultiplayerScene";
 import { PrologueScene } from "./scenes/PrologueScene";
 import { GateScene } from "./scenes/GateScene";
+import { DescentRetryScene } from "./scenes/DescentRetryScene";
+import { ReForgeScene } from "./scenes/ReForgeScene";
+import { EpilogueScene } from "./scenes/EpilogueScene";
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -72,6 +75,9 @@ const config: Phaser.Types.Core.GameConfig = {
     GameScene,
     ClinicScene,
     GateScene,
+    DescentRetryScene,
+    ReForgeScene,
+    EpilogueScene,
     EndingScene,
     MultiplayerScene,
   ],

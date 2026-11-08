@@ -198,6 +198,18 @@ export class MenuScene extends Phaser.Scene {
   private continueGame(): void {
     const save = SaveState.load();
     const data = save.get();
+    if (data.descentState.pendingRemoval) {
+      this.scene.start("ReForgeScene");
+      return;
+    }
+    if (data.descentState.brokenChain) {
+      this.scene.start("EpilogueScene", { ending: "hollow" });
+      return;
+    }
+    if (!data.descentState.active && data.descentState.currentStep >= 4 && data.endingReached === null) {
+      this.scene.start("EpilogueScene", { ending: "flesh" });
+      return;
+    }
     this.scene.start("GameScene", {
       phaseId: data.currentPhaseId,
       checkpointX: data.checkpoint.x,
@@ -205,6 +217,7 @@ export class MenuScene extends Phaser.Scene {
       consolidatedCreditIds: data.checkpoint.consolidatedCreditIds,
       wallet: data.wallet,
       abilities: data.abilities,
+      descent: data.descentState.active,
     } as GameSceneData);
   }
 

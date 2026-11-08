@@ -891,6 +891,14 @@ export class TiledPhase5Runtime {
     }
   }
 
+  hideCredits(): void {
+    this.creditSprites.forEach((sprite) => {
+      const body = sprite.body as Phaser.Physics.Arcade.Body | null;
+      if (body) body.enable = false;
+      sprite.setActive(false).setVisible(false);
+    });
+  }
+
   destroy(): void {
     this.scene.events.off("player-attack-attempt", this.pressedAttackListener);
     this.scene.events.off("player-attack", this.normalAttackListener);

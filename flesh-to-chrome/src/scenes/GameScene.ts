@@ -5,6 +5,8 @@ import { InputManager } from "../systems/InputManager";
 import { CreditsSystem } from "../systems/CreditsSystem";
 import { HUD } from "../systems/HUD";
 import { SaveState } from "../systems/SaveState";
+import { descentStepForPhase } from "../systems/DescentProgression";
+import { DescentGlitchRuntime, DESCENT_GLITCH_TEXTURE_PREFIX } from "../objects/DescentGlitchRuntime";
 import { Player } from "../entities/Player";
 import { LevelRuntime } from "../objects/LevelRuntime";
 import {
@@ -38,6 +40,7 @@ import {
   TILED_FASE2_MAP_KEY,
   TILED_FASE2_NAME,
   TILED_FASE2_TILESETS,
+  TILED_FASE2_OFFSET_Y,
 } from "../levels/TiledFase2";
 import {
   TILED_FASE3_MAP_DATA,
@@ -51,6 +54,7 @@ import {
   TILED_FASE4_MAP_KEY,
   TILED_FASE4_NAME,
   TILED_FASE4_TILESETS,
+  TILED_FASE4_OFFSET_Y,
 } from "../levels/TiledFase4";
 import {
   TILED_FASE5_BACKGROUND,
@@ -58,6 +62,7 @@ import {
   TILED_FASE5_MAP_KEY,
   TILED_FASE5_NAME,
   TILED_FASE5_TILESETS,
+  TILED_FASE5_OFFSET_Y,
 } from "../levels/TiledFase5";
 import { generatePlaceholderTextures } from "../utils/PlaceholderTextures";
 import {
@@ -89,6 +94,8 @@ export interface GameSceneData {
   consolidatedCreditIds?: string[];
   wallet?: number;
   abilities?: AbilityState;
+  /** Reutiliza o mesmo mapa no caminho inverso narrativo Flesh/Hollow. */
+  descent?: boolean;
 }
 
 /**
@@ -145,6 +152,7 @@ export class GameScene extends Phaser.Scene {
   private tiledPhase3Runtime?: TiledPhase3Runtime;
   private tiledPhase4Runtime?: TiledPhase4Runtime;
   private tiledPhase5Runtime?: TiledPhase5Runtime;
+  private descentRuntime?: DescentGlitchRuntime;
   private credits!: CreditsSystem;
   private hud!: HUD;
   private save!: SaveState;
@@ -171,6 +179,7 @@ export class GameScene extends Phaser.Scene {
     this.tiledPhase3Runtime = undefined;
     this.tiledPhase4Runtime = undefined;
     this.tiledPhase5Runtime = undefined;
+    this.descentRuntime = undefined;
     this.isPaused = false;
     this.pauseText = undefined;
     this.scanOverlay = undefined;
@@ -183,13 +192,18 @@ export class GameScene extends Phaser.Scene {
       consolidatedCreditIds: data.consolidatedCreditIds ?? [],
       wallet: data.wallet ?? 0,
       abilities: data.abilities ?? createInitialAbilityState(),
+      descent: data.descent ?? false,
     };
     this.restarting = false;
     // Cada prévia ativa apenas as mecânicas já apresentadas na campanha.
     // Isso também corrige saves antigos que tenham sido gravados com
     // implantes adiantados ou sem os braços ao entrar na Fase 3.
     const savedAbilities = data.abilities ?? createInitialAbilityState();
-    if (data.phaseId === "fase1") {
+    if (!this.data$.testMode || this.data$.descent) {
+      // Campanha sempre respeita o estado persistido. Isto impede que uma
+      // habilidade removida pela ReForge reapareca por causa da fase.
+      this.activeAbilities = { ...savedAbilities };
+    } else if (data.phaseId === "fase1") {
       this.activeAbilities = { legs: false, arms: false, eyes: false, thrusters: false };
     } else if (data.phaseId === "fase2-intro") {
       this.activeAbilities = { legs: true, arms: false, eyes: false, thrusters: false };
@@ -217,6 +231,20 @@ export class GameScene extends Phaser.Scene {
     for (const stage of alexStages) {
       if (!this.textures.exists(stage.key)) {
         this.load.spritesheet(stage.key, stage.url.href, ALEX_SHEET_CONFIG);
+      }
+    }
+    if (this.data$.descent) {
+      const fragmentAssets = [
+        { id: "topo", url: new URL("../assets/narrative/fragments/fragmento-topo.png", import.meta.url) },
+        { id: "corporativo", url: new URL("../assets/narrative/fragments/fragmento-corporativo.png", import.meta.url) },
+        { id: "urbano", url: new URL("../assets/narrative/fragments/fragmento-urbano.png", import.meta.url) },
+        { id: "industrial", url: new URL("../assets/narrative/fragments/fragmento-industrial.png", import.meta.url) },
+      ] as const;
+      for (const fragment of fragmentAssets) {
+        const key = `${DESCENT_GLITCH_TEXTURE_PREFIX}-${fragment.id}`;
+        if (!this.textures.exists(key)) {
+          this.load.image(key, fragment.url.href);
+        }
       }
     }
     if (!this.cache.audio.exists(CHECKPOINT_SFX_KEY)) {
@@ -469,10 +497,49 @@ export class GameScene extends Phaser.Scene {
       this.createLegacy();
     }
 
+    if (this.data$.descent) this.createDescentOverlay();
+
     this.updateHud();
 
     this.physics.world.setBounds(0, 0, this.levelLengthPx + SCREEN_WIDTH, SCREEN_HEIGHT);
     this.cameras.main.setBounds(0, 0, this.levelLengthPx + SCREEN_WIDTH, SCREEN_HEIGHT);
+  }
+
+  private createDescentOverlay(): void {
+    const step = descentStepForPhase(this.data$.phaseId);
+    if (!step) return;
+    const map = this.tiledPhase5Runtime?.map
+      ?? this.tiledPhase4Runtime?.map
+      ?? this.tiledPhase3Runtime?.map
+      ?? this.tiledPhase2Runtime?.map;
+    if (!map) throw new Error(`Descida sem mapa Tiled para ${this.data$.phaseId}`);
+    const offsetY = this.data$.phaseId === "fase3"
+      ? 0
+      : this.data$.phaseId === "fase2-intro"
+        ? TILED_FASE2_OFFSET_Y
+        : this.data$.phaseId === "fase4"
+          ? TILED_FASE4_OFFSET_Y
+          : TILED_FASE5_OFFSET_Y;
+    const recovered = this.save.get().descentState.recoveredFragmentIds.includes(step.fragmentId);
+    this.descentRuntime = new DescentGlitchRuntime(
+      this,
+      map,
+      offsetY,
+      step,
+      recovered,
+      (fragmentId) => {
+        if (!this.save.recoverDescentFragment(fragmentId)) return;
+        this.cameras.main.flash(320, 124, 252, 234);
+        this.hud.flashPrompt(`MEMORIA RECUPERADA — ${step.memoryTitle}`, 1800);
+      },
+    );
+    this.descentRuntime.registerPlayer(this.player);
+    this.tiledPhase2Runtime?.hideCredits();
+    this.tiledPhase3Runtime?.hideCredits();
+    this.tiledPhase4Runtime?.hideCredits();
+    this.tiledPhase5Runtime?.hideCredits();
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.descentRuntime?.destroy());
+    this.hud.flashPrompt("DESCIDA — encontre o glitch antes da saida", 1900);
   }
 
   private createTiled(): void {
@@ -646,9 +713,13 @@ export class GameScene extends Phaser.Scene {
   }
 
   private updateHud(): void {
-    const phaseTotalValue = this.phaseCredits().reduce((s, c) => s + c.value, 0);
-    const phaseValue = this.credits.getPhaseDisplayValue(this.phaseConsolidatedValue());
-    this.hud.setCredits(phaseValue, phaseTotalValue, this.credits.getTotal());
+    if (this.data$.descent) {
+      this.hud.setCredits(0, 0, 0);
+    } else {
+      const phaseTotalValue = this.phaseCredits().reduce((s, c) => s + c.value, 0);
+      const phaseValue = this.credits.getPhaseDisplayValue(this.phaseConsolidatedValue());
+      this.hud.setCredits(phaseValue, phaseTotalValue, this.credits.getTotal());
+    }
 
     const labels: string[] = [];
     if (this.activeAbilities.legs) labels.push("[Pernas: Salto Duplo]");
@@ -669,9 +740,14 @@ export class GameScene extends Phaser.Scene {
       && Math.abs(this.data$.checkpointY - y) < 1;
     if (alreadyActive) return false;
 
-    this.credits.consolidate();
+    if (!this.data$.descent) this.credits.consolidate();
     if (!this.data$.testMode) {
-      this.save.updateCheckpoint(x, y, this.credits.getConsolidatedIds(), this.credits.getTotal());
+      this.save.updateCheckpoint(
+        x,
+        y,
+        this.data$.descent ? [] : this.credits.getConsolidatedIds(),
+        this.data$.descent ? 0 : this.credits.getTotal(),
+      );
     }
     this.data$.checkpointX = x;
     this.data$.checkpointY = y;
@@ -681,7 +757,9 @@ export class GameScene extends Phaser.Scene {
     // diante da tela, sem o corpo atravessar o gabinete.
     this.player.beginCheckpointInteraction(x - 24, y);
     this.sound.play(CHECKPOINT_SFX_KEY, { volume: 0.55 });
-    this.hud.flashPrompt(`Checkpoint ${id} sincronizado — créditos consolidados`);
+    this.hud.flashPrompt(this.data$.descent
+      ? `Checkpoint ${id} sincronizado — memoria preservada`
+      : `Checkpoint ${id} sincronizado — créditos consolidados`);
     this.checkpointInteraction?.destroy();
     this.checkpointInteraction = this.time.delayedCall(
       GAMEPLAY_TIMING.checkpointInteractionMs,
@@ -699,6 +777,16 @@ export class GameScene extends Phaser.Scene {
    * usa a mesma regra fixa de antes.
    */
   private handleEndGate(destinationOverride?: string, implantOverride?: keyof AbilityState): void {
+    if (this.data$.descent) {
+      const result = this.save.completeDescentPhase();
+      const destination = result === "reforge"
+        ? "ReForgeScene"
+        : result === "retry"
+          ? "DescentRetryScene"
+          : "EpilogueScene";
+      this.time.delayedCall(250, () => this.scene.start(destination, result === "hollow" ? { ending: "hollow" } : undefined));
+      return;
+    }
     this.credits.consolidate();
     if (!this.data$.testMode) {
       this.save.updateCheckpoint(
@@ -756,6 +844,7 @@ export class GameScene extends Phaser.Scene {
         consolidatedCreditIds: this.credits.getConsolidatedIds(),
         wallet: this.credits.getTotal(),
         abilities: this.data$.abilities,
+        descent: this.data$.descent,
       } as GameSceneData);
     });
   }
@@ -779,6 +868,7 @@ export class GameScene extends Phaser.Scene {
       consolidatedCreditIds: consolidatedIds,
       wallet,
       abilities: this.data$.abilities,
+      descent: this.data$.descent,
     } as GameSceneData);
   }
 

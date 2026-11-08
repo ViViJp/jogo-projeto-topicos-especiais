@@ -629,6 +629,14 @@ export class TiledPhase4Runtime {
     }
   }
 
+  hideCredits(): void {
+    this.creditSprites.forEach((sprite) => {
+      const body = sprite.body as Phaser.Physics.Arcade.Body | null;
+      if (body) body.enable = false;
+      sprite.setActive(false).setVisible(false);
+    });
+  }
+
   destroy(): void {
     this.creditSprites.forEach((sprite) => sprite.destroy());
     this.checkpointMarkers.forEach((marker) => marker.destroy());

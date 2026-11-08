@@ -12,7 +12,6 @@ export class GateScene extends Phaser.Scene {
   private input$!: InputManager;
   private selected: GateChoice = "chrome";
   private choiceTexts = new Map<GateChoice, Phaser.GameObjects.Text>();
-  private developmentNotice?: Phaser.GameObjects.Text;
   private choosing = false;
   private music?: Phaser.Sound.BaseSound;
 
@@ -80,14 +79,6 @@ export class GateScene extends Phaser.Scene {
   }
 
   update(): void {
-    if (this.developmentNotice) {
-      if (this.input$.isConfirmJustDown() || this.input$.isCancelJustDown()) {
-        this.developmentNotice.destroy();
-        this.developmentNotice = undefined;
-      }
-      this.input$.postUpdate();
-      return;
-    }
     if (
       this.input$.isMenuLeftJustDown()
       || this.input$.isMenuRightJustDown()
@@ -135,19 +126,20 @@ export class GateScene extends Phaser.Scene {
   private confirmChoice(): void {
     if (this.choosing) return;
     if (this.selected === "flesh") {
-      this.developmentNotice = this.add.text(
-        SCREEN_WIDTH / 2,
-        SCREEN_HEIGHT / 2,
-        "CAMINHO FLESH\n\nConteúdo em desenvolvimento.\nA descida será implementada na próxima branch.\n\nENTER / A ou ESC / B para voltar à escolha.",
-        {
-          fontFamily: "Courier New, monospace",
-          fontSize: "21px",
-          color: "#e8ecff",
-          align: "center",
-          backgroundColor: "#170b20f4",
-          padding: { x: 32, y: 26 },
-        },
-      ).setOrigin(0.5).setDepth(20);
+      this.choosing = true;
+      const save = SaveState.load();
+      save.beginDescent();
+      const data = save.get();
+      this.music?.stop();
+      this.scene.start("GameScene", {
+        phaseId: "fase5",
+        checkpointX: 0,
+        checkpointY: 0,
+        consolidatedCreditIds: [],
+        wallet: 0,
+        abilities: data.abilities,
+        descent: true,
+      });
       return;
     }
 

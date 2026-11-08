@@ -656,6 +656,14 @@ export class TiledPhase2Runtime {
     }
   }
 
+  hideCredits(): void {
+    this.creditSprites.forEach((sprite) => {
+      const body = sprite.body as Phaser.Physics.Arcade.Body | null;
+      if (body) body.enable = false;
+      sprite.setActive(false).setVisible(false);
+    });
+  }
+
   setScanActive(_active: boolean): void {
     // A Fase 2 ainda não possui objetos reveláveis por scan.
   }

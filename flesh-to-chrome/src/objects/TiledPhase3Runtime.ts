@@ -453,6 +453,14 @@ export class TiledPhase3Runtime {
     }
   }
 
+  hideCredits(): void {
+    this.creditSprites.forEach((sprite) => {
+      const body = sprite.body as Phaser.Physics.Arcade.Body | null;
+      if (body) body.enable = false;
+      sprite.setActive(false).setVisible(false);
+    });
+  }
+
   setScanActive(active: boolean): void {
     if (active) this.runtimeEnemy?.scan(this.playerRef?.sprite.x ?? 0);
     else this.runtimeEnemy?.stopScan();

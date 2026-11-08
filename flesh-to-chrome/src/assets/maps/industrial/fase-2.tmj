@@ -193,6 +193,19 @@
                  "y":384
                 }, 
                 {
+                 "height":0,
+                 "id":9002,
+                 "name":"memory_glitch",
+                 "point":true,
+                 "properties":[{"name":"descent_only","type":"bool","value":true}],
+                 "rotation":0,
+                 "type":"memory_glitch",
+                 "visible":true,
+                 "width":0,
+                 "x":29248,
+                 "y":352
+                },
+                {
                  "height":96,
                  "id":2,
                  "name":"tutorial_double_jump_01",
@@ -1290,7 +1303,7 @@
          "y":0
         }],
  "nextlayerid":103,
- "nextobjectid":102,
+ "nextobjectid":9003,
  "orientation":"orthogonal",
  "properties":[
         {

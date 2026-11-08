@@ -1117,6 +1117,19 @@
      "y": 464
     },
     {
+     "height": 0,
+     "id": 9003,
+     "name": "memory_glitch",
+     "point": true,
+     "properties": [{ "name": "descent_only", "type": "bool", "value": true }],
+     "rotation": 0,
+     "type": "memory_glitch",
+     "visible": true,
+     "width": 0,
+     "x": 29248,
+     "y": 512
+    },
+    {
      "height": 128,
      "id": 47,
      "name": "phase_end",
@@ -1143,7 +1156,7 @@
   }
  ],
  "nextlayerid": 7,
- "nextobjectid": 52,
+ "nextobjectid": 9004,
  "orientation": "orthogonal",
  "properties": [
   {

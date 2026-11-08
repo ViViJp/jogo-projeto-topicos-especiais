@@ -65,6 +65,42 @@ assert.equal(restored.endingReached, null);
 assert.ok(restored.preGateSave, "restaurar não consome o ponto pré-Portão");
 assert.deepEqual(Array.from(restored.checkpoint.consolidatedCreditIds), ["f5-credit-01"]);
 
+// Caminho Flesh completo: cada memoria autoriza exatamente uma retirada e
+// a habilidade removida nao reaparece na fase seguinte.
+save.beginDescent();
+assert.equal(save.get().currentPhaseId, "fase5");
+assert.equal(save.get().descentState.active, true);
+assert.equal(save.get().wallet, 0, "creditos comuns nao acompanham a descida");
+const descentSteps = [
+  ["fase5", "glitch-topo-identidade", "thrusters", "fase4"],
+  ["fase4", "glitch-corporativo-voz", "eyes", "fase3"],
+  ["fase3", "glitch-urbano-amigos", "arms", "fase2-intro"],
+  ["fase2-intro", "glitch-industrial-familia", "legs", "fase1"],
+];
+for (const [phase, fragment, implant, nextPhase] of descentSteps) {
+  assert.equal(save.get().currentPhaseId, phase);
+  assert.equal(save.recoverDescentFragment(fragment), true);
+  assert.equal(save.completeDescentPhase(), "reforge");
+  assert.equal(save.get().descentState.pendingRemoval, implant);
+  const result = save.completeBioprinting();
+  assert.ok(result);
+  assert.equal(result.nextPhaseId, nextPhase);
+  assert.equal(save.get().abilities[implant], false, `${implant} deve permanecer removido`);
+}
+assert.equal(save.get().descentState.active, false);
+assert.equal(save.get().descentState.currentStep, 4);
+assert.deepEqual(Object.values(save.get().abilities), [false, false, false, false]);
+
+// Hollow reproduzivel: primeira conclusao sem glitch oferece retry; a
+// segunda quebra definitivamente a cadeia no estado corporal corrente.
+save.restorePreGateSave();
+save.beginDescent();
+assert.equal(save.completeDescentPhase(), "retry");
+assert.deepEqual(Array.from(save.get().descentState.retryUsedPhaseIds), ["fase5"]);
+assert.equal(save.completeDescentPhase(), "hollow");
+assert.equal(save.get().descentState.brokenChain, true);
+assert.equal(save.get().abilities.thrusters, true, "falha no primeiro glitch preserva todos os implantes");
+
 const read = (relativePath) => fs.readFileSync(path.join(projectDirectory, relativePath), "utf8");
 const main = read("src/main.ts");
 const menu = read("src/scenes/MenuScene.ts");
@@ -74,6 +110,10 @@ const gate = read("src/scenes/GateScene.ts");
 const ending = read("src/scenes/EndingScene.ts");
 const game = read("src/scenes/GameScene.ts");
 const phase4 = read("src/objects/TiledPhase4Runtime.ts");
+const retry = read("src/scenes/DescentRetryScene.ts");
+const reforge = read("src/scenes/ReForgeScene.ts");
+const epilogue = read("src/scenes/EpilogueScene.ts");
+const descentRuntime = read("src/objects/DescentGlitchRuntime.ts");
 
 assert.match(main, /PrologueScene/);
 assert.match(main, /GateScene/);
@@ -90,10 +130,27 @@ assert.match(clinic, /george-proud/);
 assert.match(game, /this\.data\$\.phaseId === "fase5"[\s\S]*?"GateScene"/);
 assert.match(gate, /createPreGateSave\(\)/);
 assert.match(gate, /markEndingReached\("chrome"\)/);
-assert.match(gate, /Conteúdo em desenvolvimento/);
+assert.match(gate, /beginDescent\(\)/);
+assert.doesNotMatch(gate, /Conteúdo em desenvolvimento/);
 assert.match(ending, /FINAL CHROME/);
+assert.match(ending, /FINAL FLESH/);
+assert.match(ending, /FINAL HOLLOW/);
 assert.match(ending, /ALEX\? FILHO\?/);
+assert.match(retry, /unica segunda oportunidade/);
+assert.match(reforge, /completeBioprinting\(\)/);
+assert.match(epilogue, /ending: "flesh" \| "hollow"/);
+assert.match(descentRuntime, /memory_glitch/);
+for (const map of [
+  "src/assets/maps/industrial/fase-2.tmj",
+  "src/assets/maps/meio-urbano/fase-3.tmj",
+  "src/assets/maps/corporativo/fase-4.tmj",
+  "src/assets/maps/topo/fase-5.tmj",
+]) {
+  const tiled = JSON.parse(read(map));
+  const objects = tiled.layers.find((layer) => layer.name === "objects")?.objects ?? [];
+  assert.equal(objects.filter((object) => object.type === "memory_glitch").length, 1, `${map}: glitch da descida`);
+}
 assert.match(phase4, /TILED_FATHER_AD_TEXTURE_KEY/);
 assert.match(phase4, /O rosto da campanha é familiar/);
 
-console.log("Narrativa: prólogo, clínicas, propaganda, Portão, Final Chrome e save pré-Portão OK.");
+console.log("Narrativa: Chrome, descida, retry, ReForge, Flesh, Hollow e epilogo reproduziveis OK.");
