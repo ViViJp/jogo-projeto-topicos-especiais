@@ -49,6 +49,7 @@ export class EndingScene extends Phaser.Scene {
   private body!: Phaser.GameObjects.Text;
   private counter!: Phaser.GameObjects.Text;
   private father!: Phaser.GameObjects.Image;
+  private fatherCaption!: Phaser.GameObjects.Text;
   private alex!: Phaser.GameObjects.Sprite;
   private music?: Phaser.Sound.BaseSound;
 
@@ -97,6 +98,18 @@ export class EndingScene extends Phaser.Scene {
     this.father = this.add.image(SCREEN_WIDTH / 2 - 170, 250, FATHER_PORTRAIT_KEY)
       .setDisplaySize(192, 192);
     this.father.texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
+    this.fatherCaption = this.add.text(
+      SCREEN_WIDTH / 2 - 170,
+      360,
+      "PAI DE ALEX // CONVERSÃO CORPORATIVA",
+      {
+        fontFamily: "Courier New, monospace",
+        fontSize: "13px",
+        color: "#FFD37C",
+        backgroundColor: "#080812dd",
+        padding: { x: 7, y: 4 },
+      },
+    ).setOrigin(0.5);
     this.alex = this.add.sprite(SCREEN_WIDTH / 2 + 140, 286, ALEX_CHROME_KEY, 26)
       .setScale(3.2);
     this.title = this.add.text(SCREEN_WIDTH / 2, 410, "", {
@@ -142,6 +155,7 @@ export class EndingScene extends Phaser.Scene {
     this.title.setText(page.title);
     this.body.setText(page.body);
     this.father.setVisible(page.fatherVisible);
+    this.fatherCaption.setVisible(page.fatherVisible);
     this.alex.setVisible(page.alexVisible);
     this.counter.setText(`${this.pageIndex + 1}/${CHROME_PAGES.length}`);
     if (this.pageIndex === CHROME_PAGES.length - 1) {

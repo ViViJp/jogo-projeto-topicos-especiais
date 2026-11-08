@@ -1,0 +1,9 @@
+George clinic progression sprites — Flesh to Chrome
+
+- `george-clinic-01.png`: clínico humilde, cauteloso e com uniforme gasto.
+- `george-clinic-02.png`: profissional em ascensão, uniforme já estruturado.
+- `george-clinic-03.png`: cirurgião ambicioso, um estágio antes da aparência final.
+
+Gerados com OpenAI ImageGen usando `george-proud-clinic.png` como referência
+de identidade, proporção, paleta e estilo. Normalizados para 64x64 px com
+transparência e escala nearest-neighbor.

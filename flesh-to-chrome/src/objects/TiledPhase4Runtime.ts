@@ -437,13 +437,14 @@ export class TiledPhase4Runtime {
       const propaganda = this.scene.add
         .image(x + 210, y + height / 2, TILED_FATHER_AD_TEXTURE_KEY)
         .setDisplaySize(320, 192)
-        .setDepth(6);
+        .setDepth(-1);
+      propaganda.texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
       this.narrativeVisuals.push(propaganda);
       const label = this.scene.add
         .text(
           x + 430,
           y + height / 2,
-          "REFORGE INDUSTRIES\n\"O FUTURO EXIGE QUE VOCÊ DEIXE ALGO PARA TRÁS.\"\n\nO rosto da campanha é familiar.\nAlex reconhece o homem que veio procurar.",
+          "GLITCH CORP // PROGRAMA DE ASCENSÃO\n\"O FUTURO EXIGE QUE VOCÊ DEIXE ALGO PARA TRÁS.\"\n\nO rosto da campanha é familiar.\nAlex reconhece o homem que veio procurar.",
           {
             fontFamily: "Courier New, monospace",
             fontSize: "17px",
@@ -455,7 +456,7 @@ export class TiledPhase4Runtime {
           },
         )
         .setOrigin(0, 0.5)
-        .setDepth(7)
+        .setDepth(-1)
         .setVisible(true);
       label.setData("triggerX", x);
       label.setData("triggerWidth", width);

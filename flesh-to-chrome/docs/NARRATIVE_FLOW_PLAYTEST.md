@@ -19,14 +19,18 @@ Novo Jogo
 ## Regras narrativas
 
 - O prólogo apresenta a família, a ausência do pai, a precariedade, o jornal e
-  a motivação de Alex.
+  a motivação de Alex. A arte diferencia o pai humano anterior à ascensão do
+  retrato ciborgue publicado no jornal.
 - George começa nervoso e atento aos riscos, ganha confiança, passa a falar em
-  reputação e termina tratando Alex como sua grande obra.
-- A propaganda da Fase 4 utiliza `propaganda-pai.png` e deixa explícito que
-  Alex reconhece o rosto da campanha.
+  reputação e termina tratando Alex como sua grande obra. Cada clínica usa um
+  sprite próprio: uniforme humilde, profissional em ascensão, cirurgião
+  ambicioso e a aparência final orgulhosa.
+- A propaganda da Fase 4 utiliza `propaganda-pai.png`, identifica a campanha
+  como parte do programa de ascensão da Glitch Corp e deixa explícito que Alex
+  reconhece o rosto do pai.
 - O Portão cria um snapshot independente antes de qualquer escolha.
-- Chrome apresenta o reencontro físico: o pai reconhece Alex, mas Alex não o
-  reconhece e continua andando.
+- Chrome apresenta o reencontro físico com `pai-portrait.png`: o pai reconhece
+  Alex, mas Alex não o reconhece e continua andando.
 - Flesh não altera o save e permanece marcado como conteúdo em desenvolvimento.
 - `Continuar do Portão` restaura fase, checkpoint, créditos, carteira e os
   quatro implantes sem consumir o snapshot.
@@ -36,7 +40,9 @@ Novo Jogo
 Execute na raiz:
 
 ```bash
-npm test
+npm run test:narrative
+npm run validate:assets
+npm run typecheck
 npm run build
 ```
 
@@ -46,7 +52,8 @@ criação/restauração real do save pré-Portão em `localStorage` simulado.
 
 ## Roteiro manual
 
-1. Selecione **Novo Jogo** e confirme que o prólogo possui três quadros.
+1. Selecione **Novo Jogo** e confirme que o prólogo possui quatro quadros, com
+   a família, o pai antes da ascensão e o pai convertido no jornal.
 2. Avance pelas quatro clínicas e observe a mudança visual e textual de George.
 3. Na Fase 4, confirme que a propaganda exibe o asset do pai e o texto narrativo.
 4. Complete a Fase 5 e confirme a abertura do Portão.

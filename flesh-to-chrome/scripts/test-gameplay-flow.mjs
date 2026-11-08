@@ -96,7 +96,7 @@ const phase2Objects = phase2.layers.find((layer) => layer.name === "objects").ob
 const industrialKinds = new Set(
   phase2Objects.filter((object) => object.type === "hazard").map((object) => objectProperty(object, "kind")),
 );
-assert.deepEqual([...industrialKinds].sort(), ["crusher", "mech_arm", "press", "steam"]);
+assert.deepEqual([...industrialKinds].sort(), ["mech_arm", "press", "steam"]);
 const lowCeilingLayer = phase2.layers.find((layer) => layer.name === "deco-low-ceilings");
 const lowCeilingTiles = lowCeilingLayer.data.filter((gid) => gid !== 0);
 assert.equal(lowCeilingTiles.length, 42, "fase2: sete obstáculos baixos com seis tiles cada");
@@ -148,11 +148,14 @@ assert.match(phase2Runtime, /updateFromGameObject/);
 assert.match(phase2Runtime, /TILED_PHASE2_PRESS_TEXTURE_KEY/);
 assert.match(phase2Runtime, /const nozzleY = hazard\.y \+ hazard\.height - this\.map\.tileHeight/);
 assert.match(phase2Runtime, /const travel = hazard\.height \* 0\.96/);
+assert.match(phase2Runtime, /const collisionHeight = Math\.max\(96, hazard\.height \* 1\.5\)/);
+assert.match(phase2Runtime, /collisionHeight,\s*true,/);
+assert.doesNotMatch(phase2Runtime, /hazard\.kind === "crusher"/);
 assert.ok(
   fs.existsSync(path.join(projectDirectory, "src/assets/props/hazards/hydraulic-press.png")),
   "fase2: sprite dedicado da prensa",
 );
-for (const kind of ["press", "steam", "mech_arm", "crusher"]) {
+for (const kind of ["press", "steam", "mech_arm"]) {
   assert.match(phase2Runtime, new RegExp(`hazard\\.kind === "${kind}"`), `fase2: movimento de ${kind}`);
 }
 for (const runtime of [
@@ -202,6 +205,7 @@ assert.match(phase4Runtime, /bottomTile\.visible = false/);
 assert.match(phase4Runtime, /\.setVisible\(true\)/);
 const phase5Runtime = fs.readFileSync(path.join(projectDirectory, "src/objects/TiledPhase5Runtime.ts"), "utf8");
 assert.match(phase5Runtime, /disabledDoors !== 0/);
+assert.match(phase5Runtime, /gateObjects\[0\]\?\.x \?\? endObject\?\.x/);
 const playerSource = fs.readFileSync(path.join(projectDirectory, "src/entities/Player.ts"), "utf8");
 assert.match(playerSource, /this\.sprite\.setDepth\(10\)/);
 assert.match(playerSource, /this\.sprite\.setDepth\(this\.depthBeforeCheckpoint\)/);

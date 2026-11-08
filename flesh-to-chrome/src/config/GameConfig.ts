@@ -126,7 +126,6 @@ export const GAMEPLAY_TIMING = {
     press: { cycleMs: 2200, activeMs: 620, warningMs: 420 },
     steam: { cycleMs: 1800, activeMs: 680, warningMs: 320 },
     mech_arm: { cycleMs: 2400, activeMs: 840, warningMs: 420 },
-    crusher: { cycleMs: 2600, activeMs: 960, warningMs: 480 },
   },
   rotatingBarrier: {
     cycleMs: 2400,

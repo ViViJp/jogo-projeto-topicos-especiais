@@ -82,10 +82,16 @@ assert.match(menu, /restorePreGateSave\(\)/);
 assert.match(menu, /this\.scene\.start\("PrologueScene"\)/);
 assert.match(prologue, /PROLOGUE_FAMILY_KEY/);
 assert.match(prologue, /PROLOGUE_NEWSPAPER_KEY/);
+assert.match(prologue, /father\/pai-antes\.png/);
+assert.match(prologue, /prologue\/jornal-pai\.png/);
+assert.match(prologue, /PAI DE ALEX — ANTES DA ASCENSÃO/);
+assert.match(prologue, /PAI DE ALEX — APÓS A CONVERSÃO/);
 for (const phase of ["fase1", "fase2-intro", "fase3", "fase4"]) {
   assert.match(clinic, new RegExp(`(?:"${phase}"|${phase}):`), `clínica narrativa ausente para ${phase}`);
 }
-assert.match(clinic, /george-nervous/);
+assert.match(clinic, /george-clinic-01/);
+assert.match(clinic, /george-clinic-02/);
+assert.match(clinic, /george-clinic-03/);
 assert.match(clinic, /george-proud/);
 assert.match(game, /this\.data\$\.phaseId === "fase5"[\s\S]*?"GateScene"/);
 assert.match(gate, /createPreGateSave\(\)/);
@@ -93,7 +99,10 @@ assert.match(gate, /markEndingReached\("chrome"\)/);
 assert.match(gate, /Conteúdo em desenvolvimento/);
 assert.match(ending, /FINAL CHROME/);
 assert.match(ending, /ALEX\? FILHO\?/);
+assert.match(ending, /father\/pai-portrait\.png/);
+assert.match(ending, /CONVERSÃO CORPORATIVA/);
 assert.match(phase4, /TILED_FATHER_AD_TEXTURE_KEY/);
+assert.match(phase4, /GLITCH CORP \/\/ PROGRAMA DE ASCENSÃO/);
 assert.match(phase4, /O rosto da campanha é familiar/);
 
 console.log("Narrativa: prólogo, clínicas, propaganda, Portão, Final Chrome e save pré-Portão OK.");

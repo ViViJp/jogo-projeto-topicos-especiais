@@ -9,6 +9,7 @@ const PROLOGUE_NEWSPAPER_KEY = "prologue-newspaper";
 
 interface ProloguePage {
   image: string;
+  imageCaption: string;
   title: string;
   body: string;
 }
@@ -16,21 +17,25 @@ interface ProloguePage {
 const PAGES: ProloguePage[] = [
   {
     image: PROLOGUE_FAMILY_KEY,
+    imageCaption: "AVÔ E TIO DE ALEX",
     title: "O NÍVEL MAIS BAIXO DE GLITCH CITY",
     body: "Alex cresceu com os avós e o tio paterno.\nA casa era pequena; trabalho e créditos nunca bastavam.\nDo pai, restaram oito anos de silêncio e histórias contadas pelo avô.",
   },
   {
     image: PROLOGUE_FATHER_BEFORE_KEY,
+    imageCaption: "PAI DE ALEX — ANTES DA ASCENSÃO",
     title: "O PAI QUE PARTIU",
     body: "Antes de subir, ele ainda era um homem do nível de baixo.\nO mesmo rosto de Alex, os dois olhos, nenhuma placa.\nFoi esse homem que a família deixou de ver.",
   },
   {
     image: PROLOGUE_NEWSPAPER_KEY,
+    imageCaption: "PAI DE ALEX — APÓS A CONVERSÃO",
     title: "UM ROSTO NO JORNAL",
     body: "Uma reportagem anuncia um ciborgue celebrado no topo da cidade.\nAlex reconhece o homem que abandonou a família.\nEle não desapareceu: apenas subiu sem olhar para trás.",
   },
   {
     image: PROLOGUE_FAMILY_KEY,
+    imageCaption: "A FAMÍLIA QUE FICOU",
     title: "A PRIMEIRA SUBIDA",
     body: "Se o pai atravessou as camadas de Glitch City, Alex também poderia.\nTalvez no topo encontrasse respostas. Talvez pudesse mudar a vida da família.\nNa manhã seguinte, ele parte em direção à clínica de George Vektor.",
   },
@@ -40,6 +45,7 @@ export class PrologueScene extends Phaser.Scene {
   private input$!: InputManager;
   private pageIndex = 0;
   private image!: Phaser.GameObjects.Image;
+  private imageCaption!: Phaser.GameObjects.Text;
   private title!: Phaser.GameObjects.Text;
   private body!: Phaser.GameObjects.Text;
   private pageCounter!: Phaser.GameObjects.Text;
@@ -78,21 +84,28 @@ export class PrologueScene extends Phaser.Scene {
 
     this.add.rectangle(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, 1120, 610, 0x10101b, 1)
       .setStrokeStyle(2, 0x7cfcea, 0.45);
-    this.add.text(SCREEN_WIDTH / 2, 52, "PRÓLOGO", {
+    this.add.text(SCREEN_WIDTH / 2, 80, "PRÓLOGO", {
       fontFamily: "Courier New, monospace",
       fontSize: "24px",
       color: "#7CFCEA",
       letterSpacing: 5,
     }).setOrigin(0.5);
 
-    this.image = this.add.image(SCREEN_WIDTH / 2, 230, PROLOGUE_FAMILY_KEY);
-    this.title = this.add.text(SCREEN_WIDTH / 2, 430, "", {
+    this.image = this.add.image(SCREEN_WIDTH / 2, 245, PROLOGUE_FAMILY_KEY);
+    this.imageCaption = this.add.text(SCREEN_WIDTH / 2, 390, "", {
+      fontFamily: "Courier New, monospace",
+      fontSize: "14px",
+      color: "#7CFCEA",
+      backgroundColor: "#080812dd",
+      padding: { x: 8, y: 4 },
+    }).setOrigin(0.5);
+    this.title = this.add.text(SCREEN_WIDTH / 2, 440, "", {
       fontFamily: "Courier New, monospace",
       fontSize: "24px",
       color: "#FFD37C",
       align: "center",
     }).setOrigin(0.5);
-    this.body = this.add.text(SCREEN_WIDTH / 2, 530, "", {
+    this.body = this.add.text(SCREEN_WIDTH / 2, 535, "", {
       fontFamily: "Courier New, monospace",
       fontSize: "18px",
       color: "#e8ecff",
@@ -127,8 +140,9 @@ export class PrologueScene extends Phaser.Scene {
     const texture = this.image.texture;
     texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
     const source = texture.getSourceImage() as HTMLImageElement;
-    const scale = Math.min(620 / source.width, 280 / source.height);
+    const scale = Math.min(620 / source.width, 260 / source.height);
     this.image.setScale(scale);
+    this.imageCaption.setText(page.imageCaption);
     this.title.setText(page.title);
     this.body.setText(page.body);
     this.pageCounter.setText(`${this.pageIndex + 1}/${PAGES.length}`);

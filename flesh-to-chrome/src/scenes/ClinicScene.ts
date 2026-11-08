@@ -14,7 +14,7 @@ interface ClinicSceneData {
 }
 
 interface ClinicBeat {
-  georgeAsset: "nervous" | "regular" | "proud";
+  georgeAsset: "humble" | "rising" | "ambitious" | "proud";
   stageLabel: string;
   implant: keyof AbilityState;
   implantLabel: string;
@@ -29,7 +29,7 @@ const CLINIC_IMPLANT_SFX_KEY = "sfx-clinic-implant";
 
 const BEATS: Record<string, ClinicBeat> = {
   fase1: {
-    georgeAsset: "nervous",
+    georgeAsset: "humble",
     stageLabel: "PRIMEIRO PROCEDIMENTO",
     implant: "legs",
     implantLabel: "pernas mecânicas",
@@ -41,7 +41,7 @@ const BEATS: Record<string, ClinicBeat> = {
     ],
   },
   "fase2-intro": {
-    georgeAsset: "regular",
+    georgeAsset: "rising",
     stageLabel: "RESULTADOS VISÍVEIS",
     implant: "arms",
     implantLabel: "braços mecânicos",
@@ -53,7 +53,7 @@ const BEATS: Record<string, ClinicBeat> = {
     ],
   },
   fase3: {
-    georgeAsset: "regular",
+    georgeAsset: "ambitious",
     stageLabel: "UM NOME EM ASCENSÃO",
     implant: "eyes",
     implantLabel: "olhos mecânicos",
@@ -109,16 +109,14 @@ export class ClinicScene extends Phaser.Scene {
         new URL("../assets/scenes/clinic/clinic-bg.png", import.meta.url).href,
       );
     }
-    const georgeUrl = this.beat.georgeAsset === "nervous"
-      ? new URL("../assets/npcs/george/george-nervous/george-nervous.png", import.meta.url)
-      : this.beat.georgeAsset === "proud"
-        ? new URL("../assets/npcs/george/george-proud/george-proud-clinic.png", import.meta.url)
-        : new URL("../assets/npcs/george/george/george.png", import.meta.url);
+    const georgeUrls: Record<ClinicBeat["georgeAsset"], URL> = {
+      humble: new URL("../assets/npcs/george/george-clinic/george-clinic-01.png", import.meta.url),
+      rising: new URL("../assets/npcs/george/george-clinic/george-clinic-02.png", import.meta.url),
+      ambitious: new URL("../assets/npcs/george/george-clinic/george-clinic-03.png", import.meta.url),
+      proud: new URL("../assets/npcs/george/george-proud/george-proud-clinic.png", import.meta.url),
+    };
     if (this.textures.exists(CLINIC_GEORGE_KEY)) this.textures.remove(CLINIC_GEORGE_KEY);
-    this.load.spritesheet(CLINIC_GEORGE_KEY, georgeUrl.href, {
-      frameWidth: 64,
-      frameHeight: 64,
-    });
+    this.load.image(CLINIC_GEORGE_KEY, georgeUrls[this.beat.georgeAsset].href);
     if (!this.cache.audio.exists(CLINIC_MUSIC_KEY)) {
       this.load.audio(
         CLINIC_MUSIC_KEY,
@@ -139,16 +137,16 @@ export class ClinicScene extends Phaser.Scene {
     this.pageIndex = 0;
     this.finished = false;
 
-    this.add.image(SCREEN_WIDTH / 2, 215, CLINIC_BACKGROUND_KEY).setDisplaySize(1280, 427);
+    this.add.image(SCREEN_WIDTH / 2, 250, CLINIC_BACKGROUND_KEY).setDisplaySize(1280, 427);
     this.add.rectangle(SCREEN_WIDTH / 2, 555, SCREEN_WIDTH, 330, 0x08050c, 0.94);
-    const georgeFrame = this.beat.georgeAsset === "proud" ? 0 : 26;
-    this.add.sprite(250, 390, CLINIC_GEORGE_KEY, georgeFrame).setScale(2.35).setDepth(3);
+    this.add.rectangle(SCREEN_WIDTH / 2, 65, 920, 112, 0x08050c, 0.82).setDepth(3);
+    this.add.image(250, 390, CLINIC_GEORGE_KEY).setScale(2.35).setDepth(3);
 
     this.add.text(SCREEN_WIDTH / 2, 45, "CLÍNICA DE GEORGE VEKTOR", {
       fontFamily: "Courier New, monospace",
       fontSize: "31px",
       color: "#e0a8ff",
-    }).setOrigin(0.5).setDepth(4);
+    }).setOrigin(0.5).setDepth(4).setShadow(0, 2, "#000000", 6, true, true);
     this.add.text(SCREEN_WIDTH / 2, 92, this.beat.stageLabel, {
       fontFamily: "Courier New, monospace",
       fontSize: "16px",
