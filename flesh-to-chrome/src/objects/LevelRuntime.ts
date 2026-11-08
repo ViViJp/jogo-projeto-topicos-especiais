@@ -46,7 +46,7 @@ export class LevelRuntime {
     private consolidatedThisPhase: Set<string>,
     private callbacks: {
       onCreditCollected: (id: string, value: number) => void;
-      onCheckpoint: (id: string, x: number, y: number) => void;
+      onCheckpoint: (id: string, x: number, y: number) => boolean | void;
       onEndGate: () => void;
     }
   ) {

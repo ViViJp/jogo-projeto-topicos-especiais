@@ -307,22 +307,37 @@ No runtime atual, a velocidade é aplicada somente enquanto o corpo de Alex est�
 
 ### 6.4 Novos valores de **hazard.kind**
 
-| kind | Representação planejada | Regra provisória atual |
+| kind | Representação | Regra atual |
 | --- | --- | --- |
-| **press** | prensa industrial | morte imediata ao contato |
-| **steam** | jato de vapor | morte imediata ao contato |
-| **mech_arm** | braço mecânico | morte imediata ao contato |
-| **crusher** | trituradora | morte ao contato |
+| **press** | prensa hidráulica dedicada | desce na janela ativa; hitbox acompanha o cabeçote |
+| **steam** | jato de vapor sobre bocal fixo | pluma nasce no topo do cano; hitbox acompanha a altura emitida |
+| **mech_arm** | braço mecânico | segmentos se estendem e recolhem; hitbox acompanha a ponta |
+| **crusher** | trituradora | mandíbulas fecham na janela ativa; hitbox acompanha o fechamento |
 
-Os quatro valores são reconhecidos explicitamente pelo runtime da Fase 2. Seus ciclos, estados ativos e animações continuam pendentes; até que sejam definidos, toda a área retangular autorada em `objects` permanece letal em qualquer estado de Alex.
+Os quatro valores usam o ciclo determinístico **inativo → aviso → ativo** do
+`TiledPhase2Runtime`. O aviso mantém um contorno amarelo, enquanto a janela
+ativa executa movimento contínuo com entrada, sustentação e retração. A zona
+física é reposicionada e redimensionada a cada frame pela mesma amostra de
+tempo que move a arte; o contato só é fatal onde a máquina ou a pluma está
+visualmente presente. Os valores padrão ficam em
+`GAMEPLAY_TIMING.industrialHazards`; cada objeto pode sobrescrever
+`cycle_ms`, `active_ms`, `warning_ms` e `phase_ms` no Tiled.
+
+A prensa oculta os antigos GIDs estruturais e instancia
+`props/hazards/hydraulic-press.png` com placa de impacto legível. No vapor, o
+último tile da coluna continua como cano fixo; a base da pluma e o limite
+inferior da zona letal coincidem com a borda superior desse tile.
+Quando recolhida, a prensa usa 96% da altura autorada como curso, deixando a
+silhueta em pé de Alex visualmente livre; ao ativar, a placa continua chegando
+ao piso e a zona letal acompanha o mesmo deslocamento.
 
 ### 6.5 **low_ceiling**
 
-**Função:** mantém um obstáculo baixo atravessável somente durante o slide, sem obrigar a arte do cano a invadir a silhueta agachada de Alex.
+**Função:** mantém um obstáculo baixo que pode ser superado saltando inteiramente por cima ou atravessado por baixo durante o slide, sem obrigar a arte do cano a invadir a silhueta agachada de Alex.
 
 **Geometria Tiled:** Rectangle Object cobrindo apenas a faixa superior ocupada pela hitbox em pé. Não usa propriedades personalizadas.
 
-No mapa atual, a arte fica na Tile Layer **deco-low-ceilings**, desenhada na linha 9 e deslocada **12 px** para baixo. A base visual permanece em **Y = 332**, deixando **52 px** entre o piso em Y = 384 e o cano. O retângulo lógico **low_ceiling** possui **24 px** de altura e mata Alex somente quando o estado não é `sliding`. A hitbox agachada de **30 px** passa abaixo dele.
+No mapa atual, a arte fica na Tile Layer **deco-low-ceilings**, desenhada na linha 9 e deslocada **12 px** para baixo. Cada obstáculo usa duas repetições do módulo de duto industrial formado pelos GIDs **25, 26 e 27**, evitando reaproveitar os tiles estruturais do chão e comunicar visualmente que não existe uma plataforma sólida. A base visual permanece em **Y = 332**, deixando **52 px** entre o piso em Y = 384 e o cano. O retângulo lógico **low_ceiling** possui **24 px** de altura e mata Alex somente quando o estado não é `sliding`. A hitbox agachada de **30 px** passa abaixo dele.
 
 Cada cano baixo da Fase 2 possui **192 px de comprimento (6 tiles de 32 px)**, tanto no visual quanto no Rectangle Object lógico. Esse comprimento foi validado em playtest como atravessável ao manter o comando de slide pressionado durante todo o obstáculo. Alterações futuras na duração ou na renovação do slide exigem um novo teste dessa medida.
 
@@ -365,7 +380,8 @@ O objeto da classe **tutorial** usa `skill = attack`. Ele marca a área segura a
 ### 6.10 **scan_reveal**
 
 **Função:** associa uma região visual ou lógica da Fase 4 à revelação produzida
-pelos olhos mecânicos. O objeto não possui colisão própria.
+pelos olhos mecânicos. Regiões `false_wall` também definem o volume sólido da
+parede até o primeiro pulso válido que resolva o grupo.
 
 **Geometria Tiled:** Rectangle Object envolvendo o elemento ou trecho revelável.
 
@@ -377,8 +393,11 @@ pelos olhos mecânicos. O objeto não possui colisão própria.
 
 Ao receber um scan válido, o runtime deve destacar os objetos do grupo e manter
 a revelação até Alex sair do trecho. Após morte e respawn, o grupo volta ao
-estado oculto. `false_wall` não cria colisão; `false_floor` marca arte sem
-colisão sobre uma abertura real da layer `ground`.
+estado oculto. `false_wall` mantém colisão sólida normalmente; o primeiro scan
+válido torna seus tiles totalmente invisíveis e desliga o corpo físico pelo
+restante da tentativa. O fim dos 750 ms do pulso não restaura a parede — ela só
+é recriada junto com a cena após morte ou reinício da fase. `false_floor` marca
+arte sem colisão sobre uma abertura real da layer `ground`.
 
 ### 6.11 Novos valores de **hazard.kind** da Fase 4
 
@@ -393,20 +412,31 @@ mesmo antes da revelação.
 
 ### 6.12 **automatic_door**
 
-**Função:** barreira corporativa que alterna entre fechada e aberta. Fechada,
-bloqueia e mata Alex ao contato; aberta, permite a passagem.
+**Função:** barreira corporativa letal controlada pelo visor. O contato enquanto
+ela está visível causa morte imediata. Um pulso de scan desativa a barreira
+ainda ativa mais próxima à frente, torna toda a sua arte invisível e remove o
+volume letal. A desativação persiste durante a tentativa e é restaurada após
+morte.
 
 **Geometria Tiled:** Rectangle Object cobrindo toda a passagem vertical.
 
 | Propriedade | Tipo | Regra | Obrigatória |
 | --- | --- | --- | --- |
 | **id** | string | identificador único | sim |
-| **cycle_ms** | int | duração total do ciclo | sim |
-| **open_ms** | int | janela aberta dentro do ciclo | sim |
-| **phase_ms** | int | deslocamento inicial do ciclo | sim |
+| **cycle_ms** | int | legado do protótipo temporizado; ignorado pelo runtime | não |
+| **open_ms** | int | legado do protótipo temporizado; ignorado pelo runtime | não |
+| **phase_ms** | int | legado do protótipo temporizado; ignorado pelo runtime | não |
 
-O visual fica na layer `hazards`, mas sua colisão temporizada deve ser criada a
-partir do Rectangle Object.
+O visual fica na layer `hazards` e a zona letal é criada a partir do topo
+do primeiro tile visível até a superfície real do chão, eliminando faixas
+invisíveis acima ou abaixo da arte. O Rectangle Object continua definindo a
+coluna e a largura da porta. O runtime destaca cada barreira com `SCAN`; após
+a desativação, oculta completamente os tiles e o aviso, além de desligar o
+mesmo corpo físico. Um único
+pulso afeta somente a próxima barreira em até 900 px, evitando abrir sequências
+inteiras com uma ação. O segmento decorativo inferior é movido um tile para
+cima e sua posição antiga é ocultada para a arte não invadir o piso; o volume
+lógico continua fechando a passagem até o chão.
 
 ### 6.13 **narrative**
 
@@ -420,7 +450,9 @@ partir do Rectangle Object.
 | **kind** | string | **father_ad** | sim |
 
 Na Fase 4, `father_ad` identifica a propaganda corporativa do pai antes da
-clínica de George.
+clínica de George. O texto permanece visível e não depende do scan. Torres e
+terminais de blockout dentro dessa região são ocultados para não competir com a
+mensagem; a mesma limpeza remove a torre que ficava atrás da TV do checkpoint.
 
 ### 6.14 Obstáculos da Fase 5
 
@@ -432,11 +464,12 @@ A Fase 5 reutiliza `automatic_door`, `breakable`, `scan_reveal` e
 | **laser_grid** | coluna contínua de emissores laser | morte imediata; dash não concede invencibilidade |
 | **rotating_barrier** | barreira mecânica rotativa | morte imediata durante o contato |
 
-O runtime atual trata as grades e barreiras como volumes letais estáticos. As
-portas automáticas já respeitam `cycle_ms`, `open_ms` e `phase_ms`. A rotação
-visual e as janelas próprias das barreiras rotativas ainda são acabamento
-pendente; seus Rectangle Objects definem integralmente a área letal no
-blockout.
+As grades continuam usando o volume letal autorado. Cada barreira rotativa
+instancia um braço visual e uma cadeia de corpos físicos que percorrem o mesmo
+ângulo a cada frame. O Rectangle Object define centro e comprimento; o período
+padrão fica em `GAMEPLAY_TIMING.rotatingBarrier` e pode ser sobrescrito por
+`cycle_ms` e `phase_ms`. As portas automáticas seguem a regra determinística
+de desativação por scan da seção 6.12.
 
 ### 6.15 **zone**
 
@@ -661,9 +694,7 @@ phase_end
 tutorial.skill = scan
 scan_reveal.kind = hidden_route | false_wall | hidden_hazard | false_floor
 hazard.kind = laser | hidden_spikes
-automatic_door.cycle_ms = int
-automatic_door.open_ms = int
-automatic_door.phase_ms = int
+automatic_door.id = string
 credit.route = normal | risk
 checkpoint.id = f4-cp1
 narrative.kind = father_ad
@@ -675,7 +706,7 @@ phase_end.fase = 4
 O mapa possui **30.720 px** de comprimento. A **320 px/s**, o percurso linear
 equivale a aproximadamente **96 s sem mortes**, dentro da hipótese de 90–120 s
 do GDD. Existem 20 créditos: 4 na rota normal e 16 associados a plataformas,
-armadilhas, pisos falsos, lasers ou portas temporizadas.
+armadilhas, pisos falsos, lasers ou barreiras desativáveis por scan.
 
 ### 8.5 Fase 5 — esquema autoral
 
@@ -713,9 +744,7 @@ phase_end
 ~~~text
 tutorial.skill = dash
 hazard.kind = laser_grid | rotating_barrier | hidden_spikes
-automatic_door.cycle_ms = int
-automatic_door.open_ms = int
-automatic_door.phase_ms = int
+automatic_door.id = string
 scan_reveal.kind = false_floor | hidden_hazard
 breakable.kind = barricade
 credit.route = normal | risk
@@ -729,7 +758,7 @@ phase_end.fase = 5
 O mapa possui **38.400 px**. Os primeiros **28.800 px** correspondem a
 aproximadamente **90 s de desafio**, e os **9.600 px** finais reservam o trecho
 contemplativo e o Portão, totalizando cerca de **120 s** a 320 px/s. Há um
-checkpoint após as portas temporizadas.
+checkpoint após as barreiras controladas por scan.
 
 Os vãos obrigatórios de dash possuem **448 px (14 tiles)**. O piso falso possui
 **192 px (6 tiles)** e permanece desenhado somente em `scan-visuals`, enquanto
@@ -752,13 +781,14 @@ visual e os desafios de kit completo da Fase 5, mas é independente da campanha.
 
 Os primeiros 28.800 px usam o percurso mecânico da Fase 5. Os 9.600 px que
 antes levavam ao Portão foram substituídos por uma extensão competitiva com
-scan, barricadas, grades de laser, barreiras rotativas e porta temporizada. O
+scan, barricadas, grades de laser, barreiras rotativas e barreira desativável. O
 mapa termina em uma linha de chegada neutra, sem decisões ou progressão
 narrativa.
 
 Cada cliente instancia sua própria cópia lógica da pista. Após morte, o
-cronômetro e os créditos coletados permanecem, enquanto barricadas destruídas e
-revelações de scan são restauradas para a nova tentativa do trecho.
+cronômetro e os créditos coletados permanecem, enquanto barricadas destruídas,
+barreiras desativadas e revelações de scan são restauradas para a nova
+tentativa do trecho.
 
 #### Auditoria de acessibilidade da Fase 4
 

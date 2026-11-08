@@ -27,10 +27,15 @@ export const ALEX_EYES_TEXTURE_KEY = "alex-eyes";
 export const ALEX_DASH_TEXTURE_KEY = "alex-dash";
 export const ALEX_RUN_ANIM = "alex-run";
 export const ALEX_HURT_ANIM = "alex-hurt";
+export const ALEX_CHECKPOINT_ANIM = "alex-checkpoint-play";
 export const ALEX_SLIDE_FRAME = frameIndex(33, 2);
 
 const WALK_RIGHT = { row: 11, frames: 9 };
 const HURT = { row: 20, frames: 6 };
+// Bloco LPC de personagem sentado, voltado para a DIREITA: Alex fica de
+// perfil para a TV. A linha 35 usada anteriormente é uma pose em pé; os dois
+// frames sentados corretos estão na linha 33.
+const CHECKPOINT_PLAY_RIGHT = { row: 33, frames: 2 };
 
 export function alexTextureForAbilities(abilities: AbilityState): string {
   if (abilities.thrusters) return ALEX_DASH_TEXTURE_KEY;
@@ -42,6 +47,12 @@ export function alexTextureForAbilities(abilities: AbilityState): string {
 
 export function alexRunAnimationKey(textureKey: string): string {
   return textureKey === ALEX_TEXTURE_KEY ? ALEX_RUN_ANIM : `${textureKey}-run`;
+}
+
+export function alexCheckpointAnimationKey(textureKey: string): string {
+  return textureKey === ALEX_TEXTURE_KEY
+    ? ALEX_CHECKPOINT_ANIM
+    : `${textureKey}-checkpoint-play`;
 }
 
 export function ensureAlexAnimations(scene: Phaser.Scene, textureKey = ALEX_TEXTURE_KEY): void {
@@ -68,6 +79,19 @@ export function ensureAlexAnimations(scene: Phaser.Scene, textureKey = ALEX_TEXT
       }),
       frameRate: 8,
       repeat: 0,
+    });
+  }
+
+  const checkpointAnimationKey = alexCheckpointAnimationKey(textureKey);
+  if (!scene.anims.exists(checkpointAnimationKey)) {
+    scene.anims.create({
+      key: checkpointAnimationKey,
+      frames: scene.anims.generateFrameNumbers(textureKey, {
+        start: frameIndex(CHECKPOINT_PLAY_RIGHT.row, 0),
+        end: frameIndex(CHECKPOINT_PLAY_RIGHT.row, CHECKPOINT_PLAY_RIGHT.frames - 1),
+      }),
+      frameRate: 4,
+      repeat: -1,
     });
   }
 }

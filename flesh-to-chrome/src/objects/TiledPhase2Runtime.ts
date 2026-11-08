@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { BASE_RUN_SPEED } from "../config/GameConfig";
+import { BASE_RUN_SPEED, GAMEPLAY_TIMING } from "../config/GameConfig";
 import { Player } from "../entities/Player";
 import {
   TILED_FASE2_MAP_KEY,
@@ -8,7 +8,11 @@ import {
 } from "../levels/TiledFase2";
 import { AbilityState } from "../systems/AbilityState";
 import { TEX } from "../utils/PlaceholderTextures";
-import { TILED_CHECKPOINT_TEXTURE_KEY } from "./TiledLevelRuntime";
+import { CheckpointMarker } from "./CheckpointMarker";
+import { HazardCycleState, HazardCycleTiming, hazardCycleSample } from "./HazardMotion";
+
+export const TILED_PHASE2_STEAM_TEXTURE_KEY = "hazard-steam-jet";
+export const TILED_PHASE2_PRESS_TEXTURE_KEY = "hazard-hydraulic-press";
 
 interface Phase2Credit {
   id: string;
@@ -32,15 +36,50 @@ interface Conveyor {
   speed: number;
 }
 
-const INDUSTRIAL_HAZARD_KINDS = new Set(["press", "steam", "mech_arm", "crusher"]);
+type IndustrialHazardKind = keyof typeof GAMEPLAY_TIMING.industrialHazards;
+
+interface IndustrialHazard {
+  kind: IndustrialHazardKind;
+  zone: Phaser.GameObjects.Zone;
+  indicator: Phaser.GameObjects.Rectangle;
+  visual: Phaser.GameObjects.Container;
+  tileParts: Array<{
+    image: Phaser.GameObjects.Image;
+    baseX: number;
+    baseY: number;
+  }>;
+  steamPlume?: Phaser.GameObjects.Image;
+  steamScaleX?: number;
+  steamScaleY?: number;
+  timing: HazardCycleTiming;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  state?: HazardCycleState;
+}
+
+const INDUSTRIAL_HAZARD_KINDS = new Set<IndustrialHazardKind>(["press", "steam", "mech_arm", "crusher"]);
+
+const smoothStep = (value: number): number => {
+  const t = Phaser.Math.Clamp(value, 0, 1);
+  return t * t * (3 - 2 * t);
+};
+
+/** Ataque com entrada e saída suaves, mantendo uma janela central estável. */
+const attackEnvelope = (progress: number): number => {
+  if (progress < 0.24) return smoothStep(progress / 0.24);
+  if (progress > 0.74) return smoothStep((1 - progress) / 0.26);
+  return 1;
+};
 
 /**
  * Runtime do blockout Tiled da Fase 2.
  *
- * Nesta primeira integração, os quatro hazards industriais ainda não têm
- * ciclos/animações: todos matam imediatamente ao contato. As esteiras já
- * aplicam a velocidade adicional autorada no objeto `conveyor`, somente
- * enquanto Alex está apoiado na superfície correspondente.
+ * Os quatro hazards industriais compartilham um ciclo determinístico de
+ * inativo → aviso → ativo. Uma única amostra contínua do ciclo controla o
+ * movimento visual e o corpo físico, evitando que a máquina pareça segura
+ * enquanto ainda é letal ou que a hitbox fique onde a arte já não está.
  */
 export class TiledPhase2Runtime {
   readonly map: Phaser.Tilemaps.Tilemap;
@@ -53,21 +92,24 @@ export class TiledPhase2Runtime {
   readonly credits: Phase2Credit[] = [];
 
   private readonly fallDeathY: number;
+  private readonly hazardsLayer?: Phaser.Tilemaps.TilemapLayer;
   private readonly checkpointTriggered = new Set<string>();
+  private readonly checkpointMarkers = new Map<string, CheckpointMarker>();
   private readonly checkpoints: Phase2Checkpoint[] = [];
   private readonly creditSprites = new Map<string, Phaser.Physics.Arcade.Sprite>();
-  private readonly hazardZones: Phaser.GameObjects.Zone[] = [];
+  private readonly industrialHazards: IndustrialHazard[] = [];
   private readonly lowCeilingZones: Phaser.GameObjects.Zone[] = [];
   private readonly conveyors: Conveyor[] = [];
   private readonly tutorialLabels: Phaser.GameObjects.Text[] = [];
   private endGateTriggered = false;
+  private elapsedMs = 0;
 
   constructor(
     private readonly scene: Phaser.Scene,
     private readonly consolidatedThisPhase: Set<string>,
     private readonly callbacks: {
       onCreditCollected: (id: string, value: number) => void;
-      onCheckpoint: (id: string, x: number, y: number) => void;
+      onCheckpoint: (id: string, x: number, y: number) => boolean | void;
       onEndGate: (destination: string, implant?: keyof AbilityState) => void;
     },
   ) {
@@ -92,7 +134,7 @@ export class TiledPhase2Runtime {
     ground.setDepth(0);
     this.groundLayer = ground;
 
-    this.createVisualLayer("hazards", tilesets, 1, offsetY);
+    this.hazardsLayer = this.createVisualLayer("hazards", tilesets, 1, offsetY);
     this.createVisualLayer("deco-low-ceilings", tilesets, 1, offsetY);
     this.createVisualLayer("deco", tilesets, 2, offsetY);
 
@@ -132,13 +174,14 @@ export class TiledPhase2Runtime {
     tilesets: Phaser.Tilemaps.Tileset[],
     depth: number,
     worldOffsetY: number,
-  ): void {
+  ): Phaser.Tilemaps.TilemapLayer | undefined {
     // Sem x/y explícitos, o Phaser preserva offsetx/offsety autorados no
     // Tiled. Depois somamos somente o deslocamento global do mapa na tela.
     const layer = this.map.createLayer(name, tilesets) as Phaser.Tilemaps.TilemapLayer | null;
-    if (!layer) return;
+    if (!layer) return undefined;
     layer.setPosition(layer.x, layer.y + worldOffsetY);
     layer.setDepth(depth);
+    return layer;
   }
 
   private readString(
@@ -163,7 +206,6 @@ export class TiledPhase2Runtime {
   private readCredits(objects: Phaser.Types.Tilemaps.TiledObject[], offsetY: number): void {
     for (const object of objects) {
       const id = this.readString(object, "id") ?? object.name ?? `credit-${object.id}`;
-      if (this.consolidatedThisPhase.has(id)) continue;
       this.credits.push({
         id,
         x: object.x ?? 0,
@@ -188,23 +230,266 @@ export class TiledPhase2Runtime {
   }
 
   private buildHazards(objects: Phaser.Types.Tilemaps.TiledObject[], offsetY: number): void {
-    for (const object of objects) {
+    objects.forEach((object, index) => {
       const kind = this.readString(object, "kind");
-      if (!kind || !INDUSTRIAL_HAZARD_KINDS.has(kind)) {
+      if (!kind || !INDUSTRIAL_HAZARD_KINDS.has(kind as IndustrialHazardKind)) {
         console.warn(`Fase 2: hazard "${object.name ?? object.id}" usa kind desconhecido "${kind ?? "ausente"}"; tratado como letal.`);
       }
 
+      const resolvedKind = INDUSTRIAL_HAZARD_KINDS.has(kind as IndustrialHazardKind)
+        ? kind as IndustrialHazardKind
+        : "crusher";
+      const defaults = GAMEPLAY_TIMING.industrialHazards[resolvedKind];
+
       const width = object.width ?? 32;
       const height = object.height ?? 32;
+      const x = object.x ?? 0;
+      const y = object.y ?? 0;
+      const visual = this.buildHazardVisual(resolvedKind, x, y, width, height, offsetY);
       const zone = this.scene.add.zone(
-        (object.x ?? 0) + width / 2,
-        (object.y ?? 0) + offsetY + height / 2,
+        x + width / 2,
+        y + offsetY + height / 2,
         width,
         height,
       );
       this.scene.physics.add.existing(zone, true);
-      this.hazardZones.push(zone);
+      const body = zone.body as Phaser.Physics.Arcade.StaticBody;
+      body.enable = false;
+      const indicator = this.scene.add
+        .rectangle(zone.x, zone.y, width, height, 0x36e2ff, 0.05)
+        .setStrokeStyle(2, 0x7cfcea, 0.42)
+        .setVisible(false)
+        .setDepth(4);
+      this.industrialHazards.push({
+        kind: resolvedKind,
+        zone,
+        indicator,
+        ...visual,
+        timing: {
+          cycleMs: Math.max(1, this.readNumber(object, "cycle_ms") ?? defaults.cycleMs),
+          activeMs: Math.max(0, this.readNumber(object, "active_ms") ?? defaults.activeMs),
+          warningMs: Math.max(0, this.readNumber(object, "warning_ms") ?? defaults.warningMs),
+          phaseMs: this.readNumber(object, "phase_ms") ?? index * 317,
+        },
+        x,
+        y: y + offsetY,
+        width,
+        height,
+      });
+    });
+    this.updateHazards(this.elapsedMs);
+  }
+
+  /**
+   * Converte os tiles autorados no mapa em imagens independentes para que
+   * cada máquina possa realmente se mover. A layer original é ocultada só
+   * dentro do retângulo do hazard; posição e escolha de arte continuam
+   * vindo do Tiled.
+   */
+  private buildHazardVisual(
+    kind: IndustrialHazardKind,
+    x: number,
+    mapY: number,
+    width: number,
+    height: number,
+    offsetY: number,
+  ): Pick<IndustrialHazard, "visual" | "tileParts" | "steamPlume" | "steamScaleX" | "steamScaleY"> {
+    const visual = this.scene.add.container(x, mapY + offsetY).setDepth(3);
+    const tileParts: IndustrialHazard["tileParts"] = [];
+    const firstCol = Math.floor(x / this.map.tileWidth);
+    const endCol = Math.ceil((x + width) / this.map.tileWidth);
+    const firstRow = Math.floor(mapY / this.map.tileHeight);
+    const endRow = Math.ceil((mapY + height) / this.map.tileHeight);
+
+    for (let row = firstRow; row < endRow; row += 1) {
+      for (let col = firstCol; col < endCol; col += 1) {
+        const tile = this.hazardsLayer?.getTileAt(col, row);
+        if (!tile || tile.index === -1) continue;
+        tile.visible = false;
+
+        // Vapor e prensa recebem arte dedicada; os tiles autorados continuam
+        // servindo apenas para posição e geometria do objeto no Tiled.
+        if (kind === "steam" && row < endRow - 1) continue;
+        if (kind === "press") continue;
+        const frame = this.frameForTileGid(tile.index);
+        if (!frame) continue;
+        const baseX = (col - firstCol) * this.map.tileWidth + this.map.tileWidth / 2;
+        const baseY = (row - firstRow) * this.map.tileHeight + this.map.tileHeight / 2;
+        const image = this.scene.add.image(baseX, baseY, frame.key, frame.frame).setOrigin(0.5);
+        visual.add(image);
+        tileParts.push({ image, baseX, baseY });
+      }
     }
+
+    if (kind === "press") {
+      const press = this.scene.add
+        .image(width / 2, height, TILED_PHASE2_PRESS_TEXTURE_KEY)
+        .setOrigin(0.5, 1)
+        .setDisplaySize(Math.max(48, width * 1.5), Math.max(96, height * 1.5));
+      visual.add(press);
+      tileParts.push({ image: press, baseX: width / 2, baseY: height });
+      return { visual, tileParts };
+    }
+
+    if (kind !== "steam") return { visual, tileParts };
+
+    const nozzleY = height - this.map.tileHeight;
+    const steamPlume = this.scene.add
+      .image(width / 2, nozzleY, TILED_PHASE2_STEAM_TEXTURE_KEY)
+      .setOrigin(0.5, 1)
+      .setDisplaySize(Math.max(40, width * 1.25), height)
+      .setVisible(false);
+    visual.add(steamPlume);
+    return {
+      visual,
+      tileParts,
+      steamPlume,
+      steamScaleX: steamPlume.scaleX,
+      steamScaleY: steamPlume.scaleY,
+    };
+  }
+
+  /** Recorta um GID do tileset já carregado e o registra como frame. */
+  private frameForTileGid(gid: number): { key: string; frame: string } | undefined {
+    const tileset = [...this.map.tilesets]
+      .reverse()
+      .find((candidate) => gid >= candidate.firstgid && gid < candidate.firstgid + candidate.total);
+    const texture = tileset?.image;
+    if (!tileset || !texture) return undefined;
+    const localId = gid - tileset.firstgid;
+    const coordinate = tileset.texCoordinates[localId] as { x: number; y: number } | undefined;
+    if (!coordinate) return undefined;
+    const frame = `phase2-hazard-gid-${gid}`;
+    if (!texture.has(frame)) {
+      texture.add(frame, 0, coordinate.x, coordinate.y, tileset.tileWidth, tileset.tileHeight);
+    }
+    return { key: texture.key, frame };
+  }
+
+  private updateHazards(now: number): void {
+    for (const hazard of this.industrialHazards) {
+      const sample = hazardCycleSample(now, hazard.timing);
+      hazard.state = sample.state;
+      const warning = sample.state === "warning";
+      hazard.indicator
+        .setVisible(warning)
+        .setFillStyle(0xffcf5a, 0.04 + sample.progress * 0.08)
+        .setStrokeStyle(2, 0xffcf5a, 0.5 + sample.progress * 0.4);
+      this.updateHazardMotion(hazard, sample.state, sample.progress, now);
+    }
+  }
+
+  private updateHazardMotion(
+    hazard: IndustrialHazard,
+    state: HazardCycleState,
+    progress: number,
+    now: number,
+  ): void {
+    const activeMotion = state === "active" ? attackEnvelope(progress) : 0;
+    const warningMotion = state === "warning" ? smoothStep(progress) : 0;
+
+    if (hazard.kind === "press") {
+      const extension = state === "active" ? activeMotion : state === "warning" ? 0.08 + warningMotion * 0.12 : 0.08;
+      // A placa recolhida precisa deixar a silhueta em pé completamente
+      // livre. O curso maior evita o contato visual com o cabelo de Alex;
+      // na janela ativa a placa ainda termina exatamente no piso.
+      const travel = hazard.height * 0.96;
+      hazard.visual.setPosition(hazard.x, hazard.y - travel * (1 - extension));
+      this.syncHazardBody(
+        hazard,
+        hazard.x + hazard.width / 2,
+        hazard.visual.y + hazard.height / 2,
+        hazard.width,
+        hazard.height,
+        state === "active" && extension > 0.25,
+      );
+      return;
+    }
+
+    if (hazard.kind === "mech_arm") {
+      const extension = state === "active"
+        ? activeMotion
+        : state === "warning"
+          ? 0.12 + warningMotion * 0.12
+          : 0.08;
+      hazard.visual.setPosition(hazard.x, hazard.y);
+      for (const part of hazard.tileParts) {
+        part.image.setPosition(part.baseX, this.map.tileHeight / 2 + (part.baseY - this.map.tileHeight / 2) * extension);
+      }
+      const extendedHeight = this.map.tileHeight + (hazard.height - this.map.tileHeight) * extension;
+      this.syncHazardBody(
+        hazard,
+        hazard.x + hazard.width / 2,
+        hazard.y + extendedHeight / 2,
+        hazard.width,
+        extendedHeight,
+        state === "active" && extension > 0.2,
+      );
+      return;
+    }
+
+    if (hazard.kind === "steam") {
+      const strength = state === "active"
+        ? activeMotion
+        : state === "warning"
+          ? 0.08 + warningMotion * 0.1
+          : 0;
+      const plume = hazard.steamPlume;
+      if (plume && hazard.steamScaleX !== undefined && hazard.steamScaleY !== undefined) {
+        plume
+          .setVisible(strength > 0.01)
+          .setAlpha(state === "warning" ? 0.45 : 0.95)
+          .setScale(
+            hazard.steamScaleX * (0.96 + Math.sin(now * 0.026 + hazard.x) * 0.04),
+            hazard.steamScaleY * Math.max(0.02, strength),
+          );
+      }
+      const steamHeight = Math.max(2, hazard.height * strength);
+      const nozzleY = hazard.y + hazard.height - this.map.tileHeight;
+      this.syncHazardBody(
+        hazard,
+        hazard.x + hazard.width / 2,
+        nozzleY - steamHeight / 2,
+        hazard.width,
+        steamHeight,
+        state === "active" && strength > 0.16,
+      );
+      return;
+    }
+
+    if (hazard.kind === "crusher") {
+      const closure = state === "active" ? activeMotion : state === "warning" ? warningMotion * 0.12 : 0;
+      const gap = (1 - closure) * 14;
+      for (const part of hazard.tileParts) {
+        const direction = part.baseX < hazard.width / 2 ? -1 : 1;
+        part.image.setPosition(part.baseX + direction * gap, part.baseY);
+      }
+      const collisionWidth = Math.max(2, hazard.width * closure);
+      this.syncHazardBody(
+        hazard,
+        hazard.x + hazard.width / 2,
+        hazard.y + hazard.height / 2,
+        collisionWidth,
+        hazard.height,
+        state === "active" && closure > 0.2,
+      );
+    }
+  }
+
+  /** Reposiciona a zona estática para coincidir com a máquina neste frame. */
+  private syncHazardBody(
+    hazard: IndustrialHazard,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    enabled: boolean,
+  ): void {
+    hazard.zone.setPosition(x, y).setSize(Math.max(2, width), Math.max(2, height));
+    const body = hazard.zone.body as Phaser.Physics.Arcade.StaticBody | null;
+    if (!body) return;
+    body.enable = enabled;
+    body.setSize(Math.max(2, width), Math.max(2, height), true).updateFromGameObject();
   }
 
   /**
@@ -276,6 +561,7 @@ export class TiledPhase2Runtime {
 
   private buildCredits(): void {
     for (const credit of this.credits) {
+      if (this.consolidatedThisPhase.has(credit.id)) continue;
       const sprite = this.scene.physics.add.sprite(credit.x, credit.y, TEX.credit);
       sprite.body!.setAllowGravity(false);
       sprite.setData("creditId", credit.id);
@@ -295,11 +581,10 @@ export class TiledPhase2Runtime {
 
   private buildCheckpoints(): void {
     for (const checkpoint of this.checkpoints) {
-      this.scene.add
-        .image(checkpoint.x + checkpoint.width / 2, checkpoint.y, TILED_CHECKPOINT_TEXTURE_KEY)
-        .setOrigin(0.5, 1)
-        .setDisplaySize(72, 61)
-        .setDepth(3);
+      this.checkpointMarkers.set(
+        checkpoint.id,
+        new CheckpointMarker(this.scene, checkpoint.x + checkpoint.width / 2, checkpoint.y, 3),
+      );
     }
   }
 
@@ -312,8 +597,8 @@ export class TiledPhase2Runtime {
     // instantânea mostrada no primeiro gap da Fase 2.
     this.scene.physics.add.collider(player.sprite, this.groundLayer);
 
-    for (const hazard of this.hazardZones) {
-      this.scene.physics.add.overlap(player.sprite, hazard, () => player.kill());
+    for (const hazard of this.industrialHazards) {
+      this.scene.physics.add.overlap(player.sprite, hazard.zone, () => player.kill());
     }
     for (const ceiling of this.lowCeilingZones) {
       this.scene.physics.add.overlap(player.sprite, ceiling, () => {
@@ -334,9 +619,11 @@ export class TiledPhase2Runtime {
     return 0;
   }
 
-  update(player: Player): void {
+  update(player: Player, deltaMs = 0): void {
+    this.elapsedMs += Math.max(0, deltaMs);
+    this.updateHazards(this.elapsedMs);
     const state = player.getState();
-    if (state !== "dead" && state !== "dashing" && state !== "pressed") {
+    if (state !== "dead" && state !== "dashing" && state !== "pressed" && state !== "checkpoint") {
       player.sprite.setVelocityX(BASE_RUN_SPEED + this.conveyorSpeedFor(player));
     }
 
@@ -353,7 +640,8 @@ export class TiledPhase2Runtime {
       if (this.checkpointTriggered.has(checkpoint.id)) continue;
       if (Math.abs(player.sprite.x - checkpoint.x) < 28) {
         this.checkpointTriggered.add(checkpoint.id);
-        this.callbacks.onCheckpoint(checkpoint.id, checkpoint.x, checkpoint.y);
+        const withFeedback = this.callbacks.onCheckpoint(checkpoint.id, checkpoint.x, checkpoint.y) !== false;
+        this.checkpointMarkers.get(checkpoint.id)?.activate(withFeedback);
       }
     }
 
@@ -374,7 +662,12 @@ export class TiledPhase2Runtime {
 
   destroy(): void {
     this.creditSprites.forEach((sprite) => sprite.destroy());
-    this.hazardZones.forEach((zone) => zone.destroy());
+    this.checkpointMarkers.forEach((marker) => marker.destroy());
+    this.industrialHazards.forEach((hazard) => {
+      hazard.zone.destroy();
+      hazard.indicator.destroy();
+      hazard.visual.destroy(true);
+    });
     this.lowCeilingZones.forEach((zone) => zone.destroy());
     this.tutorialLabels.forEach((label) => label.destroy());
   }

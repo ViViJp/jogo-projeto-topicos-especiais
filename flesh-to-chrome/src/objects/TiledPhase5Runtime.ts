@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { GAMEPLAY_TIMING } from "../config/GameConfig";
 import { Player } from "../entities/Player";
 import {
   TILED_FASE5_MAP_KEY,
@@ -6,7 +7,8 @@ import {
   TILED_FASE5_TILESETS,
 } from "../levels/TiledFase5";
 import { TEX } from "../utils/PlaceholderTextures";
-import { TILED_CHECKPOINT_TEXTURE_KEY } from "./TiledLevelRuntime";
+import { CheckpointMarker } from "./CheckpointMarker";
+import { nearestScanObstacleIndex, rotatingBarrierPoints } from "./HazardMotion";
 
 interface Phase5Credit {
   id: string;
@@ -44,12 +46,25 @@ interface HiddenVisualRegion {
 }
 
 interface AutomaticDoor {
+  id: string;
+  x: number;
+  width: number;
   zone: Phaser.GameObjects.Zone;
   col: number;
+  prompt: Phaser.GameObjects.Text;
+  disabled: boolean;
+}
+
+interface RotatingBarrier {
+  centerX: number;
+  centerY: number;
+  length: number;
+  collisionSpan: number;
   cycleMs: number;
-  openMs: number;
   phaseMs: number;
-  open?: boolean;
+  arm: Phaser.GameObjects.Rectangle;
+  hub: Phaser.GameObjects.Arc;
+  collisionNodes: Phaser.GameObjects.Zone[];
 }
 
 interface RuntimeBreakable {
@@ -98,8 +113,10 @@ export class TiledPhase5Runtime {
   private readonly fallDeathY: number;
   private readonly checkpoints: Phase5Checkpoint[] = [];
   private readonly checkpointTriggered = new Set<string>();
+  private readonly checkpointMarkers = new Map<string, CheckpointMarker>();
   private readonly creditSprites = new Map<string, Phaser.Physics.Arcade.Sprite>();
   private readonly hazardZones: Phaser.GameObjects.Zone[] = [];
+  private readonly rotatingBarriers: RotatingBarrier[] = [];
   private readonly revealRegions: RevealRegion[] = [];
   private readonly hiddenVisualRegions: HiddenVisualRegion[] = [];
   private readonly revealedGroups = new Set<string>();
@@ -112,6 +129,8 @@ export class TiledPhase5Runtime {
   private readonly creditValue: number;
   private readonly contextLabel: string;
   private readonly timeSource: () => number;
+  private readonly usesInternalTime: boolean;
+  private elapsedMs = 0;
   private endGateTriggered = false;
   private playerRef?: Player;
   private pressedAttackListener: (breakable: Phaser.GameObjects.GameObject | null) => void = () => undefined;
@@ -122,7 +141,7 @@ export class TiledPhase5Runtime {
     private readonly consolidatedThisPhase: Set<string>,
     private readonly callbacks: {
       onCreditCollected: (id: string, value: number) => void;
-      onCheckpoint: (id: string, x: number, y: number) => void;
+      onCheckpoint: (id: string, x: number, y: number) => boolean | void;
       onEndGate: () => void;
     },
     options: TiledPhase5RuntimeOptions = {},
@@ -130,7 +149,8 @@ export class TiledPhase5Runtime {
     this.offsetY = options.offsetY ?? TILED_FASE5_OFFSET_Y;
     this.creditValue = options.creditValue ?? 10;
     this.contextLabel = options.contextLabel ?? "Fase 5";
-    this.timeSource = options.timeSource ?? (() => this.scene.time.now);
+    this.usesInternalTime = options.timeSource === undefined;
+    this.timeSource = options.timeSource ?? (() => this.elapsedMs);
     this.map = scene.make.tilemap({ key: options.mapKey ?? TILED_FASE5_MAP_KEY });
     const tilesets = (options.tilesets ?? TILED_FASE5_TILESETS).map(({ name, key }) => {
       const tileset = this.map.addTilesetImage(name, key);
@@ -210,7 +230,6 @@ export class TiledPhase5Runtime {
   private readCredits(objects: Phaser.Types.Tilemaps.TiledObject[]): void {
     for (const object of objects) {
       const id = this.readString(object, "id") ?? object.name ?? `credit-${object.id}`;
-      if (this.consolidatedThisPhase.has(id)) continue;
       this.credits.push({
         id,
         x: object.x ?? 0,
@@ -240,6 +259,7 @@ export class TiledPhase5Runtime {
 
   private buildCredits(): void {
     for (const credit of this.credits) {
+      if (this.consolidatedThisPhase.has(credit.id)) continue;
       const sprite = this.scene.physics.add.sprite(credit.x, credit.y, TEX.credit);
       sprite.body!.setAllowGravity(false);
       sprite.setData("creditValue", credit.value);
@@ -258,11 +278,10 @@ export class TiledPhase5Runtime {
 
   private buildCheckpoints(): void {
     for (const checkpoint of this.checkpoints) {
-      this.scene.add
-        .image(checkpoint.x + checkpoint.width / 2, checkpoint.y, TILED_CHECKPOINT_TEXTURE_KEY)
-        .setOrigin(0.5, 1)
-        .setDisplaySize(72, 61)
-        .setDepth(5);
+      this.checkpointMarkers.set(
+        checkpoint.id,
+        new CheckpointMarker(this.scene, checkpoint.x + checkpoint.width / 2, checkpoint.y, 5),
+      );
     }
   }
 
@@ -295,7 +314,7 @@ export class TiledPhase5Runtime {
   }
 
   private buildHazards(objects: Phaser.Types.Tilemaps.TiledObject[]): void {
-    for (const object of objects) {
+    objects.forEach((object, index) => {
       const kind = this.readString(object, "kind");
       if (!kind || !TOP_HAZARD_KINDS.has(kind)) {
         console.warn(`${this.contextLabel}: hazard "${object.name ?? object.id}" usa kind desconhecido "${kind ?? "ausente"}"; tratado como letal.`);
@@ -304,6 +323,10 @@ export class TiledPhase5Runtime {
       const height = object.height ?? 32;
       const x = object.x ?? 0;
       const y = object.y ?? 0;
+      if (kind === "rotating_barrier") {
+        this.buildRotatingBarrier(object, index, x, y, width, height);
+        return;
+      }
       const zone = this.scene.add.zone(
         x + width / 2,
         y + this.offsetY + height / 2,
@@ -321,6 +344,82 @@ export class TiledPhase5Runtime {
           this.setHiddenVisual(hidden, false);
         }
       }
+    });
+    this.updateRotatingBarriers(this.timeSource());
+  }
+
+  private buildRotatingBarrier(
+    object: Phaser.Types.Tilemaps.TiledObject,
+    index: number,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+  ): void {
+    const centerX = x + width / 2;
+    const centerY = y + this.offsetY + height / 2;
+    const length = Math.max(width, height);
+    const nodeCount = GAMEPLAY_TIMING.rotatingBarrier.collisionNodes;
+    const nodeSize = Math.max(
+      GAMEPLAY_TIMING.rotatingBarrier.nodeSize,
+      length / Math.max(1, nodeCount - 1) + 2,
+    );
+    const arm = this.scene.add
+      .rectangle(centerX, centerY, length, GAMEPLAY_TIMING.rotatingBarrier.nodeSize, 0xff4fe1, 0.88)
+      .setStrokeStyle(2, 0xffd8fa, 0.95)
+      .setDepth(6);
+    const hub = this.scene.add
+      .circle(centerX, centerY, 10, 0x2b1740, 1)
+      .setStrokeStyle(3, 0x7cfcea, 0.95)
+      .setDepth(7);
+    const collisionNodes = Array.from({ length: nodeCount }, () => {
+      const node = this.scene.add.zone(centerX, centerY, nodeSize, nodeSize);
+      this.scene.physics.add.existing(node, true);
+      return node;
+    });
+    this.rotatingBarriers.push({
+      centerX,
+      centerY,
+      length,
+      collisionSpan: Math.max(0, length - nodeSize),
+      cycleMs: Math.max(1, this.readNumber(object, "cycle_ms") ?? GAMEPLAY_TIMING.rotatingBarrier.cycleMs),
+      phaseMs: this.readNumber(object, "phase_ms") ?? index * 271,
+      arm,
+      hub,
+      collisionNodes,
+    });
+
+    // O tile original funciona como suporte; o braço animado passa a ser o
+    // único visual dominante e acompanha exatamente os corpos físicos.
+    const startCol = Math.floor(x / this.map.tileWidth);
+    const endCol = Math.ceil((x + width) / this.map.tileWidth);
+    const startRow = Math.floor(y / this.map.tileHeight);
+    const endRow = Math.ceil((y + height) / this.map.tileHeight);
+    for (let row = startRow; row < endRow; row += 1) {
+      for (let col = startCol; col < endCol; col += 1) {
+        const tile = this.hazardsLayer?.getTileAt(col, row);
+        if (tile && tile.index !== -1) tile.alpha = 0.18;
+      }
+    }
+  }
+
+  private updateRotatingBarriers(now: number): void {
+    for (const barrier of this.rotatingBarriers) {
+      const position = ((now + barrier.phaseMs) % barrier.cycleMs + barrier.cycleMs) % barrier.cycleMs;
+      const angle = position / barrier.cycleMs * Math.PI * 2;
+      barrier.arm.setRotation(angle);
+      const points = rotatingBarrierPoints(
+        barrier.centerX,
+        barrier.centerY,
+        barrier.collisionSpan,
+        barrier.collisionNodes.length,
+        angle,
+      );
+      barrier.collisionNodes.forEach((node, index) => {
+        const point = points[index];
+        node.setPosition(point.x, point.y);
+        (node.body as Phaser.Physics.Arcade.StaticBody).reset(point.x, point.y);
+      });
     }
   }
 
@@ -330,19 +429,48 @@ export class TiledPhase5Runtime {
       const height = object.height ?? 256;
       const x = object.x ?? 0;
       const y = object.y ?? 128;
+      const doorCol = Math.floor(x / this.map.tileWidth);
+      let firstDoorTileRow: number | undefined;
+      for (let row = 0; row < this.map.height; row += 1) {
+        if (this.hazardsLayer?.getTileAt(doorCol, row)?.index === DOOR_FIRST_GID) {
+          firstDoorTileRow = row;
+          break;
+        }
+      }
+      const collisionTop = (firstDoorTileRow ?? Math.floor(y / this.map.tileHeight))
+        * this.map.tileHeight + this.offsetY;
+      const collisionBottom = this.groundSurfaceYAt(x);
+      const collisionHeight = Math.max(this.map.tileHeight, collisionBottom - collisionTop);
       const zone = this.scene.add.zone(
         x + width / 2,
-        y + this.offsetY + height / 2,
+        collisionTop + collisionHeight / 2,
         width,
-        height,
+        collisionHeight,
       );
       this.scene.physics.add.existing(zone, true);
+      const bottomTileRow = Math.ceil((y + height) / this.map.tileHeight) - 1;
+      const bottomTile = this.hazardsLayer?.getTileAt(doorCol, bottomTileRow);
+      if (bottomTile?.index === DOOR_FIRST_GID) {
+        this.hazardsLayer?.putTileAt(DOOR_FIRST_GID, doorCol, bottomTileRow - 1);
+        bottomTile.visible = false;
+      }
       this.doors.push({
+        id: this.readString(object, "id") ?? object.name ?? `door-${object.id}`,
+        x,
+        width,
         zone,
-        col: Math.floor(x / this.map.tileWidth),
-        cycleMs: Math.max(1, this.readNumber(object, "cycle_ms") ?? 1800),
-        openMs: Math.max(0, this.readNumber(object, "open_ms") ?? 760),
-        phaseMs: this.readNumber(object, "phase_ms") ?? 0,
+        col: doorCol,
+        prompt: this.scene.add
+          .text(x + width / 2, collisionTop - 8, "SCAN", {
+            fontFamily: "Courier New, monospace",
+            fontSize: "12px",
+            color: "#7cfcea",
+            backgroundColor: "#071b25dd",
+            padding: { x: 5, y: 3 },
+          })
+          .setOrigin(0.5, 1)
+          .setDepth(7),
+        disabled: false,
       });
     }
   }
@@ -502,6 +630,11 @@ export class TiledPhase5Runtime {
     for (const hazard of this.hazardZones) {
       this.scene.physics.add.overlap(player.sprite, hazard, () => player.kill());
     }
+    for (const barrier of this.rotatingBarriers) {
+      for (const node of barrier.collisionNodes) {
+        this.scene.physics.add.overlap(player.sprite, node, () => player.kill());
+      }
+    }
     for (const door of this.doors) {
       this.scene.physics.add.overlap(player.sprite, door.zone, () => player.kill());
     }
@@ -542,18 +675,26 @@ export class TiledPhase5Runtime {
     if (target) this.destroyBreakable(target);
   }
 
-  private updateDoors(now: number): void {
-    for (const door of this.doors) {
-      const open = (now + door.phaseMs) % door.cycleMs < Math.min(door.openMs, door.cycleMs);
-      if (door.open === open) continue;
-      door.open = open;
-      const physicsBody = door.zone.body as Phaser.Physics.Arcade.StaticBody | null;
-      if (physicsBody) physicsBody.enable = !open;
-      for (let row = 0; row < this.map.height; row += 1) {
-        const tile = this.hazardsLayer?.getTileAt(door.col, row);
-        if (tile?.index === DOOR_FIRST_GID) tile.alpha = open ? 0.12 : 1;
-      }
+  private setDoorDisabled(door: AutomaticDoor, disabled: boolean): void {
+    if (door.disabled === disabled) return;
+    door.disabled = disabled;
+    const physicsBody = door.zone.body as Phaser.Physics.Arcade.StaticBody | null;
+    if (physicsBody) physicsBody.enable = !disabled;
+    door.prompt
+      .setText("SCAN")
+      .setColor("#7cfcea")
+      .setVisible(!disabled);
+    for (let row = 0; row < this.map.height; row += 1) {
+      const tile = this.hazardsLayer?.getTileAt(door.col, row);
+      if (tile?.index !== DOOR_FIRST_GID) continue;
+      tile.alpha = disabled ? 0 : 1;
+      tile.tint = 0xffffff;
     }
+  }
+
+  private disableNearestDoor(playerX: number): void {
+    const index = nearestScanObstacleIndex(playerX, SCAN_RANGE, this.doors);
+    if (index >= 0) this.setDoorDisabled(this.doors[index], true);
   }
 
   private distanceToRegion(playerX: number, region: RevealRegion): number {
@@ -627,6 +768,7 @@ export class TiledPhase5Runtime {
   setScanActive(active: boolean): void {
     if (!active || !this.playerRef) return;
     const playerX = this.playerRef.sprite.x;
+    this.disableNearestDoor(playerX);
     const groups = new Set(
       this.revealRegions
         .filter((region) => this.distanceToRegion(playerX, region) <= SCAN_RANGE)
@@ -649,15 +791,15 @@ export class TiledPhase5Runtime {
     for (const hidden of this.hiddenVisualRegions) this.setHiddenVisual(hidden, false);
     this.revealedGroups.clear();
 
-    // Portas não são recriadas: o mesmo corpo estático é reposicionado no
-    // estado determinístico do cronômetro, evitando zonas/colliders duplicados.
-    for (const door of this.doors) door.open = undefined;
-    this.updateDoors(this.timeSource());
+    // Portas reutilizam os mesmos corpos: o respawn apenas religa colisão e
+    // visual, sem criar zonas ou overlaps duplicados.
+    for (const door of this.doors) this.setDoorDisabled(door, false);
 
     const restored = this.mutableObstacleState();
     if (
       restored.breakables !== restored.breakableDefinitions ||
       restored.activeBreakableColliders !== restored.breakableDefinitions ||
+      restored.disabledDoors !== 0 ||
       restored.revealedGroups !== 0
     ) {
       throw new Error(`${this.contextLabel}: restauração de obstáculos ficou inconsistente.`);
@@ -670,6 +812,7 @@ export class TiledPhase5Runtime {
     breakableDefinitions: number;
     activeBreakableColliders: number;
     doors: number;
+    disabledDoors: number;
     revealedGroups: number;
   } {
     return {
@@ -677,12 +820,15 @@ export class TiledPhase5Runtime {
       breakableDefinitions: this.breakableDefinitions.length,
       activeBreakableColliders: this.breakables.filter((breakable) => breakable.collider?.active).length,
       doors: this.doors.length,
+      disabledDoors: this.doors.filter((door) => door.disabled).length,
       revealedGroups: this.revealedGroups.size,
     };
   }
 
-  update(player: Player): void {
-    this.updateDoors(this.timeSource());
+  update(player: Player, deltaMs = 0): void {
+    if (this.usesInternalTime) this.elapsedMs += Math.max(0, deltaMs);
+    const now = this.timeSource();
+    this.updateRotatingBarriers(now);
     this.clearPassedRevealGroups(player.sprite.x);
 
     this.creditSprites.forEach((sprite, id) => {
@@ -698,7 +844,8 @@ export class TiledPhase5Runtime {
       if (this.checkpointTriggered.has(checkpoint.id)) continue;
       if (Math.abs(player.sprite.x - checkpoint.x) < 28) {
         this.checkpointTriggered.add(checkpoint.id);
-        this.callbacks.onCheckpoint(checkpoint.id, checkpoint.x, checkpoint.y);
+        const withFeedback = this.callbacks.onCheckpoint(checkpoint.id, checkpoint.x, checkpoint.y) !== false;
+        this.checkpointMarkers.get(checkpoint.id)?.activate(withFeedback);
       }
     }
 
@@ -716,8 +863,17 @@ export class TiledPhase5Runtime {
     this.scene.events.off("player-attack-attempt", this.pressedAttackListener);
     this.scene.events.off("player-attack", this.normalAttackListener);
     this.creditSprites.forEach((sprite) => sprite.destroy());
+    this.checkpointMarkers.forEach((marker) => marker.destroy());
     this.hazardZones.forEach((zone) => zone.destroy());
-    this.doors.forEach((door) => door.zone.destroy());
+    this.rotatingBarriers.forEach((barrier) => {
+      barrier.arm.destroy();
+      barrier.hub.destroy();
+      barrier.collisionNodes.forEach((node) => node.destroy());
+    });
+    this.doors.forEach((door) => {
+      door.zone.destroy();
+      door.prompt.destroy();
+    });
     this.breakables.forEach((breakable) => {
       breakable.collider?.destroy();
       breakable.body.destroy();

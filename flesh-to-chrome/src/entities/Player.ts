@@ -11,6 +11,7 @@ import { AbilityState } from "../systems/AbilityState";
 import { InputManager } from "../systems/InputManager";
 import {
   ALEX_SLIDE_FRAME,
+  alexCheckpointAnimationKey,
   alexRunAnimationKey,
   alexTextureForAbilities,
   ensureAlexAnimations,
@@ -23,6 +24,7 @@ export type PlayerState =
   | "attacking"
   | "scanning"
   | "dashing"
+  | "checkpoint"
   | "pressed" // preso contra um quebrável (seção 14.7)
   | "dead";
 
@@ -40,6 +42,7 @@ export class Player {
   private input: InputManager;
   private abilities: AbilityState;
   private readonly runAnimationKey: string;
+  private readonly checkpointAnimationKey: string;
 
   private state: PlayerState = "running";
   private doubleJumpUsed = false;
@@ -50,6 +53,7 @@ export class Player {
   private dashCooldownTimer = 0;
   private pressedTimer = 0;
   private scanTimer = 0;
+  private depthBeforeCheckpoint = 0;
 
   private onDeath: () => void;
   private onScanPulse: (active: boolean) => void;
@@ -72,6 +76,7 @@ export class Player {
     const textureKey = alexTextureForAbilities(abilities);
     ensureAlexAnimations(scene, textureKey);
     this.runAnimationKey = alexRunAnimationKey(textureKey);
+    this.checkpointAnimationKey = alexCheckpointAnimationKey(textureKey);
     this.sprite = scene.physics.add.sprite(x, y, textureKey);
     this.sprite.setOrigin(0.5, 1);
     this.sprite.setCollideWorldBounds(false);
@@ -105,6 +110,34 @@ export class Player {
     this.sprite.setVelocityX(BASE_RUN_SPEED);
   }
 
+  /** Parada diegética do GDD: Alex se senta diante da TV do checkpoint. */
+  beginCheckpointInteraction(x = this.sprite.x, y = this.sprite.y): void {
+    if (this.state === "dead" || this.state === "checkpoint") return;
+    if (this.scanTimer > 0) this.onScanPulse(false);
+    this.scanTimer = 0;
+    this.dashTimer = 0;
+    this.currentBreakable = null;
+    this.state = "checkpoint";
+    const body = this.sprite.body as Phaser.Physics.Arcade.Body;
+    body.setAllowGravity(false);
+    body.reset(x, y);
+    this.sprite.setVelocity(0, 0);
+    this.sprite.anims.play(this.checkpointAnimationKey, true);
+    this.depthBeforeCheckpoint = this.sprite.depth;
+    // A TV é um objeto de primeiro plano (depth 2–3 conforme a fase).
+    // Durante a pose de interação Alex precisa aparecer sentado diante dela.
+    this.sprite.setDepth(10);
+  }
+
+  endCheckpointInteraction(): void {
+    if (this.state !== "checkpoint") return;
+    this.state = "running";
+    this.sprite.setDepth(this.depthBeforeCheckpoint);
+    (this.sprite.body as Phaser.Physics.Arcade.Body).setAllowGravity(true);
+    this.applyRunningPose();
+    this.sprite.setVelocityX(BASE_RUN_SPEED);
+  }
+
   kill(): void {
     if (this.state === "dead") return;
     this.state = "dead";
@@ -134,7 +167,7 @@ export class Player {
   }
 
   update(deltaMs: number): void {
-    if (this.state === "dead") return;
+    if (this.state === "dead" || this.state === "checkpoint") return;
 
     this.updateTimers(deltaMs);
 
