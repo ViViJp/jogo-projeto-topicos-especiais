@@ -217,7 +217,19 @@ assert.match(playerSource, /this\.sprite\.anims\.play\(this\.checkpointAnimation
 assert.match(playerSource, /this\.sprite\.anims\.play\(this\.attackAnimationKey, true\)/);
 assert.match(playerSource, /delay <= PHYSICS\.attack\.activeMs/);
 assert.match(playerSource, /this\.emitAttackPulse\(false\)/);
+assert.match(playerSource, /const attackSequence = \+\+this\.attackSequence/);
+assert.match(playerSource, /this\.attackSequence === attackSequence/);
 assert.doesNotMatch(playerSource, /showAttackFeedback/, "ataque deve usar o spritesheet, não o arco provisório");
+const jumpMethod = playerSource.slice(playerSource.indexOf("private handleJump"), playerSource.indexOf("private handleSlide"));
+assert.match(jumpMethod, /this\.transitionState\("jumping", true\)/,
+  "ataque → pulo deve invalidar o golpe e restaurar a pose");
+const dashMethod = playerSource.slice(playerSource.indexOf("private handleDash"), playerSource.indexOf("destroy(): void"));
+assert.match(dashMethod, /this\.transitionState\("dashing", true\)/,
+  "ataque → dash deve invalidar o golpe e restaurar a pose");
+assert.match(playerSource, /kill\(\): void \{[\s\S]*?this\.transitionState\("dead"\)/,
+  "ataque → morte deve invalidar callbacks pendentes");
+assert.match(playerSource, /respawn\([\s\S]*?this\.attackSequence \+= 1;[\s\S]*?this\.applyRunningPose\(\)/,
+  "respawn deve invalidar ataques anteriores e restaurar a corrida");
 const checkpointMethod = playerSource.slice(
   playerSource.indexOf("beginCheckpointInteraction"),
   playerSource.indexOf("endCheckpointInteraction"),
@@ -237,6 +249,8 @@ assert.match(hudSource, /setFillStyle\(0x21d7ff, 1\)/, "dash pronto deve usar az
 assert.match(hudSource, /batteryBack,[\s\S]*this\.dashBatteryFill,[\s\S]*frame,/,
   "preenchimento da bateria precisa ficar sobre o fundo e sob a moldura");
 assert.match(gameScene, /beginCheckpointInteraction\(x - 24, y\)/);
+assert.match(gameScene, /showFeedback = true[\s\S]*?if \(showFeedback\) this\.hud\.flashPrompt\("ATAQUE", 300\)/,
+  "somente o primeiro pulso do golpe deve atualizar o HUD");
 assert.match(gameScene, /const alreadyActive = this\.data\$\.checkpointX > 0/);
 assert.match(gameScene, /if \(alreadyActive\) return false/);
 assert.match(gameScene, /checkpointX: 0/);

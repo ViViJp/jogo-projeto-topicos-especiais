@@ -163,6 +163,10 @@ export class MenuScene extends Phaser.Scene {
       label: phase.label,
       action: () => this.startTestPhase(phase.id),
     }));
+    this.options.push({
+      label: "Portão — escolha final (teste)",
+      action: () => this.scene.start("GateScene", { testMode: true }),
+    });
     this.options.push({ label: "← Voltar", action: () => this.showMainMenu() });
     this.renderOptions();
   }

@@ -14,6 +14,12 @@ interface EndingPage {
   alexVisible: boolean;
 }
 
+interface EndingSceneData {
+  ending?: "chrome";
+  /** Prévia iniciada pelo seletor; nunca registra o final no save. */
+  testMode?: boolean;
+}
+
 const CHROME_PAGES: EndingPage[] = [
   {
     title: "CONVERSÃO COMPLETA",
@@ -52,9 +58,14 @@ export class EndingScene extends Phaser.Scene {
   private fatherCaption!: Phaser.GameObjects.Text;
   private alex!: Phaser.GameObjects.Sprite;
   private music?: Phaser.Sound.BaseSound;
+  private testMode = false;
 
   constructor() {
     super("EndingScene");
+  }
+
+  init(data: EndingSceneData): void {
+    this.testMode = data.testMode ?? false;
   }
 
   preload(): void {
@@ -84,7 +95,6 @@ export class EndingScene extends Phaser.Scene {
     this.input$ = new InputManager(this);
     this.pageIndex = 0;
     this.returning = false;
-    SaveState.load().markEndingReached("chrome");
 
     this.add.rectangle(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, 1120, 610, 0x0c0d18, 1)
       .setStrokeStyle(2, 0xffd37c, 0.42);
@@ -171,6 +181,10 @@ export class EndingScene extends Phaser.Scene {
       return;
     }
     this.returning = true;
+    // A escolha só se torna um final concluído depois que o jogador viu e
+    // confirmou o último quadro. Fechar o jogo antes disso mantém o Portão
+    // disponível e a prévia do seletor nunca escreve no save.
+    if (!this.testMode) SaveState.load().markEndingReached("chrome");
     this.scene.start("MenuScene");
   }
 }

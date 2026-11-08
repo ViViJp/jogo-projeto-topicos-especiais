@@ -80,6 +80,8 @@ assert.match(main, /GateScene/);
 assert.match(menu, /Continuar do Portão/);
 assert.match(menu, /restorePreGateSave\(\)/);
 assert.match(menu, /this\.scene\.start\("PrologueScene"\)/);
+assert.match(menu, /Portão — escolha final \(teste\)/);
+assert.match(menu, /this\.scene\.start\("GateScene", \{ testMode: true \}\)/);
 assert.match(prologue, /PROLOGUE_FAMILY_KEY/);
 assert.match(prologue, /PROLOGUE_NEWSPAPER_KEY/);
 assert.match(prologue, /father\/pai-antes\.png/);
@@ -99,12 +101,20 @@ assert.match(clinic, /if \(this\.data\$\.testMode\) \{[\s\S]*?this\.scene\.start
   "prévia da clínica deve voltar ao seletor antes de alterar o save");
 assert.match(game, /this\.data\$\.phaseId === "fase5"[\s\S]*?"GateScene"/);
 assert.match(gate, /createPreGateSave\(\)/);
-assert.match(gate, /markEndingReached\("chrome"\)/);
+assert.match(gate, /!this\.testMode && !save\.hasPreGateSave\(\)/);
+assert.doesNotMatch(gate, /markEndingReached\(/,
+  "escolher Chrome ainda não significa concluir o final");
+assert.match(gate, /\{ ending: "chrome", testMode: this\.testMode \}/);
 assert.match(gate, /Conteúdo em desenvolvimento/);
 assert.match(ending, /FINAL CHROME/);
 assert.match(ending, /ALEX\? FILHO\?/);
 assert.match(ending, /father\/pai-portrait\.png/);
 assert.match(ending, /CONVERSÃO CORPORATIVA/);
+assert.match(ending, /if \(!this\.testMode\) SaveState\.load\(\)\.markEndingReached\("chrome"\)/);
+assert.ok(
+  ending.indexOf('markEndingReached("chrome")') > ending.indexOf("this.pageIndex < CHROME_PAGES.length - 1"),
+  "Final Chrome só pode ser registrado depois da confirmação do último quadro",
+);
 assert.match(phase4, /TILED_FATHER_AD_TEXTURE_KEY/);
 assert.match(phase4, /GLITCH CORP \/\/ PROGRAMA DE ASCENSÃO/);
 assert.match(phase4, /O rosto da campanha é familiar/);

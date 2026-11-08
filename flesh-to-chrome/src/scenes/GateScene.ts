@@ -8,6 +8,11 @@ const GATE_MUSIC_KEY = "bgm-gate";
 
 type GateChoice = "chrome" | "flesh";
 
+interface GateSceneData {
+  /** Acesso pelo seletor de fases; não cria snapshot nem altera o save. */
+  testMode?: boolean;
+}
+
 export class GateScene extends Phaser.Scene {
   private input$!: InputManager;
   private selected: GateChoice = "chrome";
@@ -15,9 +20,14 @@ export class GateScene extends Phaser.Scene {
   private developmentNotice?: Phaser.GameObjects.Text;
   private choosing = false;
   private music?: Phaser.Sound.BaseSound;
+  private testMode = false;
 
   constructor() {
     super("GateScene");
+  }
+
+  init(data: GateSceneData): void {
+    this.testMode = data.testMode ?? false;
   }
 
   preload(): void {
@@ -43,7 +53,7 @@ export class GateScene extends Phaser.Scene {
     this.choiceTexts.clear();
 
     const save = SaveState.load();
-    if (!save.hasPreGateSave()) save.createPreGateSave();
+    if (!this.testMode && !save.hasPreGateSave()) save.createPreGateSave();
 
     this.add.rectangle(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, SCREEN_WIDTH, SCREEN_HEIGHT, 0x100718, 1);
     this.add.image(SCREEN_WIDTH / 2, 265, GATE_TEXTURE_KEY).setDisplaySize(320, 373);
@@ -152,10 +162,11 @@ export class GateScene extends Phaser.Scene {
     }
 
     this.choosing = true;
-    SaveState.load().markEndingReached("chrome");
     this.music?.stop();
     this.cameras.main.fadeOut(450, 0, 0, 0, (_camera: Phaser.Cameras.Scene2D.Camera, progress: number) => {
-      if (progress === 1) this.scene.start("EndingScene", { ending: "chrome" });
+      if (progress === 1) {
+        this.scene.start("EndingScene", { ending: "chrome", testMode: this.testMode });
+      }
     });
   }
 }
