@@ -333,3 +333,8 @@ head/faces/male/happy
 - torso/clothes/longsleeve/longsleeve/male/spellcast.png
 - torso/clothes/longsleeve/longsleeve/male/thrust.png
 - torso/clothes/longsleeve/longsleeve/male/walk.png
+George proud clinic portrait — Flesh to Chrome
+
+Sprite frontal original gerado com OpenAI Imagegen em novembro de 2026 para
+a clínica final. Mantém a identidade e a paleta do George, com olhos e
+expressão confiante legíveis na escala de diálogo.

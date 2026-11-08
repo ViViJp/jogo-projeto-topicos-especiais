@@ -112,7 +112,7 @@ export class ClinicScene extends Phaser.Scene {
     const georgeUrl = this.beat.georgeAsset === "nervous"
       ? new URL("../assets/npcs/george/george-nervous/george-nervous.png", import.meta.url)
       : this.beat.georgeAsset === "proud"
-        ? new URL("../assets/npcs/george/george-proud/george-proud.png", import.meta.url)
+        ? new URL("../assets/npcs/george/george-proud/george-proud-clinic.png", import.meta.url)
         : new URL("../assets/npcs/george/george/george.png", import.meta.url);
     if (this.textures.exists(CLINIC_GEORGE_KEY)) this.textures.remove(CLINIC_GEORGE_KEY);
     this.load.spritesheet(CLINIC_GEORGE_KEY, georgeUrl.href, {
@@ -141,7 +141,8 @@ export class ClinicScene extends Phaser.Scene {
 
     this.add.image(SCREEN_WIDTH / 2, 215, CLINIC_BACKGROUND_KEY).setDisplaySize(1280, 427);
     this.add.rectangle(SCREEN_WIDTH / 2, 555, SCREEN_WIDTH, 330, 0x08050c, 0.94);
-    this.add.sprite(250, 390, CLINIC_GEORGE_KEY, 26).setScale(2.35).setDepth(3);
+    const georgeFrame = this.beat.georgeAsset === "proud" ? 0 : 26;
+    this.add.sprite(250, 390, CLINIC_GEORGE_KEY, georgeFrame).setScale(2.35).setDepth(3);
 
     this.add.text(SCREEN_WIDTH / 2, 45, "CLÍNICA DE GEORGE VEKTOR", {
       fontFamily: "Courier New, monospace",

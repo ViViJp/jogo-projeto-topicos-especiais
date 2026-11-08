@@ -19,7 +19,11 @@ import {
 } from "../objects/TiledPhase2Runtime";
 import { TiledPhase3Runtime } from "../objects/TiledPhase3Runtime";
 import { TILED_FATHER_AD_TEXTURE_KEY, TiledPhase4Runtime } from "../objects/TiledPhase4Runtime";
-import { TiledPhase5Runtime } from "../objects/TiledPhase5Runtime";
+import {
+  TILED_PHASE5_BARRICADE_TEXTURE_KEY,
+  TILED_PHASE5_GATE_TEXTURE_KEY,
+  TiledPhase5Runtime,
+} from "../objects/TiledPhase5Runtime";
 import { LEVELS, getNextPhaseId } from "../levels";
 import {
   TILED_FASE1_MAP_KEY,
@@ -388,6 +392,18 @@ export class GameScene extends Phaser.Scene {
     ];
     for (const asset of assets) {
       if (!this.textures.exists(asset.key)) this.load.image(asset.key, asset.url.href);
+    }
+    if (!this.textures.exists(TILED_PHASE5_BARRICADE_TEXTURE_KEY)) {
+      this.load.image(
+        TILED_PHASE5_BARRICADE_TEXTURE_KEY,
+        new URL("../assets/props/obstacles/phase5-barricade.png", import.meta.url).href,
+      );
+    }
+    if (!this.textures.exists(TILED_PHASE5_GATE_TEXTURE_KEY)) {
+      this.load.image(
+        TILED_PHASE5_GATE_TEXTURE_KEY,
+        new URL("../assets/narrative/gate/portao.png", import.meta.url).href,
+      );
     }
     if (!this.textures.exists(TILED_CHECKPOINT_TEXTURE_KEY)) {
       this.load.image(TILED_CHECKPOINT_TEXTURE_KEY, this.checkpointTvUrl().href);

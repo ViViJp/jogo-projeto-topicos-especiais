@@ -1,11 +1,10 @@
 Clinic scene — Flesh to Chrome (ClinicScene)
 
-Tiles + props: Asset Pack Sewer — cammellaro
-https://cammellaro.itch.io/sewer
-License: personal and commercial use; no redistribution.
-
-Source: flesh-to-chrome/src/assets/tiles/esgoto/tiles/tilesetSewer.png + fan/, pc/, lantern/
-Composed procedurally (no room GIFs — those contain PREVIEW watermark).
+Fundo original gerado para Flesh to Chrome com OpenAI Imagegen em novembro
+de 2026. Direção: clínica cybernética clandestina, com equipamentos médicos,
+bancada de implantes e iluminação clínica em ciano, seguindo a paleta do jogo.
 
 Size: 960×320 px (60×20 tiles @ 16px)
-Layers: layers/back.png, mid.png, front.png (optional parallax)
+
+Os arquivos históricos em layers/ permanecem como referência da composição
+anterior e não são carregados em runtime.

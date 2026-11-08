@@ -28,7 +28,11 @@ import {
 } from "../multiplayer/SignalingTransport";
 import { WebRtcMesh } from "../multiplayer/WebRtcMesh";
 import { TILED_CHECKPOINT_TEXTURE_KEY } from "../objects/TiledLevelRuntime";
-import { TiledPhase5Runtime } from "../objects/TiledPhase5Runtime";
+import {
+  TILED_PHASE5_BARRICADE_TEXTURE_KEY,
+  TILED_PHASE5_GATE_TEXTURE_KEY,
+  TiledPhase5Runtime,
+} from "../objects/TiledPhase5Runtime";
 import { InputManager } from "../systems/InputManager";
 import {
   ALEX_ARMS_TEXTURE_KEY,
@@ -146,6 +150,18 @@ export class MultiplayerScene extends Phaser.Scene {
     mapAssets.forEach(({ key, url }) => {
       if (!this.textures.exists(key)) this.load.image(key, url.href);
     });
+    if (!this.textures.exists(TILED_PHASE5_BARRICADE_TEXTURE_KEY)) {
+      this.load.image(
+        TILED_PHASE5_BARRICADE_TEXTURE_KEY,
+        new URL("../assets/props/obstacles/phase5-barricade.png", import.meta.url).href,
+      );
+    }
+    if (!this.textures.exists(TILED_PHASE5_GATE_TEXTURE_KEY)) {
+      this.load.image(
+        TILED_PHASE5_GATE_TEXTURE_KEY,
+        new URL("../assets/narrative/gate/portao.png", import.meta.url).href,
+      );
+    }
     if (!this.textures.exists(TILED_CHECKPOINT_TEXTURE_KEY)) {
       this.load.image(
         TILED_CHECKPOINT_TEXTURE_KEY,

@@ -46,7 +46,7 @@ export class GateScene extends Phaser.Scene {
     if (!save.hasPreGateSave()) save.createPreGateSave();
 
     this.add.rectangle(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, SCREEN_WIDTH, SCREEN_HEIGHT, 0x100718, 1);
-    this.add.image(SCREEN_WIDTH / 2, 265, GATE_TEXTURE_KEY).setDisplaySize(320, 400);
+    this.add.image(SCREEN_WIDTH / 2, 265, GATE_TEXTURE_KEY).setDisplaySize(320, 373);
     this.add.text(SCREEN_WIDTH / 2, 52, "O PORTÃO", {
       fontFamily: "Courier New, monospace",
       fontSize: "38px",

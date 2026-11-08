@@ -83,6 +83,7 @@ const runtimeImages = [
   "src/assets/tiles/corporativo/foozle-scifi-lab/tiles/level_tileset.png",
   "src/assets/tiles/topo/cyber-purp/tileset.png",
   "src/assets/props/obstacles/barricade.png",
+  "src/assets/props/obstacles/phase5-barricade.png",
   "src/assets/props/checkpoint/tv-checkpoint.png",
   "src/assets/npcs/enemies/bandido/bandido.png",
   "src/assets/npcs/enemies/drone/drone.png",
@@ -94,12 +95,22 @@ const runtimeImages = [
   "src/assets/npcs/george/george/george.png",
   "src/assets/npcs/george/george-nervous/george-nervous.png",
   "src/assets/npcs/george/george-proud/george-proud.png",
+  "src/assets/npcs/george/george-proud/george-proud-clinic.png",
   "src/assets/scenes/clinic/clinic-bg.png",
   "src/assets/player/alex-chrome/alex-chrome.png",
   "src/assets/audio/music/bgm-clinic.wav",
   "src/assets/audio/music/bgm-portao.wav",
   "src/assets/audio/sfx/sfx-implant.wav",
 ];
+
+const runtimeImageContracts = new Map([
+  ["src/assets/scenes/clinic/clinic-bg.png", [960, 320]],
+  ["src/assets/npcs/enemies/bandido/bandido.png", [192, 48]],
+  ["src/assets/npcs/enemies/drone/drone.png", [64, 32]],
+  ["src/assets/props/obstacles/phase5-barricade.png", [96, 44]],
+  ["src/assets/narrative/gate/portao.png", [192, 224]],
+  ["src/assets/npcs/george/george-proud/george-proud-clinic.png", [64, 64]],
+]);
 
 const readJson = (filename) => JSON.parse(fs.readFileSync(filename, "utf8"));
 const property = (object, name) => object.properties?.find((item) => item.name === name)?.value;
@@ -139,7 +150,19 @@ function stripTilesetEditorMetadata(map) {
 }
 
 for (const image of runtimeImages) {
-  if (!fs.existsSync(path.join(projectRoot, image))) fail(`asset de runtime ausente: ${image}`);
+  const imagePath = path.join(projectRoot, image);
+  if (!fs.existsSync(imagePath)) {
+    fail(`asset de runtime ausente: ${image}`);
+    continue;
+  }
+  const expectedSize = runtimeImageContracts.get(image);
+  if (expectedSize) {
+    const png = fs.readFileSync(imagePath);
+    const actualSize = [png.readUInt32BE(16), png.readUInt32BE(20)];
+    if (!isDeepStrictEqual(actualSize, expectedSize)) {
+      fail(`${image}: dimensão deve ser ${expectedSize[0]}x${expectedSize[1]}, recebido ${actualSize[0]}x${actualSize[1]}`);
+    }
+  }
 }
 
 for (const phase of phases) {

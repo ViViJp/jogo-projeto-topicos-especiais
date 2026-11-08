@@ -113,6 +113,25 @@ const rotatingBarriers = phase5Objects.filter(
 );
 assert.equal(rotatingBarriers.length, 5);
 assert.ok(rotatingBarriers.every((barrier) => Math.max(barrier.width, barrier.height) >= 96));
+const phase5Breakables = phase5Objects.filter((object) => object.type === "breakable");
+const phase5Credits = phase5Objects.filter((object) => object.type === "credit");
+for (const credit of phase5Credits) {
+  assert.ok(
+    !phase5Breakables.some((obstacle) => (
+      credit.x >= obstacle.x
+      && credit.x <= obstacle.x + obstacle.width
+      && credit.y >= obstacle.y
+      && credit.y <= obstacle.y + obstacle.height
+    )),
+    `fase5: ${credit.name} não pode ficar dentro de uma barricada`,
+  );
+}
+const phase5RuntimeSource = fs.readFileSync(path.join(projectDirectory, "src/objects/TiledPhase5Runtime.ts"), "utf8");
+assert.match(phase5RuntimeSource, /height \/ 2 - 16/, "fase5: barreira rotativa precisa de janela horizontal segura");
+assert.match(phase5RuntimeSource, /TILED_PHASE5_BARRICADE_TEXTURE_KEY/);
+assert.match(phase5RuntimeSource, /groundY \+ ASSET_BASELINE_PADDING/);
+assert.match(phase5RuntimeSource, /TILED_PHASE5_GATE_TEXTURE_KEY/);
+assert.match(phase5RuntimeSource, /bottomY \+ ASSET_BASELINE_PADDING/);
 
 const gameScene = fs.readFileSync(path.join(projectDirectory, "src/scenes/GameScene.ts"), "utf8");
 assert.match(gameScene, /this\.time\.paused = true/);

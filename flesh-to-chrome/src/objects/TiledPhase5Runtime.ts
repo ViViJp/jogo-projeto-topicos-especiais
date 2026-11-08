@@ -70,6 +70,7 @@ interface RotatingBarrier {
 interface RuntimeBreakable {
   id: string;
   body: Phaser.GameObjects.Rectangle;
+  visual: Phaser.GameObjects.Image;
   collider?: Phaser.Physics.Arcade.Collider;
   startCol: number;
   endCol: number;
@@ -77,7 +78,7 @@ interface RuntimeBreakable {
   endRow: number;
 }
 
-interface RuntimeBreakableDefinition extends Omit<RuntimeBreakable, "body"> {
+interface RuntimeBreakableDefinition extends Omit<RuntimeBreakable, "body" | "visual"> {
   x: number;
   y: number;
   width: number;
@@ -98,6 +99,10 @@ const TOP_HAZARD_KINDS = new Set(["laser_grid", "rotating_barrier", "hidden_spik
 const REVEAL_KINDS = new Set<RevealKind>(["hidden_route", "false_wall", "hidden_hazard", "false_floor"]);
 const SCAN_RANGE = 900;
 const DOOR_FIRST_GID = 521;
+const BARRICADE_VISUAL_HEIGHT = 44;
+const ASSET_BASELINE_PADDING = 2;
+export const TILED_PHASE5_BARRICADE_TEXTURE_KEY = "phase5-barricade";
+export const TILED_PHASE5_GATE_TEXTURE_KEY = "narrative-gate";
 
 /** Runtime de playtest do blockout Tiled da Fase 5. */
 export class TiledPhase5Runtime {
@@ -357,7 +362,9 @@ export class TiledPhase5Runtime {
     height: number,
   ): void {
     const centerX = x + width / 2;
-    const centerY = y + this.offsetY + height / 2;
+    // Cria janelas reais quando o braço passa pela horizontal. O dash reduz
+    // a exposição, mas continua sem invencibilidade, conforme o GDD.
+    const centerY = y + this.offsetY + height / 2 - 16;
     const length = Math.max(width, height);
     const nodeCount = GAMEPLAY_TIMING.rotatingBarrier.collisionNodes;
     const nodeSize = Math.max(
@@ -499,20 +506,31 @@ export class TiledPhase5Runtime {
 
   private createBreakable(definition: RuntimeBreakableDefinition): void {
     if (this.breakables.some((breakable) => breakable.id === definition.id)) return;
-    this.setBreakableTilesVisible(definition, true);
+    this.setBreakableTilesVisible(definition, false);
+    const groundedHeight = Math.min(definition.height, BARRICADE_VISUAL_HEIGHT);
+    const groundY = definition.y + this.offsetY + definition.height;
+    const visual = this.scene.add
+      .image(
+        definition.x + definition.width / 2,
+        groundY + ASSET_BASELINE_PADDING,
+        TILED_PHASE5_BARRICADE_TEXTURE_KEY,
+      )
+      .setOrigin(0.5, 1)
+      .setDisplaySize(definition.width, groundedHeight)
+      .setDepth(4);
     const body = this.scene.add
       .rectangle(
         definition.x + definition.width / 2,
-        definition.y + this.offsetY + definition.height / 2,
+        groundY - groundedHeight / 2,
         definition.width,
-        definition.height,
+        groundedHeight,
         0x000000,
         0.001,
       )
       .setDepth(4);
     this.scene.physics.add.existing(body, true);
     body.setData("breakableId", definition.id);
-    const breakable: RuntimeBreakable = { ...definition, body };
+    const breakable: RuntimeBreakable = { ...definition, body, visual };
     this.breakables.push(breakable);
     if (this.playerRef) this.registerBreakableCollider(breakable, this.playerRef);
   }
@@ -525,7 +543,10 @@ export class TiledPhase5Runtime {
     });
   }
 
-  private setBreakableTilesVisible(breakable: Omit<RuntimeBreakable, "body">, visible: boolean): void {
+  private setBreakableTilesVisible(
+    breakable: Pick<RuntimeBreakable, "startCol" | "endCol" | "startRow" | "endRow">,
+    visible: boolean,
+  ): void {
     for (let row = breakable.startRow; row < breakable.endRow; row += 1) {
       for (let col = breakable.startCol; col < breakable.endCol; col += 1) {
         const tile = this.hazardsLayer?.getTileAt(col, row);
@@ -583,10 +604,20 @@ export class TiledPhase5Runtime {
       );
     }
     for (const object of gates) {
+      const width = object.width ?? 192;
+      const height = object.height ?? 224;
+      const centerX = (object.x ?? 0) + width / 2;
+      const bottomY = (object.y ?? 0) + this.offsetY + height;
+      const gate = this.scene.add
+        .image(centerX, bottomY + ASSET_BASELINE_PADDING, TILED_PHASE5_GATE_TEXTURE_KEY)
+        .setOrigin(0.5, 1)
+        .setDisplaySize(width, height)
+        .setDepth(4);
+      this.endMarkerObjects.push(gate);
       this.labels.push(
         this.scene.add
           .text(
-            (object.x ?? 0) + (object.width ?? 0) / 2,
+            centerX,
             (object.y ?? 0) + this.offsetY - 24,
             "PORTÃO\nCHROME  ←   |   →  FLESH",
             {
@@ -660,6 +691,7 @@ export class TiledPhase5Runtime {
     target.collider?.destroy();
     target.collider = undefined;
     this.setBreakableTilesVisible(target, false);
+    target.visual.destroy();
     target.body.destroy();
     this.playerRef?.resolvePressedSuccess();
   }
@@ -876,6 +908,7 @@ export class TiledPhase5Runtime {
     });
     this.breakables.forEach((breakable) => {
       breakable.collider?.destroy();
+      breakable.visual.destroy();
       breakable.body.destroy();
     });
     this.revealRegions.forEach((region) => region.outline.destroy());
