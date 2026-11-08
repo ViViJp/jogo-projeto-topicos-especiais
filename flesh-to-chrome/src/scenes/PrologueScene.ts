@@ -4,6 +4,7 @@ import { InputManager } from "../systems/InputManager";
 import type { GameSceneData } from "./GameScene";
 
 const PROLOGUE_FAMILY_KEY = "prologue-family";
+const PROLOGUE_FATHER_BEFORE_KEY = "prologue-father-before";
 const PROLOGUE_NEWSPAPER_KEY = "prologue-newspaper";
 
 interface ProloguePage {
@@ -17,6 +18,11 @@ const PAGES: ProloguePage[] = [
     image: PROLOGUE_FAMILY_KEY,
     title: "O NÍVEL MAIS BAIXO DE GLITCH CITY",
     body: "Alex cresceu com os avós e o tio paterno.\nA casa era pequena; trabalho e créditos nunca bastavam.\nDo pai, restaram oito anos de silêncio e histórias contadas pelo avô.",
+  },
+  {
+    image: PROLOGUE_FATHER_BEFORE_KEY,
+    title: "O PAI QUE PARTIU",
+    body: "Antes de subir, ele ainda era um homem do nível de baixo.\nO mesmo rosto de Alex, os dois olhos, nenhuma placa.\nFoi esse homem que a família deixou de ver.",
   },
   {
     image: PROLOGUE_NEWSPAPER_KEY,
@@ -50,10 +56,16 @@ export class PrologueScene extends Phaser.Scene {
         new URL("../assets/narrative/prologue/familia.png", import.meta.url).href,
       );
     }
+    if (!this.textures.exists(PROLOGUE_FATHER_BEFORE_KEY)) {
+      this.load.image(
+        PROLOGUE_FATHER_BEFORE_KEY,
+        new URL("../assets/narrative/father/pai-antes.png", import.meta.url).href,
+      );
+    }
     if (!this.textures.exists(PROLOGUE_NEWSPAPER_KEY)) {
       this.load.image(
         PROLOGUE_NEWSPAPER_KEY,
-        new URL("../assets/narrative/prologue/jornal.png", import.meta.url).href,
+        new URL("../assets/narrative/prologue/jornal-pai.png", import.meta.url).href,
       );
     }
   }
@@ -73,8 +85,7 @@ export class PrologueScene extends Phaser.Scene {
       letterSpacing: 5,
     }).setOrigin(0.5);
 
-    this.image = this.add.image(SCREEN_WIDTH / 2, 245, PROLOGUE_FAMILY_KEY)
-      .setDisplaySize(512, 320);
+    this.image = this.add.image(SCREEN_WIDTH / 2, 230, PROLOGUE_FAMILY_KEY);
     this.title = this.add.text(SCREEN_WIDTH / 2, 430, "", {
       fontFamily: "Courier New, monospace",
       fontSize: "24px",
@@ -113,6 +124,11 @@ export class PrologueScene extends Phaser.Scene {
   private renderPage(): void {
     const page = PAGES[this.pageIndex];
     this.image.setTexture(page.image);
+    const texture = this.image.texture;
+    texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
+    const source = texture.getSourceImage() as HTMLImageElement;
+    const scale = Math.min(620 / source.width, 280 / source.height);
+    this.image.setScale(scale);
     this.title.setText(page.title);
     this.body.setText(page.body);
     this.pageCounter.setText(`${this.pageIndex + 1}/${PAGES.length}`);

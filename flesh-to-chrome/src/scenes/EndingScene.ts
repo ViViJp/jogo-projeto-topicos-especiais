@@ -96,6 +96,7 @@ export class EndingScene extends Phaser.Scene {
 
     this.father = this.add.image(SCREEN_WIDTH / 2 - 170, 250, FATHER_PORTRAIT_KEY)
       .setDisplaySize(192, 192);
+    this.father.texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
     this.alex = this.add.sprite(SCREEN_WIDTH / 2 + 140, 286, ALEX_CHROME_KEY, 26)
       .setScale(3.2);
     this.title = this.add.text(SCREEN_WIDTH / 2, 410, "", {
