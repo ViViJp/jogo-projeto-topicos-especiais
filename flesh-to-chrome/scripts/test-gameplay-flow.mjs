@@ -48,6 +48,10 @@ for (const [kind, values] of Object.entries(config.GAMEPLAY_TIMING.industrialHaz
   assert.ok(values.warningMs >= 300, `${kind}: aviso deve ser legível`);
   assert.ok(values.cycleMs - values.activeMs - values.warningMs >= 700, `${kind}: janela segura`);
 }
+assert.ok(config.PHYSICS.attack.animDurationMs >= 350, "ataque precisa permanecer legível");
+assert.ok(config.PHYSICS.attack.activeMs >= 250, "ataque precisa de janela ativa útil");
+assert.ok(config.PHYSICS.attack.range >= 80, "ataque precisa alcançar o inimigo à frente");
+assert.ok(config.PHYSICS.attack.activeMs < config.PHYSICS.attack.animDurationMs);
 
 const credits = new CreditsSystem(30, ["old-phase-credit"]);
 credits.collect("current-phase-credit", 10);
@@ -210,6 +214,10 @@ const playerSource = fs.readFileSync(path.join(projectDirectory, "src/entities/P
 assert.match(playerSource, /this\.sprite\.setDepth\(10\)/);
 assert.match(playerSource, /this\.sprite\.setDepth\(this\.depthBeforeCheckpoint\)/);
 assert.match(playerSource, /this\.sprite\.anims\.play\(this\.checkpointAnimationKey, true\)/);
+assert.match(playerSource, /this\.sprite\.anims\.play\(this\.attackAnimationKey, true\)/);
+assert.match(playerSource, /delay <= PHYSICS\.attack\.activeMs/);
+assert.match(playerSource, /this\.emitAttackPulse\(false\)/);
+assert.doesNotMatch(playerSource, /showAttackFeedback/, "ataque deve usar o spritesheet, não o arco provisório");
 const checkpointMethod = playerSource.slice(
   playerSource.indexOf("beginCheckpointInteraction"),
   playerSource.indexOf("endCheckpointInteraction"),
@@ -217,6 +225,17 @@ const checkpointMethod = playerSource.slice(
 assert.doesNotMatch(checkpointMethod, /ALEX_SLIDE_FRAME/, "checkpoint não pode reutilizar a pose de slide");
 const alexSpriteSource = fs.readFileSync(path.join(projectDirectory, "src/utils/AlexSprite.ts"), "utf8");
 assert.match(alexSpriteSource, /CHECKPOINT_PLAY_RIGHT = \{ row: 33, frames: 2 \}/);
+assert.match(alexSpriteSource, /ATTACK_RIGHT = \{ row: 15, frames: 6 \}/);
+assert.match(alexSpriteSource, /frameRate: 16/);
+const enemyRuntime = fs.readFileSync(path.join(projectDirectory, "src/objects/EnemyRuntime.ts"), "utf8");
+assert.match(enemyRuntime, /bandido: 1\.45/);
+assert.match(enemyRuntime, /drone: 1\.8/);
+assert.doesNotMatch(enemyRuntime, /setAlpha\(0\.35\)/, "inimigos não podem permanecer opacos");
+assert.match(enemyRuntime, /PHYSICS\.attack\.range/);
+const hudSource = fs.readFileSync(path.join(projectDirectory, "src/systems/HUD.ts"), "utf8");
+assert.match(hudSource, /setFillStyle\(0x21d7ff, 1\)/, "dash pronto deve usar azul elétrico");
+assert.match(hudSource, /batteryBack,[\s\S]*this\.dashBatteryFill,[\s\S]*frame,/,
+  "preenchimento da bateria precisa ficar sobre o fundo e sob a moldura");
 assert.match(gameScene, /beginCheckpointInteraction\(x - 24, y\)/);
 assert.match(gameScene, /const alreadyActive = this\.data\$\.checkpointX > 0/);
 assert.match(gameScene, /if \(alreadyActive\) return false/);

@@ -100,9 +100,17 @@ export const PHYSICS = {
     minDurationMs: 180,
   },
   attack: {
-    /** seção 14.6 - recuperação inicial após o golpe */
-    recoveryMs: 300,
-    animDurationMs: 220,
+    /** seção 14.6 - recuperação acompanha o ciclo visual completo do golpe */
+    recoveryMs: 375,
+    /** seis frames LPC a 16 fps: leitura mais clara em movimento contínuo */
+    animDurationMs: 375,
+    /** parte do ciclo na qual alvos que entram no arco ainda podem ser atingidos */
+    activeMs: 300,
+    /** intervalo dos pulsos da hitbox durante a janela ativa */
+    pulseIntervalMs: 60,
+    /** alcance frontal e tolerância vertical compartilhados pelos runtimes */
+    range: 88,
+    verticalRange: 64,
   },
   breakable: {
     /** seção 14.7 - janela de reação antes da morte */

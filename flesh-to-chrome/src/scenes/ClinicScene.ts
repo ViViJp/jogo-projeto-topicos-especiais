@@ -11,6 +11,8 @@ interface ClinicSceneData {
   wallet: number;
   abilities: AbilityState;
   implant?: keyof AbilityState;
+  /** Prévia aberta ao concluir uma fase pelo seletor; nunca altera o save. */
+  testMode?: boolean;
 }
 
 interface ClinicBeat {
@@ -140,7 +142,7 @@ export class ClinicScene extends Phaser.Scene {
     this.add.image(SCREEN_WIDTH / 2, 250, CLINIC_BACKGROUND_KEY).setDisplaySize(1280, 427);
     this.add.rectangle(SCREEN_WIDTH / 2, 555, SCREEN_WIDTH, 330, 0x08050c, 0.94);
     this.add.rectangle(SCREEN_WIDTH / 2, 65, 920, 112, 0x08050c, 0.82).setDepth(3);
-    this.add.image(250, 390, CLINIC_GEORGE_KEY).setScale(2.35).setDepth(3);
+    this.add.image(250, 390, CLINIC_GEORGE_KEY).setDisplaySize(210, 210).setDepth(3);
 
     this.add.text(SCREEN_WIDTH / 2, 45, "CLÍNICA DE GEORGE VEKTOR", {
       fontFamily: "Courier New, monospace",
@@ -219,6 +221,10 @@ export class ClinicScene extends Phaser.Scene {
       return;
     }
     this.finished = true;
+    if (this.data$.testMode) {
+      this.scene.start("MenuScene");
+      return;
+    }
     const save = SaveState.load();
     save.unlockAbility(this.beat.implant);
     const newAbilities: AbilityState = { ...this.data$.abilities, [this.beat.implant]: true };

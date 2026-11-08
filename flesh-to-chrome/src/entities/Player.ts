@@ -11,6 +11,7 @@ import { AbilityState } from "../systems/AbilityState";
 import { InputManager } from "../systems/InputManager";
 import {
   ALEX_SLIDE_FRAME,
+  alexAttackAnimationKey,
   alexCheckpointAnimationKey,
   alexRunAnimationKey,
   alexTextureForAbilities,
@@ -42,6 +43,7 @@ export class Player {
   private input: InputManager;
   private abilities: AbilityState;
   private readonly runAnimationKey: string;
+  private readonly attackAnimationKey: string;
   private readonly checkpointAnimationKey: string;
 
   private state: PlayerState = "running";
@@ -76,6 +78,7 @@ export class Player {
     const textureKey = alexTextureForAbilities(abilities);
     ensureAlexAnimations(scene, textureKey);
     this.runAnimationKey = alexRunAnimationKey(textureKey);
+    this.attackAnimationKey = alexAttackAnimationKey(textureKey);
     this.checkpointAnimationKey = alexCheckpointAnimationKey(textureKey);
     this.sprite = scene.physics.add.sprite(x, y, textureKey);
     this.sprite.setOrigin(0.5, 1);
@@ -173,8 +176,13 @@ export class Player {
 
     if (this.state === "pressed") {
       if (this.input.isAttackJustDown() && this.abilities.arms) {
+        this.attackRecoveryTimer = PHYSICS.attack.recoveryMs;
+        this.sprite.anims.play(this.attackAnimationKey, true);
         // a colisão com o quebrável (GameScene) é responsável por chamar resolvePressedSuccess()
         this.scene.events.emit("player-attack-attempt", this.currentBreakable);
+        this.scene.time.delayedCall(PHYSICS.attack.animDurationMs, () => {
+          if (this.state === "running" || this.state === "jumping") this.applyRunningPose();
+        });
       }
       if (this.pressedTimer <= 0) {
         this.kill();
@@ -308,14 +316,33 @@ export class Player {
     const previous = this.state;
     this.state = "attacking";
     this.attackRecoveryTimer = PHYSICS.attack.recoveryMs;
-    this.scene.events.emit("player-attack", this.sprite.x, this.sprite.y);
-    this.showAttackFeedback();
+    this.sprite.anims.play(this.attackAnimationKey, true);
+    this.emitAttackPulse(true);
+    for (
+      let delay = PHYSICS.attack.pulseIntervalMs;
+      delay <= PHYSICS.attack.activeMs;
+      delay += PHYSICS.attack.pulseIntervalMs
+    ) {
+      this.scene.time.delayedCall(delay, () => {
+        if (this.state === "attacking") this.emitAttackPulse(false);
+      });
+    }
 
     this.scene.time.delayedCall(PHYSICS.attack.animDurationMs, () => {
       if (this.state === "attacking") {
         this.state = previous === "jumping" && !this.isGrounded() ? "jumping" : "running";
+        this.applyRunningPose();
       }
     });
+  }
+
+  /**
+   * Mantém a hitbox ativa durante a parte ofensiva da animação. O primeiro
+   * pulso exibe o feedback do HUD; os seguintes apenas atualizam a colisão
+   * na posição atual de Alex, evitando repetir texto e som a cada 60 ms.
+   */
+  private emitAttackPulse(showFeedback: boolean): void {
+    this.scene.events.emit("player-attack", this.sprite.x, this.sprite.y, showFeedback);
   }
 
   // ---- Scan (seção 14.9) ----
@@ -329,23 +356,6 @@ export class Player {
     this.onScanPulse(true);
     this.showScanFeedback();
     if (this.state === "running") this.state = "scanning";
-  }
-
-  private showAttackFeedback(): void {
-    const g = this.scene.add.graphics();
-    g.setDepth(this.sprite.depth + 2);
-    const y = this.sprite.y - 34;
-    g.lineStyle(5, 0x7cfcea, 1);
-    g.beginPath();
-    g.arc(this.sprite.x + 24, y, 30, Phaser.Math.DegToRad(-55), Phaser.Math.DegToRad(55));
-    g.strokePath();
-    this.scene.tweens.add({
-      targets: g,
-      alpha: 0,
-      x: 12,
-      duration: 140,
-      onComplete: () => g.destroy(),
-    });
   }
 
   private showScanFeedback(): void {

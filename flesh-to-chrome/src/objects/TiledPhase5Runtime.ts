@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { GAMEPLAY_TIMING } from "../config/GameConfig";
+import { GAMEPLAY_TIMING, PHYSICS } from "../config/GameConfig";
 import { Player } from "../entities/Player";
 import {
   TILED_FASE5_MAP_KEY,
@@ -702,8 +702,8 @@ export class TiledPhase5Runtime {
       const leftEdge = breakable.body.x - breakable.body.displayWidth / 2;
       return breakable.body.active
         && leftEdge >= attackX - 8
-        && leftEdge <= attackX + 62
-        && Math.abs(breakable.body.y - attackY) <= 58;
+        && leftEdge <= attackX + PHYSICS.attack.range
+        && Math.abs(breakable.body.y - attackY) <= PHYSICS.attack.verticalRange;
     });
     if (target) this.destroyBreakable(target);
   }

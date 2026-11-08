@@ -93,6 +93,10 @@ assert.match(clinic, /george-clinic-01/);
 assert.match(clinic, /george-clinic-02/);
 assert.match(clinic, /george-clinic-03/);
 assert.match(clinic, /george-proud/);
+assert.match(game, /Deseja assistir à cutscene da clínica de George\?/);
+assert.match(game, /this\.scene\.start\("ClinicScene", \{ \.\.\.clinicData, testMode: true \}\)/);
+assert.match(clinic, /if \(this\.data\$\.testMode\) \{[\s\S]*?this\.scene\.start\("MenuScene"\);[\s\S]*?return;[\s\S]*?\}[\s\S]*?SaveState\.load\(\)/,
+  "prévia da clínica deve voltar ao seletor antes de alterar o save");
 assert.match(game, /this\.data\$\.phaseId === "fase5"[\s\S]*?"GateScene"/);
 assert.match(gate, /createPreGateSave\(\)/);
 assert.match(gate, /markEndingReached\("chrome"\)/);

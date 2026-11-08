@@ -125,9 +125,9 @@ const runtimeImageContracts = new Map([
   ["src/assets/narrative/recycling/holograma-pai.png", [80, 96]],
   ["src/assets/narrative/gate/portao.png", [192, 224]],
   ["src/assets/npcs/george/george-proud/george-proud-clinic.png", [64, 64]],
-  ["src/assets/npcs/george/george-clinic/george-clinic-01.png", [64, 64]],
-  ["src/assets/npcs/george/george-clinic/george-clinic-02.png", [64, 64]],
-  ["src/assets/npcs/george/george-clinic/george-clinic-03.png", [64, 64]],
+  ["src/assets/npcs/george/george-clinic/george-clinic-01.png", [96, 96]],
+  ["src/assets/npcs/george/george-clinic/george-clinic-02.png", [96, 96]],
+  ["src/assets/npcs/george/george-clinic/george-clinic-03.png", [96, 96]],
 ]);
 
 const readJson = (filename) => JSON.parse(fs.readFileSync(filename, "utf8"));
