@@ -23,6 +23,16 @@ export function createInitialAbilityState(): AbilityState {
   };
 }
 
+/** Estado corporal obrigatório ao atravessar o Portão antes da descida. */
+export function createCompleteAbilityState(): AbilityState {
+  return {
+    legs: true,
+    arms: true,
+    eyes: true,
+    thrusters: true,
+  };
+}
+
 export function removeAbility(state: AbilityState, key: keyof AbilityState): AbilityState {
   return { ...state, [key]: false };
 }

@@ -138,6 +138,13 @@ assert.match(phase5RuntimeSource, /TILED_PHASE5_GATE_TEXTURE_KEY/);
 assert.match(phase5RuntimeSource, /bottomY \+ ASSET_BASELINE_PADDING/);
 
 const gameScene = fs.readFileSync(path.join(projectDirectory, "src/scenes/GameScene.ts"), "utf8");
+const mainSource = fs.readFileSync(path.join(projectDirectory, "src/main.ts"), "utf8");
+assert.match(mainSource, /mode: Phaser\.Scale\.EXPAND/,
+  "canvas deve preencher todo o viewport sem barras laterais");
+assert.match(gameScene, /const viewportWidth = this\.cameras\.main\.width/,
+  "câmera deve considerar a largura expandida do viewport");
+assert.match(gameScene, /this\.scale\.width \/ 2, this\.scale\.height \/ 2/,
+  "overlays devem permanecer centralizados no viewport expandido");
 assert.match(gameScene, /this\.time\.paused = true/);
 assert.match(gameScene, /this\.anims\.pauseAll\(\)/);
 assert.match(gameScene, /checkpointX: 0/);

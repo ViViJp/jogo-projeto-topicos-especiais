@@ -1,5 +1,5 @@
 import { STORAGE_KEY } from "../config/GameConfig";
-import { AbilityState, createInitialAbilityState } from "./AbilityState";
+import { AbilityState, createCompleteAbilityState, createInitialAbilityState } from "./AbilityState";
 import { DESCENT_STEPS, descentStepAt, descentStepForPhase } from "./DescentProgression";
 
 export interface DescentState {
@@ -189,6 +189,10 @@ export class SaveState {
 
   /** Inicia a revisita ao Topo sem apagar o snapshot pre-Portao. */
   beginDescent(): void {
+    // O Portão só existe depois da conversão dos quatro implantes. Além de
+    // proteger saves antigos, isto mantém o acesso direto de playtest fiel
+    // ao início narrativo da descida e seleciona o sprite Alex completo.
+    this.data.abilities = createCompleteAbilityState();
     this.data.descentState = {
       active: true,
       brokenChain: false,

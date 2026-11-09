@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { SCREEN_WIDTH, SCREEN_HEIGHT, CAMERA, GRAVITY_Y, GAMEPLAY_TIMING } from "../config/GameConfig";
+import { CAMERA, GRAVITY_Y, GAMEPLAY_TIMING } from "../config/GameConfig";
 import { AbilityState, createInitialAbilityState } from "../systems/AbilityState";
 import { InputManager } from "../systems/InputManager";
 import { CreditsSystem } from "../systems/CreditsSystem";
@@ -524,8 +524,10 @@ export class GameScene extends Phaser.Scene {
 
     this.updateHud();
 
-    this.physics.world.setBounds(0, 0, this.levelLengthPx + SCREEN_WIDTH, SCREEN_HEIGHT);
-    this.cameras.main.setBounds(0, 0, this.levelLengthPx + SCREEN_WIDTH, SCREEN_HEIGHT);
+    const viewportWidth = this.scale.width;
+    const viewportHeight = this.scale.height;
+    this.physics.world.setBounds(0, 0, this.levelLengthPx + viewportWidth, viewportHeight);
+    this.cameras.main.setBounds(0, 0, this.levelLengthPx + viewportWidth, viewportHeight);
   }
 
   private createDescentOverlay(): void {
@@ -916,7 +918,7 @@ export class GameScene extends Phaser.Scene {
     });
 
     this.testClinicPrompt = this.add
-      .container(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, [
+      .container(this.scale.width / 2, this.scale.height / 2, [
         panel,
         title,
         question,
@@ -1024,7 +1026,7 @@ export class GameScene extends Phaser.Scene {
     if (active) {
       if (!this.scanOverlay) {
         this.scanOverlay = this.add
-          .rectangle(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0x36e2ff, 0.08)
+          .rectangle(0, 0, this.scale.width, this.scale.height, 0x36e2ff, 0.08)
           .setOrigin(0, 0)
           .setScrollFactor(0)
           .setDepth(900);
@@ -1060,7 +1062,7 @@ export class GameScene extends Phaser.Scene {
         ? "\nS / ↓ para voltar ao seletor de fases"
         : "\nS / ↓ para voltar ao menu principal";
       this.pauseText = this.add
-        .text(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, `PAUSADO\nESC / START para voltar | ENTER / A para reiniciar a fase${menuHelp}`, {
+        .text(this.scale.width / 2, this.scale.height / 2, `PAUSADO\nESC / START para voltar | ENTER / A para reiniciar a fase${menuHelp}`, {
           fontFamily: "Courier New, monospace",
           fontSize: "26px",
           color: "#ffffff",
@@ -1126,11 +1128,12 @@ export class GameScene extends Phaser.Scene {
     // sub-pixel ao scroll - correção do "tremor de tela" (v0.2.0), mantida
     // independente do formato do nível: não tem relação com o mapa, é
     // sobre a câmera + pixelArt.
+    const viewportWidth = this.cameras.main.width;
     const targetScrollX = Math.floor(
       Phaser.Math.Clamp(
-        this.player.sprite.x - SCREEN_WIDTH * CAMERA.playerScreenRatioX,
+        this.player.sprite.x - viewportWidth * CAMERA.playerScreenRatioX,
         0,
-        Math.max(0, this.levelLengthPx - SCREEN_WIDTH)
+        Math.max(0, this.levelLengthPx - viewportWidth)
       )
     );
     this.cameras.main.scrollX = targetScrollX;

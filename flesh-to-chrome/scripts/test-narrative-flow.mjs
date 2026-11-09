@@ -41,6 +41,17 @@ function loadTypeScriptModule(filename) {
 }
 
 const { SaveState } = loadTypeScriptModule(path.join(projectDirectory, "src/systems/SaveState.ts"));
+
+// O atalho de playtest do Portão também precisa começar a descida com o
+// corpo completo, mesmo quando ainda não existe progresso de campanha.
+const directDescent = SaveState.newGame();
+directDescent.beginDescent();
+assert.deepEqual(
+  Object.values(directDescent.get().abilities),
+  [true, true, true, true],
+  "a primeira fase Flesh deve começar com os quatro implantes",
+);
+
 const save = SaveState.newGame();
 save.setPhase("fase5");
 for (const ability of ["legs", "arms", "eyes", "thrusters"]) save.unlockAbility(ability);

@@ -19,14 +19,18 @@ const config: Phaser.Types.Core.GameConfig = {
   height: SCREEN_HEIGHT,
   backgroundColor: "#05050a",
   scale: {
-    mode: Phaser.Scale.FIT,
+    // EXPAND preserva a proporção e a altura lógica de 720 px, mas amplia
+    // a área visível no eixo excedente para ocupar todo o viewport. Assim
+    // monitores mais largos não exibem barras laterais e nenhuma parte do
+    // mapa ou do HUD precisa ser cortada para preencher a tela.
+    mode: Phaser.Scale.EXPAND,
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
   input: {
     gamepad: true,
   },
   // Correção do "tremor de tela" reportado em playtest (v0.2.0): com
-  // Phaser.Scale.FIT a tela do jogo quase nunca escala por um fator
+  // Phaser.Scale.EXPAND a tela do jogo quase nunca escala por um fator
   // inteiro (depende do tamanho da janela do jogador), e por padrão o
   // Phaser usa antialiasing + posições sub-pixel ao desenhar - isso faz
   // as bordas dos tiles (arte em pixel art, com padrões repetidos)
