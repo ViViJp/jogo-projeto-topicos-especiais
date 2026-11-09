@@ -215,7 +215,9 @@ export class MenuScene extends Phaser.Scene {
   private continueFromGate(): void {
     const restored = SaveState.load().restorePreGateSave();
     if (!restored) return;
-    this.scene.start("GateScene");
+    // Phaser preserva os dados anteriores quando uma cena é iniciada sem
+    // um novo objeto. Sobrescreve explicitamente a prévia do seletor.
+    this.scene.start("GateScene", { testMode: false });
   }
 
   private newGame(hasSave: boolean): void {

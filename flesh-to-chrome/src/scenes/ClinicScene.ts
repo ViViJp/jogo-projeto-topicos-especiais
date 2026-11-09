@@ -229,7 +229,7 @@ export class ClinicScene extends Phaser.Scene {
     save.unlockAbility(this.beat.implant);
     const newAbilities: AbilityState = { ...this.data$.abilities, [this.beat.implant]: true };
     if (!this.data$.nextPhaseId) {
-      this.scene.start("GateScene");
+      this.scene.start("GateScene", { testMode: false });
       return;
     }
     save.setPhase(this.data$.nextPhaseId);

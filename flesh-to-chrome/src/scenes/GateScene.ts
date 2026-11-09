@@ -122,10 +122,12 @@ export class GateScene extends Phaser.Scene {
       padding: { x: 20, y: 14 },
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     text.on("pointerover", () => {
+      if (this.developmentNotice || this.choosing) return;
       this.selected = choice;
       this.updateSelection();
     });
     text.on("pointerdown", () => {
+      if (this.developmentNotice || this.choosing) return;
       this.selected = choice;
       this.updateSelection();
       this.confirmChoice();
@@ -143,10 +145,12 @@ export class GateScene extends Phaser.Scene {
   }
 
   private confirmChoice(): void {
-    if (this.choosing) return;
+    if (this.choosing || this.developmentNotice) return;
     if (this.selected === "flesh") {
       const panel = this.add.rectangle(0, 0, 680, 330, 0x170b20, 0.97)
-        .setStrokeStyle(2, 0x7cfcea, 0.75);
+        .setStrokeStyle(2, 0x7cfcea, 0.75)
+        // Captura cliques fora do botão e impede que alcancem Chrome/Flesh.
+        .setInteractive();
       const message = this.add.text(
         0,
         -58,

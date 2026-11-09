@@ -769,6 +769,7 @@ export class GameScene extends Phaser.Scene {
         wallet: this.credits.getTotal(),
         abilities: this.activeAbilities,
         implant: implantOverride,
+        testMode: false,
       });
     });
   }

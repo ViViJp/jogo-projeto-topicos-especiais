@@ -83,6 +83,8 @@ assert.match(menu, /restorePreGateSave\(\)/);
 assert.match(menu, /this\.scene\.start\("PrologueScene"\)/);
 assert.match(menu, /Portão — escolha final \(teste\)/);
 assert.match(menu, /this\.scene\.start\("GateScene", \{ testMode: true \}\)/);
+assert.match(menu, /restorePreGateSave\(\)[\s\S]*?this\.scene\.start\("GateScene", \{ testMode: false \}\)/,
+  "prévia → menu → Continuar do Portão deve reabrir a campanha fora do modo de teste");
 assert.match(prologue, /PROLOGUE_FAMILY_KEY/);
 assert.match(prologue, /PROLOGUE_NEWSPAPER_KEY/);
 assert.match(prologue, /father\/pai-antes\.png/);
@@ -100,7 +102,11 @@ assert.match(game, /Deseja assistir à cutscene da clínica de George\?/);
 assert.match(game, /this\.scene\.start\("ClinicScene", \{ \.\.\.clinicData, testMode: true \}\)/);
 assert.match(clinic, /if \(this\.data\$\.testMode\) \{[\s\S]*?this\.scene\.start\("MenuScene"\);[\s\S]*?return;[\s\S]*?\}[\s\S]*?SaveState\.load\(\)/,
   "prévia da clínica deve voltar ao seletor antes de alterar o save");
+assert.match(clinic, /this\.scene\.start\("GateScene", \{ testMode: false \}\)/,
+  "campanha vinda da clínica deve limpar dados anteriores da prévia do Portão");
 assert.match(game, /this\.data\$\.phaseId === "fase5"[\s\S]*?"GateScene"/);
+assert.match(game, /implant: implantOverride,[\s\S]*?testMode: false/,
+  "fim normal da Fase 5 deve iniciar o Portão fora do modo de teste");
 assert.match(gate, /createPreGateSave\(\)/);
 assert.match(gate, /!this\.testMode && !save\.hasPreGateSave\(\)/);
 assert.doesNotMatch(gate, /markEndingReached\(/,
@@ -111,6 +117,12 @@ assert.match(gate, /isMenuLeftJustDown\(\)[\s\S]*?this\.selected = "chrome"/);
 assert.match(gate, /isMenuRightJustDown\(\)[\s\S]*?this\.selected = "flesh"/);
 assert.match(gate, /VOLTAR À ESCOLHA/);
 assert.match(gate, /backButton\.on\("pointerdown", \(\) => this\.closeDevelopmentNotice\(\)\)/);
+assert.match(gate, /if \(this\.choosing \|\| this\.developmentNotice\) return;/,
+  "modal Flesh deve bloquear novas confirmações");
+assert.match(gate, /if \(this\.developmentNotice \|\| this\.choosing\) return;/,
+  "opções abaixo do modal não podem responder ao ponteiro");
+assert.match(gate, /\.setInteractive\(\);/,
+  "painel do modal deve capturar cliques fora do botão");
 assert.match(ending, /FINAL CHROME/);
 assert.match(ending, /ALEX\? FILHO\?/);
 assert.match(ending, /father\/pai-portrait\.png/);
