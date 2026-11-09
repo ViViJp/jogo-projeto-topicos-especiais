@@ -59,7 +59,7 @@ interface IndustrialHazard {
   state?: HazardCycleState;
 }
 
-const INDUSTRIAL_HAZARD_KINDS = new Set<IndustrialHazardKind>(["press", "steam", "mech_arm", "crusher"]);
+const INDUSTRIAL_HAZARD_KINDS = new Set<IndustrialHazardKind>(["press", "steam", "mech_arm"]);
 
 const smoothStep = (value: number): number => {
   const t = Phaser.Math.Clamp(value, 0, 1);
@@ -76,7 +76,7 @@ const attackEnvelope = (progress: number): number => {
 /**
  * Runtime do blockout Tiled da Fase 2.
  *
- * Os quatro hazards industriais compartilham um ciclo determinístico de
+ * Os três hazards industriais compartilham um ciclo determinístico de
  * inativo → aviso → ativo. Uma única amostra contínua do ciclo controla o
  * movimento visual e o corpo físico, evitando que a máquina pareça segura
  * enquanto ainda é letal ou que a hitbox fique onde a arte já não está.
@@ -233,12 +233,11 @@ export class TiledPhase2Runtime {
     objects.forEach((object, index) => {
       const kind = this.readString(object, "kind");
       if (!kind || !INDUSTRIAL_HAZARD_KINDS.has(kind as IndustrialHazardKind)) {
-        console.warn(`Fase 2: hazard "${object.name ?? object.id}" usa kind desconhecido "${kind ?? "ausente"}"; tratado como letal.`);
+        console.warn(`Fase 2: hazard "${object.name ?? object.id}" usa kind desconhecido "${kind ?? "ausente"}"; ignorado.`);
+        return;
       }
 
-      const resolvedKind = INDUSTRIAL_HAZARD_KINDS.has(kind as IndustrialHazardKind)
-        ? kind as IndustrialHazardKind
-        : "crusher";
+      const resolvedKind = kind as IndustrialHazardKind;
       const defaults = GAMEPLAY_TIMING.industrialHazards[resolvedKind];
 
       const width = object.width ?? 32;
@@ -395,13 +394,15 @@ export class TiledPhase2Runtime {
       // na janela ativa a placa ainda termina exatamente no piso.
       const travel = hazard.height * 0.96;
       hazard.visual.setPosition(hazard.x, hazard.y - travel * (1 - extension));
+      const collisionWidth = Math.max(48, hazard.width * 1.5);
+      const collisionHeight = Math.max(96, hazard.height * 1.5);
       this.syncHazardBody(
         hazard,
         hazard.x + hazard.width / 2,
-        hazard.visual.y + hazard.height / 2,
-        hazard.width,
-        hazard.height,
-        state === "active" && extension > 0.25,
+        hazard.visual.y + hazard.height - collisionHeight / 2,
+        collisionWidth,
+        collisionHeight,
+        true,
       );
       return;
     }
@@ -457,23 +458,6 @@ export class TiledPhase2Runtime {
       return;
     }
 
-    if (hazard.kind === "crusher") {
-      const closure = state === "active" ? activeMotion : state === "warning" ? warningMotion * 0.12 : 0;
-      const gap = (1 - closure) * 14;
-      for (const part of hazard.tileParts) {
-        const direction = part.baseX < hazard.width / 2 ? -1 : 1;
-        part.image.setPosition(part.baseX + direction * gap, part.baseY);
-      }
-      const collisionWidth = Math.max(2, hazard.width * closure);
-      this.syncHazardBody(
-        hazard,
-        hazard.x + hazard.width / 2,
-        hazard.y + hazard.height / 2,
-        collisionWidth,
-        hazard.height,
-        state === "active" && closure > 0.2,
-      );
-    }
   }
 
   /** Reposiciona a zona estática para coincidir com a máquina neste frame. */

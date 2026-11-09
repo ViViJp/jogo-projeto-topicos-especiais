@@ -114,24 +114,52 @@ const retry = read("src/scenes/DescentRetryScene.ts");
 const reforge = read("src/scenes/ReForgeScene.ts");
 const epilogue = read("src/scenes/EpilogueScene.ts");
 const descentRuntime = read("src/objects/DescentGlitchRuntime.ts");
+const narrativePlaytest = read("docs/NARRATIVE_FLOW_PLAYTEST.md");
 
 assert.match(main, /PrologueScene/);
 assert.match(main, /GateScene/);
 assert.match(menu, /Continuar do Portão/);
 assert.match(menu, /restorePreGateSave\(\)/);
 assert.match(menu, /this\.scene\.start\("PrologueScene"\)/);
+assert.match(menu, /Portão — escolha final \(teste\)/);
+assert.match(menu, /this\.scene\.start\("GateScene", \{ testMode: true \}\)/);
+assert.match(menu, /restorePreGateSave\(\)[\s\S]*?this\.scene\.start\("GateScene", \{ testMode: false \}\)/,
+  "prévia → menu → Continuar do Portão deve reabrir a campanha fora do modo de teste");
 assert.match(prologue, /PROLOGUE_FAMILY_KEY/);
 assert.match(prologue, /PROLOGUE_NEWSPAPER_KEY/);
+assert.match(prologue, /father\/pai-antes\.png/);
+assert.match(prologue, /prologue\/jornal-pai\.png/);
+assert.match(prologue, /PAI DE ALEX — ANTES DA ASCENSÃO/);
+assert.match(prologue, /PAI DE ALEX — APÓS A CONVERSÃO/);
 for (const phase of ["fase1", "fase2-intro", "fase3", "fase4"]) {
   assert.match(clinic, new RegExp(`(?:"${phase}"|${phase}):`), `clínica narrativa ausente para ${phase}`);
 }
-assert.match(clinic, /george-nervous/);
+assert.match(clinic, /george-clinic-01/);
+assert.match(clinic, /george-clinic-02/);
+assert.match(clinic, /george-clinic-03/);
 assert.match(clinic, /george-proud/);
+assert.match(game, /Deseja assistir à cutscene da clínica de George\?/);
+assert.match(game, /this\.scene\.start\("ClinicScene", \{ \.\.\.clinicData, testMode: true \}\)/);
+assert.match(clinic, /if \(this\.data\$\.testMode\) \{[\s\S]*?this\.scene\.start\("MenuScene"\);[\s\S]*?return;[\s\S]*?\}[\s\S]*?SaveState\.load\(\)/,
+  "prévia da clínica deve voltar ao seletor antes de alterar o save");
+assert.match(clinic, /this\.scene\.start\("GateScene", \{ testMode: false \}\)/,
+  "campanha vinda da clínica deve limpar dados anteriores da prévia do Portão");
 assert.match(game, /this\.data\$\.phaseId === "fase5"[\s\S]*?"GateScene"/);
+assert.match(game, /implant: implantOverride,[\s\S]*?testMode: false/,
+  "fim normal da Fase 5 deve iniciar o Portão fora do modo de teste");
 assert.match(gate, /createPreGateSave\(\)/);
-assert.match(gate, /markEndingReached\("chrome"\)/);
+assert.match(gate, /!this\.testMode && !save\.hasPreGateSave\(\)/);
+assert.doesNotMatch(gate, /markEndingReached\(/,
+  "escolher Chrome ainda não significa concluir o final");
+assert.match(gate, /\{ ending: "chrome", testMode: this\.testMode \}/);
 assert.match(gate, /beginDescent\(\)/);
 assert.doesNotMatch(gate, /Conteúdo em desenvolvimento/);
+assert.match(gate, /this\.testMode && this\.input\$\.isCancelJustDown\(\)[\s\S]*?this\.scene\.start\("MenuScene"\)/,
+  "ESC/B deve sair diretamente da prévia do Portão");
+assert.match(gate, /ESC \/ B voltar ao seletor/,
+  "prévia deve informar o comando de retorno ao seletor");
+assert.match(gate, /isMenuLeftJustDown\(\)[\s\S]*?this\.selected = "chrome"/);
+assert.match(gate, /isMenuRightJustDown\(\)[\s\S]*?this\.selected = "flesh"/);
 assert.match(ending, /FINAL CHROME/);
 assert.match(ending, /FINAL FLESH/);
 assert.match(ending, /FINAL HOLLOW/);
@@ -150,7 +178,18 @@ for (const map of [
   const objects = tiled.layers.find((layer) => layer.name === "objects")?.objects ?? [];
   assert.equal(objects.filter((object) => object.type === "memory_glitch").length, 1, `${map}: glitch da descida`);
 }
+assert.match(ending, /father\/pai-portrait\.png/);
+assert.match(ending, /CONVERSÃO CORPORATIVA/);
+assert.match(ending, /if \(!this\.testMode\) SaveState\.load\(\)\.markEndingReached\(this\.ending\)/);
+assert.ok(
+  ending.indexOf("markEndingReached(this.ending)") > ending.indexOf("this.pageIndex < this.pages.length - 1"),
+  "o final só pode ser registrado depois da confirmação do último quadro",
+);
 assert.match(phase4, /TILED_FATHER_AD_TEXTURE_KEY/);
+assert.match(phase4, /GLITCH CORP \/\/ PROGRAMA DE ASCENSÃO/);
 assert.match(phase4, /O rosto da campanha é familiar/);
+assert.match(narrativePlaytest, /Portão — escolha final \(teste\)/);
+assert.match(narrativePlaytest, /endingReached/);
+assert.match(narrativePlaytest, /sem criar snapshot ou modificar o save/);
 
 console.log("Narrativa: Chrome, descida, retry, ReForge, Flesh, Hollow e epilogo reproduziveis OK.");

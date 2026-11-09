@@ -16,6 +16,12 @@ interface EndingPage {
   alexVisible: boolean;
 }
 
+interface EndingSceneData {
+  ending?: EndingKind;
+  /** Prévia iniciada pelo seletor; nunca registra o final no save. */
+  testMode?: boolean;
+}
+
 const CHROME_PAGES: EndingPage[] = [
   {
     title: "CONVERSÃO COMPLETA",
@@ -95,18 +101,21 @@ export class EndingScene extends Phaser.Scene {
   private body!: Phaser.GameObjects.Text;
   private counter!: Phaser.GameObjects.Text;
   private father!: Phaser.GameObjects.Image;
+  private fatherCaption!: Phaser.GameObjects.Text;
   private alex!: Phaser.GameObjects.Sprite;
   private music?: Phaser.Sound.BaseSound;
   private ending: EndingKind = "chrome";
   private pages: EndingPage[] = CHROME_PAGES;
+  private testMode = false;
 
   constructor() {
     super("EndingScene");
   }
 
-  init(data: { ending?: EndingKind }): void {
+  init(data: EndingSceneData): void {
     this.ending = data.ending ?? "chrome";
     this.pages = this.ending === "flesh" ? FLESH_PAGES : this.ending === "hollow" ? HOLLOW_PAGES : CHROME_PAGES;
+    this.testMode = data.testMode ?? false;
   }
 
   preload(): void {
@@ -150,7 +159,6 @@ export class EndingScene extends Phaser.Scene {
     this.input$ = new InputManager(this);
     this.pageIndex = 0;
     this.returning = false;
-    SaveState.load().markEndingReached(this.ending);
 
     this.add.rectangle(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, 1120, 610, 0x0c0d18, 1)
       .setStrokeStyle(2, 0xffd37c, 0.42);
@@ -163,6 +171,19 @@ export class EndingScene extends Phaser.Scene {
 
     this.father = this.add.image(SCREEN_WIDTH / 2 - 170, 250, FATHER_PORTRAIT_KEY)
       .setDisplaySize(192, 192);
+    this.father.texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
+    this.fatherCaption = this.add.text(
+      SCREEN_WIDTH / 2 - 170,
+      360,
+      this.ending === "chrome" ? "PAI DE ALEX // CONVERSÃO CORPORATIVA" : "FAMÍLIA DE ALEX // CASA",
+      {
+        fontFamily: "Courier New, monospace",
+        fontSize: "13px",
+        color: "#FFD37C",
+        backgroundColor: "#080812dd",
+        padding: { x: 7, y: 4 },
+      },
+    ).setOrigin(0.5);
     const alexTexture = this.ending === "flesh" ? ALEX_FLESH_KEY : this.ending === "hollow" ? ALEX_HOLLOW_KEY : ALEX_CHROME_KEY;
     this.alex = this.add.sprite(SCREEN_WIDTH / 2 + 140, 286, alexTexture, 26)
       .setScale(3.2);
@@ -209,6 +230,7 @@ export class EndingScene extends Phaser.Scene {
     this.title.setText(page.title);
     this.body.setText(page.body);
     this.father.setVisible(page.fatherVisible);
+    this.fatherCaption.setVisible(page.fatherVisible);
     this.alex.setVisible(page.alexVisible);
     this.counter.setText(`${this.pageIndex + 1}/${this.pages.length}`);
     if (this.pageIndex === this.pages.length - 1 && this.ending === "chrome") {
@@ -224,6 +246,10 @@ export class EndingScene extends Phaser.Scene {
       return;
     }
     this.returning = true;
+    // A escolha só se torna um final concluído depois que o jogador viu e
+    // confirmou o último quadro. Fechar o jogo antes disso mantém o Portão
+    // disponível e a prévia do seletor nunca escreve no save.
+    if (!this.testMode) SaveState.load().markEndingReached(this.ending);
     this.scene.start("MenuScene");
   }
 }

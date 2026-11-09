@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { PHYSICS } from "../config/GameConfig";
 import { Player } from "../entities/Player";
 
 export type EnemyKind = "bandido" | "drone";
@@ -18,6 +19,11 @@ const ENEMY_KEYS = {
   bandido: "enemy-bandido",
   drone: "enemy-drone",
 } as const;
+
+const ENEMY_SCALE: Record<EnemyKind, number> = {
+  bandido: 1.45,
+  drone: 1.8,
+};
 
 /**
  * Runtime dos inimigos definidos no Tiled como objetos `enemy`.
@@ -53,14 +59,15 @@ export class EnemyRuntime {
       const y = (object.y ?? 0) + offsetY + (object.height ?? 0);
       const sprite = scene.physics.add.sprite(x, y, ENEMY_KEYS[kind]);
       sprite.setOrigin(0.5, 1);
+      sprite.setScale(ENEMY_SCALE[kind]);
       sprite.setImmovable(true);
       sprite.body!.setAllowGravity(false);
       sprite.body!.setSize(kind === "bandido" ? 28 : 22, kind === "bandido" ? 38 : 22);
       sprite.body!.setOffset(kind === "bandido" ? 10 : 5, kind === "bandido" ? 6 : 5);
       sprite.setDepth(4);
-      // Inimigos ficam discretos antes do scan; o visor os destaca sem removê-los
-      // totalmente da cena, preservando a leitura do runner.
-      sprite.setAlpha(0.35);
+      // A silhueta precisa permanecer totalmente legível no runner. O scan
+      // ainda aplica o destaque ciano, mas não controla mais a opacidade.
+      sprite.setAlpha(1);
       sprite.setData("enemyId", object.name || `enemy-${object.id}`);
       sprite.setData("enemyKind", kind);
 
@@ -109,13 +116,12 @@ export class EnemyRuntime {
   }
 
   private handleAttack(x: number, y: number): void {
-    const attackRange = 62;
-    const verticalRange = 58;
-
     for (const enemy of this.enemies) {
-      if (!enemy.sprite.active || enemy.kind !== "bandido") continue;
+      if (!enemy.sprite.active || enemy.kind !== "bandido" || enemy.sprite.getData("hp") === 0) continue;
 
-      const closeEnough = enemy.sprite.x >= x - 8 && enemy.sprite.x <= x + attackRange && Math.abs(enemy.sprite.y - y) <= verticalRange;
+      const closeEnough = enemy.sprite.x >= x - 8
+        && enemy.sprite.x <= x + PHYSICS.attack.range
+        && Math.abs(enemy.sprite.y - y) <= PHYSICS.attack.verticalRange;
       if (!closeEnough) continue;
 
       enemy.sprite.setData("hp", 0);
@@ -171,7 +177,7 @@ export class EnemyRuntime {
       if (enemy.revealed && Math.abs(enemy.sprite.x - playerX) > 960) {
         enemy.revealed = false;
         enemy.sprite.clearTint();
-        enemy.sprite.setAlpha(0.35);
+        enemy.sprite.setAlpha(1);
       }
 
       if (!enemy.revealed && this.scanActive && Math.abs(enemy.sprite.x - playerX) <= 800) {

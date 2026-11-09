@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { PHYSICS } from "../config/GameConfig";
 import { Player } from "../entities/Player";
 import {
   TILED_FASE3_BARRICADE_TEXTURE_KEY,
@@ -410,14 +411,12 @@ export class TiledPhase3Runtime {
   }
 
   private destroyBreakableInAttackRange(attackX: number, attackY: number): void {
-    const attackRange = 62;
-    const verticalRange = 58;
     const target = this.breakables.find((breakable) => {
       if (!breakable.body.active) return false;
       const leftEdge = breakable.body.x - breakable.body.displayWidth / 2;
       return leftEdge >= attackX - 8
-        && leftEdge <= attackX + attackRange
-        && Math.abs(breakable.body.y - attackY) <= verticalRange;
+        && leftEdge <= attackX + PHYSICS.attack.range
+        && Math.abs(breakable.body.y - attackY) <= PHYSICS.attack.verticalRange;
     });
     if (target) this.destroyBreakable(target);
   }

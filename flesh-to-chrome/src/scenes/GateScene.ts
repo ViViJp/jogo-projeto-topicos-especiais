@@ -8,15 +8,25 @@ const GATE_MUSIC_KEY = "bgm-gate";
 
 type GateChoice = "chrome" | "flesh";
 
+interface GateSceneData {
+  /** Acesso pelo seletor de fases; não cria snapshot nem altera o save. */
+  testMode?: boolean;
+}
+
 export class GateScene extends Phaser.Scene {
   private input$!: InputManager;
   private selected: GateChoice = "chrome";
   private choiceTexts = new Map<GateChoice, Phaser.GameObjects.Text>();
   private choosing = false;
   private music?: Phaser.Sound.BaseSound;
+  private testMode = false;
 
   constructor() {
     super("GateScene");
+  }
+
+  init(data: GateSceneData): void {
+    this.testMode = data.testMode ?? false;
   }
 
   preload(): void {
@@ -42,7 +52,7 @@ export class GateScene extends Phaser.Scene {
     this.choiceTexts.clear();
 
     const save = SaveState.load();
-    if (!save.hasPreGateSave()) save.createPreGateSave();
+    if (!this.testMode && !save.hasPreGateSave()) save.createPreGateSave();
 
     this.add.rectangle(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, SCREEN_WIDTH, SCREEN_HEIGHT, 0x100718, 1);
     this.add.image(SCREEN_WIDTH / 2, 265, GATE_TEXTURE_KEY).setDisplaySize(320, 373);
@@ -66,7 +76,10 @@ export class GateScene extends Phaser.Scene {
 
     this.createChoice("chrome", SCREEN_WIDTH / 2 - 220, "CHROME", "Aceitar a conversão completa");
     this.createChoice("flesh", SCREEN_WIDTH / 2 + 220, "FLESH", "Recusar e iniciar a descida");
-    this.add.text(SCREEN_WIDTH / 2, SCREEN_HEIGHT - 42, "← → / DIRECIONAL escolher   ENTER / A confirmar", {
+    const controlsHelp = this.testMode
+      ? "← → / DIRECIONAL escolher   ENTER / A confirmar   ESC / B voltar ao seletor"
+      : "← → / DIRECIONAL escolher   ENTER / A confirmar";
+    this.add.text(SCREEN_WIDTH / 2, SCREEN_HEIGHT - 42, controlsHelp, {
       fontFamily: "Courier New, monospace",
       fontSize: "15px",
       color: "#565f80",
@@ -79,12 +92,18 @@ export class GateScene extends Phaser.Scene {
   }
 
   update(): void {
-    if (
-      this.input$.isMenuLeftJustDown()
-      || this.input$.isMenuRightJustDown()
-      || this.input$.isMenuUpJustDown()
-      || this.input$.isMenuDownJustDown()
-    ) {
+    if (this.testMode && this.input$.isCancelJustDown()) {
+      this.scene.start("MenuScene");
+      this.input$.postUpdate();
+      return;
+    }
+    if (this.input$.isMenuLeftJustDown()) {
+      this.selected = "chrome";
+      this.updateSelection();
+    } else if (this.input$.isMenuRightJustDown()) {
+      this.selected = "flesh";
+      this.updateSelection();
+    } else if (this.input$.isMenuUpJustDown() || this.input$.isMenuDownJustDown()) {
       this.selected = this.selected === "chrome" ? "flesh" : "chrome";
       this.updateSelection();
     } else if (this.input$.isConfirmJustDown()) {
@@ -103,10 +122,12 @@ export class GateScene extends Phaser.Scene {
       padding: { x: 20, y: 14 },
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     text.on("pointerover", () => {
+      if (this.choosing) return;
       this.selected = choice;
       this.updateSelection();
     });
     text.on("pointerdown", () => {
+      if (this.choosing) return;
       this.selected = choice;
       this.updateSelection();
       this.confirmChoice();
@@ -144,10 +165,11 @@ export class GateScene extends Phaser.Scene {
     }
 
     this.choosing = true;
-    SaveState.load().markEndingReached("chrome");
     this.music?.stop();
     this.cameras.main.fadeOut(450, 0, 0, 0, (_camera: Phaser.Cameras.Scene2D.Camera, progress: number) => {
-      if (progress === 1) this.scene.start("EndingScene", { ending: "chrome" });
+      if (progress === 1) {
+        this.scene.start("EndingScene", { ending: "chrome", testMode: this.testMode });
+      }
     });
   }
 }

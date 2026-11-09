@@ -57,14 +57,16 @@ Resultado da rodada de 2026-11-03:
 - Morte descarta créditos ainda não consolidados e reinicia no último checkpoint.
 - Clínica instala `legs`, `arms`, `eyes` e `thrusters` após as Fases 1–4,
   respectivamente, e avança pela ordem das cinco fases.
-- Fim da Fase 5 encaminha para `EndingScene` na campanha.
+- O contato com o portão da Fase 5 encerra a corrida e encaminha para
+  `GateScene`, onde ocorre a escolha de final.
 - O modo de teste não chama `updateCheckpoint`, `setPhase`, `unlockAbility`
   ou `persist`; ao concluir, volta ao seletor.
 
 ## Pendências assumidas do blockout
 
-- Fase 2: `press`, `steam`, `mech_arm` e `crusher` ainda não possuem ciclos
-  individuais; o retângulo autorado é sempre letal.
+- Fase 2: `press`, `steam` e `mech_arm` possuem ciclos individuais. A prensa
+  continua letal sempre que Alex toca o cabeçote, inclusive recolhido; o
+  crusher foi removido após playtest por não se integrar aos vãos da fase.
 - Fase 5: a barreira rotativa usa volume letal estático; rotação visual e
   janela temporal própria ainda não foram implementadas.
 - Fase 5: a escolha do Portão está interativa; Chrome possui final completo e

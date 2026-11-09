@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { GAMEPLAY_TIMING } from "../config/GameConfig";
+import { GAMEPLAY_TIMING, PHYSICS } from "../config/GameConfig";
 import { Player } from "../entities/Player";
 import {
   TILED_FASE5_MAP_KEY,
@@ -189,7 +189,8 @@ export class TiledPhase5Runtime {
       : { x: 80, y: 560 };
 
     const endObject = byType("phase_end")[0];
-    this.endGateX = endObject?.x ?? this.lengthPx - 100;
+    const gateObjects = byType("gate");
+    this.endGateX = gateObjects[0]?.x ?? endObject?.x ?? this.lengthPx - 100;
 
     this.readCredits(byType("credit"));
     this.readCheckpoints(byType("checkpoint"));
@@ -198,7 +199,7 @@ export class TiledPhase5Runtime {
     this.buildAutomaticDoors(byType("automatic_door"));
     this.buildBreakables(byType("breakable"));
     this.buildTutorials(byType("tutorial"));
-    this.buildMilestoneLabels(byType("zone"), byType("gate"));
+    this.buildMilestoneLabels(byType("zone"), gateObjects);
     if (endObject && options.endLabel) this.buildEndMarker(endObject, options.endLabel);
     this.buildCredits();
     this.buildCheckpoints();
@@ -701,8 +702,8 @@ export class TiledPhase5Runtime {
       const leftEdge = breakable.body.x - breakable.body.displayWidth / 2;
       return breakable.body.active
         && leftEdge >= attackX - 8
-        && leftEdge <= attackX + 62
-        && Math.abs(breakable.body.y - attackY) <= 58;
+        && leftEdge <= attackX + PHYSICS.attack.range
+        && Math.abs(breakable.body.y - attackY) <= PHYSICS.attack.verticalRange;
     });
     if (target) this.destroyBreakable(target);
   }

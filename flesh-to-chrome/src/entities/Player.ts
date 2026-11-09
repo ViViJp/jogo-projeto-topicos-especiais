@@ -11,6 +11,7 @@ import { AbilityState } from "../systems/AbilityState";
 import { InputManager } from "../systems/InputManager";
 import {
   ALEX_SLIDE_FRAME,
+  alexAttackAnimationKey,
   alexCheckpointAnimationKey,
   alexRunAnimationKey,
   alexTextureForAbilities,
@@ -42,6 +43,7 @@ export class Player {
   private input: InputManager;
   private abilities: AbilityState;
   private readonly runAnimationKey: string;
+  private readonly attackAnimationKey: string;
   private readonly checkpointAnimationKey: string;
 
   private state: PlayerState = "running";
@@ -49,6 +51,8 @@ export class Player {
   private slideTimer = 0;
   private slideElapsed = 0;
   private attackRecoveryTimer = 0;
+  /** Invalida callbacks de um golpe que foi interrompido por outra ação. */
+  private attackSequence = 0;
   private dashTimer = 0;
   private dashCooldownTimer = 0;
   private pressedTimer = 0;
@@ -76,6 +80,7 @@ export class Player {
     const textureKey = alexTextureForAbilities(abilities);
     ensureAlexAnimations(scene, textureKey);
     this.runAnimationKey = alexRunAnimationKey(textureKey);
+    this.attackAnimationKey = alexAttackAnimationKey(textureKey);
     this.checkpointAnimationKey = alexCheckpointAnimationKey(textureKey);
     this.sprite = scene.physics.add.sprite(x, y, textureKey);
     this.sprite.setOrigin(0.5, 1);
@@ -117,7 +122,7 @@ export class Player {
     this.scanTimer = 0;
     this.dashTimer = 0;
     this.currentBreakable = null;
-    this.state = "checkpoint";
+    this.transitionState("checkpoint");
     const body = this.sprite.body as Phaser.Physics.Arcade.Body;
     body.setAllowGravity(false);
     body.reset(x, y);
@@ -140,7 +145,7 @@ export class Player {
 
   kill(): void {
     if (this.state === "dead") return;
-    this.state = "dead";
+    this.transitionState("dead");
     this.sprite.setVelocity(0, 0);
     this.sprite.body!.enable = false;
     this.onDeath();
@@ -148,6 +153,7 @@ export class Player {
 
   /** Reativa a mesma instancia sem reiniciar a cena ou o cronometro da corrida. */
   respawn(x: number, y: number): void {
+    this.attackSequence += 1;
     this.state = "running";
     this.doubleJumpUsed = false;
     this.slideTimer = 0;
@@ -173,8 +179,13 @@ export class Player {
 
     if (this.state === "pressed") {
       if (this.input.isAttackJustDown() && this.abilities.arms) {
+        this.attackRecoveryTimer = PHYSICS.attack.recoveryMs;
+        this.sprite.anims.play(this.attackAnimationKey, true);
         // a colisão com o quebrável (GameScene) é responsável por chamar resolvePressedSuccess()
         this.scene.events.emit("player-attack-attempt", this.currentBreakable);
+        this.scene.time.delayedCall(PHYSICS.attack.animDurationMs, () => {
+          if (this.state === "running" || this.state === "jumping") this.applyRunningPose();
+        });
       }
       if (this.pressedTimer <= 0) {
         this.kill();
@@ -253,10 +264,11 @@ export class Player {
 
     if (grounded) {
       this.sprite.setVelocityY(PHYSICS.jump.velocityY);
-      this.state = "jumping";
+      this.transitionState("jumping", true);
     } else if (this.abilities.legs && !this.doubleJumpUsed) {
       this.sprite.setVelocityY(PHYSICS.doubleJump.velocityY);
       this.doubleJumpUsed = true;
+      this.transitionState("jumping", true);
     }
   }
 
@@ -307,15 +319,49 @@ export class Player {
 
     const previous = this.state;
     this.state = "attacking";
+    const attackSequence = ++this.attackSequence;
     this.attackRecoveryTimer = PHYSICS.attack.recoveryMs;
-    this.scene.events.emit("player-attack", this.sprite.x, this.sprite.y);
-    this.showAttackFeedback();
+    this.sprite.anims.play(this.attackAnimationKey, true);
+    this.emitAttackPulse(true);
+    for (
+      let delay = PHYSICS.attack.pulseIntervalMs;
+      delay <= PHYSICS.attack.activeMs;
+      delay += PHYSICS.attack.pulseIntervalMs
+    ) {
+      this.scene.time.delayedCall(delay, () => {
+        if (this.state === "attacking" && this.attackSequence === attackSequence) {
+          this.emitAttackPulse(false);
+        }
+      });
+    }
 
     this.scene.time.delayedCall(PHYSICS.attack.animDurationMs, () => {
-      if (this.state === "attacking") {
+      if (this.state === "attacking" && this.attackSequence === attackSequence) {
         this.state = previous === "jumping" && !this.isGrounded() ? "jumping" : "running";
+        this.applyRunningPose();
       }
     });
+  }
+
+  /**
+   * Mantém a hitbox ativa durante a parte ofensiva da animação. O primeiro
+   * pulso exibe o feedback do HUD; os seguintes apenas atualizam a colisão
+   * na posição atual de Alex, evitando repetir texto e som a cada 60 ms.
+   */
+  private emitAttackPulse(showFeedback: boolean): void {
+    this.scene.events.emit("player-attack", this.sprite.x, this.sprite.y, showFeedback);
+  }
+
+  /**
+   * Centraliza saídas antecipadas do golpe. Pulo e dash precisam restaurar
+   * imediatamente a pose padrão; morte e checkpoint substituem a animação
+   * logo em seguida e apenas invalidam os timers pendentes.
+   */
+  private transitionState(nextState: PlayerState, restorePoseAfterAttack = false): void {
+    const interruptedAttack = this.state === "attacking" && nextState !== "attacking";
+    if (interruptedAttack) this.attackSequence += 1;
+    this.state = nextState;
+    if (interruptedAttack && restorePoseAfterAttack) this.applyRunningPose();
   }
 
   // ---- Scan (seção 14.9) ----
@@ -329,23 +375,6 @@ export class Player {
     this.onScanPulse(true);
     this.showScanFeedback();
     if (this.state === "running") this.state = "scanning";
-  }
-
-  private showAttackFeedback(): void {
-    const g = this.scene.add.graphics();
-    g.setDepth(this.sprite.depth + 2);
-    const y = this.sprite.y - 34;
-    g.lineStyle(5, 0x7cfcea, 1);
-    g.beginPath();
-    g.arc(this.sprite.x + 24, y, 30, Phaser.Math.DegToRad(-55), Phaser.Math.DegToRad(55));
-    g.strokePath();
-    this.scene.tweens.add({
-      targets: g,
-      alpha: 0,
-      x: 12,
-      duration: 140,
-      onComplete: () => g.destroy(),
-    });
   }
 
   private showScanFeedback(): void {
@@ -370,7 +399,7 @@ export class Player {
     if (this.dashCooldownTimer > 0) return;
     if (!this.input.isDashJustDown()) return;
 
-    this.state = "dashing";
+    this.transitionState("dashing", true);
     this.dashTimer = PHYSICS.dash.durationMs;
     this.dashCooldownTimer = PHYSICS.dash.cooldownMs;
     this.sprite.setVelocityX(PHYSICS.dash.speed);
