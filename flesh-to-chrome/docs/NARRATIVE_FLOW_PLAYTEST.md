@@ -29,8 +29,13 @@ Novo Jogo
   como parte do programa de ascensão da Glitch Corp e deixa explícito que Alex
   reconhece o rosto do pai.
 - O Portão cria um snapshot independente antes de qualquer escolha.
+- O seletor de fases permite abrir o Portão diretamente em modo de teste;
+  nessa prévia, nenhum snapshot é criado e nenhuma escolha altera o save real.
 - Chrome apresenta o reencontro físico com `pai-portrait.png`: o pai reconhece
   Alex, mas Alex não o reconhece e continua andando.
+- O Final Chrome só é registrado em `endingReached` depois que o jogador
+  confirma o último quadro. Selecionar Chrome ou apenas abrir o epílogo não é
+  suficiente para marcar o final como concluído.
 - Flesh não altera o save e permanece marcado como conteúdo em desenvolvimento.
 - `Continuar do Portão` restaura fase, checkpoint, créditos, carteira e os
   quatro implantes sem consumir o snapshot.
@@ -48,7 +53,9 @@ npm run build
 
 O teste `test:narrative` valida cenas registradas, assets narrativos, arco das
 quatro clínicas, transição da Fase 5, escolha Chrome, placeholder Flesh e a
-criação/restauração real do save pré-Portão em `localStorage` simulado.
+criação/restauração real do save pré-Portão em `localStorage` simulado. Também
+valida que o Portão pode ser aberto pelo seletor sem persistência e que o Final
+Chrome é registrado somente após a confirmação do último quadro.
 
 ## Roteiro manual
 
@@ -56,8 +63,16 @@ criação/restauração real do save pré-Portão em `localStorage` simulado.
    a família, o pai antes da ascensão e o pai convertido no jornal.
 2. Avance pelas quatro clínicas e observe a mudança visual e textual de George.
 3. Na Fase 4, confirme que a propaganda exibe o asset do pai e o texto narrativo.
-4. Complete a Fase 5 e confirme a abertura do Portão.
-5. Selecione Flesh e confirme o aviso sem perder a possibilidade de escolha.
-6. Selecione Chrome e assista aos quatro quadros do Final Chrome.
-7. No menu, selecione **Continuar do Portão**.
-8. Confirme que o Portão foi restaurado com carteira e implantes preservados.
+4. No seletor de fases, abra **Portão — escolha final (teste)** e confirme que
+   Chrome e Flesh podem ser testados sem criar snapshot ou modificar o save.
+5. No Portão, valide que esquerda seleciona Chrome, direita seleciona Flesh e
+   que cima/baixo alternam entre as opções.
+6. Selecione Flesh e feche o aviso tanto pelo botão **Voltar à escolha** quanto
+   por teclado ou controle.
+7. Complete a Fase 5 na campanha e confirme a abertura normal do Portão.
+8. Selecione Chrome e avance até o quarto quadro do Final Chrome sem confirmá-lo;
+   valide que `endingReached` ainda não foi atualizado.
+9. Confirme o último quadro, volte ao menu e valide que o Final Chrome foi
+   registrado somente nesse momento.
+10. No menu, selecione **Continuar do Portão**.
+11. Confirme que o Portão foi restaurado com carteira e implantes preservados.

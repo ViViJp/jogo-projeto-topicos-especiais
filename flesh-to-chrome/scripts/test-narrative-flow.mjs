@@ -74,6 +74,7 @@ const gate = read("src/scenes/GateScene.ts");
 const ending = read("src/scenes/EndingScene.ts");
 const game = read("src/scenes/GameScene.ts");
 const phase4 = read("src/objects/TiledPhase4Runtime.ts");
+const narrativePlaytest = read("docs/NARRATIVE_FLOW_PLAYTEST.md");
 
 assert.match(main, /PrologueScene/);
 assert.match(main, /GateScene/);
@@ -106,6 +107,10 @@ assert.doesNotMatch(gate, /markEndingReached\(/,
   "escolher Chrome ainda não significa concluir o final");
 assert.match(gate, /\{ ending: "chrome", testMode: this\.testMode \}/);
 assert.match(gate, /Conteúdo em desenvolvimento/);
+assert.match(gate, /isMenuLeftJustDown\(\)[\s\S]*?this\.selected = "chrome"/);
+assert.match(gate, /isMenuRightJustDown\(\)[\s\S]*?this\.selected = "flesh"/);
+assert.match(gate, /VOLTAR À ESCOLHA/);
+assert.match(gate, /backButton\.on\("pointerdown", \(\) => this\.closeDevelopmentNotice\(\)\)/);
 assert.match(ending, /FINAL CHROME/);
 assert.match(ending, /ALEX\? FILHO\?/);
 assert.match(ending, /father\/pai-portrait\.png/);
@@ -118,5 +123,8 @@ assert.ok(
 assert.match(phase4, /TILED_FATHER_AD_TEXTURE_KEY/);
 assert.match(phase4, /GLITCH CORP \/\/ PROGRAMA DE ASCENSÃO/);
 assert.match(phase4, /O rosto da campanha é familiar/);
+assert.match(narrativePlaytest, /Portão — escolha final \(teste\)/);
+assert.match(narrativePlaytest, /endingReached/);
+assert.match(narrativePlaytest, /sem criar snapshot ou modificar o save/);
 
 console.log("Narrativa: prólogo, clínicas, propaganda, Portão, Final Chrome e save pré-Portão OK.");

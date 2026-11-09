@@ -17,7 +17,7 @@ export class GateScene extends Phaser.Scene {
   private input$!: InputManager;
   private selected: GateChoice = "chrome";
   private choiceTexts = new Map<GateChoice, Phaser.GameObjects.Text>();
-  private developmentNotice?: Phaser.GameObjects.Text;
+  private developmentNotice?: Phaser.GameObjects.Container;
   private choosing = false;
   private music?: Phaser.Sound.BaseSound;
   private testMode = false;
@@ -92,18 +92,18 @@ export class GateScene extends Phaser.Scene {
   update(): void {
     if (this.developmentNotice) {
       if (this.input$.isConfirmJustDown() || this.input$.isCancelJustDown()) {
-        this.developmentNotice.destroy();
-        this.developmentNotice = undefined;
+        this.closeDevelopmentNotice();
       }
       this.input$.postUpdate();
       return;
     }
-    if (
-      this.input$.isMenuLeftJustDown()
-      || this.input$.isMenuRightJustDown()
-      || this.input$.isMenuUpJustDown()
-      || this.input$.isMenuDownJustDown()
-    ) {
+    if (this.input$.isMenuLeftJustDown()) {
+      this.selected = "chrome";
+      this.updateSelection();
+    } else if (this.input$.isMenuRightJustDown()) {
+      this.selected = "flesh";
+      this.updateSelection();
+    } else if (this.input$.isMenuUpJustDown() || this.input$.isMenuDownJustDown()) {
       this.selected = this.selected === "chrome" ? "flesh" : "chrome";
       this.updateSelection();
     } else if (this.input$.isConfirmJustDown()) {
@@ -145,19 +145,39 @@ export class GateScene extends Phaser.Scene {
   private confirmChoice(): void {
     if (this.choosing) return;
     if (this.selected === "flesh") {
-      this.developmentNotice = this.add.text(
-        SCREEN_WIDTH / 2,
-        SCREEN_HEIGHT / 2,
-        "CAMINHO FLESH\n\nConteúdo em desenvolvimento.\nA descida será implementada na próxima branch.\n\nENTER / A ou ESC / B para voltar à escolha.",
+      const panel = this.add.rectangle(0, 0, 680, 330, 0x170b20, 0.97)
+        .setStrokeStyle(2, 0x7cfcea, 0.75);
+      const message = this.add.text(
+        0,
+        -58,
+        "CAMINHO FLESH\n\nConteúdo em desenvolvimento.\nA descida será implementada na próxima branch.",
         {
           fontFamily: "Courier New, monospace",
           fontSize: "21px",
           color: "#e8ecff",
           align: "center",
-          backgroundColor: "#170b20f4",
-          padding: { x: 32, y: 26 },
         },
-      ).setOrigin(0.5).setDepth(20);
+      ).setOrigin(0.5);
+      const backButton = this.add.text(0, 102, "VOLTAR À ESCOLHA", {
+        fontFamily: "Courier New, monospace",
+        fontSize: "19px",
+        color: "#071017",
+        backgroundColor: "#7CFCEA",
+        padding: { x: 18, y: 10 },
+      }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+      backButton.on("pointerover", () => backButton.setBackgroundColor("#FFD37C"));
+      backButton.on("pointerout", () => backButton.setBackgroundColor("#7CFCEA"));
+      backButton.on("pointerdown", () => this.closeDevelopmentNotice());
+      const controls = this.add.text(0, 148, "ENTER / A ou ESC / B também retornam", {
+        fontFamily: "Courier New, monospace",
+        fontSize: "13px",
+        color: "#8892b0",
+      }).setOrigin(0.5);
+      this.developmentNotice = this.add.container(
+        SCREEN_WIDTH / 2,
+        SCREEN_HEIGHT / 2,
+        [panel, message, backButton, controls],
+      ).setDepth(20);
       return;
     }
 
@@ -168,5 +188,10 @@ export class GateScene extends Phaser.Scene {
         this.scene.start("EndingScene", { ending: "chrome", testMode: this.testMode });
       }
     });
+  }
+
+  private closeDevelopmentNotice(): void {
+    this.developmentNotice?.destroy();
+    this.developmentNotice = undefined;
   }
 }
