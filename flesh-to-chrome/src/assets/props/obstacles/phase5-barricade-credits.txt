@@ -1,0 +1,5 @@
+Phase 5 barricade — Flesh to Chrome
+
+Barricada corporativa original gerada com OpenAI Imagegen em novembro de
+2026. Usa o tileset cyber-purp como referência de paleta e material. O runtime
+substitui as antigas grades por este sprite e o remove após um ataque válido.

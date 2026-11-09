@@ -48,7 +48,7 @@ Resultado da rodada de 2026-11-03:
 | 1 | colisão do chão; água, fios e canos letais; slide sob fios; checkpoint/respawn; clínica libera pernas |
 | 2 | pulo e salto duplo; sete canos baixos; cinco esteiras nos dois sentidos; velocidade volta a `BASE_RUN_SPEED` ao sair; prensas/vapor/braços/trituradoras letais; clínica libera braços |
 | 3 | ataque antecipado quebra barricada; ataque preso também quebra; bandido morre em um golpe; drone permanece blindado; contato com inimigo mata; clínica libera olhos |
-| 4 | scan revela grupos próximos; paredes/pisos falsos ficam translúcidos; spikes ocultos aparecem; grupos antigos são limpos; barreiras visíveis são letais e o scan as oculta/desativa; clínica libera propulsores |
+| 4 | scan revela grupos próximos; paredes falsas ficam totalmente invisíveis e intangíveis após um scan válido; pisos falsos ficam translúcidos; spikes ocultos aparecem; grupos antigos são limpos; barreiras visíveis são letais e o scan as oculta/desativa; clínica libera propulsores |
 | 5 | bateria e recarga do dash; lasers/barreiras letais mesmo durante dash; scan oculta/desativa a próxima barreira; quebráveis respondem ao ataque; conclusão retorna ao menu no modo de teste |
 
 ## Progressão e persistência
@@ -57,17 +57,19 @@ Resultado da rodada de 2026-11-03:
 - Morte descarta créditos ainda não consolidados e reinicia no último checkpoint.
 - Clínica instala `legs`, `arms`, `eyes` e `thrusters` após as Fases 1–4,
   respectivamente, e avança pela ordem das cinco fases.
-- Fim da Fase 5 encaminha para `EndingScene` na campanha.
+- O contato com o portão da Fase 5 encerra a corrida e encaminha para
+  `GateScene`, onde ocorre a escolha de final.
 - O modo de teste não chama `updateCheckpoint`, `setPhase`, `unlockAbility`
   ou `persist`; ao concluir, volta ao seletor.
 
 ## Pendências assumidas do blockout
 
-- Fase 2: `press`, `steam`, `mech_arm` e `crusher` ainda não possuem ciclos
-  individuais; o retângulo autorado é sempre letal.
+- Fase 2: `press`, `steam` e `mech_arm` possuem ciclos individuais. A prensa
+  continua letal sempre que Alex toca o cabeçote, inclusive recolhido; o
+  crusher foi removido após playtest por não se integrar aos vãos da fase.
 - Fase 5: a barreira rotativa usa volume letal estático; rotação visual e
   janela temporal própria ainda não foram implementadas.
-- Fase 5: escolhas Chrome/Flesh e os finais narrativos ainda são sinalização
-  de blockout, sem ramificação interativa.
+- Fase 5: a escolha do Portão está interativa; Chrome possui final completo e
+  Flesh informa que a descida será implementada na próxima etapa.
 - As fases ainda precisam do passe final de decoração, áudio, animações e
   calibração por playtest humano completo após cada alteração de geometria.

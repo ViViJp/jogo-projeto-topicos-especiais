@@ -143,8 +143,12 @@ export class MenuScene extends Phaser.Scene {
     this.mode = "main";
     this.menuHint?.setText("MENU PRINCIPAL");
     this.options = [];
-    if (this.hasSave) {
+    const saveData = SaveState.load().get();
+    if (this.hasSave && saveData.endingReached === null) {
       this.options.push({ label: "Continuar", action: () => this.continueGame() });
+    }
+    if (saveData.preGateSave) {
+      this.options.push({ label: "Continuar do Portão", action: () => this.continueFromGate() });
     }
     this.options.push({ label: "Novo Jogo", action: () => this.newGame(this.hasSave) });
     this.options.push({ label: "Selecionar Fase (teste)", action: () => this.showPhaseSelect() });
@@ -159,6 +163,10 @@ export class MenuScene extends Phaser.Scene {
       label: phase.label,
       action: () => this.startTestPhase(phase.id),
     }));
+    this.options.push({
+      label: "Portão — escolha final (teste)",
+      action: () => this.scene.start("GateScene", { testMode: true }),
+    });
     this.options.push({ label: "← Voltar", action: () => this.showMainMenu() });
     this.renderOptions();
   }
@@ -204,13 +212,21 @@ export class MenuScene extends Phaser.Scene {
     } as GameSceneData);
   }
 
+  private continueFromGate(): void {
+    const restored = SaveState.load().restorePreGateSave();
+    if (!restored) return;
+    // Phaser preserva os dados anteriores quando uma cena é iniciada sem
+    // um novo objeto. Sobrescreve explicitamente a prévia do seletor.
+    this.scene.start("GateScene", { testMode: false });
+  }
+
   private newGame(hasSave: boolean): void {
     if (hasSave && !this.confirmVisible) {
       this.showConfirm();
       return;
     }
     SaveState.newGame();
-    this.scene.start("GameScene", { phaseId: "fase1" } as GameSceneData);
+    this.scene.start("PrologueScene");
   }
 
   private showConfirm(): void {
@@ -234,7 +250,7 @@ export class MenuScene extends Phaser.Scene {
   private confirmNewGame(): void {
     this.hideConfirm();
     SaveState.newGame();
-    this.scene.start("GameScene", { phaseId: "fase1" } as GameSceneData);
+    this.scene.start("PrologueScene");
   }
 
   private hideConfirm(): void {

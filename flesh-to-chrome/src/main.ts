@@ -6,6 +6,8 @@ import { GameScene } from "./scenes/GameScene";
 import { ClinicScene } from "./scenes/ClinicScene";
 import { EndingScene } from "./scenes/EndingScene";
 import { MultiplayerScene } from "./scenes/MultiplayerScene";
+import { PrologueScene } from "./scenes/PrologueScene";
+import { GateScene } from "./scenes/GateScene";
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -63,7 +65,16 @@ const config: Phaser.Types.Core.GameConfig = {
       tileBias: 32,
     },
   },
-  scene: [BootScene, MenuScene, GameScene, ClinicScene, EndingScene, MultiplayerScene],
+  scene: [
+    BootScene,
+    MenuScene,
+    PrologueScene,
+    GameScene,
+    ClinicScene,
+    GateScene,
+    EndingScene,
+    MultiplayerScene,
+  ],
 };
 
 new Phaser.Game(config);

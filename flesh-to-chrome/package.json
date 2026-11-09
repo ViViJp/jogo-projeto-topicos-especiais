@@ -13,6 +13,7 @@
     "typecheck": "tsc --noEmit",
     "validate:assets": "node scripts/validate-assets.mjs",
     "test:gameplay": "node scripts/test-gameplay-flow.mjs",
+    "test:narrative": "node scripts/test-narrative-flow.mjs",
     "test:multiplayer": "node scripts/test-multiplayer-protocol.mjs"
   },
   "devDependencies": {

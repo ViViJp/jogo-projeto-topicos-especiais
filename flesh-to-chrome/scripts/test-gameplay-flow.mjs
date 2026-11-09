@@ -48,6 +48,10 @@ for (const [kind, values] of Object.entries(config.GAMEPLAY_TIMING.industrialHaz
   assert.ok(values.warningMs >= 300, `${kind}: aviso deve ser legível`);
   assert.ok(values.cycleMs - values.activeMs - values.warningMs >= 700, `${kind}: janela segura`);
 }
+assert.ok(config.PHYSICS.attack.animDurationMs >= 350, "ataque precisa permanecer legível");
+assert.ok(config.PHYSICS.attack.activeMs >= 250, "ataque precisa de janela ativa útil");
+assert.ok(config.PHYSICS.attack.range >= 80, "ataque precisa alcançar o inimigo à frente");
+assert.ok(config.PHYSICS.attack.activeMs < config.PHYSICS.attack.animDurationMs);
 
 const credits = new CreditsSystem(30, ["old-phase-credit"]);
 credits.collect("current-phase-credit", 10);
@@ -96,7 +100,7 @@ const phase2Objects = phase2.layers.find((layer) => layer.name === "objects").ob
 const industrialKinds = new Set(
   phase2Objects.filter((object) => object.type === "hazard").map((object) => objectProperty(object, "kind")),
 );
-assert.deepEqual([...industrialKinds].sort(), ["crusher", "mech_arm", "press", "steam"]);
+assert.deepEqual([...industrialKinds].sort(), ["mech_arm", "press", "steam"]);
 const lowCeilingLayer = phase2.layers.find((layer) => layer.name === "deco-low-ceilings");
 const lowCeilingTiles = lowCeilingLayer.data.filter((gid) => gid !== 0);
 assert.equal(lowCeilingTiles.length, 42, "fase2: sete obstáculos baixos com seis tiles cada");
@@ -113,6 +117,25 @@ const rotatingBarriers = phase5Objects.filter(
 );
 assert.equal(rotatingBarriers.length, 5);
 assert.ok(rotatingBarriers.every((barrier) => Math.max(barrier.width, barrier.height) >= 96));
+const phase5Breakables = phase5Objects.filter((object) => object.type === "breakable");
+const phase5Credits = phase5Objects.filter((object) => object.type === "credit");
+for (const credit of phase5Credits) {
+  assert.ok(
+    !phase5Breakables.some((obstacle) => (
+      credit.x >= obstacle.x
+      && credit.x <= obstacle.x + obstacle.width
+      && credit.y >= obstacle.y
+      && credit.y <= obstacle.y + obstacle.height
+    )),
+    `fase5: ${credit.name} não pode ficar dentro de uma barricada`,
+  );
+}
+const phase5RuntimeSource = fs.readFileSync(path.join(projectDirectory, "src/objects/TiledPhase5Runtime.ts"), "utf8");
+assert.match(phase5RuntimeSource, /height \/ 2 - 16/, "fase5: barreira rotativa precisa de janela horizontal segura");
+assert.match(phase5RuntimeSource, /TILED_PHASE5_BARRICADE_TEXTURE_KEY/);
+assert.match(phase5RuntimeSource, /groundY \+ ASSET_BASELINE_PADDING/);
+assert.match(phase5RuntimeSource, /TILED_PHASE5_GATE_TEXTURE_KEY/);
+assert.match(phase5RuntimeSource, /bottomY \+ ASSET_BASELINE_PADDING/);
 
 const gameScene = fs.readFileSync(path.join(projectDirectory, "src/scenes/GameScene.ts"), "utf8");
 assert.match(gameScene, /this\.time\.paused = true/);
@@ -129,11 +152,14 @@ assert.match(phase2Runtime, /updateFromGameObject/);
 assert.match(phase2Runtime, /TILED_PHASE2_PRESS_TEXTURE_KEY/);
 assert.match(phase2Runtime, /const nozzleY = hazard\.y \+ hazard\.height - this\.map\.tileHeight/);
 assert.match(phase2Runtime, /const travel = hazard\.height \* 0\.96/);
+assert.match(phase2Runtime, /const collisionHeight = Math\.max\(96, hazard\.height \* 1\.5\)/);
+assert.match(phase2Runtime, /collisionHeight,\s*true,/);
+assert.doesNotMatch(phase2Runtime, /hazard\.kind === "crusher"/);
 assert.ok(
   fs.existsSync(path.join(projectDirectory, "src/assets/props/hazards/hydraulic-press.png")),
   "fase2: sprite dedicado da prensa",
 );
-for (const kind of ["press", "steam", "mech_arm", "crusher"]) {
+for (const kind of ["press", "steam", "mech_arm"]) {
   assert.match(phase2Runtime, new RegExp(`hazard\\.kind === "${kind}"`), `fase2: movimento de ${kind}`);
 }
 for (const runtime of [
@@ -183,10 +209,27 @@ assert.match(phase4Runtime, /bottomTile\.visible = false/);
 assert.match(phase4Runtime, /\.setVisible\(true\)/);
 const phase5Runtime = fs.readFileSync(path.join(projectDirectory, "src/objects/TiledPhase5Runtime.ts"), "utf8");
 assert.match(phase5Runtime, /disabledDoors !== 0/);
+assert.match(phase5Runtime, /gateObjects\[0\]\?\.x \?\? endObject\?\.x/);
 const playerSource = fs.readFileSync(path.join(projectDirectory, "src/entities/Player.ts"), "utf8");
 assert.match(playerSource, /this\.sprite\.setDepth\(10\)/);
 assert.match(playerSource, /this\.sprite\.setDepth\(this\.depthBeforeCheckpoint\)/);
 assert.match(playerSource, /this\.sprite\.anims\.play\(this\.checkpointAnimationKey, true\)/);
+assert.match(playerSource, /this\.sprite\.anims\.play\(this\.attackAnimationKey, true\)/);
+assert.match(playerSource, /delay <= PHYSICS\.attack\.activeMs/);
+assert.match(playerSource, /this\.emitAttackPulse\(false\)/);
+assert.match(playerSource, /const attackSequence = \+\+this\.attackSequence/);
+assert.match(playerSource, /this\.attackSequence === attackSequence/);
+assert.doesNotMatch(playerSource, /showAttackFeedback/, "ataque deve usar o spritesheet, não o arco provisório");
+const jumpMethod = playerSource.slice(playerSource.indexOf("private handleJump"), playerSource.indexOf("private handleSlide"));
+assert.match(jumpMethod, /this\.transitionState\("jumping", true\)/,
+  "ataque → pulo deve invalidar o golpe e restaurar a pose");
+const dashMethod = playerSource.slice(playerSource.indexOf("private handleDash"), playerSource.indexOf("destroy(): void"));
+assert.match(dashMethod, /this\.transitionState\("dashing", true\)/,
+  "ataque → dash deve invalidar o golpe e restaurar a pose");
+assert.match(playerSource, /kill\(\): void \{[\s\S]*?this\.transitionState\("dead"\)/,
+  "ataque → morte deve invalidar callbacks pendentes");
+assert.match(playerSource, /respawn\([\s\S]*?this\.attackSequence \+= 1;[\s\S]*?this\.applyRunningPose\(\)/,
+  "respawn deve invalidar ataques anteriores e restaurar a corrida");
 const checkpointMethod = playerSource.slice(
   playerSource.indexOf("beginCheckpointInteraction"),
   playerSource.indexOf("endCheckpointInteraction"),
@@ -194,13 +237,37 @@ const checkpointMethod = playerSource.slice(
 assert.doesNotMatch(checkpointMethod, /ALEX_SLIDE_FRAME/, "checkpoint não pode reutilizar a pose de slide");
 const alexSpriteSource = fs.readFileSync(path.join(projectDirectory, "src/utils/AlexSprite.ts"), "utf8");
 assert.match(alexSpriteSource, /CHECKPOINT_PLAY_RIGHT = \{ row: 33, frames: 2 \}/);
+assert.match(alexSpriteSource, /ATTACK_RIGHT = \{ row: 15, frames: 6 \}/);
+assert.match(alexSpriteSource, /frameRate: 16/);
+const enemyRuntime = fs.readFileSync(path.join(projectDirectory, "src/objects/EnemyRuntime.ts"), "utf8");
+assert.match(enemyRuntime, /bandido: 1\.45/);
+assert.match(enemyRuntime, /drone: 1\.8/);
+assert.doesNotMatch(enemyRuntime, /setAlpha\(0\.35\)/, "inimigos não podem permanecer opacos");
+assert.match(enemyRuntime, /PHYSICS\.attack\.range/);
+const hudSource = fs.readFileSync(path.join(projectDirectory, "src/systems/HUD.ts"), "utf8");
+assert.match(hudSource, /setFillStyle\(0x21d7ff, 1\)/, "dash pronto deve usar azul elétrico");
+assert.match(hudSource, /batteryBack,[\s\S]*this\.dashBatteryFill,[\s\S]*frame,/,
+  "preenchimento da bateria precisa ficar sobre o fundo e sob a moldura");
 assert.match(gameScene, /beginCheckpointInteraction\(x - 24, y\)/);
+assert.match(gameScene, /showFeedback = true[\s\S]*?if \(showFeedback\) this\.hud\.flashPrompt\("ATAQUE", 300\)/,
+  "somente o primeiro pulso do golpe deve atualizar o HUD");
 assert.match(gameScene, /const alreadyActive = this\.data\$\.checkpointX > 0/);
 assert.match(gameScene, /if \(alreadyActive\) return false/);
 assert.match(gameScene, /checkpointX: 0/);
 assert.match(gameScene, /checkpointY: 0/);
 const pausedBranch = gameScene.slice(gameScene.indexOf("if (this.isPaused)"), gameScene.indexOf("this.player.update(delta)"));
 assert.match(pausedBranch, /return;/, "pausa deve retornar antes de atualizar Player e cooldowns");
+assert.match(gameScene, /S \/ ↓ para voltar ao menu principal/);
+assert.match(
+  pausedBranch,
+  /if \(this\.input\$\.isMenuDownJustDown\(\)\)/,
+  "retorno ao menu durante a pausa deve funcionar também na campanha",
+);
+assert.doesNotMatch(
+  pausedBranch,
+  /this\.data\$\.testMode\s*&&\s*this\.input\$\.isMenuDownJustDown/,
+  "retorno ao menu não pode ficar restrito ao seletor de fases",
+);
 const checkpointMarker = fs.readFileSync(path.join(projectDirectory, "src/objects/CheckpointMarker.ts"), "utf8");
 assert.match(checkpointMarker, /activate\(withFeedback = true\)/);
 assert.match(checkpointMarker, /if \(!withFeedback\) return/);

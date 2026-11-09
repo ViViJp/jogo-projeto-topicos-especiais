@@ -58,15 +58,17 @@ export class HUD {
       .rectangle(66, 31, 144, 38, 0x49f5ff, 0)
       .setOrigin(0.5);
     this.dashBatteryFill = scene.add
-      .rectangle(5, 31, 122, 16, 0x32e6f2, 0.96)
+      .rectangle(5, 31, 122, 16, 0x21d7ff, 1)
       .setOrigin(0, 0.5);
 
+    const batteryBack = scene.add.graphics();
+    batteryBack.fillStyle(0x07141d, 0.96);
+    batteryBack.fillRoundedRect(0, 18, 132, 26, 4);
+
     const frame = scene.add.graphics();
-    frame.fillStyle(0x07141d, 0.92);
-    frame.fillRoundedRect(0, 18, 132, 26, 4);
-    frame.lineStyle(2, 0x7cfcea, 1);
+    frame.lineStyle(2, 0x8cf7ff, 1);
     frame.strokeRoundedRect(0, 18, 132, 26, 4);
-    frame.fillStyle(0x7cfcea, 0.9);
+    frame.fillStyle(0x8cf7ff, 1);
     frame.fillRect(132, 25, 6, 12);
     frame.lineStyle(1, 0x07141d, 0.75);
     for (const x of [29, 53, 77, 101]) frame.lineBetween(x, 22, x, 40);
@@ -89,6 +91,7 @@ export class HUD {
     this.dashBattery = scene.add
       .container(scene.scale.width - 170, 20, [
         this.dashBatteryGlow,
+        batteryBack,
         this.dashBatteryFill,
         frame,
         label,
@@ -125,7 +128,7 @@ export class HUD {
     this.scene.tweens.killTweensOf(this.dashBatteryFill);
     this.dashReady = false;
     this.dashBatteryGlow.setAlpha(0).setScale(1);
-    this.dashBatteryFill.setAlpha(0.96).setScale(0, 1);
+    this.dashBatteryFill.setFillStyle(0x176b86, 0.9).setAlpha(0.9).setScale(0, 1);
     this.dashBatteryStatus.setColor("#7896a8").setText(`RECARREGANDO ${(durationMs / 1000).toFixed(1)}s`);
 
     this.dashRechargeTween = this.scene.tweens.add({
@@ -147,14 +150,17 @@ export class HUD {
     this.dashReady = true;
     this.dashRechargeTween?.stop();
     this.dashRechargeTween = undefined;
-    this.dashBatteryFill.setScale(1, 1).setAlpha(0.96);
-    this.dashBatteryStatus.setColor("#7cfcea").setText("DASH PRONTO");
-    if (!pulse) return;
+    this.dashBatteryFill.setFillStyle(0x21d7ff, 1).setScale(1, 1).setAlpha(1);
+    this.dashBatteryStatus.setColor("#8cf7ff").setText("DASH PRONTO");
+    if (!pulse) {
+      this.dashBatteryGlow.setAlpha(0.2).setScale(1);
+      return;
+    }
 
-    this.dashBatteryGlow.setAlpha(0.6).setScale(1);
+    this.dashBatteryGlow.setAlpha(0.72).setScale(1);
     this.scene.tweens.add({
       targets: this.dashBatteryGlow,
-      alpha: 0,
+      alpha: 0.2,
       scaleX: 1.14,
       scaleY: 1.3,
       duration: 420,
@@ -162,10 +168,10 @@ export class HUD {
     });
     this.scene.tweens.add({
       targets: this.dashBatteryFill,
-      alpha: 0.55,
+      alpha: 0.72,
       duration: 110,
       yoyo: true,
-      repeat: 1,
+      repeat: 0,
     });
   }
 

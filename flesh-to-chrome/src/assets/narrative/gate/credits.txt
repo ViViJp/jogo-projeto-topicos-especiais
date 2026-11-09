@@ -1,0 +1,5 @@
+portao.png
+- Gerado com OpenAI ImageGen para Flesh to Chrome.
+- Normalizado para 192x224 px com transparência e escala nearest-neighbor.
+- Prompt de produção: portão industrial cyberpunk frontal em pixel art, metal navy,
+  iluminação magenta e detalhes cyan, pilares simétricos apoiados no piso, sem texto.

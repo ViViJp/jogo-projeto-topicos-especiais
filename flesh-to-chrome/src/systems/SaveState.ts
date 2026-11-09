@@ -53,6 +53,64 @@ function defaultSave(): SaveData {
   };
 }
 
+function cloneSaveData(data: SaveData, includePreGateSave = true): SaveData {
+  return {
+    version: 1,
+    currentPhaseId: data.currentPhaseId,
+    checkpoint: {
+      x: data.checkpoint.x,
+      y: data.checkpoint.y,
+      consolidatedCreditIds: [...data.checkpoint.consolidatedCreditIds],
+    },
+    wallet: data.wallet,
+    abilities: { ...data.abilities },
+    descentState: {
+      active: data.descentState.active,
+      brokenChain: data.descentState.brokenChain,
+      recoveredFragmentIds: [...data.descentState.recoveredFragmentIds],
+    },
+    preGateSave: includePreGateSave && data.preGateSave
+      ? cloneSaveData(data.preGateSave, false)
+      : null,
+    endingReached: data.endingReached,
+  };
+}
+
+function normalizeSaveData(parsed: Partial<SaveData>): SaveData {
+  const fresh = defaultSave();
+  const checkpoint = parsed.checkpoint ?? fresh.checkpoint;
+  const descentState = parsed.descentState ?? fresh.descentState;
+  const endingReached = ["chrome", "flesh", "hollow"].includes(parsed.endingReached ?? "")
+    ? parsed.endingReached as SaveData["endingReached"]
+    : null;
+  const normalized: SaveData = {
+    ...fresh,
+    ...parsed,
+    version: 1,
+    checkpoint: {
+      x: Number.isFinite(checkpoint.x) ? checkpoint.x : 0,
+      y: Number.isFinite(checkpoint.y) ? checkpoint.y : 0,
+      consolidatedCreditIds: Array.isArray(checkpoint.consolidatedCreditIds)
+        ? [...checkpoint.consolidatedCreditIds]
+        : [],
+    },
+    abilities: { ...fresh.abilities, ...(parsed.abilities ?? {}) },
+    descentState: {
+      ...fresh.descentState,
+      ...descentState,
+      recoveredFragmentIds: Array.isArray(descentState.recoveredFragmentIds)
+        ? [...descentState.recoveredFragmentIds]
+        : [],
+    },
+    preGateSave: null,
+    endingReached,
+  };
+  if (parsed.preGateSave) {
+    normalized.preGateSave = normalizeSaveData({ ...parsed.preGateSave, preGateSave: null });
+  }
+  return normalized;
+}
+
 export class SaveState {
   private data: SaveData;
 
@@ -68,14 +126,8 @@ export class SaveState {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return new SaveState(defaultSave());
-      const parsed = JSON.parse(raw) as SaveData;
-      const merged = { ...defaultSave(), ...parsed };
-      // `checkpoint` é objeto aninhado - o spread acima troca o objeto
-      // inteiro, então um save salvo ANTES da v0.4.0 (sem `checkpoint.y`)
-      // ia trazer `y: undefined` em vez do default 0. Corrigido explicitamente
-      // pra não reintroduzir o bug de respawn com saves antigos.
-      merged.checkpoint = { ...merged.checkpoint, y: merged.checkpoint.y ?? 0 };
-      return new SaveState(merged);
+      const parsed = JSON.parse(raw) as Partial<SaveData>;
+      return new SaveState(normalizeSaveData(parsed));
     } catch (err) {
       console.warn("[SaveState] save corrompido, iniciando novo estado", err);
       return new SaveState(defaultSave());
@@ -107,6 +159,37 @@ export class SaveState {
 
   unlockAbility(key: keyof AbilityState): void {
     this.data.abilities[key] = true;
+    this.persist();
+  }
+
+  hasPreGateSave(): boolean {
+    return this.data.preGateSave !== null;
+  }
+
+  /** Seção 18.12: snapshot independente, criado imediatamente antes da escolha. */
+  createPreGateSave(): Readonly<SaveData> {
+    const snapshot = cloneSaveData({ ...this.data, preGateSave: null, endingReached: null }, false);
+    this.data.preGateSave = snapshot;
+    this.data.endingReached = null;
+    this.persist();
+    return snapshot;
+  }
+
+  /** Restaura atributos, carteira e progresso sem consumir o ponto pré-Portão. */
+  restorePreGateSave(): Readonly<SaveData> | null {
+    if (!this.data.preGateSave) return null;
+    const snapshot = cloneSaveData(this.data.preGateSave, false);
+    this.data = {
+      ...cloneSaveData(snapshot, false),
+      preGateSave: cloneSaveData(snapshot, false),
+      endingReached: null,
+    };
+    this.persist();
+    return this.data;
+  }
+
+  markEndingReached(ending: Exclude<SaveData["endingReached"], null>): void {
+    this.data.endingReached = ending;
     this.persist();
   }
 

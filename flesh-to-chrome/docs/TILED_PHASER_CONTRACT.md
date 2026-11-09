@@ -312,14 +312,14 @@ No runtime atual, a velocidade é aplicada somente enquanto o corpo de Alex est�
 | **press** | prensa hidráulica dedicada | desce na janela ativa; hitbox acompanha o cabeçote |
 | **steam** | jato de vapor sobre bocal fixo | pluma nasce no topo do cano; hitbox acompanha a altura emitida |
 | **mech_arm** | braço mecânico | segmentos se estendem e recolhem; hitbox acompanha a ponta |
-| **crusher** | trituradora | mandíbulas fecham na janela ativa; hitbox acompanha o fechamento |
 
-Os quatro valores usam o ciclo determinístico **inativo → aviso → ativo** do
+Os três valores usam o ciclo determinístico **inativo → aviso → ativo** do
 `TiledPhase2Runtime`. O aviso mantém um contorno amarelo, enquanto a janela
 ativa executa movimento contínuo com entrada, sustentação e retração. A zona
 física é reposicionada e redimensionada a cada frame pela mesma amostra de
-tempo que move a arte; o contato só é fatal onde a máquina ou a pluma está
-visualmente presente. Os valores padrão ficam em
+tempo que move a arte. A prensa permanece letal em qualquer estado quando há
+contato físico com o cabeçote; vapor e braço mecânico só são letais durante a
+janela ativa. Os valores padrão ficam em
 `GAMEPLAY_TIMING.industrialHazards`; cada objeto pode sobrescrever
 `cycle_ms`, `active_ms`, `warning_ms` e `phase_ms` no Tiled.
 
@@ -488,13 +488,12 @@ O Rectangle Object `gate` representa o Portão final. Sua propriedade string
 `choices` usa o valor `chrome,flesh`. Cada zona `ending_choice` possui a
 propriedade string `ending`, com valor `chrome` ou `flesh`.
 
-Esses objetos não são hazards. O runtime deve pausar ou desacelerar a corrida,
-apresentar a decisão e encaminhar a campanha conforme a escolha antes de
-acionar `phase_end`.
-
-No runtime de playtest atual, o Portão e as duas opções são sinalizados
-visualmente, mas a escolha narrativa ainda não é interativa. Em modo de teste,
-alcançar `phase_end` encerra o percurso e retorna ao seletor de fases.
+Esses objetos não são hazards. Ao concluir a Fase 5, a campanha consolida os
+créditos, cria o save narrativo pré-Portão e abre `GateScene`. A cena apresenta
+as opções Chrome e Flesh com teclado, controle ou ponteiro. Chrome encaminha ao
+Final Chrome; Flesh permanece sinalizado como conteúdo em desenvolvimento até
+a implementação da descida. Em modo de teste, alcançar `phase_end` continua
+retornando ao seletor sem alterar o save.
 
 ## 7. Classes planejadas / ainda não formalizadas
 
@@ -581,7 +580,7 @@ phase_end
 
 ~~~text
 tutorial.skill = double_jump
-hazard.kind = press | steam | mech_arm | crusher
+hazard.kind = press | steam | mech_arm
 low_ceiling = volume letal em pé e atravessável somente durante o slide
 deco-low-ceilings.offsetY = 12 px; visual sem colisão
 conveyor.direction = left | right
@@ -854,6 +853,15 @@ Dependendo da versão/exportação do Tiled, a informação exibida na interface
 
 ## 12. Histórico de alterações
 
+### v0.21 — 2026-11-08
+
+- removidos os dois crushers da Fase 2 e seus tiles visuais após playtest dos
+  vãos; o percurso permanece baseado em salto, prensa, vapor e braço mecânico;
+- ajustada a prensa para matar em qualquer contato com o cabeçote, inclusive
+  durante aviso, recolhimento e retorno;
+- definido o objeto `gate` da Fase 5 como gatilho de conclusão da corrida; o
+  `phase_end` posterior permanece apenas como fallback para mapas derivados.
+
 ### v0.20 — 2026-11-03
 
 - integrada a versão atual da `main`, preservando seletor de fases e Multiplayer;
@@ -956,7 +964,7 @@ Dependendo da versão/exportação do Tiled, a informação exibida na interface
 - integrada a exportação `fase-2.json` ao Phaser, substituindo a prévia programática da Fase 2;
 - implementada a colisão da layer **ground** e a leitura de spawn, créditos, checkpoint, clínica e fim de fase;
 - implementadas as esteiras com velocidade adicional, direção e detecção de contato com a superfície;
-- definidos temporariamente **press**, **steam**, **mech_arm** e **crusher** como hazards de morte imediata ao contato;
+- definidos temporariamente **press**, **steam** e **mech_arm** como hazards de morte imediata ao contato;
 - mantidos ciclos e animações individuais dos hazards industriais como trabalho futuro.
 
 ### v0.5 — 2026-10-14
@@ -964,7 +972,7 @@ Dependendo da versão/exportação do Tiled, a informação exibida na interface
 - registrada a Fase 2 como mapa industrial 32 × 32;
 - normalizados nomes, IDs, Points e dimensões dos objetos do blockout;
 - formalizado o esquema autoral de **tutorial**, **conveyor** e **clinic**;
-- registrados os kinds industriais **press**, **steam**, **mech_arm** e **crusher** como pendentes de implementação no Phaser;
+- registrados os kinds industriais **press**, **steam** e **mech_arm** como pendentes de implementação no Phaser;
 - diferenciada a esteira não letal dos objetos da classe **hazard**.
 
 ### v0.4 — 2026-10-14

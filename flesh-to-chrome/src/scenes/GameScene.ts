@@ -18,8 +18,12 @@ import {
   TiledPhase2Runtime,
 } from "../objects/TiledPhase2Runtime";
 import { TiledPhase3Runtime } from "../objects/TiledPhase3Runtime";
-import { TiledPhase4Runtime } from "../objects/TiledPhase4Runtime";
-import { TiledPhase5Runtime } from "../objects/TiledPhase5Runtime";
+import { TILED_FATHER_AD_TEXTURE_KEY, TiledPhase4Runtime } from "../objects/TiledPhase4Runtime";
+import {
+  TILED_PHASE5_BARRICADE_TEXTURE_KEY,
+  TILED_PHASE5_GATE_TEXTURE_KEY,
+  TiledPhase5Runtime,
+} from "../objects/TiledPhase5Runtime";
 import { LEVELS, getNextPhaseId } from "../levels";
 import {
   TILED_FASE1_MAP_KEY,
@@ -122,6 +126,15 @@ const PHASE_BACKGROUND: Record<string, number> = {
 };
 
 const CHECKPOINT_SFX_KEY = "sfx-checkpoint";
+const PHASES_WITH_CLINIC = new Set(["fase1", "fase2-intro", "fase3", "fase4"]);
+
+interface TestClinicChoiceData {
+  completedPhaseId: string;
+  nextPhaseId: string | null;
+  wallet: number;
+  abilities: AbilityState;
+  implant?: keyof AbilityState;
+}
 
 /**
  * v0.3.0 - a Fase 1 volta a usar o mapa Tiled real
@@ -150,6 +163,12 @@ export class GameScene extends Phaser.Scene {
   private scanOverlay?: Phaser.GameObjects.Rectangle;
   private activeAbilities!: AbilityState;
   private restarting = false;
+  private awaitingTestClinicChoice = false;
+  private testClinicWatchSelected = true;
+  private testClinicPrompt?: Phaser.GameObjects.Container;
+  private testClinicYesText?: Phaser.GameObjects.Text;
+  private testClinicNoText?: Phaser.GameObjects.Text;
+  private pendingTestClinicData?: TestClinicChoiceData;
   private levelLengthPx = 0;
   private checkpointInteraction?: Phaser.Time.TimerEvent;
 
@@ -171,6 +190,12 @@ export class GameScene extends Phaser.Scene {
     this.pauseText = undefined;
     this.scanOverlay = undefined;
     this.checkpointInteraction = undefined;
+    this.awaitingTestClinicChoice = false;
+    this.testClinicWatchSelected = true;
+    this.testClinicPrompt = undefined;
+    this.testClinicYesText = undefined;
+    this.testClinicNoText = undefined;
+    this.pendingTestClinicData = undefined;
     this.data$ = {
       phaseId: data.phaseId,
       testMode: data.testMode ?? false,
@@ -357,6 +382,12 @@ export class GameScene extends Phaser.Scene {
     if (!this.textures.exists(TILED_CHECKPOINT_TEXTURE_KEY)) {
       this.load.image(TILED_CHECKPOINT_TEXTURE_KEY, this.checkpointTvUrl().href);
     }
+    if (!this.textures.exists(TILED_FATHER_AD_TEXTURE_KEY)) {
+      this.load.image(
+        TILED_FATHER_AD_TEXTURE_KEY,
+        new URL("../assets/narrative/father/propaganda-pai.png", import.meta.url).href,
+      );
+    }
     if (!this.cache.tilemap.exists(TILED_FASE4_MAP_KEY)) {
       this.cache.tilemap.add(TILED_FASE4_MAP_KEY, {
         format: Phaser.Tilemaps.Formats.TILED_JSON,
@@ -382,6 +413,18 @@ export class GameScene extends Phaser.Scene {
     ];
     for (const asset of assets) {
       if (!this.textures.exists(asset.key)) this.load.image(asset.key, asset.url.href);
+    }
+    if (!this.textures.exists(TILED_PHASE5_BARRICADE_TEXTURE_KEY)) {
+      this.load.image(
+        TILED_PHASE5_BARRICADE_TEXTURE_KEY,
+        new URL("../assets/props/obstacles/phase5-barricade.png", import.meta.url).href,
+      );
+    }
+    if (!this.textures.exists(TILED_PHASE5_GATE_TEXTURE_KEY)) {
+      this.load.image(
+        TILED_PHASE5_GATE_TEXTURE_KEY,
+        new URL("../assets/narrative/gate/portao.png", import.meta.url).href,
+      );
     }
     if (!this.textures.exists(TILED_CHECKPOINT_TEXTURE_KEY)) {
       this.load.image(TILED_CHECKPOINT_TEXTURE_KEY, this.checkpointTvUrl().href);
@@ -426,7 +469,9 @@ export class GameScene extends Phaser.Scene {
     this.credits = new CreditsSystem(this.data$.wallet, this.data$.consolidatedCreditIds);
     this.hud = new HUD(this);
     this.hud.setDashUnlocked(this.activeAbilities.thrusters);
-    this.events.on("player-attack", () => this.hud.flashPrompt("ATAQUE", 220));
+    this.events.on("player-attack", (_x: number, _y: number, showFeedback = true) => {
+      if (showFeedback) this.hud.flashPrompt("ATAQUE", 300);
+    });
     this.events.on("player-dash-start", (_x: number, _y: number, cooldownMs: number) => {
       this.hud.flashPrompt("DASH", 220);
       this.hud.beginDashCooldown(cooldownMs);
@@ -688,19 +733,34 @@ export class GameScene extends Phaser.Scene {
     }
     this.updateHud();
 
+    const nextPhaseId = getNextPhaseId(this.data$.phaseId);
+
     if (this.data$.testMode) {
+      if (PHASES_WITH_CLINIC.has(this.data$.phaseId)) {
+        this.showTestClinicChoice({
+          completedPhaseId: this.data$.phaseId,
+          nextPhaseId,
+          wallet: this.credits.getTotal(),
+          abilities: this.activeAbilities,
+          implant: implantOverride,
+        });
+        return;
+      }
       this.hud.flashPrompt("Teste concluído — retornando ao seletor", 900);
       this.time.delayedCall(700, () => this.scene.start("MenuScene"));
       return;
     }
 
-    const nextPhaseId = getNextPhaseId(this.data$.phaseId);
     // A clínica de George instala um novo implante ao final de cada uma das
     // quatro primeiras fases (seção 11.1) e continua para o próximo blockout
     // Tiled registrado em `PHASE_ORDER`.
-    const phasesWithClinic = new Set(["fase1", "fase2-intro", "fase3", "fase4"]);
-    const destination = destinationOverride ??
-      (phasesWithClinic.has(this.data$.phaseId) ? "ClinicScene" : "EndingScene");
+    const destination = destinationOverride ?? (
+      PHASES_WITH_CLINIC.has(this.data$.phaseId)
+        ? "ClinicScene"
+        : this.data$.phaseId === "fase5"
+          ? "GateScene"
+          : "EndingScene"
+    );
 
     this.time.delayedCall(300, () => {
       this.scene.start(destination, {
@@ -709,8 +769,123 @@ export class GameScene extends Phaser.Scene {
         wallet: this.credits.getTotal(),
         abilities: this.activeAbilities,
         implant: implantOverride,
+        testMode: false,
       });
     });
+  }
+
+  /**
+   * O seletor de fases não avança nem grava a campanha, mas agora oferece a
+   * cena narrativa correspondente em vez de descartá-la silenciosamente.
+   */
+  private showTestClinicChoice(data: TestClinicChoiceData): void {
+    this.restarting = true;
+    this.awaitingTestClinicChoice = true;
+    this.testClinicWatchSelected = true;
+    this.pendingTestClinicData = data;
+    this.player.sprite.setVelocity(0, 0);
+    this.physics.world.pause();
+
+    const panel = this.add.rectangle(0, 0, 720, 270, 0x070b13, 0.97)
+      .setStrokeStyle(2, 0x7cfcea, 0.9);
+    const title = this.add.text(0, -88, "FASE CONCLUÍDA", {
+      fontFamily: "Courier New, monospace",
+      fontSize: "29px",
+      color: "#7CFCEA",
+    }).setOrigin(0.5);
+    const question = this.add.text(0, -32, "Deseja assistir à cutscene da clínica de George?", {
+      fontFamily: "Courier New, monospace",
+      fontSize: "20px",
+      color: "#e8ecff",
+      align: "center",
+      wordWrap: { width: 640 },
+    }).setOrigin(0.5);
+    this.testClinicYesText = this.add.text(-145, 45, "SIM — ASSISTIR", {
+      fontFamily: "Courier New, monospace",
+      fontSize: "20px",
+      padding: { x: 12, y: 8 },
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    this.testClinicNoText = this.add.text(145, 45, "NÃO — SELETOR", {
+      fontFamily: "Courier New, monospace",
+      fontSize: "20px",
+      padding: { x: 12, y: 8 },
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    const help = this.add.text(0, 102, "← / → para escolher   •   ENTER / A para confirmar", {
+      fontFamily: "Courier New, monospace",
+      fontSize: "14px",
+      color: "#8892b0",
+    }).setOrigin(0.5);
+
+    this.testClinicYesText.on("pointerover", () => this.setTestClinicSelection(true));
+    this.testClinicNoText.on("pointerover", () => this.setTestClinicSelection(false));
+    this.testClinicYesText.on("pointerdown", () => {
+      this.setTestClinicSelection(true);
+      this.confirmTestClinicChoice();
+    });
+    this.testClinicNoText.on("pointerdown", () => {
+      this.setTestClinicSelection(false);
+      this.confirmTestClinicChoice();
+    });
+
+    this.testClinicPrompt = this.add
+      .container(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, [
+        panel,
+        title,
+        question,
+        this.testClinicYesText,
+        this.testClinicNoText,
+        help,
+      ])
+      .setScrollFactor(0)
+      .setDepth(2200);
+    this.renderTestClinicSelection();
+  }
+
+  private setTestClinicSelection(watch: boolean): void {
+    this.testClinicWatchSelected = watch;
+    this.renderTestClinicSelection();
+  }
+
+  private renderTestClinicSelection(): void {
+    this.testClinicYesText
+      ?.setColor(this.testClinicWatchSelected ? "#071017" : "#8892b0")
+      .setBackgroundColor(this.testClinicWatchSelected ? "#7CFCEA" : "#151a27");
+    this.testClinicNoText
+      ?.setColor(!this.testClinicWatchSelected ? "#071017" : "#8892b0")
+      .setBackgroundColor(!this.testClinicWatchSelected ? "#7CFCEA" : "#151a27");
+  }
+
+  private updateTestClinicChoice(): void {
+    if (
+      this.input$.isMenuLeftJustDown()
+      || this.input$.isMenuUpJustDown()
+    ) this.setTestClinicSelection(true);
+    if (
+      this.input$.isMenuRightJustDown()
+      || this.input$.isMenuDownJustDown()
+    ) this.setTestClinicSelection(false);
+    if (this.input$.isCancelJustDown()) {
+      this.setTestClinicSelection(false);
+      this.confirmTestClinicChoice();
+      return;
+    }
+    if (this.input$.isConfirmJustDown()) this.confirmTestClinicChoice();
+  }
+
+  private confirmTestClinicChoice(): void {
+    if (!this.awaitingTestClinicChoice) return;
+    const watchClinic = this.testClinicWatchSelected;
+    const clinicData = this.pendingTestClinicData;
+    this.awaitingTestClinicChoice = false;
+    this.testClinicPrompt?.destroy();
+    this.testClinicPrompt = undefined;
+    this.physics.world.resume();
+
+    if (watchClinic && clinicData) {
+      this.scene.start("ClinicScene", { ...clinicData, testMode: true });
+    } else {
+      this.scene.start("MenuScene");
+    }
   }
 
   private handlePlayerDeath(): void {
@@ -791,11 +966,11 @@ export class GameScene extends Phaser.Scene {
       this.tweens.pauseAll();
       this.time.paused = true;
       this.anims.pauseAll();
-      const testModeHelp = this.data$.testMode
+      const menuHelp = this.data$.testMode
         ? "\nS / ↓ para voltar ao seletor de fases"
-        : "";
+        : "\nS / ↓ para voltar ao menu principal";
       this.pauseText = this.add
-        .text(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, `PAUSADO\nESC / START para voltar | ENTER / A para reiniciar a fase${testModeHelp}`, {
+        .text(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, `PAUSADO\nESC / START para voltar | ENTER / A para reiniciar a fase${menuHelp}`, {
           fontFamily: "Courier New, monospace",
           fontSize: "26px",
           color: "#ffffff",
@@ -817,6 +992,11 @@ export class GameScene extends Phaser.Scene {
   }
 
   update(_time: number, delta: number): void {
+    if (this.awaitingTestClinicChoice) {
+      this.updateTestClinicChoice();
+      this.input$.postUpdate();
+      return;
+    }
     if (this.restarting) return;
 
     if (this.input$.isPauseJustDown()) {
@@ -824,7 +1004,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     if (this.isPaused) {
-      if (this.data$.testMode && this.input$.isMenuDownJustDown()) {
+      if (this.input$.isMenuDownJustDown()) {
         this.togglePause();
         this.scene.start("MenuScene");
         this.input$.postUpdate();

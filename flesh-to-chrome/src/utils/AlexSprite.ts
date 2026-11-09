@@ -27,11 +27,16 @@ export const ALEX_EYES_TEXTURE_KEY = "alex-eyes";
 export const ALEX_DASH_TEXTURE_KEY = "alex-dash";
 export const ALEX_RUN_ANIM = "alex-run";
 export const ALEX_HURT_ANIM = "alex-hurt";
+export const ALEX_ATTACK_ANIM = "alex-attack";
 export const ALEX_CHECKPOINT_ANIM = "alex-checkpoint-play";
 export const ALEX_SLIDE_FRAME = frameIndex(33, 2);
 
 const WALK_RIGHT = { row: 11, frames: 9 };
 const HURT = { row: 20, frames: 6 };
+// Bloco LPC de soco voltado para a DIREITA. Os seis frames já existem em
+// todas as variantes de Alex; antes o jogo ignorava essa animação e exibia
+// somente um arco gráfico provisório.
+const ATTACK_RIGHT = { row: 15, frames: 6 };
 // Bloco LPC de personagem sentado, voltado para a DIREITA: Alex fica de
 // perfil para a TV. A linha 35 usada anteriormente é uma pose em pé; os dois
 // frames sentados corretos estão na linha 33.
@@ -53,6 +58,10 @@ export function alexCheckpointAnimationKey(textureKey: string): string {
   return textureKey === ALEX_TEXTURE_KEY
     ? ALEX_CHECKPOINT_ANIM
     : `${textureKey}-checkpoint-play`;
+}
+
+export function alexAttackAnimationKey(textureKey: string): string {
+  return textureKey === ALEX_TEXTURE_KEY ? ALEX_ATTACK_ANIM : `${textureKey}-attack`;
 }
 
 export function ensureAlexAnimations(scene: Phaser.Scene, textureKey = ALEX_TEXTURE_KEY): void {
@@ -78,6 +87,21 @@ export function ensureAlexAnimations(scene: Phaser.Scene, textureKey = ALEX_TEXT
         end: frameIndex(HURT.row, HURT.frames - 1),
       }),
       frameRate: 8,
+      repeat: 0,
+    });
+  }
+
+  const attackAnimationKey = alexAttackAnimationKey(textureKey);
+  if (!scene.anims.exists(attackAnimationKey)) {
+    scene.anims.create({
+      key: attackAnimationKey,
+      frames: scene.anims.generateFrameNumbers(textureKey, {
+        start: frameIndex(ATTACK_RIGHT.row, 0),
+        end: frameIndex(ATTACK_RIGHT.row, ATTACK_RIGHT.frames - 1),
+      }),
+      // O golpe precisa permanecer legível no runner e acompanhar a janela
+      // ativa de colisão, em vez de terminar em apenas 250 ms.
+      frameRate: 16,
       repeat: 0,
     });
   }
