@@ -113,6 +113,10 @@ assert.doesNotMatch(gate, /markEndingReached\(/,
   "escolher Chrome ainda não significa concluir o final");
 assert.match(gate, /\{ ending: "chrome", testMode: this\.testMode \}/);
 assert.match(gate, /Conteúdo em desenvolvimento/);
+assert.match(gate, /this\.testMode && this\.input\$\.isCancelJustDown\(\)[\s\S]*?this\.scene\.start\("MenuScene"\)/,
+  "ESC/B deve sair diretamente da prévia do Portão");
+assert.match(gate, /ESC \/ B voltar ao seletor/,
+  "prévia deve informar o comando de retorno ao seletor");
 assert.match(gate, /isMenuLeftJustDown\(\)[\s\S]*?this\.selected = "chrome"/);
 assert.match(gate, /isMenuRightJustDown\(\)[\s\S]*?this\.selected = "flesh"/);
 assert.match(gate, /VOLTAR À ESCOLHA/);

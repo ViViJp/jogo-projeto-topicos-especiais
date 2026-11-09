@@ -77,7 +77,10 @@ export class GateScene extends Phaser.Scene {
 
     this.createChoice("chrome", SCREEN_WIDTH / 2 - 220, "CHROME", "Aceitar a conversão completa");
     this.createChoice("flesh", SCREEN_WIDTH / 2 + 220, "FLESH", "Recusar e iniciar a descida");
-    this.add.text(SCREEN_WIDTH / 2, SCREEN_HEIGHT - 42, "← → / DIRECIONAL escolher   ENTER / A confirmar", {
+    const controlsHelp = this.testMode
+      ? "← → / DIRECIONAL escolher   ENTER / A confirmar   ESC / B voltar ao seletor"
+      : "← → / DIRECIONAL escolher   ENTER / A confirmar";
+    this.add.text(SCREEN_WIDTH / 2, SCREEN_HEIGHT - 42, controlsHelp, {
       fontFamily: "Courier New, monospace",
       fontSize: "15px",
       color: "#565f80",
@@ -94,6 +97,11 @@ export class GateScene extends Phaser.Scene {
       if (this.input$.isConfirmJustDown() || this.input$.isCancelJustDown()) {
         this.closeDevelopmentNotice();
       }
+      this.input$.postUpdate();
+      return;
+    }
+    if (this.testMode && this.input$.isCancelJustDown()) {
+      this.scene.start("MenuScene");
       this.input$.postUpdate();
       return;
     }

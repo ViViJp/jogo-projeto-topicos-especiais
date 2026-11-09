@@ -64,7 +64,8 @@ Chrome é registrado somente após a confirmação do último quadro.
 2. Avance pelas quatro clínicas e observe a mudança visual e textual de George.
 3. Na Fase 4, confirme que a propaganda exibe o asset do pai e o texto narrativo.
 4. No seletor de fases, abra **Portão — escolha final (teste)** e confirme que
-   Chrome e Flesh podem ser testados sem criar snapshot ou modificar o save.
+   Chrome e Flesh podem ser testados sem criar snapshot ou modificar o save;
+   pressione **ESC/B** e confirme o retorno direto ao seletor.
 5. No Portão, valide que esquerda seleciona Chrome, direita seleciona Flesh e
    que cima/baixo alternam entre as opções.
 6. Selecione Flesh e feche o aviso tanto pelo botão **Voltar à escolha** quanto
