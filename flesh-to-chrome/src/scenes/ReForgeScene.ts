@@ -1,11 +1,10 @@
 import Phaser from "phaser";
-import { SCREEN_HEIGHT, SCREEN_WIDTH } from "../config/GameConfig";
 import { descentStepAt } from "../systems/DescentProgression";
 import { InputManager } from "../systems/InputManager";
 import { SaveState } from "../systems/SaveState";
 
 const REFORGE_BG = "reforge-bg";
-const REFORGE_FRAME = "reforge-frame";
+const REFORGE_FATHER = "reforge-father";
 
 const IMPLANT_NAMES = {
   legs: "PERNAS MECANICAS",
@@ -27,7 +26,9 @@ export class ReForgeScene extends Phaser.Scene {
   preload(): void {
     if (!this.textures.exists(REFORGE_BG)) {
       this.load.image(REFORGE_BG, new URL("../assets/narrative/recycling/unidade-reciclagem.png", import.meta.url).href);
-      this.load.image(REFORGE_FRAME, new URL("../assets/narrative/recycling/holograma-frame.png", import.meta.url).href);
+    }
+    if (!this.textures.exists(REFORGE_FATHER)) {
+      this.load.image(REFORGE_FATHER, new URL("../assets/narrative/recycling/holograma-pai.png", import.meta.url).href);
     }
   }
 
@@ -42,24 +43,33 @@ export class ReForgeScene extends Phaser.Scene {
       this.scene.start("MenuScene");
       return;
     }
+    const width = this.scale.width;
+    const height = this.scale.height;
     this.cameras.main.setBackgroundColor(0x071015);
-    this.add.image(SCREEN_WIDTH / 2, 260, REFORGE_BG).setDisplaySize(720, 405);
-    this.add.image(SCREEN_WIDTH / 2, 248, REFORGE_FRAME).setDisplaySize(280, 190).setAlpha(0.72);
-    this.add.text(SCREEN_WIDTH / 2, 45, "REFORGE INDUSTRIES", {
+    this.add.image(width / 2, 270, REFORGE_BG).setDisplaySize(300, 400);
+    const fatherHologram = this.add.image(width / 2, 255, REFORGE_FATHER)
+      .setDisplaySize(180, 216)
+      .setVisible(false);
+    fatherHologram.texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
+    const fatherCaption = this.add.text(width / 2, 385, "AVATAR REFORGE // PAI DE ALEX", {
+      fontFamily: "Courier New, monospace", fontSize: "13px", color: "#7CFCEA",
+      backgroundColor: "#071015dd", padding: { x: 7, y: 4 },
+    }).setOrigin(0.5).setVisible(false);
+    this.add.text(width / 2, 45, "REFORGE INDUSTRIES", {
       fontFamily: "Courier New, monospace", fontSize: "34px", color: "#7CFCEA", letterSpacing: 5,
     }).setOrigin(0.5);
     const implant = IMPLANT_NAMES[step.implant];
     const pages = [
       `${step.memoryTitle}\n${step.memory}`,
-      `CROMO IDENTIFICADO: ${implant}\nValor recuperavel confirmado. Iniciando extracao.`,
+      `CROMO IDENTIFICADO: ${implant}\nAVATAR REFORGE: peça avaliada. O cromo conserva valor; a carne será substituída.`,
       `BIOPRINTING EM CURSO\nSubstituto organico imperfeito reconstruido.`,
       `${implant} REMOVIDO\nA habilidade correspondente nao esta mais disponivel.`,
     ];
-    const body = this.add.text(SCREEN_WIDTH / 2, 525, pages[0], {
+    const body = this.add.text(width / 2, height - 195, pages[0], {
       fontFamily: "Courier New, monospace", fontSize: "21px", color: "#e8ecff", align: "center",
       lineSpacing: 9, wordWrap: { width: 920 },
     }).setOrigin(0.5);
-    const counter = this.add.text(SCREEN_WIDTH - 90, SCREEN_HEIGHT - 48, "1/4", {
+    const counter = this.add.text(width - 90, height - 48, "1/4", {
       fontFamily: "Courier New, monospace", fontSize: "15px", color: "#77809d",
     }).setOrigin(0.5);
     const advance = () => {
@@ -68,6 +78,8 @@ export class ReForgeScene extends Phaser.Scene {
         this.page += 1;
         body.setText(pages[this.page]);
         counter.setText(`${this.page + 1}/${pages.length}`);
+        fatherHologram.setVisible(this.page >= 1);
+        fatherCaption.setVisible(this.page >= 1);
         return;
       }
       this.finished = true;
@@ -93,7 +105,7 @@ export class ReForgeScene extends Phaser.Scene {
     };
     this.advancePage = advance;
     this.input.on("pointerdown", advance);
-    this.add.text(SCREEN_WIDTH / 2, SCREEN_HEIGHT - 48, "ENTER / A para continuar", {
+    this.add.text(width / 2, height - 48, "ENTER / A para continuar", {
       fontFamily: "Courier New, monospace", fontSize: "16px", color: "#77809d",
     }).setOrigin(0.5);
   }

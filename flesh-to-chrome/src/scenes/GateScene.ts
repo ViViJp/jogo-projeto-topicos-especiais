@@ -152,15 +152,8 @@ export class GateScene extends Phaser.Scene {
       save.beginDescent();
       const data = save.get();
       this.music?.stop();
-      this.scene.start("GameScene", {
-        phaseId: "fase5",
-        checkpointX: 0,
-        checkpointY: 0,
-        consolidatedCreditIds: [],
-        wallet: 0,
-        abilities: data.abilities,
-        descent: true,
-      });
+      if (!data.descentState.active) return;
+      this.scene.start("GeorgeRefusalScene");
       return;
     }
 

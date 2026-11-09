@@ -125,10 +125,13 @@ const retry = read("src/scenes/DescentRetryScene.ts");
 const reforge = read("src/scenes/ReForgeScene.ts");
 const epilogue = read("src/scenes/EpilogueScene.ts");
 const descentRuntime = read("src/objects/DescentGlitchRuntime.ts");
+const georgeRefusal = read("src/scenes/GeorgeRefusalScene.ts");
+const gdd = read("docs/gdd.md");
 const narrativePlaytest = read("docs/NARRATIVE_FLOW_PLAYTEST.md");
 
 assert.match(main, /PrologueScene/);
 assert.match(main, /GateScene/);
+assert.match(main, /GeorgeRefusalScene/);
 assert.match(menu, /Continuar do Portão/);
 assert.match(menu, /restorePreGateSave\(\)/);
 assert.match(menu, /this\.scene\.start\("PrologueScene"\)/);
@@ -164,6 +167,7 @@ assert.doesNotMatch(gate, /markEndingReached\(/,
   "escolher Chrome ainda não significa concluir o final");
 assert.match(gate, /\{ ending: "chrome", testMode: this\.testMode \}/);
 assert.match(gate, /beginDescent\(\)/);
+assert.match(gate, /this\.scene\.start\("GeorgeRefusalScene"\)/);
 assert.doesNotMatch(gate, /Conteúdo em desenvolvimento/);
 assert.match(gate, /this\.testMode && this\.input\$\.isCancelJustDown\(\)[\s\S]*?this\.scene\.start\("MenuScene"\)/,
   "ESC/B deve sair diretamente da prévia do Portão");
@@ -177,6 +181,15 @@ assert.match(ending, /FINAL HOLLOW/);
 assert.match(ending, /ALEX\? FILHO\?/);
 assert.match(retry, /unica segunda oportunidade/);
 assert.match(reforge, /completeBioprinting\(\)/);
+assert.match(reforge, /recycling\/holograma-pai\.png/);
+assert.match(reforge, /fatherHologram\.setVisible\(this\.page >= 1\)/);
+assert.match(georgeRefusal, /george-angry\/george-angry\.png/);
+assert.match(georgeRefusal, /Eu não sou sua obra, George/);
+assert.match(georgeRefusal, /recuperar cada motivo que deixei para trás/);
+assert.match(georgeRefusal, /this\.scene\.start\("GameScene"/);
+assert.match(gdd, /30 segundos por setor/);
+assert.match(gdd, /holograma corporativo com o rosto do pai/);
+assert.match(gdd, /Cena de reprovação de George antes do primeiro setor/);
 assert.match(epilogue, /ending: "flesh" \| "hollow"/);
 assert.match(descentRuntime, /memory_glitch/);
 for (const map of [
@@ -201,6 +214,6 @@ assert.match(phase4, /GLITCH CORP \/\/ PROGRAMA DE ASCENSÃO/);
 assert.match(phase4, /O rosto da campanha é familiar/);
 assert.match(narrativePlaytest, /Portão — escolha final \(teste\)/);
 assert.match(narrativePlaytest, /endingReached/);
-assert.match(narrativePlaytest, /sem criar snapshot ou modificar o save/);
+assert.match(narrativePlaytest, /reprova a decisão de Alex/);
 
 console.log("Narrativa: Chrome, descida, retry, ReForge, Flesh, Hollow e epilogo reproduziveis OK.");

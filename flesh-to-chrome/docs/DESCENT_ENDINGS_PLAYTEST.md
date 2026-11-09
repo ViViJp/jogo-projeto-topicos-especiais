@@ -16,8 +16,13 @@
 
 1. Use `Continuar do Portao`, escolha Flesh e percorra Topo, Corporativo,
    Meio Urbano e Industrial.
-2. Em cada setor, atravesse o `memory_glitch` antes da saida.
-3. Complete a sequencia ReForge depois de cada memoria.
+2. Antes do Topo, confirme a cena em que George reprova a decisao, recusa a
+   retirada e Alex afirma que nao e uma obra.
+3. Em cada setor, atravesse o `memory_glitch` antes da saida e confirme que a
+   lembranca explica um motivo humano para abandonar o cromo.
+4. Complete a sequencia ReForge depois de cada memoria. Antes da retirada,
+   confirme que o holograma corporativo mostra o rosto do pai de Alex durante
+   a avaliacao/venda do implante.
 
 | Setor | Glitch | Remocao | Habilidade que deve desaparecer |
 | --- | --- | --- | --- |
@@ -26,7 +31,7 @@
 | Meio Urbano | amigos | bracos | ataque |
 | Industrial | familia | pernas | salto duplo |
 
-4. Resultado esperado: epilogo no Esgoto, `FINAL FLESH` e as quatro
+5. Resultado esperado: epilogo no Esgoto, `FINAL FLESH` e as quatro
    habilidades em `false`.
 
 ## Final Hollow e retry especial

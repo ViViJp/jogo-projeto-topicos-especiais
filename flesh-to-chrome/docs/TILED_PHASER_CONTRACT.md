@@ -491,15 +491,23 @@ propriedade string `ending`, com valor `chrome` ou `flesh`.
 Esses objetos não são hazards. Ao concluir a Fase 5, a campanha consolida os
 créditos, cria o save narrativo pré-Portão e abre `GateScene`. A cena apresenta
 as opções Chrome e Flesh com teclado, controle ou ponteiro. Chrome encaminha ao
-Final Chrome; Flesh permanece sinalizado como conteúdo em desenvolvimento até
-a implementação da descida. Em modo de teste, alcançar `phase_end` continua
-retornando ao seletor sem alterar o save.
+Final Chrome; Flesh abre a reprovação de George e inicia a descida no Topo. Em
+modo de teste, alcançar `phase_end` continua retornando ao seletor sem alterar o
+save enquanto a descida não tiver sido confirmada.
+
+### 6.17 **memory_glitch**
+
+Point Object exclusivo da descida, existente uma vez em cada mapa do Topo,
+Corporativo, Meio Urbano e Industrial. A propriedade booleana `descent_only`
+deve ser `true`. O objeto representa o núcleo de uma memória reprimida e só é
+ativado quando o setor está sendo executado no contexto Flesh/Hollow.
 
 ## 7. Classes planejadas / ainda não formalizadas
 
 Esta classe só entra no contrato oficial quando for efetivamente criada no mapa e implementada:
 
 - **animated_prop**
+- **descent_spawn** — início do recorte de aproximadamente 30 segundos usado na descida.
 
 Ao criar uma delas, documentar:
 

@@ -103,6 +103,7 @@ const runtimeImages = [
   "src/assets/npcs/george/george-clinic/george-clinic-01.png",
   "src/assets/npcs/george/george-clinic/george-clinic-02.png",
   "src/assets/npcs/george/george-clinic/george-clinic-03.png",
+  "src/assets/npcs/george/george-angry/george-angry.png",
   "src/assets/scenes/clinic/clinic-bg.png",
   "src/assets/player/alex-chrome/alex-chrome.png",
   "src/assets/player/alex-flesh-happy/alex-flesh-happy.png",

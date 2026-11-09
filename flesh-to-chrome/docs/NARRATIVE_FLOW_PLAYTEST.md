@@ -1,6 +1,6 @@
-# Validação — fluxo narrativo até o Final Chrome
+# Validação — fluxo narrativo e finais
 
-Documento da branch `feat/campaign-gate-chrome`.
+Documento atualizado para a branch de descida Flesh/Hollow.
 
 ## Fluxo implementado
 
@@ -13,7 +13,8 @@ Novo Jogo
   → Save pré-Portão
   → Escolha Chrome/Flesh
       Chrome → Final Chrome → Menu → Continuar do Portão
-      Flesh  → aviso de conteúdo em desenvolvimento
+      Flesh  → reprovação de George → descida → glitches → ReForge
+             → Final Flesh ou Hollow
 ```
 
 ## Regras narrativas
@@ -29,14 +30,17 @@ Novo Jogo
   como parte do programa de ascensão da Glitch Corp e deixa explícito que Alex
   reconhece o rosto do pai.
 - O Portão cria um snapshot independente antes de qualquer escolha.
-- O seletor de fases permite abrir o Portão diretamente em modo de teste;
-  nessa prévia, nenhum snapshot é criado e nenhuma escolha altera o save real.
+- O seletor de fases permite abrir o Portão diretamente em modo de teste. Abrir
+  e sair com ESC/B não cria snapshot; confirmar Flesh inicia a descida de teste
+  com os quatro implantes e passa a usar o save da cadeia narrativa.
 - Chrome apresenta o reencontro físico com `pai-portrait.png`: o pai reconhece
   Alex, mas Alex não o reconhece e continua andando.
 - O Final Chrome só é registrado em `endingReached` depois que o jogador
   confirma o último quadro. Selecionar Chrome ou apenas abrir o epílogo não é
   suficiente para marcar o final como concluído.
-- Flesh não altera o save e permanece marcado como conteúdo em desenvolvimento.
+- Flesh inicia com a cena em que George reprova a decisão de Alex e se recusa a
+  desmontar sua obra. Cada glitch recupera uma memória/motivação, e cada
+  procedimento ReForge mostra o holograma corporativo do pai antes da retirada.
 - `Continuar do Portão` restaura fase, checkpoint, créditos, carteira e os
   quatro implantes sem consumir o snapshot.
 
@@ -52,10 +56,10 @@ npm run build
 ```
 
 O teste `test:narrative` valida cenas registradas, assets narrativos, arco das
-quatro clínicas, transição da Fase 5, escolha Chrome, placeholder Flesh e a
+quatro clínicas, transição da Fase 5, escolhas Chrome/Flesh, recusa de George e a
 criação/restauração real do save pré-Portão em `localStorage` simulado. Também
-valida que o Portão pode ser aberto pelo seletor sem persistência e que o Final
-Chrome é registrado somente após a confirmação do último quadro.
+valida glitches, retirada sequencial dos implantes, retry, ReForge e os três
+finais reproduzíveis.
 
 ## Roteiro manual
 
@@ -63,13 +67,12 @@ Chrome é registrado somente após a confirmação do último quadro.
    a família, o pai antes da ascensão e o pai convertido no jornal.
 2. Avance pelas quatro clínicas e observe a mudança visual e textual de George.
 3. Na Fase 4, confirme que a propaganda exibe o asset do pai e o texto narrativo.
-4. No seletor de fases, abra **Portão — escolha final (teste)** e confirme que
-   Chrome e Flesh podem ser testados sem criar snapshot ou modificar o save;
-   pressione **ESC/B** e confirme o retorno direto ao seletor.
+4. No seletor de fases, abra **Portão — escolha final (teste)**, pressione
+   **ESC/B** e confirme o retorno sem criar snapshot.
 5. No Portão, valide que esquerda seleciona Chrome, direita seleciona Flesh e
    que cima/baixo alternam entre as opções.
-6. Selecione Flesh e feche o aviso tanto pelo botão **Voltar à escolha** quanto
-   por teclado ou controle.
+6. Selecione Flesh e confirme a cena de confronto: George chama Alex de sua
+   obra, Alex explica por que abandonará o cromo e a descida começa no Topo.
 7. Complete a Fase 5 na campanha e confirme a abertura normal do Portão.
 8. Selecione Chrome e avance até o quarto quadro do Final Chrome sem confirmá-lo;
    valide que `endingReached` ainda não foi atualizado.
@@ -77,3 +80,5 @@ Chrome é registrado somente após a confirmação do último quadro.
    registrado somente nesse momento.
 10. No menu, selecione **Continuar do Portão**.
 11. Confirme que o Portão foi restaurado com carteira e implantes preservados.
+12. Siga `DESCENT_ENDINGS_PLAYTEST.md` para validar memórias, holograma do pai,
+    bioprinting, perda de habilidades e finais Flesh/Hollow.

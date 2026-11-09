@@ -1,0 +1,193 @@
+import Phaser from "phaser";
+import { InputManager } from "../systems/InputManager";
+import { SaveState } from "../systems/SaveState";
+import type { GameSceneData } from "./GameScene";
+
+const BACKGROUND_KEY = "george-refusal-background";
+const GEORGE_ANGRY_KEY = "george-angry";
+const ALEX_COMPLETE_KEY = "george-refusal-alex";
+const MUSIC_KEY = "george-refusal-music";
+
+const DIALOGUE = [
+  {
+    speaker: "GEORGE",
+    text: "Você voltou do Portão sem atravessá-lo. Diga que foi uma falha do sistema.",
+  },
+  {
+    speaker: "ALEX",
+    text: "Eu recusei. Quando pediram o que ainda restava de mim, percebi que já não sabia por quem eu tinha subido.",
+  },
+  {
+    speaker: "GEORGE",
+    text: "Você chegou ao topo por causa deste corpo. Pernas, braços, olhos, propulsores — tudo funciona.",
+  },
+  {
+    speaker: "ALEX",
+    text: "Funciona para correr. Não para lembrar. Minha família, minha rua e meus amigos viraram ruído atrás do cromo.",
+  },
+  {
+    speaker: "ALEX",
+    text: "Eu subi para mudar a vida deles. Se preciso apagá-los para chegar ao topo, então o topo não vale o que tirei de mim.",
+  },
+  {
+    speaker: "GEORGE",
+    text: "Não vou desmontar minha maior obra por uma crise de consciência. Meu nome está em cada peça que coloquei em você.",
+  },
+  {
+    speaker: "ALEX",
+    text: "Eu não sou sua obra, George. Vou descer e recuperar cada motivo que deixei para trás.",
+  },
+  {
+    speaker: "GEORGE",
+    text: "A carne é fraca. Quando se arrepender, não haverá nada de mim para salvá-lo.",
+  },
+  {
+    speaker: "ALEX",
+    text: "É justamente isso que eu preciso.",
+  },
+] as const;
+
+export class GeorgeRefusalScene extends Phaser.Scene {
+  private input$!: InputManager;
+  private pageIndex = 0;
+  private finished = false;
+  private speakerText!: Phaser.GameObjects.Text;
+  private dialogueText!: Phaser.GameObjects.Text;
+  private counterText!: Phaser.GameObjects.Text;
+  private george!: Phaser.GameObjects.Image;
+  private alex!: Phaser.GameObjects.Sprite;
+  private music?: Phaser.Sound.BaseSound;
+
+  constructor() {
+    super("GeorgeRefusalScene");
+  }
+
+  preload(): void {
+    if (!this.textures.exists(BACKGROUND_KEY)) {
+      this.load.image(
+        BACKGROUND_KEY,
+        new URL("../assets/scenes/clinic/clinic-bg.png", import.meta.url).href,
+      );
+    }
+    if (!this.textures.exists(GEORGE_ANGRY_KEY)) {
+      this.load.image(
+        GEORGE_ANGRY_KEY,
+        new URL("../assets/npcs/george/george-angry/george-angry.png", import.meta.url).href,
+      );
+    }
+    if (!this.textures.exists(ALEX_COMPLETE_KEY)) {
+      this.load.spritesheet(
+        ALEX_COMPLETE_KEY,
+        new URL("../assets/player/alex-dash/alex-dash.png", import.meta.url).href,
+        { frameWidth: 64, frameHeight: 64 },
+      );
+    }
+    if (!this.cache.audio.exists(MUSIC_KEY)) {
+      this.load.audio(
+        MUSIC_KEY,
+        new URL("../assets/audio/music/bgm-clinic.wav", import.meta.url).href,
+      );
+    }
+  }
+
+  create(): void {
+    const width = this.scale.width;
+    const height = this.scale.height;
+    this.input$ = new InputManager(this);
+    this.pageIndex = 0;
+    this.finished = false;
+    this.cameras.main.setBackgroundColor(0x08050c);
+
+    this.add.image(width / 2, 235, BACKGROUND_KEY).setDisplaySize(width, 470);
+    this.add.rectangle(width / 2, height - 145, width, 300, 0x08050c, 0.96);
+    this.add.rectangle(width / 2, 65, 920, 105, 0x08050c, 0.88).setStrokeStyle(2, 0xd64f6f, 0.75);
+    this.add.text(width / 2, 43, "A OBRA NÃO VOLTA ATRÁS", {
+      fontFamily: "Courier New, monospace",
+      fontSize: "31px",
+      color: "#ff718f",
+      letterSpacing: 4,
+    }).setOrigin(0.5);
+    this.add.text(width / 2, 86, "CLÍNICA DE GEORGE // APÓS O PORTÃO", {
+      fontFamily: "Courier New, monospace",
+      fontSize: "15px",
+      color: "#FFD37C",
+      letterSpacing: 2,
+    }).setOrigin(0.5);
+
+    this.george = this.add.image(width * 0.26, 325, GEORGE_ANGRY_KEY).setDisplaySize(300, 300);
+    this.george.texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
+    this.alex = this.add.sprite(width * 0.74, 400, ALEX_COMPLETE_KEY, 26).setScale(4);
+    this.alex.texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
+
+    this.speakerText = this.add.text(190, height - 260, "", {
+      fontFamily: "Courier New, monospace",
+      fontSize: "18px",
+      color: "#7CFCEA",
+    });
+    this.dialogueText = this.add.text(190, height - 220, "", {
+      fontFamily: "Courier New, monospace",
+      fontSize: "21px",
+      color: "#e8ecff",
+      wordWrap: { width: width - 380 },
+      lineSpacing: 9,
+    });
+    this.counterText = this.add.text(width - 90, height - 45, "", {
+      fontFamily: "Courier New, monospace",
+      fontSize: "14px",
+      color: "#565f80",
+    }).setOrigin(0.5);
+    const prompt = this.add.text(width / 2, height - 45, "ENTER / A para continuar", {
+      fontFamily: "Courier New, monospace",
+      fontSize: "16px",
+      color: "#8892b0",
+    }).setOrigin(0.5);
+    this.tweens.add({ targets: prompt, alpha: 0.3, yoyo: true, repeat: -1, duration: 700 });
+
+    this.music = this.sound.add(MUSIC_KEY, { loop: true, volume: 0.28 });
+    this.music.play();
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.music?.stop());
+    this.input.on("pointerdown", () => this.advance());
+    this.renderPage();
+  }
+
+  update(): void {
+    if (this.input$.isConfirmJustDown()) this.advance();
+    this.input$.postUpdate();
+  }
+
+  private renderPage(): void {
+    const page = DIALOGUE[this.pageIndex];
+    const georgeSpeaking = page.speaker === "GEORGE";
+    this.speakerText.setText(page.speaker).setColor(georgeSpeaking ? "#ff718f" : "#7CFCEA");
+    this.dialogueText.setText(page.text);
+    this.counterText.setText(`${this.pageIndex + 1}/${DIALOGUE.length}`);
+    this.george.setAlpha(georgeSpeaking ? 1 : 0.62);
+    this.alex.setAlpha(georgeSpeaking ? 0.62 : 1);
+  }
+
+  private advance(): void {
+    if (this.finished) return;
+    if (this.pageIndex < DIALOGUE.length - 1) {
+      this.pageIndex += 1;
+      this.renderPage();
+      return;
+    }
+    this.finished = true;
+    this.cameras.main.fadeOut(350, 0, 0, 0, (
+      _camera: Phaser.Cameras.Scene2D.Camera,
+      progress: number,
+    ) => {
+      if (progress < 1) return;
+      const data = SaveState.load().get();
+      this.scene.start("GameScene", {
+        phaseId: "fase5",
+        checkpointX: 0,
+        checkpointY: 0,
+        consolidatedCreditIds: [],
+        wallet: 0,
+        abilities: data.abilities,
+        descent: true,
+      } as GameSceneData);
+    });
+  }
+}
