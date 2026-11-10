@@ -131,6 +131,8 @@ Os mesmos testes podem ser executados pela raiz com `npm test`.
 
 ## Nuvem (ISN)
 
+A especificação da disciplina fica em [`isn/`](isn/). O índice da sprint 1 é [`isn/docs/sprint1/README.md`](isn/docs/sprint1/README.md).
+
 A infraestrutura da campanha fica em [`pulumi/`](pulumi/). É o que se executa com Pulumi; o cliente do jogo continua em `flesh-to-chrome/`.
 
 ```bash

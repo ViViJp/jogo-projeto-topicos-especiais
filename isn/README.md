@@ -4,7 +4,7 @@ Pasta da disciplina **Infraestrutura e Serviços em Nuvem**.
 
 Não misturar com o código do jogo em `flesh-to-chrome/`.
 
-As alterações desta pasta são de documentação/entregas da ISN. **Não mergear na `main` do jogo** sem combinar.
+As alterações desta pasta são a documentação e as entregas da ISN. O cliente do jogo continua em `flesh-to-chrome/`.
 
 ## Sprint 1 — especificação
 
