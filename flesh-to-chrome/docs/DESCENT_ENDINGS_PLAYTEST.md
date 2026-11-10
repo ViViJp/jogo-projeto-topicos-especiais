@@ -56,8 +56,9 @@
    Depois da porta ReForge do Topo não deve permanecer visível nenhum conteúdo
    do trecho contemplativo usado pela subida. O piso deve continuar sob toda a
    largura da porta, sem deixar sua metade direita suspensa sobre o vazio.
-6. Depois da última retirada, confirme o trecho do Esgoto com cerca de 8
-   segundos, sem implantes e sem tutorial, antes da casa da família.
+6. Depois da última retirada, confirme o trecho do Esgoto com cerca de 5
+   segundos, sem implantes, tutorial, hazards ou vãos. Alex deve apenas correr
+   sobre chão contínuo antes da casa da família e do Final Flesh.
 7. Resultado esperado: epilogo no Esgoto, `FINAL FLESH` e as quatro
    habilidades em `false`.
 

@@ -628,3 +628,11 @@
 - utiliza os gaps industriais já autorados para testar salto duplo, sem criar
   ou reutilizar o piso elétrico exclusivo da D3 — Meio Urbano;
 - o primeiro obstáculo ativo precisa preservar uma janela mínima de reação.
+
+## Epílogo — Esgoto
+
+- dura aproximadamente 5 segundos / 1.600 px;
+- começa e termina em chão contínuo, sem vãos ou plataformas elevadas;
+- não contém hazards, inimigos, créditos, tutorial ou checkpoint;
+- Alex apenas corre em direção à casa antes da transição para o Final Flesh;
+- o trecho comunica retorno e encerramento, não um quinto desafio da descida.

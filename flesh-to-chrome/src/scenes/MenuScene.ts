@@ -206,6 +206,18 @@ export class MenuScene extends Phaser.Scene {
       this.scene.start("ReForgeScene");
       return;
     }
+    if (data.descentState.epiloguePending) {
+      this.scene.start("GameScene", {
+        phaseId: data.currentPhaseId,
+        checkpointX: data.checkpoint.x,
+        checkpointY: data.checkpoint.y,
+        consolidatedCreditIds: [],
+        wallet: 0,
+        abilities: data.abilities,
+        descent: true,
+      } as GameSceneData);
+      return;
+    }
     if (data.descentState.brokenChain) {
       this.scene.start("EpilogueScene", { ending: "hollow" });
       return;

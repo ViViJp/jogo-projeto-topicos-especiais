@@ -1,5 +1,4 @@
 import Phaser from "phaser";
-import { SCREEN_HEIGHT, SCREEN_WIDTH } from "../config/GameConfig";
 import { InputManager } from "../systems/InputManager";
 import { SaveState } from "../systems/SaveState";
 
@@ -20,6 +19,7 @@ export class GateScene extends Phaser.Scene {
   private choosing = false;
   private music?: Phaser.Sound.BaseSound;
   private testMode = false;
+  private previewNotice!: Phaser.GameObjects.Text;
 
   constructor() {
     super("GateScene");
@@ -45,7 +45,14 @@ export class GateScene extends Phaser.Scene {
   }
 
   create(): void {
-    this.cameras.main.setBackgroundColor(0x05050a);
+    const width = this.scale.width;
+    const height = this.scale.height;
+    const centerX = width / 2;
+    const gateY = 318;
+    const gateHeight = 336;
+    const choiceOffsetX = Math.min(220, width * 0.24);
+
+    this.cameras.main.setBackgroundColor(0x100718);
     this.input$ = new InputManager(this);
     this.selected = "chrome";
     this.choosing = false;
@@ -54,32 +61,40 @@ export class GateScene extends Phaser.Scene {
     const save = SaveState.load();
     if (!this.testMode && !save.hasPreGateSave()) save.createPreGateSave();
 
-    this.add.rectangle(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, SCREEN_WIDTH, SCREEN_HEIGHT, 0x100718, 1);
-    this.add.image(SCREEN_WIDTH / 2, 265, GATE_TEXTURE_KEY).setDisplaySize(320, 373);
-    this.add.text(SCREEN_WIDTH / 2, 52, "O PORTÃO", {
+    this.add.rectangle(centerX, height / 2, width, height, 0x100718, 1);
+    this.add.image(centerX, gateY, GATE_TEXTURE_KEY).setDisplaySize(288, gateHeight);
+    this.add.text(centerX, 52, "O PORTÃO", {
       fontFamily: "Courier New, monospace",
       fontSize: "38px",
       color: "#7CFCEA",
       letterSpacing: 7,
     }).setOrigin(0.5);
     this.add.text(
-      SCREEN_WIDTH / 2,
-      105,
+      centerX,
+      112,
       "A conversão final está pronta. O que ainda resta de Alex atravessará?",
       {
         fontFamily: "Courier New, monospace",
         fontSize: "17px",
         color: "#c8cfe8",
         align: "center",
+        wordWrap: { width: Math.min(width - 80, 820) },
       },
     ).setOrigin(0.5);
 
-    this.createChoice("chrome", SCREEN_WIDTH / 2 - 220, "CHROME", "Aceitar a conversão completa");
-    this.createChoice("flesh", SCREEN_WIDTH / 2 + 220, "FLESH", "Recusar e iniciar a descida");
+    this.createChoice("chrome", centerX - choiceOffsetX, "CHROME", "Aceitar a conversão completa");
+    this.createChoice("flesh", centerX + choiceOffsetX, "FLESH", "Recusar e iniciar a descida");
+    this.previewNotice = this.add.text(centerX, height - 92, "", {
+      fontFamily: "Courier New, monospace",
+      fontSize: "15px",
+      color: "#ff9a4d",
+      align: "center",
+      wordWrap: { width: Math.min(width - 80, 900) },
+    }).setOrigin(0.5);
     const controlsHelp = this.testMode
       ? "← → / DIRECIONAL escolher   ENTER / A confirmar   ESC / B voltar ao seletor"
       : "← → / DIRECIONAL escolher   ENTER / A confirmar";
-    this.add.text(SCREEN_WIDTH / 2, SCREEN_HEIGHT - 42, controlsHelp, {
+    this.add.text(centerX, height - 42, controlsHelp, {
       fontFamily: "Courier New, monospace",
       fontSize: "15px",
       color: "#565f80",
@@ -147,6 +162,13 @@ export class GateScene extends Phaser.Scene {
   private confirmChoice(): void {
     if (this.choosing) return;
     if (this.selected === "flesh") {
+      if (this.testMode) {
+        this.previewNotice.setText(
+          "A descida Flesh altera a campanha. Inicie este caminho pelo Portão do seu save.",
+        );
+        this.cameras.main.shake(120, 0.002);
+        return;
+      }
       this.choosing = true;
       const save = SaveState.load();
       save.beginDescent();

@@ -636,6 +636,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createTiled(): void {
+    const descentRoute = this.data$.descent ? descentRouteForPhase(this.data$.phaseId) : undefined;
     const runtime = new TiledLevelRuntime(this, new Set(this.data$.consolidatedCreditIds), {
       onCreditCollected: (id, value) => this.handleCreditCollected(id, value),
       onCheckpoint: (id, x, y) => this.handleCheckpoint(id, x, y),
@@ -643,6 +644,9 @@ export class GameScene extends Phaser.Scene {
     });
     this.tiledRuntime = runtime;
     this.levelLengthPx = runtime.lengthPx;
+    if (descentRoute?.epilogue) {
+      runtime.prepareDescentEpilogue(descentRoute.startX, descentRoute.endX);
+    }
 
     const spawn = this.phaseSpawn(runtime.spawn.x, runtime.spawn.y);
     this.player = new Player(this, spawn.x, spawn.y, this.activeAbilities, this.input$, {
@@ -887,6 +891,7 @@ export class GameScene extends Phaser.Scene {
       this.restarting = true;
       this.player.sprite.setVelocity(0, 0);
       if (descentRouteForPhase(this.data$.phaseId)?.epilogue) {
+        this.save.completeDescentEpilogue();
         this.time.delayedCall(250, () => this.scene.start("EpilogueScene", { ending: "flesh" }));
         return;
       }

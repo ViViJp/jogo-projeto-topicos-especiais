@@ -919,7 +919,7 @@ Cada setor jogável da cadeia ativa deve durar aproximadamente **30 segundos sem
 | D2 | Corporativo | ~30 s | salto duplo, ataque e visor |
 | D3 | Meio Urbano | ~30 s | salto duplo e ataque |
 | D4 | Industrial | ~30 s | salto duplo |
-| Epílogo | Esgoto | ~8 s | nenhum implante; apenas ações humanas básicas |
+| Epílogo | Esgoto | ~5 s | nenhum implante; apenas ações humanas básicas |
 
 A cadeia de desafios da descida possui aproximadamente **120 segundos de gameplay**, sem contar diálogos, ReForge, retry e o trecho jogável do epílogo. O Esgoto é intencionalmente muito mais curto: serve como retorno contemplativo à família depois da última retirada, não como um quinto teste de implantes. Esses valores permanecem provisórios até os playtests.
 
@@ -1049,10 +1049,11 @@ sprite suspensa sobre o vazio.
   colisão letal, garantindo uma entrada neutra antes do primeiro obstáculo.
   A fase usa os vãos industriais do próprio mapa e não repete a grade/piso
   elétrico exclusivo do Meio Urbano;
-- **Epílogo — Esgoto:** usa apenas um recorte final de aproximadamente 2.464 px
-  / 8 s, sem tutorial, créditos, checkpoint ou obstáculo exclusivo de
-  implante. Alex já está inteiramente humano e o ritmo deve comunicar retorno,
-  não escalada.
+- **Epílogo — Esgoto:** usa apenas um corredor plano de aproximadamente 1.600
+  px / 5 s, sem tutorial, créditos, checkpoint, vãos ou hazards. Alex já está
+  inteiramente humano e o ritmo deve comunicar retorno, não escalada. O chão
+  reutiliza a arte do Esgoto, mas fecha os vãos do mapa-base e remove as
+  plataformas elevadas do recorte antes do Final Flesh.
 
 ## 18.6 Cadeia de redenção
 
@@ -1123,24 +1124,39 @@ Hollow usa exatamente o estado corporal em que a cadeia foi quebrada:
 
 Alex chega ao Esgoto completamente humano, mas com marcas do bioprinting.
 
-Um trecho curto de aproximadamente **8 segundos** leva até a casa da família.
-Ele reutiliza o setor final do mapa da Fase 1, começa depois das áreas de
-tutorial e não exige nenhuma habilidade de implante. Ao alcançar a saída, o
-Final Flesh é iniciado.
+Um trecho curto de aproximadamente **5 segundos** leva até a casa da família.
+Ele reutiliza a arte do setor final da Fase 1, mas transforma o caminho em um
+corredor plano e contínuo: sem vãos, plataformas elevadas ou hazards. Não exige
+nenhuma habilidade de implante. Ao alcançar a saída, o Final Flesh é iniciado.
 
 ### Hollow
 
 O mesmo epílogo-base é reaproveitado com a aparência e reação correspondentes aos implantes restantes.
 
+O estado persistido distingue a última retirada da conclusão do percurso:
+`epiloguePending` permanece ativo entre a quarta ReForge e a saída do trecho
+jogável do Esgoto. **Continuar** durante esse intervalo sempre restaura o
+corredor curto, sem saltar diretamente para a cena final.
+
 ## 18.10 Final Flesh
 
 Alex retorna para sua verdadeira família.
+
+A imagem da casa mostra coletivamente o avô e o tio paterno, os parentes que
+permaneceram nos níveis inferiores. O retrato ciborgue do pai não representa a
+família neste final e permanece exclusivo do encontro do Final Chrome.
 
 Está novamente humano, mas carrega cicatrizes e diferenças físicas das substituições.
 
 ## 18.11 Final Hollow
 
 Alex retorna parcialmente mecanizado e não consegue falar com a família.
+Mesmo sem conseguir se reconectar, a imagem do outro lado da porta continua
+mostrando o avô e o tio; o pai não participa desse retorno.
+
+O sprite de Alex preserva o estágio corporal exato da quebra da cadeia. O
+epílogo e os quadros finais usam a mesma variante correspondente aos implantes
+restantes, acompanhada da contagem de cromo remanescente.
 
 A incapacidade é emocional e simbólica.
 

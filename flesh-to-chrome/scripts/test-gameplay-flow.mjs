@@ -313,6 +313,16 @@ assert.doesNotMatch(
 const checkpointMarker = fs.readFileSync(path.join(projectDirectory, "src/objects/CheckpointMarker.ts"), "utf8");
 assert.match(checkpointMarker, /activate\(withFeedback = true\)/);
 assert.match(checkpointMarker, /if \(!withFeedback\) return/);
+const tiledLevelRuntime = fs.readFileSync(path.join(projectDirectory, "src/objects/TiledLevelRuntime.ts"), "utf8");
+assert.match(tiledLevelRuntime, /prepareDescentEpilogue\(startX: number, endX: number\)/,
+  "epílogo deve preparar um corredor próprio no mapa do Esgoto");
+assert.match(tiledLevelRuntime, /this\.groundLayer\.removeTileAt\(col, row\)/);
+assert.match(tiledLevelRuntime, /this\.groundLayer\.putTileAt\(template\.pattern\[patternIndex\], col, template\.row\)/,
+  "corredor final deve preencher todos os vãos com chão do próprio mapa");
+assert.match(tiledLevelRuntime, /hazard\.zone\.setActive\(false\)/,
+  "epílogo sem implantes não pode reutilizar hazards da subida");
+assert.match(gameScene, /runtime\.prepareDescentEpilogue\(descentRoute\.startX, descentRoute\.endX\)/,
+  "GameScene deve ativar o corredor seguro somente no epílogo");
 for (const runtime of [
   "TiledLevelRuntime.ts",
   "TiledPhase2Runtime.ts",

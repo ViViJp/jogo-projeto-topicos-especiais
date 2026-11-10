@@ -47,7 +47,7 @@ const { DESCENT_ROUTES } = loadTypeScriptModule(
 
 assert.deepEqual(
   Array.from(DESCENT_ROUTES, (route) => route.targetSeconds),
-  [30, 30, 30, 30, 8],
+  [30, 30, 30, 30, 5],
   "a descida deve usar quatro recortes de 30 s e um epilogo curto",
 );
 assert.deepEqual(
@@ -62,8 +62,8 @@ assert.deepEqual(
   "cada recorte deve exigir somente os implantes ainda presentes",
 );
 
-// O atalho de playtest do Portão também precisa começar a descida com o
-// corpo completo, mesmo quando ainda não existe progresso de campanha.
+// O início autorizado pelo Portão da campanha precisa reconstruir o corpo
+// completo, inclusive ao normalizar progresso antigo.
 const directDescent = SaveState.newGame();
 directDescent.beginDescent();
 assert.deepEqual(
@@ -120,7 +120,15 @@ for (const [phase, fragment, implant, nextPhase] of descentSteps) {
 }
 assert.equal(save.get().descentState.active, false);
 assert.equal(save.get().descentState.currentStep, 4);
+assert.equal(save.get().descentState.epiloguePending, true,
+  "a última ReForge deve preservar a pendência do trecho jogável");
 assert.deepEqual(Object.values(save.get().abilities), [false, false, false, false]);
+const interruptedBeforeSewer = SaveState.load();
+assert.equal(interruptedBeforeSewer.get().descentState.epiloguePending, true,
+  "fechar o jogo antes do Esgoto deve manter o percurso pendente");
+assert.equal(interruptedBeforeSewer.completeDescentEpilogue(), true);
+assert.equal(interruptedBeforeSewer.get().descentState.epiloguePending, false,
+  "a pendência só termina ao concluir o percurso jogável");
 
 // Hollow reproduzivel: primeira conclusao sem glitch oferece retry; a
 // segunda quebra definitivamente a cadeia no estado corporal corrente.
@@ -149,6 +157,7 @@ const descentRouteRuntime = read("src/objects/DescentRouteRuntime.ts");
 const georgeRefusal = read("src/scenes/GeorgeRefusalScene.ts");
 const gdd = read("docs/gdd.md");
 const narrativePlaytest = read("docs/NARRATIVE_FLOW_PLAYTEST.md");
+const assetRegistry = read("docs/ASSET_REGISTRY.md");
 
 assert.match(main, /PrologueScene/);
 assert.match(main, /GateScene/);
@@ -184,11 +193,23 @@ assert.match(game, /implant: implantOverride,[\s\S]*?testMode: false/,
   "fim normal da Fase 5 deve iniciar o Portão fora do modo de teste");
 assert.match(gate, /createPreGateSave\(\)/);
 assert.match(gate, /!this\.testMode && !save\.hasPreGateSave\(\)/);
+assert.match(gate, /const width = this\.scale\.width;/,
+  "Portão deve usar a largura expandida do viewport");
+assert.match(gate, /rectangle\(centerX, height \/ 2, width, height, 0x100718, 1\)/,
+  "fundo do Portão deve cobrir toda a área lógica sem borda preta");
+assert.doesNotMatch(gate, /SCREEN_WIDTH|SCREEN_HEIGHT/,
+  "layout do Portão não pode permanecer preso à resolução base");
+const gateY = Number(gate.match(/const gateY = (\d+);/)?.[1]);
+const gateHeight = Number(gate.match(/const gateHeight = (\d+);/)?.[1]);
+assert.ok(112 < gateY - gateHeight / 2,
+  "subtítulo deve terminar antes do topo visual do Portão");
 assert.doesNotMatch(gate, /markEndingReached\(/,
   "escolher Chrome ainda não significa concluir o final");
 assert.match(gate, /\{ ending: "chrome", testMode: this\.testMode \}/);
 assert.match(gate, /beginDescent\(\)/);
 assert.match(gate, /this\.scene\.start\("GeorgeRefusalScene"\)/);
+assert.match(gate, /if \(this\.testMode\) \{[\s\S]*?Inicie este caminho pelo Portão do seu save[\s\S]*?return;[\s\S]*?SaveState\.load\(\)/,
+  "Flesh em modo de teste deve retornar antes de carregar ou modificar o save");
 assert.doesNotMatch(gate, /Conteúdo em desenvolvimento/);
 assert.match(gate, /this\.testMode && this\.input\$\.isCancelJustDown\(\)[\s\S]*?this\.scene\.start\("MenuScene"\)/,
   "ESC/B deve sair diretamente da prévia do Portão");
@@ -201,6 +222,13 @@ assert.match(ending, /FINAL FLESH/);
 assert.match(ending, /FINAL HOLLOW/);
 assert.match(ending, /ALEX\? FILHO\?/);
 assert.match(retry, /unica segunda oportunidade/);
+assert.match(retry, /isMenuLeftJustDown\(\)[\s\S]*?this\.selectChoice\(true\)/,
+  "esquerda deve sempre selecionar repetir setor");
+assert.match(retry, /isMenuRightJustDown\(\)[\s\S]*?this\.selectChoice\(false\)/,
+  "direita deve sempre selecionar aceitar Hollow");
+assert.match(retry, /setInteractive\(\{ useHandCursor: true \}\)/);
+assert.match(retry, /pointerdown[\s\S]*?this\.confirmChoice\(\)/,
+  "as duas opções de retry devem aceitar clique");
 assert.match(reforge, /completeBioprinting\(\)/);
 assert.match(reforge, /recycling\/holograma-pai\.png/);
 assert.match(reforge, /recycling\/holograma-ciborgue\.png/);
@@ -236,11 +264,15 @@ assert.match(descentRouteRuntime, /DESCENT_REFORGE_DOOR_CLOSED_KEY/);
 assert.match(descentRouteRuntime, /DESCENT_REFORGE_DOOR_OPEN_KEY/);
 assert.match(descentRouteRuntime, /setMemoryRecovered\(recovered: boolean\)/);
 assert.match(descentRouteRuntime, /MEMÓRIA VALIDADA \/\/ ACESSO ABERTO/);
-assert.match(descentRouteRuntime, /MEMÓRIA AUSENTE \/\/ ACESSO BLOQUEADO/);
+assert.match(descentRouteRuntime, /MEMÓRIA AUSENTE — AVANÇAR COMPROMETE A DESCIDA/);
 assert.match(game, /this\.descentRouteRuntime\?\.setMemoryRecovered\(true\)/,
   "coletar o fragmento deve abrir a porta ReForge");
 assert.match(reforge, /phaseId: "fase1"[\s\S]*?descent: true/,
   "a ultima retirada deve abrir o trecho curto jogavel do Esgoto");
+assert.match(menu, /descentState\.epiloguePending[\s\S]*?this\.scene\.start\("GameScene"[\s\S]*?descent: true/,
+  "Continuar após a última ReForge deve restaurar o trecho jogável do Esgoto");
+assert.match(game, /descentRouteForPhase\(this\.data\$\.phaseId\)\?\.epilogue[\s\S]*?completeDescentEpilogue\(\)/,
+  "a pendência do Esgoto só deve ser limpa na saída do percurso");
 for (const [phaseId, map] of [
   ["fase2-intro", "src/assets/maps/industrial/fase-2.tmj"],
   ["fase3", "src/assets/maps/meio-urbano/fase-3.tmj"],
@@ -279,14 +311,23 @@ for (const [phaseId, map] of [
 }
 const sewerRoute = DESCENT_ROUTES.find((route) => route.phaseId === "fase1");
 assert.ok(sewerRoute?.epilogue);
-assert.ok(sewerRoute.endX - sewerRoute.startX < 3_000, "Esgoto deve ser um epilogo curto");
+assert.equal(sewerRoute.endX - sewerRoute.startX, 1_600,
+  "Esgoto deve ser um epilogo contemplativo de aproximadamente 5 s");
 const urbanRoute = DESCENT_ROUTES.find((route) => route.phaseId === "fase3");
 const industrialRoute = DESCENT_ROUTES.find((route) => route.phaseId === "fase2-intro");
 assert.ok(urbanRoute?.doubleJumpHazard, "grade elétrica exclusiva deve permanecer na D3");
 assert.equal(industrialRoute?.doubleJumpHazard, undefined,
   "D4 deve usar os gaps industriais do mapa, sem repetir o piso elétrico da D3");
 assert.match(ending, /father\/pai-portrait\.png/);
+assert.match(ending, /prologue\/familia\.png/,
+  "Flesh e Hollow devem mostrar avô e tio, não reutilizar o retrato do pai");
+assert.match(ending, /this\.ending === "chrome" \? FATHER_PORTRAIT_KEY : FAMILY_PORTRAIT_KEY/,
+  "retrato do pai deve permanecer exclusivo do Final Chrome");
+assert.match(ending, /this\.ending === "chrome" \? "PAI DE ALEX \/\/ CONVERSÃO CORPORATIVA" : "FAMÍLIA DE ALEX \/\/ CASA"/);
 assert.match(ending, /CONVERSÃO CORPORATIVA/);
+assert.match(ending, /alexTextureForAbilities\(saveData\.abilities\)/,
+  "Final Hollow deve preservar o estágio corporal salvo no epílogo");
+assert.match(ending, /CROMO REMANESCENTE/);
 assert.match(ending, /if \(!this\.testMode\) SaveState\.load\(\)\.markEndingReached\(this\.ending\)/);
 assert.ok(
   ending.indexOf("markEndingReached(this.ending)") > ending.indexOf("this.pageIndex < this.pages.length - 1"),
@@ -298,5 +339,15 @@ assert.match(phase4, /O rosto da campanha é familiar/);
 assert.match(narrativePlaytest, /Portão — escolha final \(teste\)/);
 assert.match(narrativePlaytest, /endingReached/);
 assert.match(narrativePlaytest, /reprova a decisão de Alex/);
+for (const asset of [
+  "george-angry.png",
+  "holograma-ciborgue.png",
+  "reforge-door-open.png",
+  "reforge-door-closed.png",
+  "urban-electric-floor.png",
+  "reforge-security-seal.png",
+]) {
+  assert.match(assetRegistry, new RegExp(asset.replaceAll(".", "\\.")), `${asset}: registro de asset ausente`);
+}
 
 console.log("Narrativa: Chrome, descida, retry, ReForge, Flesh, Hollow e epilogo reproduziveis OK.");

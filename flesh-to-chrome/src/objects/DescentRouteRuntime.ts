@@ -304,7 +304,7 @@ export class DescentRouteRuntime {
     this.doorStatus
       .setText(this.memoryRecovered
         ? "REFORGE // MEMÓRIA VALIDADA // ACESSO ABERTO"
-        : "REFORGE // MEMÓRIA AUSENTE // ACESSO BLOQUEADO")
+        : "MEMÓRIA AUSENTE — AVANÇAR COMPROMETE A DESCIDA")
       .setColor(this.memoryRecovered ? "#7CFCEA" : "#ff9a4d");
     if (!animate || !this.memoryRecovered) return;
     const targetScaleX = this.doorOpen.scaleX;

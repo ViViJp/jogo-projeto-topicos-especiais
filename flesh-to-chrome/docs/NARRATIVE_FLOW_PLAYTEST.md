@@ -35,6 +35,15 @@ Novo Jogo
   com os quatro implantes e passa a usar o save da cadeia narrativa.
 - Chrome apresenta o reencontro físico com `pai-portrait.png`: o pai reconhece
   Alex, mas Alex não o reconhece e continua andando.
+- Flesh e Hollow usam `prologue/familia.png`, com avô e tio juntos, para
+  representar a casa. O retrato do pai não pode aparecer como família nesses
+  dois finais.
+- Na prévia do Portão, selecionar Flesh exibe uma orientação e não inicia a
+  descida. O caminho completo só começa pelo Portão da campanha, protegendo o
+  save real do seletor de fases.
+- Depois da última ReForge, o save mantém `epiloguePending` até Alex alcançar a
+  saída do trecho jogável do Esgoto. Fechar e continuar antes disso restaura o
+  corredor, em vez de saltar diretamente para o epílogo.
 - O Final Chrome só é registrado em `endingReached` depois que o jogador
   confirma o último quadro. Selecionar Chrome ou apenas abrir o epílogo não é
   suficiente para marcar o final como concluído.
@@ -72,7 +81,9 @@ finais reproduzíveis.
 4. No seletor de fases, abra **Portão — escolha final (teste)**, pressione
    **ESC/B** e confirme o retorno sem criar snapshot.
 5. No Portão, valide que esquerda seleciona Chrome, direita seleciona Flesh e
-   que cima/baixo alternam entre as opções.
+   que cima/baixo alternam entre as opções. Em viewport largo, o fundo deve
+   ocupar toda a tela sem borda preta à direita; o subtítulo deve ficar entre
+   o título e o portão, sem sobrepor a arte.
 6. Selecione Flesh e confirme a cena de confronto: George chama Alex de sua
    obra, Alex explica por que abandonará o cromo e a descida começa no Topo.
 7. Complete a Fase 5 na campanha e confirme a abertura normal do Portão.
@@ -84,3 +95,15 @@ finais reproduzíveis.
 11. Confirme que o Portão foi restaurado com carteira e implantes preservados.
 12. Siga `DESCENT_ENDINGS_PLAYTEST.md` para validar memórias, holograma do pai,
     bioprinting, perda de habilidades e finais Flesh/Hollow.
+13. Nos quadros finais Flesh e Hollow, confirme que a imagem da casa mostra o
+    avô e o tio juntos. O retrato ciborgue do pai deve aparecer somente em
+    Chrome.
+14. Com uma campanha salva, abra o Portão pelo seletor de fases, escolha Flesh
+    e confirme que aparece a orientação para usar a campanha. Volte ao menu e
+    valide que fase, carteira, checkpoint, implantes e final continuam iguais.
+15. Feche o jogo imediatamente depois da quarta retirada e use **Continuar**.
+    Alex deve retornar ao corredor curto do Esgoto; depois de alcançar a saída,
+    um novo **Continuar** deve abrir o epílogo, sem repetir o corredor.
+16. Falhe a descida depois de quantidades diferentes de retiradas. O Alex do
+    Final Hollow deve manter o mesmo estágio corporal do epílogo e informar a
+    quantidade correta de implantes restantes.
