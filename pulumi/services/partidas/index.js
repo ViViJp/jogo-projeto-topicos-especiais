@@ -51,6 +51,17 @@ async function getKey(pk, sk) {
   return out.Item || null;
 }
 
+function releaseActive(userId, matchId) {
+  return {
+    Delete: {
+      TableName: table,
+      Key: { pk: `USER#${userId}`, sk: "ACTIVE" },
+      ConditionExpression: "matchId = :id",
+      ExpressionAttributeValues: { ":id": matchId },
+    },
+  };
+}
+
 function operationPut(userId, operationId, mark, statusCode, payload) {
   return {
     Put: {
@@ -145,30 +156,24 @@ async function createMatch(userId, operationId, mark) {
     const old = await getKey(`MATCH#${active.matchId}`, "META");
     const lobbyDead = old && old.state === "lobby" && old.lobbyExpiresAt <= nowIso();
     if (!lobbyDead) return fail(409, "ACTIVE_MATCH", "Já existe uma partida ativa.", "");
-    await db.send(
-      new TransactWriteCommand({
-        TransactItems: [
-          {
-            Delete: {
-              TableName: table,
-              Key: { pk: `USER#${userId}`, sk: "ACTIVE" },
-              ConditionExpression: "matchId = :id",
-              ExpressionAttributeValues: { ":id": old.id },
-            },
-          },
-          {
-            Update: {
-              TableName: table,
-              Key: { pk: `MATCH#${old.id}`, sk: "META" },
-              UpdateExpression: "SET #state = :cancelled",
-              ConditionExpression: "#state = :lobby AND lobbyExpiresAt <= :now",
-              ExpressionAttributeNames: { "#state": "state" },
-              ExpressionAttributeValues: { ":cancelled": "cancelled", ":lobby": "lobby", ":now": nowIso() },
-            },
-          },
-        ],
-      })
-    );
+    const cleanup = [
+      releaseActive(userId, old.id),
+      {
+        Update: {
+          TableName: table,
+          Key: { pk: `MATCH#${old.id}`, sk: "META" },
+          UpdateExpression: "SET #state = :cancelled",
+          ConditionExpression: "#state = :lobby AND lobbyExpiresAt <= :now",
+          ExpressionAttributeNames: { "#state": "state" },
+          ExpressionAttributeValues: { ":cancelled": "cancelled", ":lobby": "lobby", ":now": nowIso() },
+        },
+      },
+    ];
+    for (const participant of [old.hostUserId, old.guestUserId].filter((id) => id && id !== userId)) {
+      const link = await getKey(`USER#${participant}`, "ACTIVE");
+      if (link && link.matchId === old.id) cleanup.push(releaseActive(participant, old.id));
+    }
+    await db.send(new TransactWriteCommand({ TransactItems: cleanup }));
   }
 
   const id = crypto.randomUUID();
@@ -231,7 +236,7 @@ async function joinMatch(userId, body, mark, requestId) {
   if (!match || match.state !== "lobby" || match.guestUserId || match.hostUserId === userId || match.lobbyExpiresAt <= nowIso()) {
     return fail(422, "INVITE_REJECTED", "Convite inválido.", requestId);
   }
-  const payload = publicMatch({ ...match, guestUserId: userId }, userId);
+  const payload = publicMatch({ ...match, guestUserId: userId, revision: match.revision + 1 }, userId);
   await db.send(
     new TransactWriteCommand({
       TransactItems: [
@@ -321,7 +326,7 @@ async function leaveMatch(userId, match, operationId, mark, requestId) {
     ? null
     : { winnerUserId: match.hostUserId === userId ? match.guestUserId : match.hostUserId, reason: "abandon" };
   const nextState = beforeStart ? "cancelled" : "finished";
-  const payload = publicMatch({ ...match, state: nextState, result }, userId);
+  const payload = publicMatch({ ...match, state: nextState, result, revision: match.revision + 1 }, userId);
   const items = [
     {
       Update: {

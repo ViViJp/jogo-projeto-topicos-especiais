@@ -1,6 +1,6 @@
 const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
 const { DynamoDBDocumentClient, GetCommand, TransactWriteCommand } = require("@aws-sdk/lib-dynamodb");
-const { validateState, fingerprint } = require("./rules");
+const { validateState, validateTransition, fingerprint } = require("./rules");
 
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const table = process.env.TABLE_NAME;
@@ -43,12 +43,15 @@ function initialState() {
 }
 
 function view(item) {
+  const state = item.state?.descent
+    ? { ...item.state, descent: { ...item.state.descent, pendingMemory: null } }
+    : item.state;
   return {
     id: item.id,
     revision: item.revision,
     schemaVersion: item.schemaVersion,
     updatedAt: item.updatedAt,
-    state: item.state,
+    state,
   };
 }
 
@@ -69,9 +72,13 @@ function replay(operation, mark) {
   return response(operation.statusCode, operation.response);
 }
 
-async function save(userId, body, current, requestId, eventType, mark) {
+async function save(userId, body, current, requestId, eventType, mark, checkTransition = true) {
   const problem = validateState(body.state);
   if (problem) return fail(422, "INVALID", problem, requestId);
+  const transition = checkTransition && body.source === "online" && current
+    ? validateTransition(current.state, body.state)
+    : "";
+  if (transition) return fail(422, "INVALID", transition, requestId);
   if (!sources.has(body.source)) return fail(422, "INVALID", "source inválido.", requestId);
   if (body.schemaVersion !== 1) return fail(422, "INVALID", "schemaVersion inválido.", requestId);
   if (typeof body.expectedRevision !== "number") return fail(422, "INVALID", "expectedRevision ausente.", requestId);
@@ -175,7 +182,7 @@ exports.handler = async (event) => {
       body.state = initialState();
       body.schemaVersion = 1;
       body.source = "online";
-      return await save(userId, body, current, requestId, "campaign.reset", mark);
+      return await save(userId, body, current, requestId, "campaign.reset", mark, false);
     }
     if (method === "POST" && path === "/me/campaign/restore-gate") {
       if (!current?.state?.preGateSnapshot) {
@@ -184,7 +191,7 @@ exports.handler = async (event) => {
       body.state = current.state.preGateSnapshot;
       body.schemaVersion = current.schemaVersion;
       body.source = "online";
-      return await save(userId, body, current, requestId, "campaign.restored", mark);
+      return await save(userId, body, current, requestId, "campaign.restored", mark, false);
     }
     return fail(404, "NOT_FOUND", "Rota ausente.", requestId);
   } catch (err) {

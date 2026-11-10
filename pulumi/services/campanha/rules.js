@@ -89,8 +89,17 @@ function validateState(state) {
   }
 
   if (state.phase === "epilogue") {
-    if (state.stageId !== "esgoto" || state.descent?.pendingMemory !== null) return "epílogo inválido";
-    return validateDescent(state, state.descent.chainStatus);
+    if (state.ending !== null || state.gateChoice !== "descida" || state.descent?.pendingMemory !== null) {
+      return "epílogo inválido";
+    }
+    const chain = state.descent?.chainStatus;
+    if (chain !== "complete" && chain !== "broken") return "epílogo com cadeia incoerente";
+    if (chain === "complete" && state.stageId !== "esgoto") return "epílogo inválido";
+    const problem = validateDescent(state, chain);
+    if (problem) return problem;
+    const body = state.implants.length === 0 ? "bioprinted" : "implanted";
+    if (state.bodyState !== body) return "corpo incoerente com o epílogo";
+    return "";
   }
 
   if (state.ending === "chrome") {
@@ -100,13 +109,19 @@ function validateState(state) {
     return "";
   }
   if (state.ending === "flesh") {
-    if (state.bodyState !== "bioprinted" || state.implants.length !== 0 || state.descent?.memories?.length !== 4) {
-      return "final Flesh incoerente";
+    if (state.gateChoice !== "descida" || state.descent?.chainStatus !== "complete") {
+      return "final Flesh sem a descida concluída";
     }
-    return "";
+    if (!prefix(state.descent?.removals, removals, 4) || state.descent?.memories?.length !== 4) {
+      return "final Flesh sem as quatro retiradas";
+    }
+    if (state.bodyState !== "bioprinted" || state.implants.length !== 0) return "final Flesh incoerente";
+    return validateDescent(state, "complete");
   }
   if (state.ending === "hollow") {
-    if (state.descent?.chainStatus !== "broken") return "final Hollow sem cadeia quebrada";
+    if (state.gateChoice !== "descida" || state.descent?.chainStatus !== "broken") {
+      return "final Hollow sem cadeia quebrada";
+    }
     return validateDescent(state, "broken");
   }
   return "final inválido";
@@ -125,8 +140,60 @@ function stable(value) {
   return value;
 }
 
+const phaseOrder = { ascent: 0, descent: 1, epilogue: 2, ending: 3 };
+
+function listGrows(previous, next) {
+  return (
+    Array.isArray(previous) &&
+    Array.isArray(next) &&
+    next.length >= previous.length &&
+    previous.every((item, index) => next[index] === item)
+  );
+}
+
+function validateTransition(previous, next) {
+  if (!previous || !next) return "transição ausente";
+  if (phaseOrder[next.phase] < phaseOrder[previous.phase]) return "fase regrediu";
+  if (next.phase === "epilogue" && previous.phase !== "descent" && previous.phase !== "epilogue") {
+    return "epílogo sem descida";
+  }
+  if (next.ending === "chrome" && previous.phase !== "ascent" && previous.phase !== "ending") {
+    return "Chrome sem a subida";
+  }
+  if (next.ending && next.ending !== "chrome" && previous.phase === "ascent") {
+    return "final da descida sem a descida";
+  }
+
+  const from = stages.indexOf(previous.stageId);
+  const to = stages.indexOf(next.stageId);
+  if (previous.phase === "ascent" && next.phase === "ascent" && (to < from || to > from + 1)) {
+    return "setor da subida inválido";
+  }
+  if (previous.phase === "ascent" && next.phase === "descent" && (previous.stageId !== "topo" || next.stageId !== "topo")) {
+    return "descida fora do topo";
+  }
+  if (previous.phase === "descent" && next.phase === "descent" && (to > from || from - to > 1)) {
+    return "setor da descida inválido";
+  }
+  if (previous.phase === "ascent" && next.phase === "ascent") {
+    if (!listGrows(previous.implants, next.implants)) return "implante removido na subida";
+    if (next.implants.length > previous.implants.length + 1) return "implantes pulados";
+  }
+
+  const previousRemovals = previous.descent?.removals || [];
+  const nextRemovals = next.descent?.removals || [];
+  if (!listGrows(previousRemovals, nextRemovals)) return "retirada desfeita";
+  if (nextRemovals.length > previousRemovals.length + 1) return "retiradas puladas";
+  if (next.stageId === previous.stageId && previous.checkpointId && next.checkpointId === null) {
+    return "checkpoint apagado";
+  }
+  if (previous.gateChoice && next.gateChoice !== previous.gateChoice) return "escolha do Portão alterada";
+  if (previous.ending && next.ending !== previous.ending) return "final alterado";
+  return "";
+}
+
 function fingerprint(payload) {
   return crypto.createHash("sha256").update(JSON.stringify(stable(payload))).digest("hex");
 }
 
-module.exports = { validateState, fingerprint, implants, memories };
+module.exports = { validateState, validateTransition, fingerprint, implants, memories };
