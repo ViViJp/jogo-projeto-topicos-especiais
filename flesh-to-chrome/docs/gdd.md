@@ -1041,9 +1041,12 @@ sprite suspensa sobre o vazio.
 - **D3 — Meio Urbano:** combina barricadas/inimigos com uma travessia larga
   demais para o salto simples. Essa travessia é uma grade elétrica urbana
   exclusiva da descida, com sprite ciano/azul próprio e leitura visual baseada
-  nos portões elétricos da Fase 3. Não utiliza o retângulo vermelho de blockout;
+  nos portões elétricos da Fase 3. Não utiliza o retângulo vermelho de blockout.
+  Inimigos que sobreponham a janela inicial de reação são removidos do recorte;
 - **D4 — Industrial:** concentra o desafio numa travessia de salto duplo e
-  permanece completável sem braços, olhos ou propulsores;
+  permanece completável sem braços, olhos ou propulsores. O teto baixo do
+  mapa-base que começa exatamente no spawn é removido, incluindo sua arte e
+  colisão letal, garantindo uma entrada neutra antes do primeiro obstáculo;
 - **Epílogo — Esgoto:** usa apenas um recorte final de aproximadamente 2.464 px
   / 8 s, sem tutorial, créditos, checkpoint ou obstáculo exclusivo de
   implante. Alex já está inteiramente humano e o ritmo deve comunicar retorno,

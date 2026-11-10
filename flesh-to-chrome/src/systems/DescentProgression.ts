@@ -17,8 +17,8 @@ export interface DescentRoute {
   doubleJumpHazard?: { x: number; width: number };
   /** Oculta tiles do setor anterior que ainda caberiam atrás do spawn. */
   hidePreviousMapContent?: boolean;
-  /** Remove inimigos autorados perto demais do spawn exclusivo da descida. */
-  enemySafeStartPx?: number;
+  /** Remove ameaças autoradas dentro da janela inicial de reação da descida. */
+  spawnSafeStartPx?: number;
   epilogue?: boolean;
 }
 
@@ -107,7 +107,7 @@ export const DESCENT_ROUTES: readonly DescentRoute[] = [
     targetSeconds: 30,
     requiredAbilities: ["legs", "arms"],
     doubleJumpHazard: { x: 25_920, width: 320 },
-    enemySafeStartPx: 160,
+    spawnSafeStartPx: 160,
   },
   {
     phaseId: "fase2-intro",
@@ -118,6 +118,7 @@ export const DESCENT_ROUTES: readonly DescentRoute[] = [
     targetSeconds: 30,
     requiredAbilities: ["legs"],
     doubleJumpHazard: { x: 26_848, width: 320 },
+    spawnSafeStartPx: 256,
   },
   {
     phaseId: "fase1",

@@ -263,6 +263,19 @@ for (const [phaseId, map] of [
     0,
     `${phaseId}: recorte nao pode conter tutorial/checkpoint da subida`,
   );
+
+  const immediateThreats = objects.filter((object) => (
+    ["enemy", "hazard", "low_ceiling"].includes(object.type)
+    && (object.x ?? 0) < route.startX + 64
+    && (object.x ?? 0) + (object.width ?? 0) > route.startX - 64
+  ));
+  for (const threat of immediateThreats) {
+    assert.ok(
+      route.spawnSafeStartPx !== undefined
+        && route.startX + route.spawnSafeStartPx >= (threat.x ?? 0) + (threat.width ?? 0),
+      `${phaseId}: ${threat.name} sobrepoe o spawn sem janela segura suficiente`,
+    );
+  }
 }
 const sewerRoute = DESCENT_ROUTES.find((route) => route.phaseId === "fase1");
 assert.ok(sewerRoute?.epilogue);

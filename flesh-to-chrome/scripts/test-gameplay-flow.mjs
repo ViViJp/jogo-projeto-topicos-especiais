@@ -165,6 +165,12 @@ for (const runtime of ["TiledPhase2Runtime.ts", "TiledPhase4Runtime.ts", "TiledP
 }
 const phase2Runtime = fs.readFileSync(path.join(projectDirectory, "src/objects/TiledPhase2Runtime.ts"), "utf8");
 assert.match(phase2Runtime, /hazardCycleSample/);
+assert.match(phase2Runtime, /excludeObstaclesThroughX/,
+  "recorte industrial deve poder excluir ameaças sobrepostas ao spawn");
+assert.match(phase2Runtime, /excludedLowCeilings\.forEach\(\(object\) => this\.hideObjectTiles\(this\.lowCeilingsLayer, object\)\)/,
+  "teto baixo excluído da D4 não pode permanecer visível no spawn");
+assert.match(phase2Runtime, /lowCeilingObjects\.filter\(\(object\) => !this\.isExcludedStartObstacle\(object\)\)/,
+  "teto baixo excluído da D4 não pode manter a zona letal");
 assert.match(phase2Runtime, /updateFromGameObject/);
 assert.match(phase2Runtime, /TILED_PHASE2_PRESS_TEXTURE_KEY/);
 assert.match(phase2Runtime, /const nozzleY = hazard\.y \+ hazard\.height - this\.map\.tileHeight/);
@@ -285,7 +291,10 @@ assert.match(gameScene, /runtime\.hideBeforeX\(descentRoute\.startX, this\.scale
   "o piso de aproximação do Corporativo deve cobrir uma tela inteira");
 assert.match(gameScene, /runtime\.moveFatherAdToDescentStart\(descentRoute\.startX\)/,
   "a descida Corporativa deve começar pela propaganda do pai");
-assert.match(gameScene, /descentRoute\.startX \+ descentRoute\.enemySafeStartPx/);
+assert.match(gameScene, /excludeObstaclesThroughX:[\s\S]*?descentRoute\.startX \+ descentRoute\.spawnSafeStartPx/,
+  "D4 deve aplicar a janela segura aos hazards e tetos baixos");
+assert.match(gameScene, /excludeEnemiesThroughX:[\s\S]*?descentRoute\.startX \+ descentRoute\.spawnSafeStartPx/,
+  "D3 deve aplicar a mesma janela segura aos inimigos");
 const pausedBranch = gameScene.slice(gameScene.indexOf("if (this.isPaused)"), gameScene.indexOf("this.player.update(delta)"));
 assert.match(pausedBranch, /return;/, "pausa deve retornar antes de atualizar Player e cooldowns");
 assert.match(gameScene, /S \/ ↓ para voltar ao menu principal/);

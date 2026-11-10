@@ -618,3 +618,11 @@
   portões elétricos originais; não há tile horizontal adequado no tileset da
   Fase 3;
 - contato com a grade segue a regra de hazard fatal em um hit.
+
+## D4 — Industrial
+
+- o trecho começa em piso neutro, sem hazard, inimigo ou teto baixo sobreposto
+  a Alex;
+- o teto baixo autorado em `x=20.480–20.672` pertence ao fluxo da subida e é
+  ocultado, junto com sua zona letal, no contexto da descida;
+- o primeiro obstáculo ativo precisa preservar uma janela mínima de reação.

@@ -657,10 +657,15 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createTiledPhase2(): void {
+    const descentRoute = this.data$.descent ? descentRouteForPhase(this.data$.phaseId) : undefined;
     const runtime = new TiledPhase2Runtime(this, new Set(this.data$.consolidatedCreditIds), {
       onCreditCollected: (id, value) => this.handleCreditCollected(id, value),
       onCheckpoint: (id, x, y) => this.handleCheckpoint(id, x, y),
       onEndGate: (destination, implant) => this.handleEndGate(destination, implant),
+    }, {
+      excludeObstaclesThroughX: descentRoute?.spawnSafeStartPx === undefined
+        ? undefined
+        : descentRoute.startX + descentRoute.spawnSafeStartPx,
     });
     this.tiledPhase2Runtime = runtime;
     this.levelLengthPx = runtime.lengthPx;
@@ -683,9 +688,9 @@ export class GameScene extends Phaser.Scene {
       onCheckpoint: (id, x, y) => this.handleCheckpoint(id, x, y),
       onEndGate: (destination, implant) => this.handleEndGate(destination, implant),
     }, {
-      excludeEnemiesThroughX: descentRoute?.enemySafeStartPx === undefined
+      excludeEnemiesThroughX: descentRoute?.spawnSafeStartPx === undefined
         ? undefined
-        : descentRoute.startX + descentRoute.enemySafeStartPx,
+        : descentRoute.startX + descentRoute.spawnSafeStartPx,
     });
     this.tiledPhase3Runtime = runtime;
     this.levelLengthPx = runtime.lengthPx;
