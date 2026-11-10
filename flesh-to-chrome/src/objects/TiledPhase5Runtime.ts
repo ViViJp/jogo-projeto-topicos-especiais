@@ -692,9 +692,79 @@ export class TiledPhase5Runtime {
     target.collider?.destroy();
     target.collider = undefined;
     this.setBreakableTilesVisible(target, false);
+    this.spawnBarricadeFragments(target.visual);
     target.visual.destroy();
     target.body.destroy();
     this.playerRef?.resolvePressedSuccess();
+  }
+
+  /**
+   * Divide o sprite 96x44 em seis estilhaços. O primeiro tween dá o impacto
+   * do golpe; o segundo simula a queda e dissolve os pedaços. Como a descida
+   * Flesh usa este mesmo runtime, a animação vale para ambos os contextos.
+   */
+  private spawnBarricadeFragments(barricade: Phaser.GameObjects.Image): void {
+    const columns = 3;
+    const rows = 2;
+    const sourceWidth = barricade.texture.getSourceImage().width / columns;
+    const sourceHeight = barricade.texture.getSourceImage().height / rows;
+    const displayWidth = barricade.displayWidth / columns;
+    const displayHeight = barricade.displayHeight / rows;
+    const visualLeft = barricade.x - barricade.displayWidth / 2;
+    const visualTop = barricade.y - barricade.displayHeight;
+
+    for (let row = 0; row < rows; row += 1) {
+      for (let col = 0; col < columns; col += 1) {
+        const horizontalDirection = col === 0 ? -1 : col === columns - 1 ? 1 : Phaser.Math.RND.sign();
+        const fragment = this.scene.add
+          .image(
+            visualLeft + (col + 0.5) * displayWidth,
+            visualTop + (row + 0.5) * displayHeight,
+            TILED_PHASE5_BARRICADE_TEXTURE_KEY,
+          )
+          .setCrop(
+            Math.floor(col * sourceWidth),
+            Math.floor(row * sourceHeight),
+            Math.ceil(sourceWidth),
+            Math.ceil(sourceHeight),
+          )
+          .setDisplaySize(displayWidth, displayHeight)
+          .setDepth(6);
+
+        this.scene.tweens.add({
+          targets: fragment,
+          x: fragment.x + horizontalDirection * Phaser.Math.Between(18, 34),
+          y: fragment.y - Phaser.Math.Between(row === 0 ? 24 : 12, row === 0 ? 40 : 25),
+          angle: horizontalDirection * Phaser.Math.Between(20, 65),
+          duration: Phaser.Math.Between(110, 160),
+          ease: "Quad.easeOut",
+          onComplete: () => {
+            this.scene.tweens.add({
+              targets: fragment,
+              x: fragment.x + horizontalDirection * Phaser.Math.Between(10, 24),
+              y: fragment.y + Phaser.Math.Between(42, 72),
+              angle: fragment.angle + horizontalDirection * Phaser.Math.Between(35, 85),
+              alpha: 0,
+              duration: Phaser.Math.Between(170, 240),
+              ease: "Quad.easeIn",
+              onComplete: () => fragment.destroy(),
+            });
+          },
+        });
+      }
+    }
+
+    const impact = this.scene.add
+      .circle(barricade.x, barricade.y - barricade.displayHeight / 2, 10, 0x7cfcea, 0.85)
+      .setDepth(7);
+    this.scene.tweens.add({
+      targets: impact,
+      scale: 3.2,
+      alpha: 0,
+      duration: 180,
+      ease: "Quad.easeOut",
+      onComplete: () => impact.destroy(),
+    });
   }
 
   private destroyBreakableInAttackRange(attackX: number, attackY: number): void {

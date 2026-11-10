@@ -20,10 +20,10 @@
    retirada e Alex afirma que nao e uma obra.
 3. Em cada setor, atravesse o `memory_glitch` antes da saida e confirme que a
    lembranca explica um motivo humano para abandonar o cromo.
-4. Complete a sequencia ReForge depois de cada memoria. Confirme que o primeiro
-   procedimento mostra o pai de Alex, que o segundo mostra um operador ciborgue
-   diferente e que o pai retorna no terceiro e no último. Todos devem aparecer
-   durante a avaliacao/venda do implante.
+4. Complete a sequencia ReForge depois de cada memoria. Confirme que as três
+   primeiras retiradas mostram o operador ciborgue anônimo. O rosto do pai deve
+   aparecer somente na última retirada, quando as pernas mecânicas são vendidas
+   e o salto duplo deixa de existir.
 
 | Setor | Glitch | Remocao | Habilidade que deve desaparecer |
 | --- | --- | --- | --- |
@@ -39,6 +39,8 @@
    No Corporativo, nenhum tile/plataforma do segmento anterior deve aparecer
    atrás do spawn. No Meio Urbano, o primeiro bandido deve estar à frente, com
    tempo de reação, e nunca sobreposto a Alex no início.
+   No Topo, quebrar qualquer barricada deve reproduzir a mesma leitura da Fase
+   3: seis fragmentos se espalham, giram, caem e desaparecem.
 6. Depois da última retirada, confirme o trecho do Esgoto com cerca de 8
    segundos, sem implantes e sem tutorial, antes da casa da família.
 7. Resultado esperado: epilogo no Esgoto, `FINAL FLESH` e as quatro

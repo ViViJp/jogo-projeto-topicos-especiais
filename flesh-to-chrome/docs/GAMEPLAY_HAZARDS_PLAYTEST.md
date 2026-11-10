@@ -86,7 +86,7 @@ linha:
 | 2 | cada tipo industrial, dutos baixos e esteiras | movimento comunica ativação; hitbox acompanha arte/pluma; prensa recolhida não toca a silhueta em pé; máquina inativa não mata; duto não parece plataforma sólida |
 | 3 | barricadas, inimigos, checkpoint e morte | ataque e restauração sem duplicação |
 | 4 | paredes falsas, barreiras de segurança, propaganda e checkpoint | parede falsa bloqueia Alex até o primeiro scan válido e então permanece invisível/intangível; barreira visível mata e o scan oculta/desativa somente a próxima; propaganda permanece legível e checkpoint não possui torre ao fundo |
-| 5 | dash, barreiras, quebráveis e barreiras rotativas | barreira visível mata; scan a torna invisível e libera a passagem sem timing aleatório; visual sempre coincide com a colisão |
+| 5 | dash, barreiras, quebráveis e barreiras rotativas | barreira visível mata; scan a torna invisível e libera a passagem sem timing aleatório; visual sempre coincide com a colisão; quebráveis explodem em seis fragmentos, com impacto, rotação, queda e fade |
 
 Em qualquer fase, pause durante um hazard e durante o cooldown de dash,
 aguarde alguns segundos e retome: estado e tempo restantes devem ser os

@@ -133,6 +133,12 @@ for (const credit of phase5Credits) {
 const phase5RuntimeSource = fs.readFileSync(path.join(projectDirectory, "src/objects/TiledPhase5Runtime.ts"), "utf8");
 assert.match(phase5RuntimeSource, /height \/ 2 - 16/, "fase5: barreira rotativa precisa de janela horizontal segura");
 assert.match(phase5RuntimeSource, /TILED_PHASE5_BARRICADE_TEXTURE_KEY/);
+assert.match(phase5RuntimeSource, /this\.spawnBarricadeFragments\(target\.visual\)/,
+  "barricadas da Fase 5 devem executar a animação antes de desaparecer");
+assert.match(phase5RuntimeSource, /const columns = 3;[\s\S]*?const rows = 2;/,
+  "animação da Fase 5 deve dividir a barricada em seis fragmentos");
+assert.match(phase5RuntimeSource, /onComplete: \(\) => \{[\s\S]*?alpha: 0,[\s\S]*?fragment\.destroy\(\)/,
+  "fragmentos devem subir no impacto, cair e desaparecer");
 assert.match(phase5RuntimeSource, /groundY \+ ASSET_BASELINE_PADDING/);
 assert.match(phase5RuntimeSource, /TILED_PHASE5_GATE_TEXTURE_KEY/);
 assert.match(phase5RuntimeSource, /bottomY \+ ASSET_BASELINE_PADDING/);

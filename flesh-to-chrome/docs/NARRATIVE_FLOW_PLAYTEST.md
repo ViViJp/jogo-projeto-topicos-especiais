@@ -40,9 +40,9 @@ Novo Jogo
   suficiente para marcar o final como concluído.
 - Flesh inicia com a cena em que George reprova a decisão de Alex e se recusa a
   desmontar sua obra. Cada glitch recupera uma memória/motivação, e cada
-  primeiro procedimento ReForge mostra o holograma corporativo do pai antes da
-  retirada; o segundo usa um operador ciborgue diferente e o pai retorna nos
-  procedimentos seguintes.
+  três primeiros procedimentos ReForge mostram um operador ciborgue anônimo; o
+  holograma do pai aparece somente no último, antes da retirada das pernas e da
+  perda do salto duplo.
 - `Continuar do Portão` restaura fase, checkpoint, créditos, carteira e os
   quatro implantes sem consumir o snapshot.
 

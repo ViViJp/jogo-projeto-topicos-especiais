@@ -343,7 +343,7 @@ No topo, o Portão materializa a decisão temática do jogo. Aceitar a conversã
 
 Como George se recusa a retirar os implantes, Alex utiliza a ReForge Industries. A empresa recupera o cromo — material socialmente mais valioso — e fornece substitutos orgânicos bioprintados de qualidade inferior. A cada remoção Alex perde uma habilidade especial e recupera uma parte imperfeita de sua condição humana.
 
-No caminho Flesh, a imagem do pai reaparece como holograma corporativo no primeiro, no terceiro e no último procedimentos, recebendo ênfase na retirada final do setor Industrial. A segunda retirada, depois do Corporativo, utiliza outro operador ciborgue da ReForge para mostrar que a empresa alterna avatares e que o pai não controla pessoalmente cada transação. Mesmo depois de reencontrar o símbolo que perseguiu, Alex continua descendo para a família. Se recuperar todas as memórias, chega ao Flesh. Se quebrar a cadeia, chega ao Hollow.
+No caminho Flesh, as três primeiras retiradas utilizam um operador ciborgue anônimo da ReForge. A imagem do pai aparece como holograma corporativo **somente na última remoção**, no setor Industrial, quando as pernas mecânicas são vendidas e Alex perde o salto duplo. Essa aparição única concentra o impacto narrativo no momento em que Alex abandona a última parte robótica. Se recuperar todas as memórias, chega ao Flesh. Se quebrar a cadeia, chega ao Hollow.
 
 ## 13.3 Gameplay — Brief
 
@@ -655,9 +655,9 @@ O reencontro físico é exclusivo e central nesse final:
 
 ### Caminho Flesh
 
-A imagem do pai é utilizada como um dos avatares pré-programados das interfaces corporativas da ReForge Industries. Outros operadores ciborgues podem ocupar a mesma interface.
+A imagem do pai é utilizada como avatar pré-programado somente no último procedimento da ReForge Industries. Os três procedimentos anteriores usam um operador ciborgue anônimo na mesma interface.
 
-Antes de cada retirada, um holograma apresenta a avaliação e a venda do implante recuperado, confirma que o cromo conserva valor comercial e oferece a parte bioprintada como substituição barata. O rosto do pai no primeiro, terceiro e último procedimentos transforma a operação numa lembrança do destino que Alex decidiu recusar; na segunda retirada, um operador ciborgue anônimo evidencia que esse discurso é institucional.
+Antes de cada retirada, um holograma apresenta a avaliação e a venda do implante recuperado, confirma que o cromo conserva valor comercial e oferece a parte bioprintada como substituição barata. O operador anônimo dos três primeiros procedimentos evidencia que esse discurso é institucional. O rosto do pai surge apenas na retirada das pernas, transformando a perda do salto duplo e da última parte robótica no confronto final com o destino que Alex decidiu recusar.
 
 Na **Fase 2 — Industrial**, quando Alex já abandonou quase toda a ascensão, a presença do holograma recebe ênfase narrativa especial.
 
@@ -777,8 +777,8 @@ As unidades de reciclagem usam hologramas com rostos de ciborgues famosos.
 - são interfaces pré-programadas;
 - não possuem consciência;
 - não representam comunicação real com a pessoa exibida.
-- o primeiro, o terceiro e o último avatares usados no procedimento de Alex exibem o rosto de seu pai;
-- a segunda retirada usa um operador ciborgue anônimo da corporação;
+- as três primeiras retiradas usam um operador ciborgue anônimo da corporação;
+- somente o último avatar, durante a remoção das pernas mecânicas, exibe o rosto do pai de Alex;
 - aparece depois da memória e antes da retirada do implante;
 - conduz a avaliação/venda da peça mecânica e a autorização do bioprinting;
 - reforça a lógica corporativa de que o cromo vale mais do que a carne.
@@ -838,7 +838,7 @@ Final: George instala os braços.
 
 ### Durante a descida
 
-O holograma do pai acompanha a primeira transação da ReForge e retorna com destaque especial no setor Industrial; o segundo procedimento usa outro ciborgue corporativo. Mesmo diante do símbolo que originou sua obsessão, Alex vende o último implante e continua descendo em direção à família.
+Os três primeiros procedimentos usam o operador ciborgue da ReForge. O holograma do pai aparece uma única vez, com destaque especial no setor Industrial. Mesmo diante do símbolo que originou sua obsessão, Alex vende as pernas mecânicas, perde o salto duplo e continua descendo em direção à família.
 
 ## 16.3 Fase 3 — Meio Urbano
 
@@ -959,7 +959,7 @@ A conversão completa ocorre e segue para o Final Chrome.
 6. o primeiro glitch passa a existir numa pequena rota secreta;
 7. Alex recupera a primeira memória e confirma um motivo para abandonar o cromo;
 8. procura uma unidade da ReForge Industries;
-9. o holograma do pai conduz a venda do implante e o bioprinting;
+9. um operador ciborgue anônimo conduz a venda do implante e o bioprinting;
 10. Alex remove o primeiro implante e segue para o recorte da Fase 4.
 
 ## 18.3 Natureza dos fragmentos
@@ -1080,7 +1080,7 @@ Hollow usa exatamente o estado corporal em que a cadeia foi quebrada:
 
 1. memória recuperada;
 2. Alex encontra unidade da ReForge Industries;
-3. o holograma corporativo correspondente aparece — pai de Alex no primeiro e no último procedimentos, operador ciborgue anônimo na segunda retirada;
+3. o holograma corporativo correspondente aparece — operador ciborgue anônimo nas três primeiras retiradas e pai de Alex somente na última, durante a remoção das pernas/salto duplo;
 4. a interface avalia e registra a venda da peça mecânica;
 5. o discurso corporativo reforça que o cromo conserva valor e que a carne é um substituto barato;
 6. implante é removido e recolhido pela corporação;

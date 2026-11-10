@@ -49,13 +49,15 @@ export class ReForgeScene extends Phaser.Scene {
     }
     const width = this.scale.width;
     const height = this.scale.height;
-    const usesCyborgOperator = save.descentState.currentStep === 1;
+    // O pai aparece uma única vez: na retirada final das pernas, quando Alex
+    // perde o salto duplo. As três vendas anteriores usam o operador genérico.
+    const usesFatherAvatar = step.implant === "legs";
     this.cameras.main.setBackgroundColor(0x071015);
     this.add.image(width / 2, 270, REFORGE_BG).setDisplaySize(300, 400);
     const avatarHologram = this.add.image(
       width / 2,
       255,
-      usesCyborgOperator ? REFORGE_CYBORG : REFORGE_FATHER,
+      usesFatherAvatar ? REFORGE_FATHER : REFORGE_CYBORG,
     )
       .setDisplaySize(180, 216)
       .setVisible(false);
@@ -63,7 +65,7 @@ export class ReForgeScene extends Phaser.Scene {
     const avatarCaption = this.add.text(
       width / 2,
       385,
-      usesCyborgOperator ? "AVATAR REFORGE // OPERADOR CIBORGUE" : "AVATAR REFORGE // PAI DE ALEX",
+      usesFatherAvatar ? "AVATAR REFORGE // PAI DE ALEX" : "AVATAR REFORGE // OPERADOR CIBORGUE",
       {
         fontFamily: "Courier New, monospace", fontSize: "13px", color: "#7CFCEA",
         backgroundColor: "#071015dd", padding: { x: 7, y: 4 },
