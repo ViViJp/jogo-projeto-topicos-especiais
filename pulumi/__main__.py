@@ -1,25 +1,44 @@
 import json
+import subprocess
+from pathlib import Path
 
 import pulumi
 import pulumi_aws as aws
 
-if pulumi.get_stack() == "prod":
-    zone = aws.route53.Zone(
-        "flesh-to-chrome",
-        name="flesh-to-chrome.negoci.online",
-    )
-    pulumi.export("nameservers", zone.name_servers)
+stack = pulumi.get_stack()
+if stack not in ("dev", "prod"):
+    raise Exception("A stack precisa se chamar dev ou prod.")
 
-    table = aws.dynamodb.Table(
-        "campanha",
-        name="flesh-to-chrome-campanha",
-        attributes=[aws.dynamodb.TableAttributeArgs(name="id", type="S")],
-        hash_key="id",
+prefix = f"flesh-to-chrome-{stack}"
+services_dir = Path(__file__).parent / "services"
+domain = "nihil-legere-possum.lat"
+
+if stack == "prod":
+    zone = aws.route53.Zone("nihil-legere-possum", name=domain)
+    pulumi.export("nameservers", zone.name_servers)
+    pulumi.export("domain", domain)
+
+
+def table(name):
+    return aws.dynamodb.Table(
+        name,
+        name=f"{prefix}-{name}",
+        attributes=[
+            aws.dynamodb.TableAttributeArgs(name="pk", type="S"),
+            aws.dynamodb.TableAttributeArgs(name="sk", type="S"),
+        ],
+        hash_key="pk",
+        range_key="sk",
         billing_mode="PAY_PER_REQUEST",
     )
 
+
+def publish(service, table_resource):
+    path = services_dir / service
+    subprocess.run(["npm", "install", "--omit=dev"], cwd=path, check=True)
+
     role = aws.iam.Role(
-        "campanha-role",
+        f"{service}-role",
         assume_role_policy=json.dumps(
             {
                 "Version": "2012-10-17",
@@ -33,44 +52,61 @@ if pulumi.get_stack() == "prod":
             }
         ),
     )
-
     aws.iam.RolePolicyAttachment(
-        "campanha-logs",
+        f"{service}-logs",
         role=role.name,
         policy_arn="arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
     )
-
     aws.iam.RolePolicy(
-        "campanha-dynamodb",
+        f"{service}-dynamodb",
         role=role.id,
-        policy=table.arn.apply(
+        policy=table_resource.arn.apply(
             lambda arn: json.dumps(
                 {
                     "Version": "2012-10-17",
                     "Statement": [
                         {
                             "Effect": "Allow",
-                            "Action": ["dynamodb:GetItem", "dynamodb:PutItem"],
-                            "Resource": arn,
+                            "Action": [
+                                "dynamodb:GetItem",
+                                "dynamodb:PutItem",
+                                "dynamodb:UpdateItem",
+                                "dynamodb:DeleteItem",
+                                "dynamodb:Query",
+                                "dynamodb:TransactWriteItems",
+                                "dynamodb:ConditionCheckItem",
+                            ],
+                            "Resource": [arn, f"{arn}/index/*"],
                         }
                     ],
                 }
             )
         ),
     )
-
     fn = aws.lambda_.Function(
-        "campanha",
-        name="flesh-to-chrome-campanha",
-        runtime=aws.lambda_.Runtime.PYTHON3D13,
-        handler="handler.lambda_handler",
+        service,
+        name=f"{prefix}-{service}",
+        runtime=aws.lambda_.Runtime.NODE_JS22D_X,
+        handler="index.handler",
         role=role.arn,
-        code=pulumi.FileArchive("./campanha"),
+        code=pulumi.FileArchive(str(path)),
         timeout=10,
         environment=aws.lambda_.FunctionEnvironmentArgs(
-            variables={"TABLE_NAME": table.name},
+            variables={"TABLE_NAME": table_resource.name},
         ),
     )
+    pulumi.export(f"{service}_function", fn.name)
+    pulumi.export(f"{service}_table", table_resource.name)
+    return fn
 
-    pulumi.export("table_name", table.name)
-    pulumi.export("function_name", fn.name)
+
+services = {
+    "conta": table("accounts"),
+    "campanha": table("campaigns"),
+    "partidas": table("matches"),
+    "comunicacoes": table("communications"),
+    "auditoria": table("audit"),
+}
+
+for service, table_resource in services.items():
+    publish(service, table_resource)
