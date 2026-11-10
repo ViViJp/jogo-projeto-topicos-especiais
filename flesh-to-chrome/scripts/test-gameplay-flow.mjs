@@ -268,6 +268,8 @@ assert.match(phase4Runtime, /hideBeforeX\(worldX: number, flatGroundWidthPx = 0\
   "recorte corporativo deve ocultar o segmento anterior ao spawn");
 assert.match(phase4Runtime, /this\.groundLayer\.putTileAt\(template\.index, col, template\.row\)/,
   "recorte corporativo deve reconstruir um piso plano à esquerda do spawn");
+assert.match(phase4Runtime, /moveFatherAdToDescentStart\(startX: number\)/,
+  "propaganda do pai deve poder marcar o início do caminho de volta");
 const hudSource = fs.readFileSync(path.join(projectDirectory, "src/systems/HUD.ts"), "utf8");
 assert.match(hudSource, /setFillStyle\(0x21d7ff, 1\)/, "dash pronto deve usar azul elétrico");
 assert.match(hudSource, /batteryBack,[\s\S]*this\.dashBatteryFill,[\s\S]*frame,/,
@@ -281,6 +283,8 @@ assert.match(gameScene, /checkpointX: 0/);
 assert.match(gameScene, /checkpointY: 0/);
 assert.match(gameScene, /runtime\.hideBeforeX\(descentRoute\.startX, this\.scale\.width\)/,
   "o piso de aproximação do Corporativo deve cobrir uma tela inteira");
+assert.match(gameScene, /runtime\.moveFatherAdToDescentStart\(descentRoute\.startX\)/,
+  "a descida Corporativa deve começar pela propaganda do pai");
 assert.match(gameScene, /descentRoute\.startX \+ descentRoute\.enemySafeStartPx/);
 const pausedBranch = gameScene.slice(gameScene.indexOf("if (this.isPaused)"), gameScene.indexOf("this.player.update(delta)"));
 assert.match(pausedBranch, /return;/, "pausa deve retornar antes de atualizar Player e cooldowns");

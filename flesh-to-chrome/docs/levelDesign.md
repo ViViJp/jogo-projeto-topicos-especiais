@@ -597,3 +597,24 @@
                 ┌──────┴──────┐
                 ↓             ↓
               CHROME         FLESH
+
+
+# Recortes da Descida
+
+## D2 — Corporativo
+
+- a propaganda do pai abre o recorte e sinaliza que Alex está refazendo o
+  caminho da subida;
+- o fragmento de memória continua no fim do percurso;
+- a mudança vale apenas para a descida: o crédito comum e a composição
+  original permanecem no final da Fase 4 durante a subida.
+
+## D3 — Meio Urbano
+
+- mantém o vocabulário urbano de barricadas, inimigos e eletricidade;
+- inclui uma grade elétrica horizontal de 320 px, larga demais para salto
+  simples e vencida com salto duplo;
+- a grade usa sprite próprio em azul-petróleo/ciano, derivado visualmente dos
+  portões elétricos originais; não há tile horizontal adequado no tileset da
+  Fase 3;
+- contato com a grade segue a regra de hazard fatal em um hit.

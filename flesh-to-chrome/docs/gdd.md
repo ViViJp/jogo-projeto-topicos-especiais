@@ -1034,9 +1034,14 @@ sprite suspensa sobre o vazio.
   duplo e um lacre da ReForge quebrável por ataque. A aproximação à esquerda
   do spawn usa apenas piso plano, sem recuperar plataformas ou obstáculos do
   trecho anterior. O lacre tem sprite metálico próprio e se divide em seis
-  fragmentos animados quando destruído;
+  fragmentos animados quando destruído. Para comunicar que Alex está refazendo
+  o caminho, a propaganda do pai aparece no início do recorte da descida; o
+  fragmento de memória permanece no fim. Na subida, a propaganda e o crédito
+  comum conservam suas posições originais no final do mapa;
 - **D3 — Meio Urbano:** combina barricadas/inimigos com uma travessia larga
-  demais para o salto simples;
+  demais para o salto simples. Essa travessia é uma grade elétrica urbana
+  exclusiva da descida, com sprite ciano/azul próprio e leitura visual baseada
+  nos portões elétricos da Fase 3. Não utiliza o retângulo vermelho de blockout;
 - **D4 — Industrial:** concentra o desafio numa travessia de salto duplo e
   permanece completável sem braços, olhos ou propulsores;
 - **Epílogo — Esgoto:** usa apenas um recorte final de aproximadamente 2.464 px

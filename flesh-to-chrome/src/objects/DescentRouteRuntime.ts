@@ -6,6 +6,7 @@ import type { DescentRoute } from "../systems/DescentProgression";
 export const DESCENT_REFORGE_DOOR_CLOSED_KEY = "descent-reforge-door-closed";
 export const DESCENT_REFORGE_DOOR_OPEN_KEY = "descent-reforge-door-open";
 export const DESCENT_ATTACK_BARRIER_TEXTURE_KEY = "descent-reforge-security-seal";
+export const DESCENT_URBAN_ELECTRIC_FLOOR_TEXTURE_KEY = "descent-urban-electric-floor";
 
 /** Obstáculos e saída exclusivos do recorte de descida, sem duplicar mapas. */
 export class DescentRouteRuntime {
@@ -190,6 +191,48 @@ export class DescentRouteRuntime {
 
   private createDoubleJumpHazard(): void {
     const hazard = this.route.doubleJumpHazard!;
+    if (this.route.phaseId === "fase3") {
+      const visual = this.scene.add
+        .image(
+          hazard.x + hazard.width / 2,
+          this.route.startY + 2,
+          DESCENT_URBAN_ELECTRIC_FLOOR_TEXTURE_KEY,
+        )
+        .setOrigin(0.5, 1)
+        .setDisplaySize(hazard.width, 34)
+        .setDepth(4);
+      visual.texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
+      const glow = this.scene.add
+        .rectangle(
+          hazard.x + hazard.width / 2,
+          this.route.startY - 13,
+          hazard.width,
+          26,
+          0x21d7ff,
+          0.12,
+        )
+        .setDepth(3)
+        .setBlendMode(Phaser.BlendModes.ADD);
+      this.scene.tweens.add({
+        targets: visual,
+        alpha: { from: 0.76, to: 1 },
+        yoyo: true,
+        repeat: -1,
+        duration: 240,
+        ease: "Sine.easeInOut",
+      });
+      this.scene.tweens.add({
+        targets: glow,
+        alpha: { from: 0.05, to: 0.18 },
+        yoyo: true,
+        repeat: -1,
+        duration: 360,
+        ease: "Sine.easeInOut",
+      });
+      this.gameObjects.push(visual, glow);
+      return;
+    }
+
     const visual = this.scene.add.rectangle(
       hazard.x + hazard.width / 2,
       this.route.startY - 5,

@@ -220,6 +220,10 @@ assert.match(epilogue, /ending: "flesh" \| "hollow"/);
 assert.match(descentRuntime, /memory_glitch/);
 assert.match(descentRouteRuntime, /doubleJumpHazard/);
 assert.match(descentRouteRuntime, /attackBarrierX/);
+assert.match(descentRouteRuntime, /DESCENT_URBAN_ELECTRIC_FLOOR_TEXTURE_KEY/,
+  "a travessia urbana da descida deve usar arte própria");
+assert.match(descentRouteRuntime, /this\.route\.phaseId === "fase3"[\s\S]*?\.image\([\s\S]*?DESCENT_URBAN_ELECTRIC_FLOOR_TEXTURE_KEY/,
+  "o hazard da D3 não pode permanecer um retângulo vermelho provisório");
 assert.match(descentRouteRuntime, /DESCENT_ATTACK_BARRIER_TEXTURE_KEY/,
   "o lacre da ReForge deve usar um sprite dedicado");
 assert.match(descentRouteRuntime, /this\.spawnBarrierFragments\(this\.barrier\)/,

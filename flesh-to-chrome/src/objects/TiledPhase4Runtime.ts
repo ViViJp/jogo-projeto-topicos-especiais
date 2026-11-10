@@ -98,6 +98,10 @@ export class TiledPhase4Runtime {
   private readonly narrativeLabels: Phaser.GameObjects.Text[] = [];
   private readonly narrativeVisuals: Phaser.GameObjects.Image[] = [];
   private readonly tileLayers: Phaser.Tilemaps.TilemapLayer[] = [];
+  private fatherAd?: {
+    visual: Phaser.GameObjects.Image;
+    label: Phaser.GameObjects.Text;
+  };
   private endGateTriggered = false;
   private playerRef?: Player;
 
@@ -215,6 +219,20 @@ export class TiledPhase4Runtime {
       }
     }
     this.groundLayer.setCollisionByExclusion([-1, 0]);
+  }
+
+  /**
+   * Na descida, a propaganda é o primeiro sinal de que Alex está refazendo o
+   * caminho. O crédito e o fragmento permanecem nas coordenadas finais do
+   * mapa; somente a composição narrativa é deslocada.
+   */
+  moveFatherAdToDescentStart(startX: number): void {
+    if (!this.fatherAd) return;
+    this.fatherAd.visual.setX(startX + 210);
+    this.fatherAd.label
+      .setX(startX + 430)
+      .setData("triggerX", startX)
+      .setData("triggerWidth", 1024);
   }
 
   private readString(
@@ -502,6 +520,7 @@ export class TiledPhase4Runtime {
       label.setData("triggerX", x);
       label.setData("triggerWidth", width);
       this.narrativeLabels.push(label);
+      this.fatherAd = { visual: propaganda, label };
     }
   }
 

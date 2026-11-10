@@ -11,6 +11,7 @@ import {
   DESCENT_ATTACK_BARRIER_TEXTURE_KEY,
   DESCENT_REFORGE_DOOR_CLOSED_KEY,
   DESCENT_REFORGE_DOOR_OPEN_KEY,
+  DESCENT_URBAN_ELECTRIC_FLOOR_TEXTURE_KEY,
   DescentRouteRuntime,
 } from "../objects/DescentRouteRuntime";
 import { Player } from "../entities/Player";
@@ -267,6 +268,12 @@ export class GameScene extends Phaser.Scene {
         this.load.image(
           DESCENT_ATTACK_BARRIER_TEXTURE_KEY,
           new URL("../assets/props/obstacles/reforge-security-seal.png", import.meta.url).href,
+        );
+      }
+      if (!this.textures.exists(DESCENT_URBAN_ELECTRIC_FLOOR_TEXTURE_KEY)) {
+        this.load.image(
+          DESCENT_URBAN_ELECTRIC_FLOOR_TEXTURE_KEY,
+          new URL("../assets/props/hazards/urban-electric-floor.png", import.meta.url).href,
         );
       }
       if (!this.textures.exists(DESCENT_REFORGE_DOOR_CLOSED_KEY)) {
@@ -705,6 +712,7 @@ export class GameScene extends Phaser.Scene {
     const descentRoute = this.data$.descent ? descentRouteForPhase(this.data$.phaseId) : undefined;
     if (descentRoute?.hidePreviousMapContent) {
       runtime.hideBeforeX(descentRoute.startX, this.scale.width);
+      runtime.moveFatherAdToDescentStart(descentRoute.startX);
     }
 
     const spawn = this.phaseSpawn(runtime.spawn.x, runtime.spawn.y);

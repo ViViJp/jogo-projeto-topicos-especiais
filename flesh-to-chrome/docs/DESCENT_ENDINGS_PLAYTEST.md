@@ -43,9 +43,12 @@
    atrás do spawn. A metade esquerda da tela deve continuar preenchida apenas
    por piso plano, sem vazio nem obstáculo antes de Alex. O lacre da ReForge
    deve usar o sprite metálico próprio e, ao ser atacado, quebrar em seis
-   fragmentos que se espalham, giram, caem e desaparecem. No Meio Urbano, o
-   primeiro bandido deve estar à frente, com tempo de reação, e nunca
-   sobreposto a Alex no início.
+   fragmentos que se espalham, giram, caem e desaparecem. A propaganda do pai
+   deve aparecer no início deste recorte, enquanto o fragmento permanece no
+   final. No Meio Urbano, o primeiro bandido deve estar à frente, com tempo de
+   reação, e nunca sobreposto a Alex no início. A travessia de salto duplo deve
+   usar a grade elétrica urbana ciano/azul, sem o retângulo vermelho de
+   blockout.
    No Topo, quebrar qualquer barricada deve reproduzir a mesma leitura da Fase
    3: seis fragmentos se espalham, giram, caem e desaparecem.
    Depois da porta ReForge do Topo não deve permanecer visível nenhum conteúdo
