@@ -34,6 +34,20 @@ assert.equal(
 );
 assert.equal(validateState({ ...initial, credits: { total: 10, consolidatedIds: ["f1-risk-01"] } }), "");
 assert.equal(
+  validateState({ ...initial, credits: { total: 10, consolidatedIds: ["f5-risk-01"] } }),
+  "crédito de fase ainda não alcançada"
+);
+assert.equal(
+  validateState({
+    ...initial,
+    stageId: "topo",
+    implants: ["pernas", "bracos", "olhos", "propulsores"],
+    bodyState: "implanted",
+    credits: { total: 10, consolidatedIds: ["f5-risk-01"] },
+  }),
+  ""
+);
+assert.equal(
   validateState({ ...initial, credits: { total: 10, consolidatedIds: ["mp-credit-01"] } }),
   "crédito inexistente no mapa"
 );
@@ -121,6 +135,13 @@ const chrome = {
   ending: "chrome",
 };
 assert.equal(validateState(chrome), "");
+assert.notEqual(
+  validateState({
+    ...chrome,
+    descent: { ...chrome.descent, chainStatus: "active", pendingMemory: "quem-alex-era" },
+  }),
+  ""
+);
 assert.notEqual(validateTransition(initial, chrome), "");
 const atGate = {
   ...initial,
@@ -130,6 +151,12 @@ const atGate = {
 };
 assert.equal(validateTransition(atGate, chrome), "");
 assert.notEqual(validateTransition({ ...descent, stageId: "topo" }, flesh), "");
+const withCredit = { ...initial, credits: { total: 10, consolidatedIds: ["f1-risk-01"] } };
+assert.notEqual(validateTransition(withCredit, initial), "");
+assert.equal(
+  validateTransition(withCredit, { ...initial, credits: { total: 20, consolidatedIds: ["f1-risk-01", "f1-risk-02"] } }),
+  ""
+);
 
 const code = generateCode();
 assert.match(code, /^[A-Z2-9]{5}-[A-Z2-9]{5}$/);

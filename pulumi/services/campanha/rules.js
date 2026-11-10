@@ -35,16 +35,24 @@ const campaignCredits = {
   ...creditIds("f5-risk-", 24),
 };
 
-function validateCredits(credits) {
+function creditStage(id) {
+  const phase = Number(id.slice(1, 2));
+  return stages[phase - 1];
+}
+
+function validateCredits(state) {
+  const credits = state?.credits;
   if (!credits || !Array.isArray(credits.consolidatedIds)) return "créditos ausentes";
   if (!Number.isInteger(credits.total) || credits.total < 0) return "total de créditos inválido";
   const ids = credits.consolidatedIds;
   if (ids.some((id) => typeof id !== "string" || !id)) return "identificador de crédito inválido";
   if (new Set(ids).size !== ids.length) return "crédito consolidado repetido";
+  const reached = state.phase === "ascent" ? stages.indexOf(state.stageId) : stages.length - 1;
   let sum = 0;
   for (const id of ids) {
     const value = campaignCredits[id];
     if (value === undefined) return "crédito inexistente no mapa";
+    if (stages.indexOf(creditStage(id)) > reached) return "crédito de fase ainda não alcançada";
     sum += value;
   }
   if (credits.total !== sum) return "total incoerente com os créditos";
@@ -90,7 +98,7 @@ function validateState(state) {
   if (state.checkpointId !== null && (typeof state.checkpointId !== "string" || !state.checkpointId)) {
     return "checkpoint inválido";
   }
-  const credits = validateCredits(state.credits);
+  const credits = validateCredits(state);
   if (credits) return credits;
 
   if (state.phase === "ascent") {
@@ -130,7 +138,7 @@ function validateState(state) {
     if (state.gateChoice !== "chrome" || state.bodyState !== "chrome" || !sameList(state.implants, implants)) {
       return "final Chrome incoerente";
     }
-    return "";
+    return validateDescent(state, "inactive");
   }
   if (state.ending === "flesh") {
     if (state.gateChoice !== "descida" || state.descent?.chainStatus !== "complete") {
@@ -217,6 +225,10 @@ function validateTransition(previous, next) {
   }
   if (previous.gateChoice && next.gateChoice !== previous.gateChoice) return "escolha do Portão alterada";
   if (previous.ending && next.ending !== previous.ending) return "final alterado";
+  const previousIds = previous.credits?.consolidatedIds || [];
+  const nextIds = next.credits?.consolidatedIds || [];
+  if (!listGrows(previousIds, nextIds)) return "crédito consolidado removido";
+  if ((next.credits?.total ?? 0) < (previous.credits?.total ?? 0)) return "total de créditos diminuiu";
   return "";
 }
 
