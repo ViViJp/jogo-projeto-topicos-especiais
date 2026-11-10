@@ -20,6 +20,9 @@
    retirada e Alex afirma que nao e uma obra.
 3. Em cada setor, atravesse o `memory_glitch` antes da saida e confirme que a
    lembranca explica um motivo humano para abandonar o cromo.
+   Antes da coleta, a porta ReForge no final deve aparecer fechada e indicar
+   acesso bloqueado. Depois da coleta, deve trocar imediatamente para o sprite
+   aberto e indicar acesso autorizado. Repita nas quatro fases da descida.
 4. Complete a sequencia ReForge depois de cada memoria. Confirme que as três
    primeiras retiradas mostram o operador ciborgue anônimo. O rosto do pai deve
    aparecer somente na última retirada, quando as pernas mecânicas são vendidas
@@ -37,10 +40,17 @@
    de tutorial e exigem, respectivamente: todas as habilidades; visor + salto
    duplo + ataque; salto duplo + ataque; e salto duplo.
    No Corporativo, nenhum tile/plataforma do segmento anterior deve aparecer
-   atrás do spawn. No Meio Urbano, o primeiro bandido deve estar à frente, com
-   tempo de reação, e nunca sobreposto a Alex no início.
+   atrás do spawn. A metade esquerda da tela deve continuar preenchida apenas
+   por piso plano, sem vazio nem obstáculo antes de Alex. O lacre da ReForge
+   deve usar o sprite metálico próprio e, ao ser atacado, quebrar em seis
+   fragmentos que se espalham, giram, caem e desaparecem. No Meio Urbano, o
+   primeiro bandido deve estar à frente, com tempo de reação, e nunca
+   sobreposto a Alex no início.
    No Topo, quebrar qualquer barricada deve reproduzir a mesma leitura da Fase
    3: seis fragmentos se espalham, giram, caem e desaparecem.
+   Depois da porta ReForge do Topo não deve permanecer visível nenhum conteúdo
+   do trecho contemplativo usado pela subida. O piso deve continuar sob toda a
+   largura da porta, sem deixar sua metade direita suspensa sobre o vazio.
 6. Depois da última retirada, confirme o trecho do Esgoto com cerca de 8
    segundos, sem implantes e sem tutorial, antes da casa da família.
 7. Resultado esperado: epilogo no Esgoto, `FINAL FLESH` e as quatro

@@ -220,6 +220,21 @@ assert.match(epilogue, /ending: "flesh" \| "hollow"/);
 assert.match(descentRuntime, /memory_glitch/);
 assert.match(descentRouteRuntime, /doubleJumpHazard/);
 assert.match(descentRouteRuntime, /attackBarrierX/);
+assert.match(descentRouteRuntime, /DESCENT_ATTACK_BARRIER_TEXTURE_KEY/,
+  "o lacre da ReForge deve usar um sprite dedicado");
+assert.match(descentRouteRuntime, /this\.spawnBarrierFragments\(this\.barrier\)/,
+  "destruir o lacre deve iniciar sua animação de quebra");
+assert.match(descentRouteRuntime, /const columns = 2;[\s\S]*?const rows = 3;/,
+  "a animação do lacre deve produzir seis fragmentos");
+assert.match(descentRouteRuntime, /alpha: 0,[\s\S]*?fragment\.destroy\(\)/,
+  "os fragmentos do lacre devem cair, desaparecer e ser destruídos");
+assert.match(descentRouteRuntime, /DESCENT_REFORGE_DOOR_CLOSED_KEY/);
+assert.match(descentRouteRuntime, /DESCENT_REFORGE_DOOR_OPEN_KEY/);
+assert.match(descentRouteRuntime, /setMemoryRecovered\(recovered: boolean\)/);
+assert.match(descentRouteRuntime, /MEMÓRIA VALIDADA \/\/ ACESSO ABERTO/);
+assert.match(descentRouteRuntime, /MEMÓRIA AUSENTE \/\/ ACESSO BLOQUEADO/);
+assert.match(game, /this\.descentRouteRuntime\?\.setMemoryRecovered\(true\)/,
+  "coletar o fragmento deve abrir a porta ReForge");
 assert.match(reforge, /phaseId: "fase1"[\s\S]*?descent: true/,
   "a ultima retirada deve abrir o trecho curto jogavel do Esgoto");
 for (const [phaseId, map] of [

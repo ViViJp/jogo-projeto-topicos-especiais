@@ -7,7 +7,12 @@ import { HUD } from "../systems/HUD";
 import { SaveState } from "../systems/SaveState";
 import { descentRouteForPhase, descentStepForPhase } from "../systems/DescentProgression";
 import { DescentGlitchRuntime, DESCENT_GLITCH_TEXTURE_PREFIX } from "../objects/DescentGlitchRuntime";
-import { DescentRouteRuntime } from "../objects/DescentRouteRuntime";
+import {
+  DESCENT_ATTACK_BARRIER_TEXTURE_KEY,
+  DESCENT_REFORGE_DOOR_CLOSED_KEY,
+  DESCENT_REFORGE_DOOR_OPEN_KEY,
+  DescentRouteRuntime,
+} from "../objects/DescentRouteRuntime";
 import { Player } from "../entities/Player";
 import { LevelRuntime } from "../objects/LevelRuntime";
 import {
@@ -258,6 +263,24 @@ export class GameScene extends Phaser.Scene {
       }
     }
     if (this.data$.descent) {
+      if (!this.textures.exists(DESCENT_ATTACK_BARRIER_TEXTURE_KEY)) {
+        this.load.image(
+          DESCENT_ATTACK_BARRIER_TEXTURE_KEY,
+          new URL("../assets/props/obstacles/reforge-security-seal.png", import.meta.url).href,
+        );
+      }
+      if (!this.textures.exists(DESCENT_REFORGE_DOOR_CLOSED_KEY)) {
+        this.load.image(
+          DESCENT_REFORGE_DOOR_CLOSED_KEY,
+          new URL("../assets/narrative/reforge-door/reforge-door-closed.png", import.meta.url).href,
+        );
+      }
+      if (!this.textures.exists(DESCENT_REFORGE_DOOR_OPEN_KEY)) {
+        this.load.image(
+          DESCENT_REFORGE_DOOR_OPEN_KEY,
+          new URL("../assets/narrative/reforge-door/reforge-door-open.png", import.meta.url).href,
+        );
+      }
       const fragmentAssets = [
         { id: "topo", url: new URL("../assets/narrative/fragments/fragmento-topo.png", import.meta.url) },
         { id: "corporativo", url: new URL("../assets/narrative/fragments/fragmento-corporativo.png", import.meta.url) },
@@ -544,10 +567,15 @@ export class GameScene extends Phaser.Scene {
   private createDescentOverlay(): void {
     const route = descentRouteForPhase(this.data$.phaseId);
     if (!route) throw new Error(`Recorte de descida ausente para ${this.data$.phaseId}`);
+    const step = descentStepForPhase(this.data$.phaseId);
+    const recovered = step
+      ? this.save.get().descentState.recoveredFragmentIds.includes(step.fragmentId)
+      : false;
     this.descentRouteRuntime = new DescentRouteRuntime(
       this,
       route,
       () => this.handleEndGate(),
+      recovered,
     );
     this.descentRouteRuntime.registerPlayer(this.player);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.descentRouteRuntime?.destroy());
@@ -558,7 +586,6 @@ export class GameScene extends Phaser.Scene {
     this.tiledPhase4Runtime?.hideCredits();
     this.tiledPhase5Runtime?.hideCredits();
 
-    const step = descentStepForPhase(this.data$.phaseId);
     if (!step) {
       this.hud.flashPrompt(route.title, 2200);
       return;
@@ -575,7 +602,6 @@ export class GameScene extends Phaser.Scene {
         : this.data$.phaseId === "fase4"
           ? TILED_FASE4_OFFSET_Y
           : TILED_FASE5_OFFSET_Y;
-    const recovered = this.save.get().descentState.recoveredFragmentIds.includes(step.fragmentId);
     this.descentRuntime = new DescentGlitchRuntime(
       this,
       map,
@@ -584,6 +610,7 @@ export class GameScene extends Phaser.Scene {
       recovered,
       (fragmentId) => {
         if (!this.save.recoverDescentFragment(fragmentId)) return;
+        this.descentRouteRuntime?.setMemoryRecovered(true);
         this.cameras.main.flash(320, 124, 252, 234);
         this.hud.flashPrompt(`MEMORIA RECUPERADA — ${step.memoryTitle}`, 1800);
       },
@@ -676,7 +703,9 @@ export class GameScene extends Phaser.Scene {
     this.tiledPhase4Runtime = runtime;
     this.levelLengthPx = runtime.lengthPx;
     const descentRoute = this.data$.descent ? descentRouteForPhase(this.data$.phaseId) : undefined;
-    if (descentRoute?.hidePreviousMapContent) runtime.hideBeforeX(descentRoute.startX);
+    if (descentRoute?.hidePreviousMapContent) {
+      runtime.hideBeforeX(descentRoute.startX, this.scale.width);
+    }
 
     const spawn = this.phaseSpawn(runtime.spawn.x, runtime.spawn.y);
     this.player = new Player(this, spawn.x, spawn.y, this.activeAbilities, this.input$, {
@@ -697,6 +726,8 @@ export class GameScene extends Phaser.Scene {
     });
     this.tiledPhase5Runtime = runtime;
     this.levelLengthPx = runtime.lengthPx;
+    const descentRoute = this.data$.descent ? descentRouteForPhase(this.data$.phaseId) : undefined;
+    if (descentRoute && !descentRoute.epilogue) runtime.hideAfterX(descentRoute.endX);
 
     const spawn = this.phaseSpawn(runtime.spawn.x, runtime.spawn.y);
     this.player = new Player(this, spawn.x, spawn.y, this.activeAbilities, this.input$, {

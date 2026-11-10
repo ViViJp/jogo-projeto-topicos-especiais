@@ -1009,12 +1009,32 @@ Cada recorte deve:
 - terminar na transição para a unidade da ReForge Industries;
 - utilizar iluminação e ambientação próprias da descida.
 
+### Porta da ReForge
+
+Os quatro recortes ativos terminam numa porta física da ReForge Industries,
+com dois estados visuais:
+
+- **fechada:** o fragmento de memória da fase ainda não foi recuperado; ao
+  alcançá-la, o fluxo segue para o retry especial ou para Hollow;
+- **aberta:** o fragmento foi recuperado e validado; atravessá-la conduz ao
+  procedimento de venda do implante e bioprinting.
+
+A porta reage imediatamente à coleta do fragmento e preserva o estado aberto
+se a fase for reiniciada depois da recuperação. No recorte D1 — Topo, todo o
+conteúdo do mapa posterior à entrada é ocultado: a porta encerra visualmente a
+fase e o antigo trecho contemplativo da subida não aparece depois dela. A
+soleira permanece visível sob toda a largura da porta, sem deixar parte do
+sprite suspensa sobre o vazio.
+
 ### Distribuição mecânica dos recortes
 
 - **D1 — Topo:** combina vãos de dash e salto duplo, barricadas quebráveis,
   revelações do visor e ameaças que exigem leitura das quatro habilidades;
 - **D2 — Corporativo:** combina rota revelada pelo visor, travessia de salto
-  duplo e um lacre da ReForge quebrável por ataque;
+  duplo e um lacre da ReForge quebrável por ataque. A aproximação à esquerda
+  do spawn usa apenas piso plano, sem recuperar plataformas ou obstáculos do
+  trecho anterior. O lacre tem sprite metálico próprio e se divide em seis
+  fragmentos animados quando destruído;
 - **D3 — Meio Urbano:** combina barricadas/inimigos com uma travessia larga
   demais para o salto simples;
 - **D4 — Industrial:** concentra o desafio numa travessia de salto duplo e

@@ -184,7 +184,16 @@ export class TiledPhase4Runtime {
    * da tela e, sem este corte visual, ainda mostra plataformas abandonadas
    * do trecho anterior atrás dele, embora não exista caminho de volta.
    */
-  hideBeforeX(worldX: number): void {
+  hideBeforeX(worldX: number, flatGroundWidthPx = 0): void {
+    const startColumn = Phaser.Math.Clamp(
+      Math.floor(worldX / this.map.tileWidth),
+      0,
+      this.map.width - 1,
+    );
+    const groundTemplate = Array.from({ length: this.map.height }, (_, row) => {
+      const tile = this.groundLayer.getTileAt(startColumn, row);
+      return tile && tile.index !== -1 ? { row, index: tile.index } : null;
+    }).filter((entry): entry is { row: number; index: number } => entry !== null);
     const lastHiddenColumn = Math.floor((worldX - 1) / this.map.tileWidth);
     for (const layer of this.tileLayers) {
       for (let col = 0; col <= lastHiddenColumn; col += 1) {
@@ -194,6 +203,18 @@ export class TiledPhase4Runtime {
         }
       }
     }
+    if (flatGroundWidthPx <= 0) return;
+    const firstGroundColumn = Math.max(
+      0,
+      startColumn - Math.ceil(flatGroundWidthPx / this.map.tileWidth),
+    );
+    for (let col = firstGroundColumn; col < startColumn; col += 1) {
+      for (const template of groundTemplate) {
+        const tile = this.groundLayer.putTileAt(template.index, col, template.row);
+        if (tile) tile.visible = true;
+      }
+    }
+    this.groundLayer.setCollisionByExclusion([-1, 0]);
   }
 
   private readString(

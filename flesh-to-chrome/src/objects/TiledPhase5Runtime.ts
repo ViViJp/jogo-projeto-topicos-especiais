@@ -130,6 +130,7 @@ export class TiledPhase5Runtime {
   private readonly breakableDefinitions: RuntimeBreakableDefinition[] = [];
   private readonly labels: Phaser.GameObjects.Text[] = [];
   private readonly endMarkerObjects: Array<{ destroy(): void }> = [];
+  private readonly tileLayers: Phaser.Tilemaps.TilemapLayer[] = [];
   private readonly offsetY: number;
   private readonly creditValue: number;
   private readonly contextLabel: string;
@@ -172,6 +173,7 @@ export class TiledPhase5Runtime {
     ground.setCollisionByExclusion([-1, 0]);
     ground.setDepth(0);
     this.groundLayer = ground;
+    this.tileLayers.push(ground);
 
     this.scanVisualsLayer = this.createVisualLayer("scan-visuals", tilesets, 1);
     this.hazardsLayer = this.createVisualLayer("hazards", tilesets, 2);
@@ -214,7 +216,25 @@ export class TiledPhase5Runtime {
     if (!layer) return undefined;
     layer.setPosition(layer.x, layer.y + this.offsetY);
     layer.setDepth(depth);
+    this.tileLayers.push(layer);
     return layer;
+  }
+
+  /** Remove do recorte Flesh o trecho contemplativo que pertence à subida. */
+  hideAfterX(worldX: number): void {
+    for (const layer of this.tileLayers) {
+      // A soleira precisa continuar além do centro da porta; cortar o chão
+      // exatamente no endX fazia metade direita do sprite flutuar no vazio.
+      const groundExtension = layer === this.groundLayer ? 128 : 0;
+      const firstHiddenColumn = Math.ceil((worldX + groundExtension) / this.map.tileWidth);
+      for (let col = firstHiddenColumn; col < this.map.width; col += 1) {
+        for (let row = 0; row < this.map.height; row += 1) {
+          const tile = layer.getTileAt(col, row);
+          if (tile) tile.visible = false;
+        }
+      }
+    }
+    this.labels.filter((label) => label.x >= worldX).forEach((label) => label.setVisible(false));
   }
 
   private readString(

@@ -142,6 +142,10 @@ assert.match(phase5RuntimeSource, /onComplete: \(\) => \{[\s\S]*?alpha: 0,[\s\S]
 assert.match(phase5RuntimeSource, /groundY \+ ASSET_BASELINE_PADDING/);
 assert.match(phase5RuntimeSource, /TILED_PHASE5_GATE_TEXTURE_KEY/);
 assert.match(phase5RuntimeSource, /bottomY \+ ASSET_BASELINE_PADDING/);
+assert.match(phase5RuntimeSource, /hideAfterX\(worldX: number\)/,
+  "recorte Flesh do Topo deve remover conteúdo posterior à porta ReForge");
+assert.match(phase5RuntimeSource, /const groundExtension = layer === this\.groundLayer \? 128 : 0/,
+  "a soleira do Topo deve sustentar toda a largura da porta ReForge");
 
 const gameScene = fs.readFileSync(path.join(projectDirectory, "src/scenes/GameScene.ts"), "utf8");
 const mainSource = fs.readFileSync(path.join(projectDirectory, "src/main.ts"), "utf8");
@@ -260,8 +264,10 @@ assert.match(enemyRuntime, /PHYSICS\.attack\.range/);
 const phase3Runtime = fs.readFileSync(path.join(projectDirectory, "src/objects/TiledPhase3Runtime.ts"), "utf8");
 assert.match(phase3Runtime, /excludeEnemiesThroughX/,
   "recorte urbano deve poder excluir inimigos sobrepostos ao spawn");
-assert.match(phase4Runtime, /hideBeforeX\(worldX: number\)/,
+assert.match(phase4Runtime, /hideBeforeX\(worldX: number, flatGroundWidthPx = 0\)/,
   "recorte corporativo deve ocultar o segmento anterior ao spawn");
+assert.match(phase4Runtime, /this\.groundLayer\.putTileAt\(template\.index, col, template\.row\)/,
+  "recorte corporativo deve reconstruir um piso plano à esquerda do spawn");
 const hudSource = fs.readFileSync(path.join(projectDirectory, "src/systems/HUD.ts"), "utf8");
 assert.match(hudSource, /setFillStyle\(0x21d7ff, 1\)/, "dash pronto deve usar azul elétrico");
 assert.match(hudSource, /batteryBack,[\s\S]*this\.dashBatteryFill,[\s\S]*frame,/,
@@ -273,7 +279,8 @@ assert.match(gameScene, /const alreadyActive = this\.data\$\.checkpointX > 0/);
 assert.match(gameScene, /if \(alreadyActive\) return false/);
 assert.match(gameScene, /checkpointX: 0/);
 assert.match(gameScene, /checkpointY: 0/);
-assert.match(gameScene, /runtime\.hideBeforeX\(descentRoute\.startX\)/);
+assert.match(gameScene, /runtime\.hideBeforeX\(descentRoute\.startX, this\.scale\.width\)/,
+  "o piso de aproximação do Corporativo deve cobrir uma tela inteira");
 assert.match(gameScene, /descentRoute\.startX \+ descentRoute\.enemySafeStartPx/);
 const pausedBranch = gameScene.slice(gameScene.indexOf("if (this.isPaused)"), gameScene.indexOf("this.player.update(delta)"));
 assert.match(pausedBranch, /return;/, "pausa deve retornar antes de atualizar Player e cooldowns");
