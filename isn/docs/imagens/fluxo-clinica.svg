@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1540" height="1710" viewBox="0 0 1540 1710" role="img" aria-labelledby="title desc">
+<title id="title">Clínica, implante e próxima fase</title>
+<desc id="desc">Diagrama gerado da mesma fonte do bloco Mermaid. Laranja e tracejado indicam propostas ou decisões pendentes.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#52657c"/></marker></defs>
+<rect width="1540" height="1710" fill="#ffffff"/>
+<text x="32" y="40" font-family="sans-serif" font-size="25" font-weight="700" fill="#10253f">Clínica, implante e próxima fase</text>
+<text x="32" y="70" font-family="sans-serif" font-size="16" fill="#52657c">Flesh to Chrome · Sprint 1 · Propostas/pendências em laranja e tracejado</text>
+<polyline points="690,214 690,316" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,404 690,506" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,594 690,696" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,784 690,886" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,974 690,1054" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,1186 690,1226 1120,1226 1120,1266" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,1186 690,1206 1450,1206 1450,1436 690,1436 690,1456" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1120,1354 1120,1405 690,1405 690,1456" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1120,1354 1120,1390 110,1390 110,1230 260,1230 260,1266" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="260,1354 260,1405 690,1405 690,1456" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<text x="905" y="1217" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">sim</text>
+<text x="1070" y="1198" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">não</text>
+<text x="905" y="1396" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">sucesso</text>
+<text x="615" y="1382" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">erro</text>
+<rect x="532" y="126" width="316" height="88" rx="38" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="176" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Concluir Fase 1–4</text>
+<rect x="532" y="316" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="356" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">George: procedimento sem escolha</text>
+<text x="690" y="376" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">sim/não</text>
+<rect x="532" y="506" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="556" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Instalar implante da fase</text>
+<rect x="532" y="696" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="746" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Atualizar corpo e habilidade</text>
+<rect x="532" y="886" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="926" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Atualizar sessão; cache só se</text>
+<text x="690" y="946" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">autenticado</text>
+<polygon points="690,1054 848,1120 690,1186 532,1120" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="1126" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Autenticado?</text>
+<rect x="962" y="1266" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="1120" y="1316" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Sincronizar e auditar no backend</text>
+<rect x="532" y="1456" width="316" height="88" rx="38" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="1506" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Seguir para próxima fase</text>
+<rect x="102" y="1266" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="260" y="1306" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Falha: manter local e informar</text>
+<text x="260" y="1326" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">pendência</text>
+</svg>

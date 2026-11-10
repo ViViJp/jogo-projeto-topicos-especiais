@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1540" height="2090" viewBox="0 0 1540 2090" role="img" aria-labelledby="title desc">
+<title id="title">Campanha completa e finais</title>
+<desc id="desc">Diagrama gerado da mesma fonte do bloco Mermaid. Laranja e tracejado indicam propostas ou decisões pendentes.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#52657c"/></marker></defs>
+<rect width="1540" height="2090" fill="#ffffff"/>
+<text x="32" y="40" font-family="sans-serif" font-size="25" font-weight="700" fill="#10253f">Campanha completa e finais</text>
+<text x="32" y="70" font-family="sans-serif" font-size="16" fill="#52657c">Flesh to Chrome · Sprint 1 · Propostas/pendências em laranja e tracejado</text>
+<polyline points="690,214 690,316" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,404 690,506" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,594 690,696" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,784 690,864" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,996 690,1036 260,1036 260,1076" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,996 690,1036 1120,1036 1120,1076" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1120,1164 1120,1244" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1120,1376 1120,1456" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1120,1376 1120,1416 690,1416 690,1456" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="260,1164 260,1184 1510,1184 1510,1626 260,1626 260,1646" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1120,1544 1120,1595 260,1595 260,1646" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,1544 690,1595 260,1595 260,1646" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="260,1734 260,1785 690,1785 690,1836" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,1924 690,1952 70,1952 70,836 690,836 690,864" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="260,1734 260,1770 1460,1770 1460,90 690,90 690,126" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<text x="475" y="1027" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">sim</text>
+<text x="905" y="1027" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">não</text>
+<text x="1168" y="1416" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">sim</text>
+<text x="905" y="1407" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">quebrou</text>
+<text x="475" y="1776" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">continuar</text>
+<text x="860" y="1762" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">Novo Jogo confirmado</text>
+<rect x="532" y="126" width="316" height="88" rx="38" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="176" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Novo Jogo confirmado / prólogo</text>
+<rect x="532" y="316" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="366" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Fases 1–4 e clínicas em ordem</text>
+<rect x="532" y="506" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="556" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Fase 5 — Topo</text>
+<rect x="532" y="696" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="746" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Salvar snapshot pré-Portão</text>
+<polygon points="690,864 848,930 690,996 532,930" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="936" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Aceitar conversão?</text>
+<rect x="102" y="1076" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="260" y="1126" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Chrome: encontro físico com pai</text>
+<rect x="962" y="1076" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="1120" y="1116" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Recusar: D1–D4 / memórias e</text>
+<text x="1120" y="1136" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">ReForge</text>
+<polygon points="1120,1244 1278,1310 1120,1376 962,1310" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="1120" y="1316" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Cadeia completa?</text>
+<rect x="962" y="1456" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="1120" y="1496" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Flesh: humano bioprintado /</text>
+<text x="1120" y="1516" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">família</text>
+<rect x="532" y="1456" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="1496" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Hollow: corpo preservado /</text>
+<text x="690" y="1516" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">transições / família</text>
+<rect x="102" y="1646" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="260" y="1696" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Créditos e menu pós-final</text>
+<rect x="532" y="1836" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="1876" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Continuar do Portão: restaurar</text>
+<text x="690" y="1896" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">snapshot</text>
+</svg>

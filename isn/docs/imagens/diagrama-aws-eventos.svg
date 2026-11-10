@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1540" height="2090" viewBox="0 0 1540 2090" role="img" aria-labelledby="title desc">
+<title id="title">AWS — eventos, auditoria e notificações</title>
+<desc id="desc">Diagrama gerado da mesma fonte do bloco Mermaid. Laranja e tracejado indicam propostas ou decisões pendentes.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#52657c"/></marker></defs>
+<rect width="1540" height="2090" fill="#ffffff"/>
+<text x="32" y="40" font-family="sans-serif" font-size="25" font-weight="700" fill="#10253f">AWS — eventos, auditoria e notificações</text>
+<text x="32" y="70" font-family="sans-serif" font-size="16" fill="#52657c">Flesh to Chrome · Sprint 1 · Propostas/pendências em laranja e tracejado</text>
+<polyline points="690,214 690,316" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,404 690,506" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,594 690,645 260,645 260,696" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,594 690,696" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,784 690,886" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,974 690,1025 260,1025 260,1076" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,974 690,1025 1120,1025 1120,1076" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,974 690,1002 100,1002 100,478 690,478 690,506" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="260,1164 260,1266" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1120,1164 1120,1266" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="260,1354 260,1456" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1120,1354 1120,1456" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1120,1354 1120,1374 1480,1374 1480,1816 1120,1816 1120,1836" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="260,1164 260,1192 1470,1192 1470,1618 260,1618 260,1646" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1120,1164 1120,1200 1460,1200 1460,1610 1120,1610 1120,1646" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="690,1924 690,1944 90,1944 90,866 690,866 690,886" fill="none" stroke="#52657c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<text x="738" y="455" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">transação</text>
+<text x="905" y="1016" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">se houver gatilho</text>
+<text x="395" y="994" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">confirmar publicação</text>
+<text x="308" y="1405" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">idempotente</text>
+<text x="1168" y="1405" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">idempotente</text>
+<text x="1300" y="1366" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">envio controlado</text>
+<text x="865" y="1184" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">tentativas esgotadas</text>
+<text x="1290" y="1192" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">tentativas esgotadas</text>
+<text x="390" y="1936" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#243f5d" stroke="white" stroke-width="5" paint-order="stroke">republicar eventId</text>
+<rect x="532" y="126" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="176" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Operação crítica validada</text>
+<rect x="532" y="316" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="366" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Lambda do domínio produtor</text>
+<rect x="532" y="506" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="556" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">DynamoDB próprio: estado + outbox</text>
+<rect x="102" y="696" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="260" y="746" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Responder após transação durável</text>
+<rect x="532" y="696" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="746" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">DynamoDB Streams</text>
+<rect x="532" y="886" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="936" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Publicador Lambda do domínio</text>
+<rect x="102" y="1076" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="260" y="1126" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">SQS Auditoria</text>
+<rect x="962" y="1076" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="1120" y="1126" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">SQS Comunicações</text>
+<rect x="102" y="1266" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="260" y="1316" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Consumidor Auditoria</text>
+<rect x="962" y="1266" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="1120" y="1316" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Consumidor Comunicações</text>
+<rect x="102" y="1456" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="260" y="1506" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">DynamoDB audit: eventId único</text>
+<rect x="962" y="1456" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="1120" y="1496" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">DynamoDB communications:</text>
+<text x="1120" y="1516" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">notificação e entrega</text>
+<rect x="102" y="1646" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="260" y="1686" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">DLQ Auditoria: alarme e</text>
+<text x="260" y="1706" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">reprocessamento</text>
+<rect x="962" y="1646" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="1120" y="1686" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">DLQ Comunicações: alarme e</text>
+<text x="1120" y="1706" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">reprocessamento</text>
+<rect x="962" y="1836" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="1120" y="1886" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">SES: envio por evento</text>
+<rect x="532" y="1836" width="316" height="88" rx="12" fill="#edf4fc" stroke="#315b85" stroke-width="2"/>
+<text x="690" y="1886" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#10253f">Reconciliação da outbox pendente</text>
+</svg>
