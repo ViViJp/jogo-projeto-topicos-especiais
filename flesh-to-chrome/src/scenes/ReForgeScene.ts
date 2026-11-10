@@ -5,6 +5,7 @@ import { SaveState } from "../systems/SaveState";
 
 const REFORGE_BG = "reforge-bg";
 const REFORGE_FATHER = "reforge-father";
+const REFORGE_CYBORG = "reforge-cyborg";
 
 const IMPLANT_NAMES = {
   legs: "PERNAS MECANICAS",
@@ -30,6 +31,9 @@ export class ReForgeScene extends Phaser.Scene {
     if (!this.textures.exists(REFORGE_FATHER)) {
       this.load.image(REFORGE_FATHER, new URL("../assets/narrative/recycling/holograma-pai.png", import.meta.url).href);
     }
+    if (!this.textures.exists(REFORGE_CYBORG)) {
+      this.load.image(REFORGE_CYBORG, new URL("../assets/narrative/recycling/holograma-ciborgue.png", import.meta.url).href);
+    }
   }
 
   create(): void {
@@ -45,16 +49,26 @@ export class ReForgeScene extends Phaser.Scene {
     }
     const width = this.scale.width;
     const height = this.scale.height;
+    const usesCyborgOperator = save.descentState.currentStep === 1;
     this.cameras.main.setBackgroundColor(0x071015);
     this.add.image(width / 2, 270, REFORGE_BG).setDisplaySize(300, 400);
-    const fatherHologram = this.add.image(width / 2, 255, REFORGE_FATHER)
+    const avatarHologram = this.add.image(
+      width / 2,
+      255,
+      usesCyborgOperator ? REFORGE_CYBORG : REFORGE_FATHER,
+    )
       .setDisplaySize(180, 216)
       .setVisible(false);
-    fatherHologram.texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
-    const fatherCaption = this.add.text(width / 2, 385, "AVATAR REFORGE // PAI DE ALEX", {
-      fontFamily: "Courier New, monospace", fontSize: "13px", color: "#7CFCEA",
-      backgroundColor: "#071015dd", padding: { x: 7, y: 4 },
-    }).setOrigin(0.5).setVisible(false);
+    avatarHologram.texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
+    const avatarCaption = this.add.text(
+      width / 2,
+      385,
+      usesCyborgOperator ? "AVATAR REFORGE // OPERADOR CIBORGUE" : "AVATAR REFORGE // PAI DE ALEX",
+      {
+        fontFamily: "Courier New, monospace", fontSize: "13px", color: "#7CFCEA",
+        backgroundColor: "#071015dd", padding: { x: 7, y: 4 },
+      },
+    ).setOrigin(0.5).setVisible(false);
     this.add.text(width / 2, 45, "REFORGE INDUSTRIES", {
       fontFamily: "Courier New, monospace", fontSize: "34px", color: "#7CFCEA", letterSpacing: 5,
     }).setOrigin(0.5);
@@ -78,8 +92,8 @@ export class ReForgeScene extends Phaser.Scene {
         this.page += 1;
         body.setText(pages[this.page]);
         counter.setText(`${this.page + 1}/${pages.length}`);
-        fatherHologram.setVisible(this.page >= 1);
-        fatherCaption.setVisible(this.page >= 1);
+        avatarHologram.setVisible(this.page >= 1);
+        avatarCaption.setVisible(this.page >= 1);
         return;
       }
       this.finished = true;
@@ -90,7 +104,15 @@ export class ReForgeScene extends Phaser.Scene {
       }
       const data = SaveState.load().get();
       if (result.finished) {
-        this.scene.start("EpilogueScene", { ending: "flesh" });
+        this.scene.start("GameScene", {
+          phaseId: "fase1",
+          checkpointX: 0,
+          checkpointY: 0,
+          consolidatedCreditIds: [],
+          wallet: 0,
+          abilities: data.abilities,
+          descent: true,
+        });
       } else {
         this.scene.start("GameScene", {
           phaseId: result.nextPhaseId,

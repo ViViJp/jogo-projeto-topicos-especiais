@@ -1,6 +1,26 @@
 import type { AbilityState } from "./AbilityState";
 
 export type DescentPhaseId = "fase5" | "fase4" | "fase3" | "fase2-intro";
+export type DescentRoutePhaseId = DescentPhaseId | "fase1";
+
+export interface DescentRoute {
+  phaseId: DescentRoutePhaseId;
+  title: string;
+  startX: number;
+  startY: number;
+  endX: number;
+  targetSeconds: number;
+  requiredAbilities: readonly (keyof AbilityState)[];
+  /** Barreira exclusiva da descida que torna o ataque obrigatório. */
+  attackBarrierX?: number;
+  /** Faixa fatal larga demais para o salto simples. */
+  doubleJumpHazard?: { x: number; width: number };
+  /** Oculta tiles do setor anterior que ainda caberiam atrás do spawn. */
+  hidePreviousMapContent?: boolean;
+  /** Remove inimigos autorados perto demais do spawn exclusivo da descida. */
+  enemySafeStartPx?: number;
+  epilogue?: boolean;
+}
 
 export interface DescentStep {
   phaseId: DescentPhaseId;
@@ -52,6 +72,65 @@ export const DESCENT_STEPS: readonly DescentStep[] = [
   },
 ] as const;
 
+/**
+ * Recortes curtos dos mapas já conhecidos. Os quatro setores ativos medem
+ * 9.600 px (aprox. 30 s a 320 px/s); o Esgoto é o trecho contemplativo e
+ * deliberadamente curto do epílogo, depois que todos os implantes saíram.
+ */
+export const DESCENT_ROUTES: readonly DescentRoute[] = [
+  {
+    phaseId: "fase5",
+    title: "D1 — TOPO // QUEM ALEX ERA",
+    startX: 19_400,
+    startY: 560,
+    endX: 29_000,
+    targetSeconds: 30,
+    requiredAbilities: ["legs", "arms", "eyes", "thrusters"],
+  },
+  {
+    phaseId: "fase4",
+    title: "D2 — CORPORATIVO // A VOZ DA RUA",
+    startX: 20_000,
+    startY: 560,
+    endX: 29_600,
+    targetSeconds: 30,
+    requiredAbilities: ["legs", "arms", "eyes"],
+    attackBarrierX: 23_936,
+    hidePreviousMapContent: true,
+  },
+  {
+    phaseId: "fase3",
+    title: "D3 — MEIO URBANO // OS AMIGOS",
+    startX: 20_000,
+    startY: 560,
+    endX: 29_600,
+    targetSeconds: 30,
+    requiredAbilities: ["legs", "arms"],
+    doubleJumpHazard: { x: 25_920, width: 320 },
+    enemySafeStartPx: 160,
+  },
+  {
+    phaseId: "fase2-intro",
+    title: "D4 — INDUSTRIAL // A FAMÍLIA",
+    startX: 20_480,
+    startY: 560,
+    endX: 30_080,
+    targetSeconds: 30,
+    requiredAbilities: ["legs"],
+    doubleJumpHazard: { x: 26_848, width: 320 },
+  },
+  {
+    phaseId: "fase1",
+    title: "EPÍLOGO — ESGOTO // O CAMINHO DE CASA",
+    startX: 26_400,
+    startY: 560,
+    endX: 28_864,
+    targetSeconds: 8,
+    requiredAbilities: [],
+    epilogue: true,
+  },
+] as const;
+
 export function descentStepForPhase(phaseId: string): DescentStep | undefined {
   return DESCENT_STEPS.find((step) => step.phaseId === phaseId);
 }
@@ -62,4 +141,8 @@ export function descentStepAt(index: number): DescentStep | undefined {
 
 export function isDescentPhase(phaseId: string): phaseId is DescentPhaseId {
   return DESCENT_STEPS.some((step) => step.phaseId === phaseId);
+}
+
+export function descentRouteForPhase(phaseId: string): DescentRoute | undefined {
+  return DESCENT_ROUTES.find((route) => route.phaseId === phaseId);
 }

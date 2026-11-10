@@ -41,6 +41,26 @@ function loadTypeScriptModule(filename) {
 }
 
 const { SaveState } = loadTypeScriptModule(path.join(projectDirectory, "src/systems/SaveState.ts"));
+const { DESCENT_ROUTES } = loadTypeScriptModule(
+  path.join(projectDirectory, "src/systems/DescentProgression.ts"),
+);
+
+assert.deepEqual(
+  Array.from(DESCENT_ROUTES, (route) => route.targetSeconds),
+  [30, 30, 30, 30, 8],
+  "a descida deve usar quatro recortes de 30 s e um epilogo curto",
+);
+assert.deepEqual(
+  Array.from(DESCENT_ROUTES, (route) => Array.from(route.requiredAbilities)),
+  [
+    ["legs", "arms", "eyes", "thrusters"],
+    ["legs", "arms", "eyes"],
+    ["legs", "arms"],
+    ["legs"],
+    [],
+  ],
+  "cada recorte deve exigir somente os implantes ainda presentes",
+);
 
 // O atalho de playtest do Portão também precisa começar a descida com o
 // corpo completo, mesmo quando ainda não existe progresso de campanha.
@@ -125,6 +145,7 @@ const retry = read("src/scenes/DescentRetryScene.ts");
 const reforge = read("src/scenes/ReForgeScene.ts");
 const epilogue = read("src/scenes/EpilogueScene.ts");
 const descentRuntime = read("src/objects/DescentGlitchRuntime.ts");
+const descentRouteRuntime = read("src/objects/DescentRouteRuntime.ts");
 const georgeRefusal = read("src/scenes/GeorgeRefusalScene.ts");
 const gdd = read("docs/gdd.md");
 const narrativePlaytest = read("docs/NARRATIVE_FLOW_PLAYTEST.md");
@@ -182,26 +203,50 @@ assert.match(ending, /ALEX\? FILHO\?/);
 assert.match(retry, /unica segunda oportunidade/);
 assert.match(reforge, /completeBioprinting\(\)/);
 assert.match(reforge, /recycling\/holograma-pai\.png/);
-assert.match(reforge, /fatherHologram\.setVisible\(this\.page >= 1\)/);
+assert.match(reforge, /recycling\/holograma-ciborgue\.png/);
+assert.match(reforge, /save\.descentState\.currentStep === 1/);
+assert.match(reforge, /OPERADOR CIBORGUE/);
+assert.match(reforge, /avatarHologram\.setVisible\(this\.page >= 1\)/);
 assert.match(georgeRefusal, /george-angry\/george-angry\.png/);
+assert.match(georgeRefusal, /alex-dialogue\/alex-complete-dialogue\.png/);
 assert.match(georgeRefusal, /Eu não sou sua obra, George/);
 assert.match(georgeRefusal, /recuperar cada motivo que deixei para trás/);
 assert.match(georgeRefusal, /this\.scene\.start\("GameScene"/);
 assert.match(gdd, /30 segundos por setor/);
-assert.match(gdd, /holograma corporativo com o rosto do pai/);
+assert.match(gdd, /operador ciborgue anônimo/);
 assert.match(gdd, /Cena de reprovação de George antes do primeiro setor/);
 assert.match(epilogue, /ending: "flesh" \| "hollow"/);
 assert.match(descentRuntime, /memory_glitch/);
-for (const map of [
-  "src/assets/maps/industrial/fase-2.tmj",
-  "src/assets/maps/meio-urbano/fase-3.tmj",
-  "src/assets/maps/corporativo/fase-4.tmj",
-  "src/assets/maps/topo/fase-5.tmj",
+assert.match(descentRouteRuntime, /doubleJumpHazard/);
+assert.match(descentRouteRuntime, /attackBarrierX/);
+assert.match(reforge, /phaseId: "fase1"[\s\S]*?descent: true/,
+  "a ultima retirada deve abrir o trecho curto jogavel do Esgoto");
+for (const [phaseId, map] of [
+  ["fase2-intro", "src/assets/maps/industrial/fase-2.tmj"],
+  ["fase3", "src/assets/maps/meio-urbano/fase-3.tmj"],
+  ["fase4", "src/assets/maps/corporativo/fase-4.tmj"],
+  ["fase5", "src/assets/maps/topo/fase-5.tmj"],
 ]) {
   const tiled = JSON.parse(read(map));
   const objects = tiled.layers.find((layer) => layer.name === "objects")?.objects ?? [];
   assert.equal(objects.filter((object) => object.type === "memory_glitch").length, 1, `${map}: glitch da descida`);
+  const route = DESCENT_ROUTES.find((candidate) => candidate.phaseId === phaseId);
+  assert.ok(route, `${phaseId}: recorte da descida ausente`);
+  assert.equal(route.endX - route.startX, 9_600, `${phaseId}: recorte deve medir 30 s`);
+  assert.ok(
+    objects.some((object) => object.type === "memory_glitch" && object.x >= route.startX && object.x <= route.endX),
+    `${phaseId}: glitch deve estar dentro do recorte`,
+  );
+  assert.equal(
+    objects.filter((object) => ["tutorial", "checkpoint"].includes(object.type)
+      && object.x >= route.startX && object.x <= route.endX).length,
+    0,
+    `${phaseId}: recorte nao pode conter tutorial/checkpoint da subida`,
+  );
 }
+const sewerRoute = DESCENT_ROUTES.find((route) => route.phaseId === "fase1");
+assert.ok(sewerRoute?.epilogue);
+assert.ok(sewerRoute.endX - sewerRoute.startX < 3_000, "Esgoto deve ser um epilogo curto");
 assert.match(ending, /father\/pai-portrait\.png/);
 assert.match(ending, /CONVERSÃO CORPORATIVA/);
 assert.match(ending, /if \(!this\.testMode\) SaveState\.load\(\)\.markEndingReached\(this\.ending\)/);

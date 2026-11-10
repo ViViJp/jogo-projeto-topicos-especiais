@@ -251,6 +251,11 @@ assert.match(enemyRuntime, /bandido: 1\.45/);
 assert.match(enemyRuntime, /drone: 1\.8/);
 assert.doesNotMatch(enemyRuntime, /setAlpha\(0\.35\)/, "inimigos não podem permanecer opacos");
 assert.match(enemyRuntime, /PHYSICS\.attack\.range/);
+const phase3Runtime = fs.readFileSync(path.join(projectDirectory, "src/objects/TiledPhase3Runtime.ts"), "utf8");
+assert.match(phase3Runtime, /excludeEnemiesThroughX/,
+  "recorte urbano deve poder excluir inimigos sobrepostos ao spawn");
+assert.match(phase4Runtime, /hideBeforeX\(worldX: number\)/,
+  "recorte corporativo deve ocultar o segmento anterior ao spawn");
 const hudSource = fs.readFileSync(path.join(projectDirectory, "src/systems/HUD.ts"), "utf8");
 assert.match(hudSource, /setFillStyle\(0x21d7ff, 1\)/, "dash pronto deve usar azul elétrico");
 assert.match(hudSource, /batteryBack,[\s\S]*this\.dashBatteryFill,[\s\S]*frame,/,
@@ -262,6 +267,8 @@ assert.match(gameScene, /const alreadyActive = this\.data\$\.checkpointX > 0/);
 assert.match(gameScene, /if \(alreadyActive\) return false/);
 assert.match(gameScene, /checkpointX: 0/);
 assert.match(gameScene, /checkpointY: 0/);
+assert.match(gameScene, /runtime\.hideBeforeX\(descentRoute\.startX\)/);
+assert.match(gameScene, /descentRoute\.startX \+ descentRoute\.enemySafeStartPx/);
 const pausedBranch = gameScene.slice(gameScene.indexOf("if (this.isPaused)"), gameScene.indexOf("this.player.update(delta)"));
 assert.match(pausedBranch, /return;/, "pausa deve retornar antes de atualizar Player e cooldowns");
 assert.match(gameScene, /S \/ ↓ para voltar ao menu principal/);

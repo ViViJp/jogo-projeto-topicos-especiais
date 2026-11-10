@@ -55,7 +55,7 @@ export class GeorgeRefusalScene extends Phaser.Scene {
   private dialogueText!: Phaser.GameObjects.Text;
   private counterText!: Phaser.GameObjects.Text;
   private george!: Phaser.GameObjects.Image;
-  private alex!: Phaser.GameObjects.Sprite;
+  private alex!: Phaser.GameObjects.Image;
   private music?: Phaser.Sound.BaseSound;
 
   constructor() {
@@ -76,10 +76,9 @@ export class GeorgeRefusalScene extends Phaser.Scene {
       );
     }
     if (!this.textures.exists(ALEX_COMPLETE_KEY)) {
-      this.load.spritesheet(
+      this.load.image(
         ALEX_COMPLETE_KEY,
-        new URL("../assets/player/alex-dash/alex-dash.png", import.meta.url).href,
-        { frameWidth: 64, frameHeight: 64 },
+        new URL("../assets/player/alex-dialogue/alex-complete-dialogue.png", import.meta.url).href,
       );
     }
     if (!this.cache.audio.exists(MUSIC_KEY)) {
@@ -114,17 +113,21 @@ export class GeorgeRefusalScene extends Phaser.Scene {
       letterSpacing: 2,
     }).setOrigin(0.5);
 
-    this.george = this.add.image(width * 0.26, 325, GEORGE_ANGRY_KEY).setDisplaySize(300, 300);
+    const portraitCenterY = 290;
+    const portraitHeight = 280;
+    this.george = this.add.image(width * 0.27, portraitCenterY, GEORGE_ANGRY_KEY)
+      .setDisplaySize(280, portraitHeight);
     this.george.texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
-    this.alex = this.add.sprite(width * 0.74, 400, ALEX_COMPLETE_KEY, 26).setScale(4);
+    this.alex = this.add.image(width * 0.73, portraitCenterY, ALEX_COMPLETE_KEY)
+      .setDisplaySize(187, portraitHeight);
     this.alex.texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
 
-    this.speakerText = this.add.text(190, height - 260, "", {
+    this.speakerText = this.add.text(190, height - 245, "", {
       fontFamily: "Courier New, monospace",
       fontSize: "18px",
       color: "#7CFCEA",
     });
-    this.dialogueText = this.add.text(190, height - 220, "", {
+    this.dialogueText = this.add.text(190, height - 207, "", {
       fontFamily: "Courier New, monospace",
       fontSize: "21px",
       color: "#e8ecff",

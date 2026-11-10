@@ -5,8 +5,9 @@ import { InputManager } from "../systems/InputManager";
 import { CreditsSystem } from "../systems/CreditsSystem";
 import { HUD } from "../systems/HUD";
 import { SaveState } from "../systems/SaveState";
-import { descentStepForPhase } from "../systems/DescentProgression";
+import { descentRouteForPhase, descentStepForPhase } from "../systems/DescentProgression";
 import { DescentGlitchRuntime, DESCENT_GLITCH_TEXTURE_PREFIX } from "../objects/DescentGlitchRuntime";
+import { DescentRouteRuntime } from "../objects/DescentRouteRuntime";
 import { Player } from "../entities/Player";
 import { LevelRuntime } from "../objects/LevelRuntime";
 import {
@@ -162,6 +163,7 @@ export class GameScene extends Phaser.Scene {
   private tiledPhase4Runtime?: TiledPhase4Runtime;
   private tiledPhase5Runtime?: TiledPhase5Runtime;
   private descentRuntime?: DescentGlitchRuntime;
+  private descentRouteRuntime?: DescentRouteRuntime;
   private credits!: CreditsSystem;
   private hud!: HUD;
   private save!: SaveState;
@@ -195,6 +197,7 @@ export class GameScene extends Phaser.Scene {
     this.tiledPhase4Runtime = undefined;
     this.tiledPhase5Runtime = undefined;
     this.descentRuntime = undefined;
+    this.descentRouteRuntime = undefined;
     this.isPaused = false;
     this.pauseText = undefined;
     this.scanOverlay = undefined;
@@ -528,11 +531,38 @@ export class GameScene extends Phaser.Scene {
     const viewportHeight = this.scale.height;
     this.physics.world.setBounds(0, 0, this.levelLengthPx + viewportWidth, viewportHeight);
     this.cameras.main.setBounds(0, 0, this.levelLengthPx + viewportWidth, viewportHeight);
+    const route = this.data$.descent ? descentRouteForPhase(this.data$.phaseId) : undefined;
+    if (route) {
+      this.cameras.main.scrollX = Math.floor(Phaser.Math.Clamp(
+        route.startX - viewportWidth * CAMERA.playerScreenRatioX,
+        0,
+        Math.max(0, this.levelLengthPx - viewportWidth),
+      ));
+    }
   }
 
   private createDescentOverlay(): void {
+    const route = descentRouteForPhase(this.data$.phaseId);
+    if (!route) throw new Error(`Recorte de descida ausente para ${this.data$.phaseId}`);
+    this.descentRouteRuntime = new DescentRouteRuntime(
+      this,
+      route,
+      () => this.handleEndGate(),
+    );
+    this.descentRouteRuntime.registerPlayer(this.player);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.descentRouteRuntime?.destroy());
+
+    this.tiledRuntime?.hideCredits();
+    this.tiledPhase2Runtime?.hideCredits();
+    this.tiledPhase3Runtime?.hideCredits();
+    this.tiledPhase4Runtime?.hideCredits();
+    this.tiledPhase5Runtime?.hideCredits();
+
     const step = descentStepForPhase(this.data$.phaseId);
-    if (!step) return;
+    if (!step) {
+      this.hud.flashPrompt(route.title, 2200);
+      return;
+    }
     const map = this.tiledPhase5Runtime?.map
       ?? this.tiledPhase4Runtime?.map
       ?? this.tiledPhase3Runtime?.map
@@ -559,12 +589,16 @@ export class GameScene extends Phaser.Scene {
       },
     );
     this.descentRuntime.registerPlayer(this.player);
-    this.tiledPhase2Runtime?.hideCredits();
-    this.tiledPhase3Runtime?.hideCredits();
-    this.tiledPhase4Runtime?.hideCredits();
-    this.tiledPhase5Runtime?.hideCredits();
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.descentRuntime?.destroy());
-    this.hud.flashPrompt("DESCIDA — encontre o glitch antes da saida", 1900);
+    this.hud.flashPrompt(`${route.title} — encontre o glitch`, 2200);
+  }
+
+  private phaseSpawn(defaultX: number, defaultY: number): { x: number; y: number } {
+    if (this.data$.checkpointX > 0) {
+      return { x: this.data$.checkpointX, y: this.data$.checkpointY };
+    }
+    const route = this.data$.descent ? descentRouteForPhase(this.data$.phaseId) : undefined;
+    return route ? { x: route.startX, y: route.startY } : { x: defaultX, y: defaultY };
   }
 
   private createTiled(): void {
@@ -576,9 +610,8 @@ export class GameScene extends Phaser.Scene {
     this.tiledRuntime = runtime;
     this.levelLengthPx = runtime.lengthPx;
 
-    const spawnX = this.data$.checkpointX > 0 ? this.data$.checkpointX : runtime.spawn.x;
-    const spawnY = this.data$.checkpointX > 0 ? this.data$.checkpointY : runtime.spawn.y;
-    this.player = new Player(this, spawnX, spawnY, this.activeAbilities, this.input$, {
+    const spawn = this.phaseSpawn(runtime.spawn.x, runtime.spawn.y);
+    this.player = new Player(this, spawn.x, spawn.y, this.activeAbilities, this.input$, {
       onDeath: () => this.handlePlayerDeath(),
       onScanPulse: (active) => this.handleScanPulse(active),
     });
@@ -598,9 +631,8 @@ export class GameScene extends Phaser.Scene {
     this.tiledPhase2Runtime = runtime;
     this.levelLengthPx = runtime.lengthPx;
 
-    const spawnX = this.data$.checkpointX > 0 ? this.data$.checkpointX : runtime.spawn.x;
-    const spawnY = this.data$.checkpointX > 0 ? this.data$.checkpointY : runtime.spawn.y;
-    this.player = new Player(this, spawnX, spawnY, this.activeAbilities, this.input$, {
+    const spawn = this.phaseSpawn(runtime.spawn.x, runtime.spawn.y);
+    this.player = new Player(this, spawn.x, spawn.y, this.activeAbilities, this.input$, {
       onDeath: () => this.handlePlayerDeath(),
       onScanPulse: (active) => this.handleScanPulse(active),
     });
@@ -611,17 +643,21 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createTiledPhase3(): void {
+    const descentRoute = this.data$.descent ? descentRouteForPhase(this.data$.phaseId) : undefined;
     const runtime = new TiledPhase3Runtime(this, new Set(this.data$.consolidatedCreditIds), {
       onCreditCollected: (id, value) => this.handleCreditCollected(id, value),
       onCheckpoint: (id, x, y) => this.handleCheckpoint(id, x, y),
       onEndGate: (destination, implant) => this.handleEndGate(destination, implant),
+    }, {
+      excludeEnemiesThroughX: descentRoute?.enemySafeStartPx === undefined
+        ? undefined
+        : descentRoute.startX + descentRoute.enemySafeStartPx,
     });
     this.tiledPhase3Runtime = runtime;
     this.levelLengthPx = runtime.lengthPx;
 
-    const spawnX = this.data$.checkpointX > 0 ? this.data$.checkpointX : runtime.spawn.x;
-    const spawnY = this.data$.checkpointX > 0 ? this.data$.checkpointY : runtime.spawn.y;
-    this.player = new Player(this, spawnX, spawnY, this.activeAbilities, this.input$, {
+    const spawn = this.phaseSpawn(runtime.spawn.x, runtime.spawn.y);
+    this.player = new Player(this, spawn.x, spawn.y, this.activeAbilities, this.input$, {
       onDeath: () => this.handlePlayerDeath(),
       onScanPulse: (active) => this.handleScanPulse(active),
     });
@@ -639,10 +675,11 @@ export class GameScene extends Phaser.Scene {
     });
     this.tiledPhase4Runtime = runtime;
     this.levelLengthPx = runtime.lengthPx;
+    const descentRoute = this.data$.descent ? descentRouteForPhase(this.data$.phaseId) : undefined;
+    if (descentRoute?.hidePreviousMapContent) runtime.hideBeforeX(descentRoute.startX);
 
-    const spawnX = this.data$.checkpointX > 0 ? this.data$.checkpointX : runtime.spawn.x;
-    const spawnY = this.data$.checkpointX > 0 ? this.data$.checkpointY : runtime.spawn.y;
-    this.player = new Player(this, spawnX, spawnY, this.activeAbilities, this.input$, {
+    const spawn = this.phaseSpawn(runtime.spawn.x, runtime.spawn.y);
+    this.player = new Player(this, spawn.x, spawn.y, this.activeAbilities, this.input$, {
       onDeath: () => this.handlePlayerDeath(),
       onScanPulse: (active) => this.handleScanPulse(active),
     });
@@ -661,9 +698,8 @@ export class GameScene extends Phaser.Scene {
     this.tiledPhase5Runtime = runtime;
     this.levelLengthPx = runtime.lengthPx;
 
-    const spawnX = this.data$.checkpointX > 0 ? this.data$.checkpointX : runtime.spawn.x;
-    const spawnY = this.data$.checkpointX > 0 ? this.data$.checkpointY : runtime.spawn.y;
-    this.player = new Player(this, spawnX, spawnY, this.activeAbilities, this.input$, {
+    const spawn = this.phaseSpawn(runtime.spawn.x, runtime.spawn.y);
+    this.player = new Player(this, spawn.x, spawn.y, this.activeAbilities, this.input$, {
       onDeath: () => this.handlePlayerDeath(),
       onScanPulse: (active) => this.handleScanPulse(active),
     });
@@ -803,6 +839,13 @@ export class GameScene extends Phaser.Scene {
    */
   private handleEndGate(destinationOverride?: string, implantOverride?: keyof AbilityState): void {
     if (this.data$.descent) {
+      if (this.restarting) return;
+      this.restarting = true;
+      this.player.sprite.setVelocity(0, 0);
+      if (descentRouteForPhase(this.data$.phaseId)?.epilogue) {
+        this.time.delayedCall(250, () => this.scene.start("EpilogueScene", { ending: "flesh" }));
+        return;
+      }
       const result = this.save.completeDescentPhase();
       const destination = result === "reforge"
         ? "ReForgeScene"
@@ -1123,6 +1166,7 @@ export class GameScene extends Phaser.Scene {
     } else {
       this.legacyRuntime!.update(this.player);
     }
+    this.descentRouteRuntime?.update(this.player);
 
     // Câmera: valores inteiros (Math.floor) para não somar jitter de
     // sub-pixel ao scroll - correção do "tremor de tela" (v0.2.0), mantida

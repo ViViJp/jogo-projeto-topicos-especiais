@@ -20,9 +20,10 @@
    retirada e Alex afirma que nao e uma obra.
 3. Em cada setor, atravesse o `memory_glitch` antes da saida e confirme que a
    lembranca explica um motivo humano para abandonar o cromo.
-4. Complete a sequencia ReForge depois de cada memoria. Antes da retirada,
-   confirme que o holograma corporativo mostra o rosto do pai de Alex durante
-   a avaliacao/venda do implante.
+4. Complete a sequencia ReForge depois de cada memoria. Confirme que o primeiro
+   procedimento mostra o pai de Alex, que o segundo mostra um operador ciborgue
+   diferente e que o pai retorna no terceiro e no último. Todos devem aparecer
+   durante a avaliacao/venda do implante.
 
 | Setor | Glitch | Remocao | Habilidade que deve desaparecer |
 | --- | --- | --- | --- |
@@ -31,7 +32,16 @@
 | Meio Urbano | amigos | bracos | ataque |
 | Industrial | familia | pernas | salto duplo |
 
-5. Resultado esperado: epilogo no Esgoto, `FINAL FLESH` e as quatro
+5. Valide os recortes sem morrer: Topo, Corporativo, Meio Urbano e Industrial
+   devem levar aproximadamente 30 segundos cada. Eles começam depois das áreas
+   de tutorial e exigem, respectivamente: todas as habilidades; visor + salto
+   duplo + ataque; salto duplo + ataque; e salto duplo.
+   No Corporativo, nenhum tile/plataforma do segmento anterior deve aparecer
+   atrás do spawn. No Meio Urbano, o primeiro bandido deve estar à frente, com
+   tempo de reação, e nunca sobreposto a Alex no início.
+6. Depois da última retirada, confirme o trecho do Esgoto com cerca de 8
+   segundos, sem implantes e sem tutorial, antes da casa da família.
+7. Resultado esperado: epilogo no Esgoto, `FINAL FLESH` e as quatro
    habilidades em `false`.
 
 ## Final Hollow e retry especial

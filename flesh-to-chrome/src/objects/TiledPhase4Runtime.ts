@@ -97,6 +97,7 @@ export class TiledPhase4Runtime {
   private readonly tutorialLabels: Phaser.GameObjects.Text[] = [];
   private readonly narrativeLabels: Phaser.GameObjects.Text[] = [];
   private readonly narrativeVisuals: Phaser.GameObjects.Image[] = [];
+  private readonly tileLayers: Phaser.Tilemaps.TilemapLayer[] = [];
   private endGateTriggered = false;
   private playerRef?: Player;
 
@@ -125,6 +126,7 @@ export class TiledPhase4Runtime {
     ground.setCollisionByExclusion([-1, 0]);
     ground.setDepth(0);
     this.groundLayer = ground;
+    this.tileLayers.push(ground);
 
     this.scanVisualsLayer = this.createVisualLayer("scan-visuals", tilesets, 1);
     this.hazardsLayer = this.createVisualLayer("hazards", tilesets, 2);
@@ -173,7 +175,25 @@ export class TiledPhase4Runtime {
     if (!layer) return undefined;
     layer.setPosition(layer.x, layer.y + TILED_FASE4_OFFSET_Y);
     layer.setDepth(depth);
+    this.tileLayers.push(layer);
     return layer;
+  }
+
+  /**
+   * O recorte da descida começa no meio do mapa. A câmera mantém Alex a 35%
+   * da tela e, sem este corte visual, ainda mostra plataformas abandonadas
+   * do trecho anterior atrás dele, embora não exista caminho de volta.
+   */
+  hideBeforeX(worldX: number): void {
+    const lastHiddenColumn = Math.floor((worldX - 1) / this.map.tileWidth);
+    for (const layer of this.tileLayers) {
+      for (let col = 0; col <= lastHiddenColumn; col += 1) {
+        for (let row = 0; row < this.map.height; row += 1) {
+          const tile = layer.getTileAt(col, row);
+          if (tile) tile.visible = false;
+        }
+      }
+    }
   }
 
   private readString(

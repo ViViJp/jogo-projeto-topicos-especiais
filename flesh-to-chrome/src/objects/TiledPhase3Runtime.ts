@@ -76,6 +76,7 @@ export class TiledPhase3Runtime {
       onCheckpoint: (id: string, x: number, y: number) => boolean | void;
       onEndGate: (destination: string, implant?: keyof AbilityState) => void;
     },
+    private readonly options: { excludeEnemiesThroughX?: number } = {},
   ) {
     this.map = scene.make.tilemap({ key: TILED_FASE3_MAP_KEY });
     const tileset = this.map.addTilesetImage(TILED_FASE3_TILESET_NAME, TILED_FASE3_TILESET_KEY);
@@ -365,7 +366,11 @@ export class TiledPhase3Runtime {
   }
 
   private getEnemyObjects(): Phaser.Types.Tilemaps.TiledObject[] {
-    return this.map.getObjectLayer("objects")?.objects.filter((object) => object.type === "enemy") ?? [];
+    return this.map.getObjectLayer("objects")?.objects.filter((object) => (
+      object.type === "enemy"
+      && (this.options.excludeEnemiesThroughX === undefined
+        || (object.x ?? 0) > this.options.excludeEnemiesThroughX)
+    )) ?? [];
   }
 
   private destroyBreakable(breakable: Phase3Breakable): void {

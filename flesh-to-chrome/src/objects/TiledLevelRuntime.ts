@@ -474,6 +474,14 @@ export class TiledLevelRuntime {
     else this.enemyRuntime?.stopScan();
   }
 
+  hideCredits(): void {
+    this.creditSprites.forEach((sprite) => {
+      const body = sprite.body as Phaser.Physics.Arcade.Body | null;
+      if (body) body.enable = false;
+      sprite.setActive(false).setVisible(false);
+    });
+  }
+
   /** Deve ser chamado a cada frame pela GameScene. */
   update(player: Player): void {
     this.enemyRuntime?.update();
