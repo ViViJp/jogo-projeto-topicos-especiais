@@ -1046,7 +1046,9 @@ sprite suspensa sobre o vazio.
 - **D4 — Industrial:** concentra o desafio numa travessia de salto duplo e
   permanece completável sem braços, olhos ou propulsores. O teto baixo do
   mapa-base que começa exatamente no spawn é removido, incluindo sua arte e
-  colisão letal, garantindo uma entrada neutra antes do primeiro obstáculo;
+  colisão letal, garantindo uma entrada neutra antes do primeiro obstáculo.
+  A fase usa os vãos industriais do próprio mapa e não repete a grade/piso
+  elétrico exclusivo do Meio Urbano;
 - **Epílogo — Esgoto:** usa apenas um recorte final de aproximadamente 2.464 px
   / 8 s, sem tutorial, créditos, checkpoint ou obstáculo exclusivo de
   implante. Alex já está inteiramente humano e o ritmo deve comunicar retorno,

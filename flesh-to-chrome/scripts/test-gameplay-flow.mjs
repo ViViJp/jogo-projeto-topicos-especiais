@@ -167,8 +167,10 @@ const phase2Runtime = fs.readFileSync(path.join(projectDirectory, "src/objects/T
 assert.match(phase2Runtime, /hazardCycleSample/);
 assert.match(phase2Runtime, /excludeObstaclesThroughX/,
   "recorte industrial deve poder excluir ameaças sobrepostas ao spawn");
-assert.match(phase2Runtime, /excludedLowCeilings\.forEach\(\(object\) => this\.hideObjectTiles\(this\.lowCeilingsLayer, object\)\)/,
+assert.match(phase2Runtime, /excludedLowCeilings\.forEach\(\(object\) => this\.hideObjectTiles\(this\.lowCeilingsLayer, object, true\)\)/,
   "teto baixo excluído da D4 não pode permanecer visível no spawn");
+assert.match(phase2Runtime, /const startRow = allRowsInColumns \? 0/,
+  "offset visual do teto baixo exige limpar todas as linhas das colunas excluídas");
 assert.match(phase2Runtime, /lowCeilingObjects\.filter\(\(object\) => !this\.isExcludedStartObstacle\(object\)\)/,
   "teto baixo excluído da D4 não pode manter a zona letal");
 assert.match(phase2Runtime, /updateFromGameObject/);

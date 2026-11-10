@@ -280,6 +280,11 @@ for (const [phaseId, map] of [
 const sewerRoute = DESCENT_ROUTES.find((route) => route.phaseId === "fase1");
 assert.ok(sewerRoute?.epilogue);
 assert.ok(sewerRoute.endX - sewerRoute.startX < 3_000, "Esgoto deve ser um epilogo curto");
+const urbanRoute = DESCENT_ROUTES.find((route) => route.phaseId === "fase3");
+const industrialRoute = DESCENT_ROUTES.find((route) => route.phaseId === "fase2-intro");
+assert.ok(urbanRoute?.doubleJumpHazard, "grade elétrica exclusiva deve permanecer na D3");
+assert.equal(industrialRoute?.doubleJumpHazard, undefined,
+  "D4 deve usar os gaps industriais do mapa, sem repetir o piso elétrico da D3");
 assert.match(ending, /father\/pai-portrait\.png/);
 assert.match(ending, /CONVERSÃO CORPORATIVA/);
 assert.match(ending, /if \(!this\.testMode\) SaveState\.load\(\)\.markEndingReached\(this\.ending\)/);

@@ -49,7 +49,8 @@
    reação, e nunca sobreposto a Alex no início. A travessia de salto duplo deve
    usar a grade elétrica urbana ciano/azul, sem o retângulo vermelho de
    blockout. No Industrial, Alex deve começar vivo em piso neutro: o teto baixo
-   que antes sobrepunha o spawn não pode aparecer nem manter colisão letal.
+   que antes sobrepunha o spawn não pode aparecer nem manter colisão letal. A
+   fase deve usar seus gaps naturais e não pode exibir o piso elétrico da D3.
    No Topo, quebrar qualquer barricada deve reproduzir a mesma leitura da Fase
    3: seis fragmentos se espalham, giram, caem e desaparecem.
    Depois da porta ReForge do Topo não deve permanecer visível nenhum conteúdo

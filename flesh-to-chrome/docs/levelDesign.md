@@ -624,5 +624,7 @@
 - o trecho começa em piso neutro, sem hazard, inimigo ou teto baixo sobreposto
   a Alex;
 - o teto baixo autorado em `x=20.480–20.672` pertence ao fluxo da subida e é
-  ocultado, junto com sua zona letal, no contexto da descida;
+  ocultado por completo, junto com sua zona letal, no contexto da descida;
+- utiliza os gaps industriais já autorados para testar salto duplo, sem criar
+  ou reutilizar o piso elétrico exclusivo da D3 — Meio Urbano;
 - o primeiro obstáculo ativo precisa preservar uma janela mínima de reação.

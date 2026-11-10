@@ -166,7 +166,7 @@ export class TiledPhase2Runtime {
     const excludedHazards = hazardObjects.filter((object) => this.isExcludedStartObstacle(object));
     const excludedLowCeilings = lowCeilingObjects.filter((object) => this.isExcludedStartObstacle(object));
     excludedHazards.forEach((object) => this.hideObjectTiles(this.hazardsLayer, object));
-    excludedLowCeilings.forEach((object) => this.hideObjectTiles(this.lowCeilingsLayer, object));
+    excludedLowCeilings.forEach((object) => this.hideObjectTiles(this.lowCeilingsLayer, object, true));
 
     this.readCredits(byType("credit"), offsetY);
     this.readCheckpoints(byType("checkpoint"), offsetY);
@@ -214,12 +214,18 @@ export class TiledPhase2Runtime {
   private hideObjectTiles(
     layer: Phaser.Tilemaps.TilemapLayer | undefined,
     object: Phaser.Types.Tilemaps.TiledObject,
+    allRowsInColumns = false,
   ): void {
     if (!layer) return;
     const startCol = Math.floor((object.x ?? 0) / this.map.tileWidth);
     const endCol = Math.ceil(((object.x ?? 0) + (object.width ?? 0)) / this.map.tileWidth);
-    const startRow = Math.floor((object.y ?? 0) / this.map.tileHeight);
-    const endRow = Math.ceil(((object.y ?? 0) + (object.height ?? 0)) / this.map.tileHeight);
+    // A layer visual dos tetos tem offset próprio e foi desenhada acima da
+    // zona lógica. Como ela é exclusiva desses tetos, limpamos todas as
+    // linhas dentro das colunas do objeto para não deixar a plataforma órfã.
+    const startRow = allRowsInColumns ? 0 : Math.floor((object.y ?? 0) / this.map.tileHeight);
+    const endRow = allRowsInColumns
+      ? this.map.height
+      : Math.ceil(((object.y ?? 0) + (object.height ?? 0)) / this.map.tileHeight);
     for (let col = startCol; col < endCol; col += 1) {
       for (let row = startRow; row < endRow; row += 1) {
         const tile = layer.getTileAt(col, row);

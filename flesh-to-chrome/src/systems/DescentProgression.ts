@@ -117,7 +117,6 @@ export const DESCENT_ROUTES: readonly DescentRoute[] = [
     endX: 30_080,
     targetSeconds: 30,
     requiredAbilities: ["legs"],
-    doubleJumpHazard: { x: 26_848, width: 320 },
     spawnSafeStartPx: 256,
   },
   {
