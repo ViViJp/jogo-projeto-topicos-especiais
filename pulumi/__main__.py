@@ -19,7 +19,10 @@ if stack == "prod":
     pulumi.export("domain", domain)
 
 
-def table(name):
+def table(name, with_ttl=False):
+    kwargs = {}
+    if with_ttl:
+        kwargs["ttl"] = aws.dynamodb.TableTtlArgs(attribute_name="ttl", enabled=True)
     return aws.dynamodb.Table(
         name,
         name=f"{prefix}-{name}",
@@ -30,6 +33,7 @@ def table(name):
         hash_key="pk",
         range_key="sk",
         billing_mode="PAY_PER_REQUEST",
+        **kwargs,
     )
 
 
@@ -103,7 +107,7 @@ def publish(service, table_resource):
 services = {
     "conta": table("accounts"),
     "campanha": table("campaigns"),
-    "partidas": table("matches"),
+    "partidas": table("matches", with_ttl=True),
     "comunicacoes": table("communications"),
     "auditoria": table("audit"),
 }

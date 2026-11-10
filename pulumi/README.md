@@ -47,3 +47,10 @@ pulumi up
 ```
 
 As funções esperam o evento HTTP API v2 com `requestContext.authorizer.jwt.claims.sub`. Sem esse sujeito respondem 401. O encaminhamento HTTP entra quando houver API Gateway.
+
+## O que esta entrega não publica
+
+- Registros alias de `nihil-legere-possum.lat`, `www` e `api`. A sprint 1 aponta esses nomes para CloudFront e API Gateway. Eles entram com a CDN, o certificado e o API Gateway.
+- O barramento do documento 12 (DynamoDB Streams, publicador e SQS). A campanha já grava o outbox na mesma transação do save. A Lambda de auditoria deduplica e persiste o evento quando recebe `{ "action": "ingest", "events": [...] }` por invocação direta. Essa invocação não está ligada a uma fila.
+- E-mail SES. A sprint 1 deixa o envio para depois; falha de e-mail não bloqueia save nem partida.
+- Prova de `pulumi up`. Este repositório não executa a implantação. Quem tiver as credenciais da conta precisa rodar o comando acima e guardar a saída. `pulumi preview` não substitui isso.

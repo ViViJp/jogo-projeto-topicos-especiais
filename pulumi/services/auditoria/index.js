@@ -1,5 +1,5 @@
 const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
-const { DynamoDBDocumentClient, QueryCommand } = require("@aws-sdk/lib-dynamodb");
+const { DynamoDBDocumentClient, QueryCommand, TransactWriteCommand } = require("@aws-sdk/lib-dynamodb");
 
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const table = process.env.TABLE_NAME;
@@ -16,7 +16,52 @@ function fail(statusCode, code, message, requestId) {
   return response(statusCode, { error: { code, message, requestId } });
 }
 
+async function ingest(events) {
+  const stored = [];
+  for (const entry of events) {
+    if (!entry?.id || !entry.userId) continue;
+    const at = entry.at || new Date().toISOString();
+    try {
+      await db.send(
+        new TransactWriteCommand({
+          TransactItems: [
+            {
+              Put: {
+                TableName: table,
+                Item: { pk: entry.userId, sk: `DEDUP#${entry.id}` },
+                ConditionExpression: "attribute_not_exists(pk)",
+              },
+            },
+            {
+              Put: {
+                TableName: table,
+                Item: {
+                  pk: entry.userId,
+                  sk: `EVENT#${at}#${entry.id}`,
+                  id: entry.id,
+                  type: entry.type,
+                  resource: entry.resource,
+                  result: entry.result,
+                  at,
+                  correlation: entry.correlation || entry.id,
+                },
+                ConditionExpression: "attribute_not_exists(pk)",
+              },
+            },
+          ],
+        })
+      );
+      stored.push(entry.id);
+    } catch (err) {
+      if (err.name !== "TransactionCanceledException") throw err;
+    }
+  }
+  return { statusCode: 200, body: JSON.stringify({ stored }) };
+}
+
 exports.handler = async (event) => {
+  if (!event.requestContext?.http && event.action === "ingest") return ingest(event.events || []);
+
   const requestId = event.requestContext?.requestId || "";
   const userId = event.requestContext?.authorizer?.jwt?.claims?.sub || "";
   if (!userId) return fail(401, "UNAUTHENTICATED", "Sessão ausente.", requestId);

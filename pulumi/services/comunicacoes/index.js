@@ -22,7 +22,7 @@ function readBody(event) {
   return JSON.parse(raw);
 }
 
-const defaultPreferences = { categories: { welcome: true, ending: false, match: true }, channels: { game: true, email: false }, revision: 1 };
+const defaultPreferences = { categories: { welcome: true, ending: false, match: true }, channels: { game: true, email: false }, revision: 0 };
 
 exports.handler = async (event) => {
   const requestId = event.requestContext?.requestId || "";
@@ -67,10 +67,7 @@ exports.handler = async (event) => {
       }
       const current = await db.send(new GetCommand({ TableName: table, Key: { pk: userId, sk: "PREFERENCES" } }));
       const revision = current.Item?.preferences?.revision ?? 0;
-      if (body.expectedRevision !== revision && !(body.expectedRevision === 0 && !current.Item)) {
-        return fail(409, "CONFLICT", "Preferência foi alterada.", requestId);
-      }
-      if (!current.Item && body.expectedRevision !== 0) {
+      if (body.expectedRevision !== revision) {
         return fail(409, "CONFLICT", "Preferência foi alterada.", requestId);
       }
       const next = { ...body.preferences, revision: body.expectedRevision + 1 };

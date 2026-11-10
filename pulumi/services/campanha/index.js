@@ -1,5 +1,6 @@
 const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
 const { DynamoDBDocumentClient, GetCommand, TransactWriteCommand } = require("@aws-sdk/lib-dynamodb");
+const { validateState, fingerprint } = require("./rules");
 
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const table = process.env.TABLE_NAME;
@@ -41,14 +42,6 @@ function initialState() {
   };
 }
 
-function validateState(state) {
-  if (!state || typeof state !== "object" || Array.isArray(state)) return "state ausente";
-  for (const key of ["phase", "stageId", "credits", "implants", "bodyState", "descent"]) {
-    if (state[key] === undefined) return `state.${key} ausente`;
-  }
-  return "";
-}
-
 function view(item) {
   return {
     id: item.id,
@@ -65,12 +58,18 @@ function readBody(event) {
   return JSON.parse(raw);
 }
 
-async function load(userId) {
-  const out = await db.send(new GetCommand({ TableName: table, Key: { pk: userId, sk: "CAMPAIGN" } }));
+async function load(userId, sk) {
+  const out = await db.send(new GetCommand({ TableName: table, Key: { pk: userId, sk } }));
   return out.Item || null;
 }
 
-async function save(userId, body, current, requestId, eventType) {
+function replay(operation, mark) {
+  if (!operation) return null;
+  if (operation.fingerprint !== mark) return fail(409, "OPERATION_CONFLICT", "operationId reutilizado com outro conteúdo.", "");
+  return response(operation.statusCode, operation.response);
+}
+
+async function save(userId, body, current, requestId, eventType, mark) {
   const problem = validateState(body.state);
   if (problem) return fail(422, "INVALID", problem, requestId);
   if (!sources.has(body.source)) return fail(422, "INVALID", "source inválido.", requestId);
@@ -92,15 +91,7 @@ async function save(userId, body, current, requestId, eventType) {
   const statusCode = exists ? 200 : 201;
   const campaignPut = {
     TableName: table,
-    Item: {
-      pk: userId,
-      sk: "CAMPAIGN",
-      ...payload,
-      source: body.source,
-      lastOperationId: body.operationId,
-      lastStatusCode: statusCode,
-      lastResponse: payload,
-    },
+    Item: { pk: userId, sk: "CAMPAIGN", ...payload, source: body.source },
     ConditionExpression: exists ? "revision = :expected" : "attribute_not_exists(pk)",
   };
   if (exists) campaignPut.ExpressionAttributeValues = { ":expected": body.expectedRevision };
@@ -115,9 +106,26 @@ async function save(userId, body, current, requestId, eventType) {
             Item: {
               pk: userId,
               sk: `OUTBOX#${body.operationId}`,
-              eventType,
-              operationId: body.operationId,
-              createdAt: payload.updatedAt,
+              id: body.operationId,
+              userId,
+              type: eventType,
+              resource: payload.id,
+              result: "accepted",
+              at: payload.updatedAt,
+              correlation: body.operationId,
+            },
+            ConditionExpression: "attribute_not_exists(pk)",
+          },
+        },
+        {
+          Put: {
+            TableName: table,
+            Item: {
+              pk: userId,
+              sk: `OP#${body.operationId}`,
+              fingerprint: mark,
+              statusCode,
+              response: payload,
             },
             ConditionExpression: "attribute_not_exists(pk)",
           },
@@ -137,7 +145,7 @@ exports.handler = async (event) => {
   const path = event.rawPath || "";
 
   try {
-    const current = await load(userId);
+    const current = await load(userId, "CAMPAIGN");
     if (method === "GET" && path === "/me/campaign") {
       if (!current) return fail(404, "NOT_FOUND", "Campanha ausente.", requestId);
       return response(200, view(current));
@@ -147,19 +155,27 @@ exports.handler = async (event) => {
     if (!body.operationId || typeof body.operationId !== "string") {
       return fail(422, "INVALID", "operationId ausente.", requestId);
     }
-    if (current?.lastOperationId === body.operationId && current.lastResponse) {
-      return response(current.lastStatusCode, current.lastResponse);
-    }
+    const mark = fingerprint({
+      operationId: body.operationId,
+      path,
+      expectedRevision: body.expectedRevision,
+      schemaVersion: body.schemaVersion,
+      source: body.source,
+      state: body.state,
+      confirmed: body.confirmed === true,
+    });
+    const previous = replay(await load(userId, `OP#${body.operationId}`), mark);
+    if (previous) return previous;
 
     if (method === "PUT" && path === "/me/campaign") {
-      return await save(userId, body, current, requestId, "campaign.saved");
+      return await save(userId, body, current, requestId, "campaign.saved", mark);
     }
     if (method === "POST" && path === "/me/campaign/reset") {
       if (body.confirmed !== true) return fail(422, "INVALID", "Reset exige confirmed: true.", requestId);
       body.state = initialState();
       body.schemaVersion = 1;
       body.source = "online";
-      return await save(userId, body, current, requestId, "campaign.reset");
+      return await save(userId, body, current, requestId, "campaign.reset", mark);
     }
     if (method === "POST" && path === "/me/campaign/restore-gate") {
       if (!current?.state?.preGateSnapshot) {
@@ -168,7 +184,7 @@ exports.handler = async (event) => {
       body.state = current.state.preGateSnapshot;
       body.schemaVersion = current.schemaVersion;
       body.source = "online";
-      return await save(userId, body, current, requestId, "campaign.restored");
+      return await save(userId, body, current, requestId, "campaign.restored", mark);
     }
     return fail(404, "NOT_FOUND", "Rota ausente.", requestId);
   } catch (err) {
