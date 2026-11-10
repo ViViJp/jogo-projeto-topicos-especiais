@@ -2,16 +2,18 @@
 
 Projeto **Flesh to Chrome**, ISN 2026.2. Equipe ISN: João Pedro e Victor Blum. Domínio previsto: `nihil-legere-possum.lat`.
 
-Esta entrega documenta o jogo completo planejado e os serviços de nuvem. Implementação e implantação são etapas posteriores. Referência: [GDD 1.0.0](../../../gdd.md). 
+Esta entrega documenta o jogo completo planejado e os serviços de nuvem. Implementação e implantação são etapas posteriores. Referência: [GDD 1.0.0](../../../gdd.md).
+
+Marco da disciplina: [Sprint 1](https://github.com/ederson-torresini/isn20262/milestone/3), no repositório da matéria. Os números da coluna abaixo também são desse repositório, não deste jogo.
 
 | Documento | Conteúdo | Issue original |
 | --- | --- | --- |
-| [01 — Resumo](01-resumo-do-projeto.md) | Produto, narrativa, prioridades e arquitetura | #18 |
-| [02 — Requisitos](02-requisitos.md) | Disciplina, produto e critérios de validação | #19 |
-| [03 — Regras de negócio](03-regras-de-negocio.md) | Campanha, save, finais, multiplayer e serviços | #20 |
-| [04 — Casos de uso](04-casos-de-uso.md) | UC01–UC15, incluindo gamepad e multiplayer | #21 |
-| [05 — Diagramas](05-diagramas-de-blocos.md) | Arquitetura, entrada, multiplayer e dados | #22 |
-| [06 — Fluxogramas](06-fluxogramas.md) | Campanha completa, serviços, gamepad e corrida | #23 |
+| [01 — Resumo](01-resumo-do-projeto.md) | Produto, narrativa, prioridades e arquitetura | [Issue #18](https://github.com/ederson-torresini/isn20262/issues/18) |
+| [02 — Requisitos](02-requisitos.md) | Disciplina, produto e critérios de validação | [Issue #19](https://github.com/ederson-torresini/isn20262/issues/19) |
+| [03 — Regras de negócio](03-regras-de-negocio.md) | Campanha, save, finais, multiplayer e serviços | [Issue #20](https://github.com/ederson-torresini/isn20262/issues/20) |
+| [04 — Casos de uso](04-casos-de-uso.md) | UC01–UC15, incluindo gamepad e multiplayer | [Issue #21](https://github.com/ederson-torresini/isn20262/issues/21) |
+| [05 — Diagramas](05-diagramas-de-blocos.md) | Arquitetura, entrada, multiplayer e dados | [Issue #22](https://github.com/ederson-torresini/isn20262/issues/22) |
+| [06 — Fluxogramas](06-fluxogramas.md) | Campanha completa, serviços, gamepad e corrida | [Issue #23](https://github.com/ederson-torresini/isn20262/issues/23) |
 | [07 — Decisões pendentes](07-decisoes-pendentes.md) | O que precisa ser verificado pela equipe | — |
 | [08 — Modelagem de dados](08-modelagem-de-dados.md) | Entidades, campos e invariantes | — |
 | [09 — API REST](09-api-rest.md) | Contrato inicial proposto | — |

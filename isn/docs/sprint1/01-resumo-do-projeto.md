@@ -10,6 +10,10 @@
 
 **Referência de produto:** [GDD 1.0.0](../../../gdd.md), setembro de 2026. As definições ISN complementam o GDD e estão registradas nesta documentação.
 
+## Definição
+
+Flesh to Chrome é um auto-runner 2D cyberpunk no navegador. Alex sobe em Glitch City trocando partes do corpo por implantes. O jogo roda no cliente; a nuvem guarda conta, save da campanha, partidas, notificações e auditoria de quem está autenticado.
+
 ## Produto e narrativa
 
 Flesh to Chrome é um auto-runner 2D cyberpunk para navegador desktop. Alex Murphy vive com os avós e o tio nos níveis inferiores de Glitch City. Ao reconhecer no jornal o pai que abandonou a família e ascendeu socialmente, decide chegar ao topo. A ascensão atravessa Esgoto, Industrial, Meio Urbano, Corporativo e Topo.
