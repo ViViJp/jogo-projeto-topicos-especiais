@@ -16,14 +16,38 @@ function prefix(list, catalog, count) {
   return Array.isArray(list) && list.length === count && list.every((item, index) => item === catalog[index]);
 }
 
+function creditIds(prefix, count) {
+  return Object.fromEntries(
+    Array.from({ length: count }, (_, index) => [`${prefix}${String(index + 1).padStart(2, "0")}`, 10])
+  );
+}
+
+// Valor 10 é o que os runtimes das fases 1–5 gravam ao coletar. Créditos da pista
+// multiplayer não entram no save da campanha.
+const campaignCredits = {
+  ...creditIds("f1-risk-", 15),
+  "f1-safe-01": 10,
+  ...creditIds("f2-risk-", 12),
+  ...creditIds("f3-risk-", 18),
+  ...creditIds("f4-normal-", 4),
+  ...creditIds("f4-risk-", 16),
+  ...creditIds("f5-normal-", 6),
+  ...creditIds("f5-risk-", 24),
+};
+
 function validateCredits(credits) {
   if (!credits || !Array.isArray(credits.consolidatedIds)) return "créditos ausentes";
   if (!Number.isInteger(credits.total) || credits.total < 0) return "total de créditos inválido";
   const ids = credits.consolidatedIds;
   if (ids.some((id) => typeof id !== "string" || !id)) return "identificador de crédito inválido";
   if (new Set(ids).size !== ids.length) return "crédito consolidado repetido";
-  if (ids.length === 0 && credits.total !== 0) return "total incoerente com os créditos";
-  if (ids.length > 0 && credits.total < ids.length) return "total incoerente com os créditos";
+  let sum = 0;
+  for (const id of ids) {
+    const value = campaignCredits[id];
+    if (value === undefined) return "crédito inexistente no mapa";
+    sum += value;
+  }
+  if (credits.total !== sum) return "total incoerente com os créditos";
   return "";
 }
 
@@ -157,8 +181,12 @@ function validateTransition(previous, next) {
   if (next.phase === "epilogue" && previous.phase !== "descent" && previous.phase !== "epilogue") {
     return "epílogo sem descida";
   }
-  if (next.ending === "chrome" && previous.phase !== "ascent" && previous.phase !== "ending") {
-    return "Chrome sem a subida";
+  if (next.ending === "chrome") {
+    if (previous.phase !== "ascent" && previous.phase !== "ending") return "Chrome sem a subida";
+    if (previous.phase === "ascent") {
+      const atGate = previous.stageId === "topo" && previous.implants.length === implants.length;
+      if (!atGate || next.stageId !== "topo") return "Chrome sem chegar ao Portão";
+    }
   }
   if (next.ending && next.ending !== "chrome" && previous.phase === "ascent") {
     return "final da descida sem a descida";
@@ -172,10 +200,10 @@ function validateTransition(previous, next) {
   if (previous.phase === "ascent" && next.phase === "descent" && (previous.stageId !== "topo" || next.stageId !== "topo")) {
     return "descida fora do topo";
   }
-  if (previous.phase === "descent" && next.phase === "descent" && (to > from || from - to > 1)) {
-    return "setor da descida inválido";
-  }
-  if (previous.phase === "ascent" && next.phase === "ascent") {
+  const descending = previous.phase === "descent"
+    && (next.phase === "descent" || next.phase === "epilogue" || next.phase === "ending");
+  if (descending && (to > from || from - to > 1)) return "setor da descida inválido";
+  if (previous.phase === "ascent" && next.phase !== "descent") {
     if (!listGrows(previous.implants, next.implants)) return "implante removido na subida";
     if (next.implants.length > previous.implants.length + 1) return "implantes pulados";
   }

@@ -27,7 +27,16 @@ assert.equal(
   validateState({ ...initial, credits: { total: 1, consolidatedIds: ["a", "a"] } }),
   "crédito consolidado repetido"
 );
-assert.equal(validateState({ ...initial, credits: { total: 0, consolidatedIds: ["a"] } }), "total incoerente com os créditos");
+assert.equal(validateState({ ...initial, credits: { total: 0, consolidatedIds: ["a"] } }), "crédito inexistente no mapa");
+assert.equal(
+  validateState({ ...initial, credits: { total: 500, consolidatedIds: ["f1-risk-01"] } }),
+  "total incoerente com os créditos"
+);
+assert.equal(validateState({ ...initial, credits: { total: 10, consolidatedIds: ["f1-risk-01"] } }), "");
+assert.equal(
+  validateState({ ...initial, credits: { total: 10, consolidatedIds: ["mp-credit-01"] } }),
+  "crédito inexistente no mapa"
+);
 
 const descent = {
   ...initial,
@@ -92,6 +101,35 @@ assert.notEqual(
   ""
 );
 assert.notEqual(validateTransition({ ...climbed, checkpointId: "tv-1" }, { ...climbed, checkpointId: null }), "");
+
+const chrome = {
+  phase: "ending",
+  stageId: "topo",
+  checkpointId: null,
+  credits: { total: 0, consolidatedIds: [] },
+  implants: ["pernas", "bracos", "olhos", "propulsores"],
+  bodyState: "chrome",
+  gateChoice: "chrome",
+  descent: {
+    step: null,
+    chainStatus: "inactive",
+    memories: [],
+    pendingMemory: null,
+    removals: [],
+    retryUsedByStage: {},
+  },
+  ending: "chrome",
+};
+assert.equal(validateState(chrome), "");
+assert.notEqual(validateTransition(initial, chrome), "");
+const atGate = {
+  ...initial,
+  stageId: "topo",
+  implants: ["pernas", "bracos", "olhos", "propulsores"],
+  bodyState: "implanted",
+};
+assert.equal(validateTransition(atGate, chrome), "");
+assert.notEqual(validateTransition({ ...descent, stageId: "topo" }, flesh), "");
 
 const code = generateCode();
 assert.match(code, /^[A-Z2-9]{5}-[A-Z2-9]{5}$/);
