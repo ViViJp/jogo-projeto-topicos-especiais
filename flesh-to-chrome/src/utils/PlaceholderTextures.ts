@@ -1,19 +1,15 @@
 import Phaser from "phaser";
-import { PLAYER_SIZE, PLAYER_SLIDE_SIZE } from "../config/GameConfig";
 
 /**
- * Marco 1 (Protótipo técnico) exige apenas "placeholders" como arte.
- * Este módulo gera texturas simples (retângulos/círculos coloridos) via
- * Phaser.GameObjects.Graphics -> generateTexture, para que nenhum asset
- * externo seja necessário para rodar o protótipo. Quando a arte real
- * (seção 23.1) estiver pronta, basta trocar as chamadas `scene.add.sprite`
- * pelos spritesheets finais - o resto do código (física, colisão, estado)
- * não muda.
+ * v0.2.0: Alex e os mapas já usam arte real (ver `AlexSprite.ts` e
+ * `LevelRuntime.ts`). Este módulo agora só cobre o que ainda não tem arte
+ * dedicada nesta passagem (crédito coletável, checkpoint e os elementos de
+ * fases futuras ainda não implementados) - texturas simples geradas via
+ * Phaser.GameObjects.Graphics -> generateTexture, sem depender de nenhum
+ * arquivo externo.
  */
 
 export const TEX = {
-  player: "tex_player",
-  playerSlide: "tex_player_slide",
   ground: "tex_ground",
   hazard: "tex_hazard",
   pipe: "tex_pipe",
@@ -50,13 +46,7 @@ function circle(scene: Phaser.Scene, key: string, r: number, color: number) {
 }
 
 export function generatePlaceholderTextures(scene: Phaser.Scene): void {
-  if (scene.textures.exists(TEX.player)) return; // já geradas nesta sessão do jogo
-
-  // Alex: retângulo com um "visor" para dar leitura de direção.
-  rect(scene, TEX.player, PLAYER_SIZE.width, PLAYER_SIZE.height, 0x9be7ff, 1, 1);
-  // Pose de slide: textura própria (mais baixa) em vez de re-escalar a
-  // textura em pé - evita descasar o corpo físico do sprite visual.
-  rect(scene, TEX.playerSlide, PLAYER_SLIDE_SIZE.width, PLAYER_SLIDE_SIZE.height, 0x6fd3ff, 1, 1);
+  if (scene.textures.exists(TEX.ground)) return; // já geradas nesta sessão do jogo
 
   rect(scene, TEX.ground, 64, 64, 0x2a2f45, 1, 1);
   rect(scene, TEX.hazard, 64, 48, 0x00e08a, 0.55); // água tóxica

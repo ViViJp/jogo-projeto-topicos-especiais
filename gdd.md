@@ -861,7 +861,7 @@ Elementos:
 3. armadilha oculta;
 4. scan + salto duplo;
 5. lasers;
-6. portas automatizadas;
+6. barreiras de segurança letais, ocultadas e desativadas por scan;
 7. pisos falsos;
 8. checkpoint;
 9. combinação;
@@ -885,7 +885,7 @@ Possíveis obstáculos:
 - grandes vãos de dash;
 - grades de laser;
 - barreiras rotativas;
-- portas temporizadas;
+- barreiras de segurança letais, ocultadas e desativadas por scan;
 - sequências de dash + salto + ataque + scan.
 
 Não haverá chefe.
@@ -1112,6 +1112,22 @@ Continuar do Portão restaura integralmente o estado anterior à escolha.
 
 ### Confirmar
 - `Enter`
+
+## 19.1.1 Controle USB
+
+O jogo aceita controles no padrão Web Gamepad e controles USB retrô com layout A/B/X/Y, direcional, Start, Select, L1 e R1.
+
+- **Pulo / salto duplo:** `A` ou direcional `↑`
+- **Slide:** `B`, `L1` ou direcional `↓`
+- **Ataque:** `X`
+- **Scan:** `Y` ou `Select`
+- **Dash:** `R1`
+- **Pausa:** `Start`
+- **Confirmar:** `A`
+- **Cancelar / voltar em menus:** `B` ou `Select`
+- **Navegação de menus:** direcional
+
+Como Flesh to Chrome é um auto-runner, Alex continua correndo automaticamente; esquerda e direita são usadas na navegação dos menus. O jogo detecta automaticamente o perfil USB/SNES e também aceita direcionais expostos pelo navegador como eixos.
 
 ## 19.2 Pausa
 
@@ -1359,8 +1375,7 @@ O humano bioprintado pode reutilizar a base do humano original com diferenças d
 - lasers;
 - drones;
 - pisos falsos;
-- portas automatizadas;
-- barreiras de segurança;
+- barreiras de segurança letais enquanto visíveis e intangíveis após scan;
 - créditos;
 - glitches/memórias;
 - checkpoints com videogame + TV de tubo.

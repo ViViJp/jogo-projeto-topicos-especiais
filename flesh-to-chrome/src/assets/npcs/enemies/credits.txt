@@ -1,0 +1,19 @@
+Cavern Set — Draconimous
+https://draconimous.itch.io/cavern-set
+
+License: CC-BY 4.0 (Creative Commons Attribution v4.0)
+
+Files:
+- npcs/enemies/crystal-crab/crystal-crab.png (40×30, walk/hit/death)
+- npcs/enemies/dark-hand/dark-hand.png (48×48, walk/hit/death)
+- tiles/esgoto/props/crystal-cave-tiles.png (32×32 tiles)
+
+GDD: inimigos e props extras do Esgoto / Periferia
+
+Meio Urbano enemies — Fase 3:
+- npcs/enemies/drone/drone.png (32×32, 2 frames de voo)
+- npcs/enemies/bandido/bandido.png (48×48, 4 frames idle)
+
+Sprites originais gerados para Flesh to Chrome com OpenAI Imagegen em
+novembro de 2026. Direção: segurança urbana blindada e saqueador cyberpunk,
+usando a paleta do tileset Warped City como referência visual.

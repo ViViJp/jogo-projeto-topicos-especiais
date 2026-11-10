@@ -236,17 +236,14 @@
              └────────┬───────┘
                       ↓
                     DRONE
-                      |
-            JOGADOR TENTA ATACAR
-                      |
-               ATAQUE NÃO FUNCIONA
-                      |
-               DRONE É BLINDADO
-                      |
-               APRENDE A EVITAR
-                      |
-            SLIDE / ROTA ALTERNATIVA
-                      |
+                      │
+          ┌───────────┴────────────┐
+          │                        │
+      ataque aéreo             passar por baixo
+      + recompensa                slide
+          │                        │
+          └────────────┬───────────┘
+                       ↓
                   BARRICADAS
                        │
                        ↓
@@ -353,9 +350,9 @@
                            timing
                               │
                               ↓
-                    PORTAS AUTOMATIZADAS
+                    BARREIRAS LETAIS
                               │
-                           timing
+                    scan antes do contato
                               │
                               ↓
                         PISOS FALSOS
@@ -383,7 +380,7 @@
                               ↓
                            lasers
                               ↓
-                   portas automatizadas
+                  barreiras via scan
                               ↓
                         pisos falsos
                               │
@@ -444,7 +441,7 @@
                      leitura + timing
                             │
                             ↓
-                    PORTAS TEMPORIZADAS
+                 BARREIRAS LETAIS VIA SCAN
                             │
                             ↓
                         CHECKPOINT

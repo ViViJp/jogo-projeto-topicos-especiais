@@ -55,6 +55,8 @@ function build(): LevelData {
     overheadObstacles: b.overheadObstacles,
     credits: b.credits,
     checkpoints: b.checkpoints,
+    breakables: b.breakables,
+    abilityGates: b.abilityGates,
     endGateX,
     playerSpawnX: 80,
   };

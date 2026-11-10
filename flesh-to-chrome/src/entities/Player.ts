@@ -1,10 +1,22 @@
 import Phaser from "phaser";
-import { BASE_RUN_SPEED, PHYSICS } from "../config/GameConfig";
+import {
+  BASE_RUN_SPEED,
+  PHYSICS,
+  PLAYER_SIZE,
+  PLAYER_BODY_OFFSET,
+  PLAYER_SLIDE_SIZE,
+  PLAYER_SLIDE_BODY_OFFSET,
+} from "../config/GameConfig";
 import { AbilityState } from "../systems/AbilityState";
 import { InputManager } from "../systems/InputManager";
-import { AudioManager, SFX } from "../systems/AudioManager";
-import { TEX } from "../utils/PlaceholderTextures";
-import { ALEX, applySlideBody, applyStandBody } from "../utils/AlexSprites";
+import {
+  ALEX_SLIDE_FRAME,
+  alexAttackAnimationKey,
+  alexCheckpointAnimationKey,
+  alexRunAnimationKey,
+  alexTextureForAbilities,
+  ensureAlexAnimations,
+} from "../utils/AlexSprite";
 
 export type PlayerState =
   | "running"
@@ -13,6 +25,7 @@ export type PlayerState =
   | "attacking"
   | "scanning"
   | "dashing"
+  | "checkpoint"
   | "pressed" // preso contra um quebrável (seção 14.7)
   | "dead";
 
@@ -21,32 +34,30 @@ export type PlayerState =
  *
  * Implementa a matriz de compatibilidade de ações da seção 14.11 do GDD e
  * os valores de referência da seção 14 (durações, cooldowns). Ataque, scan
- * e dash já existem na máquina de estados para que a equipe só precise
- * ligar `abilities.arms/eyes/thrusters = true` quando as fases 2-4 forem
- * implementadas - a lógica de execução das habilidades não muda.
+ * e dash estão ligados aos implantes liberados pelas clínicas das Fases 2–4
+ * e são exercitados nos runtimes Tiled das Fases 3–5.
  */
 export class Player {
   readonly sprite: Phaser.Physics.Arcade.Sprite;
   private scene: Phaser.Scene;
   private input: InputManager;
   private abilities: AbilityState;
-  private audio?: AudioManager;
+  private readonly runAnimationKey: string;
+  private readonly attackAnimationKey: string;
+  private readonly checkpointAnimationKey: string;
 
   private state: PlayerState = "running";
   private doubleJumpUsed = false;
   private slideTimer = 0;
   private slideElapsed = 0;
   private attackRecoveryTimer = 0;
+  /** Invalida callbacks de um golpe que foi interrompido por outra ação. */
+  private attackSequence = 0;
   private dashTimer = 0;
   private dashCooldownTimer = 0;
   private pressedTimer = 0;
   private scanTimer = 0;
-  private wasGrounded = true;
-  private footstepAcc = 0;
-
-  private standKey: string;
-  private slideKey: string;
-  private useAlexSheet: boolean;
+  private depthBeforeCheckpoint = 0;
 
   private onDeath: () => void;
   private onScanPulse: (active: boolean) => void;
@@ -58,29 +69,23 @@ export class Player {
     y: number,
     abilities: AbilityState,
     input: InputManager,
-    callbacks: { onDeath: () => void; onScanPulse: (active: boolean) => void },
-    audio?: AudioManager
+    callbacks: { onDeath: () => void; onScanPulse: (active: boolean) => void }
   ) {
     this.scene = scene;
     this.abilities = abilities;
     this.input = input;
-    this.audio = audio;
     this.onDeath = callbacks.onDeath;
     this.onScanPulse = callbacks.onScanPulse;
 
-    this.useAlexSheet = scene.textures.exists(ALEX.sheet);
-    this.standKey = this.useAlexSheet ? ALEX.sheet : TEX.player;
-    this.slideKey = TEX.playerSlide;
-
-    this.sprite = scene.physics.add.sprite(x, y, this.standKey);
+    const textureKey = alexTextureForAbilities(abilities);
+    ensureAlexAnimations(scene, textureKey);
+    this.runAnimationKey = alexRunAnimationKey(textureKey);
+    this.attackAnimationKey = alexAttackAnimationKey(textureKey);
+    this.checkpointAnimationKey = alexCheckpointAnimationKey(textureKey);
+    this.sprite = scene.physics.add.sprite(x, y, textureKey);
     this.sprite.setOrigin(0.5, 1);
     this.sprite.setCollideWorldBounds(false);
-    if (this.useAlexSheet) {
-      applyStandBody(this.sprite);
-      this.sprite.play(ALEX.run);
-    } else {
-      this.sprite.body!.setSize(this.sprite.width, this.sprite.height);
-    }
+    this.applyRunningPose();
 
     this.sprite.setVelocityX(BASE_RUN_SPEED);
   }
@@ -110,28 +115,77 @@ export class Player {
     this.sprite.setVelocityX(BASE_RUN_SPEED);
   }
 
+  /** Parada diegética do GDD: Alex se senta diante da TV do checkpoint. */
+  beginCheckpointInteraction(x = this.sprite.x, y = this.sprite.y): void {
+    if (this.state === "dead" || this.state === "checkpoint") return;
+    if (this.scanTimer > 0) this.onScanPulse(false);
+    this.scanTimer = 0;
+    this.dashTimer = 0;
+    this.currentBreakable = null;
+    this.transitionState("checkpoint");
+    const body = this.sprite.body as Phaser.Physics.Arcade.Body;
+    body.setAllowGravity(false);
+    body.reset(x, y);
+    this.sprite.setVelocity(0, 0);
+    this.sprite.anims.play(this.checkpointAnimationKey, true);
+    this.depthBeforeCheckpoint = this.sprite.depth;
+    // A TV é um objeto de primeiro plano (depth 2–3 conforme a fase).
+    // Durante a pose de interação Alex precisa aparecer sentado diante dela.
+    this.sprite.setDepth(10);
+  }
+
+  endCheckpointInteraction(): void {
+    if (this.state !== "checkpoint") return;
+    this.state = "running";
+    this.sprite.setDepth(this.depthBeforeCheckpoint);
+    (this.sprite.body as Phaser.Physics.Arcade.Body).setAllowGravity(true);
+    this.applyRunningPose();
+    this.sprite.setVelocityX(BASE_RUN_SPEED);
+  }
+
   kill(): void {
     if (this.state === "dead") return;
-    this.state = "dead";
+    this.transitionState("dead");
     this.sprite.setVelocity(0, 0);
     this.sprite.body!.enable = false;
-    this.sprite.anims?.stop();
-    if (this.useAlexSheet && this.scene.anims.exists(ALEX.hurt)) {
-      this.sprite.play(ALEX.hurt);
-    }
-    this.audio?.sfx(SFX.hurt, { volume: 0.8 });
     this.onDeath();
   }
 
+  /** Reativa a mesma instancia sem reiniciar a cena ou o cronometro da corrida. */
+  respawn(x: number, y: number): void {
+    this.attackSequence += 1;
+    this.state = "running";
+    this.doubleJumpUsed = false;
+    this.slideTimer = 0;
+    this.slideElapsed = 0;
+    this.attackRecoveryTimer = 0;
+    this.dashTimer = 0;
+    this.dashCooldownTimer = 0;
+    this.pressedTimer = 0;
+    this.scanTimer = 0;
+    this.currentBreakable = null;
+    this.sprite.setVisible(true).setActive(true);
+    const body = this.sprite.body!;
+    body.enable = true;
+    body.reset(x, y);
+    this.applyRunningPose();
+    this.sprite.setVelocityX(BASE_RUN_SPEED);
+  }
+
   update(deltaMs: number): void {
-    if (this.state === "dead") return;
+    if (this.state === "dead" || this.state === "checkpoint") return;
 
     this.updateTimers(deltaMs);
 
     if (this.state === "pressed") {
       if (this.input.isAttackJustDown() && this.abilities.arms) {
+        this.attackRecoveryTimer = PHYSICS.attack.recoveryMs;
+        this.sprite.anims.play(this.attackAnimationKey, true);
         // a colisão com o quebrável (GameScene) é responsável por chamar resolvePressedSuccess()
         this.scene.events.emit("player-attack-attempt", this.currentBreakable);
+        this.scene.time.delayedCall(PHYSICS.attack.animDurationMs, () => {
+          if (this.state === "running" || this.state === "jumping") this.applyRunningPose();
+        });
       }
       if (this.pressedTimer <= 0) {
         this.kill();
@@ -140,11 +194,6 @@ export class Player {
     }
 
     const grounded = this.isGrounded();
-    if (grounded && !this.wasGrounded) {
-      this.audio?.sfx(SFX.land);
-    }
-    this.wasGrounded = grounded;
-
     if (grounded) {
       this.doubleJumpUsed = false;
       if (this.state === "jumping") {
@@ -159,7 +208,6 @@ export class Player {
     this.handleAttack();
     this.handleScan();
     this.handleDash();
-    this.updateRunAnim(grounded, deltaMs);
 
     // fora dos estados especiais, garante velocidade base constante
     if (this.state === "running" || this.state === "jumping") {
@@ -169,29 +217,15 @@ export class Player {
     }
   }
 
-  private updateRunAnim(grounded: boolean, deltaMs: number): void {
-    if (!this.useAlexSheet) return;
-    if (this.state === "sliding" || this.state === "dashing" || this.state === "attacking") return;
-
-    if (grounded && this.state === "running") {
-      if (this.sprite.anims.currentAnim?.key !== ALEX.run) {
-        this.sprite.play(ALEX.run, true);
-      }
-      this.footstepAcc += deltaMs;
-      if (this.footstepAcc >= 220) {
-        this.footstepAcc = 0;
-        this.audio?.sfx(SFX.footstep, { volume: 0.35, rate: 1.0 + Math.random() * 0.1 });
-      }
-    } else {
-      this.footstepAcc = 0;
-      if (this.sprite.anims.isPlaying) this.sprite.anims.pause();
-    }
-  }
-
   private updateTimers(deltaMs: number): void {
     if (this.slideTimer > 0) this.slideTimer -= deltaMs;
     if (this.attackRecoveryTimer > 0) this.attackRecoveryTimer -= deltaMs;
-    if (this.dashCooldownTimer > 0) this.dashCooldownTimer -= deltaMs;
+    if (this.dashCooldownTimer > 0) {
+      this.dashCooldownTimer = Math.max(0, this.dashCooldownTimer - deltaMs);
+      if (this.dashCooldownTimer === 0) {
+        this.scene.events.emit("player-dash-ready");
+      }
+    }
     if (this.pressedTimer > 0) this.pressedTimer -= deltaMs;
 
     if (this.dashTimer > 0) {
@@ -230,14 +264,11 @@ export class Player {
 
     if (grounded) {
       this.sprite.setVelocityY(PHYSICS.jump.velocityY);
-      this.state = "jumping";
-      this.audio?.sfx(SFX.jump);
-      this.audio?.sfx(SFX.effort, { volume: 0.65 });
+      this.transitionState("jumping", true);
     } else if (this.abilities.legs && !this.doubleJumpUsed) {
       this.sprite.setVelocityY(PHYSICS.doubleJump.velocityY);
       this.doubleJumpUsed = true;
-      this.audio?.sfx(SFX.jump, { rate: 1.12 });
-      this.audio?.sfx(SFX.effort, { volume: 0.75 });
+      this.transitionState("jumping", true);
     }
   }
 
@@ -251,46 +282,32 @@ export class Player {
     this.state = "sliding";
     this.slideTimer = PHYSICS.slide.durationMs;
     this.slideElapsed = 0;
-    this.setSliding(true);
-    this.audio?.sfx(SFX.slide);
-    this.audio?.sfx(SFX.effort, { volume: 0.45, rate: 0.9 });
+    this.applySlidingPose();
   }
 
   private endSlide(): void {
     this.state = "running";
-    this.setSliding(false);
+    this.applyRunningPose();
   }
 
-  /** Em pé ↔ agachar: hitbox ancorada nos pés (não afunda no chão). */
-  private setSliding(sliding: boolean): void {
-    const feetX = this.sprite.x;
-    const feetY = this.sprite.y;
-
-    if (this.useAlexSheet) {
-      this.sprite.anims?.stop();
-      this.sprite.setTexture(this.standKey);
-      if (sliding) {
-        applySlideBody(this.sprite);
-      } else {
-        applyStandBody(this.sprite);
-        this.sprite.play(ALEX.run, true);
-      }
-      this.pinFeet(feetX, feetY);
-      return;
-    }
-
-    const textureKey = sliding ? this.slideKey : this.standKey;
-    this.sprite.setTexture(textureKey);
-    this.sprite.setScale(1, 1);
-    this.sprite.setCrop();
-    this.sprite.body!.setSize(this.sprite.width, this.sprite.height);
-    this.sprite.body!.setOffset(0, 0);
-    this.pinFeet(feetX, feetY);
+  /**
+   * Corpo físico medido no bounding-box alfa dos frames reais do
+   * spritesheet LPC (ver `GameConfig.ts` / `AlexSprite.ts`) - o mesmo
+   * princípio "hitbox honesta com o desenho" da v0.1 (era a causa do bug
+   * "slide atravessa o chão"), agora com os números certos para a arte
+   * final em vez do retângulo placeholder.
+   */
+  private applyRunningPose(): void {
+    this.sprite.anims.play(this.runAnimationKey, true);
+    this.sprite.body!.setSize(PLAYER_SIZE.width, PLAYER_SIZE.height);
+    this.sprite.body!.setOffset(PLAYER_BODY_OFFSET.x, PLAYER_BODY_OFFSET.y);
   }
 
-  /** Mantém a origem (0.5,1) nos pés após mudar textura/hitbox. */
-  private pinFeet(x: number, y: number): void {
-    this.sprite.setPosition(x, y);
+  private applySlidingPose(): void {
+    this.sprite.anims.stop();
+    this.sprite.setFrame(ALEX_SLIDE_FRAME);
+    this.sprite.body!.setSize(PLAYER_SLIDE_SIZE.width, PLAYER_SLIDE_SIZE.height);
+    this.sprite.body!.setOffset(PLAYER_SLIDE_BODY_OFFSET.x, PLAYER_SLIDE_BODY_OFFSET.y);
   }
 
   // ---- Ataque / quebra (seção 14.6) ----
@@ -302,15 +319,49 @@ export class Player {
 
     const previous = this.state;
     this.state = "attacking";
+    const attackSequence = ++this.attackSequence;
     this.attackRecoveryTimer = PHYSICS.attack.recoveryMs;
-    this.scene.events.emit("player-attack", this.sprite.x, this.sprite.y);
-    this.audio?.sfx(SFX.attack);
+    this.sprite.anims.play(this.attackAnimationKey, true);
+    this.emitAttackPulse(true);
+    for (
+      let delay = PHYSICS.attack.pulseIntervalMs;
+      delay <= PHYSICS.attack.activeMs;
+      delay += PHYSICS.attack.pulseIntervalMs
+    ) {
+      this.scene.time.delayedCall(delay, () => {
+        if (this.state === "attacking" && this.attackSequence === attackSequence) {
+          this.emitAttackPulse(false);
+        }
+      });
+    }
 
     this.scene.time.delayedCall(PHYSICS.attack.animDurationMs, () => {
-      if (this.state === "attacking") {
+      if (this.state === "attacking" && this.attackSequence === attackSequence) {
         this.state = previous === "jumping" && !this.isGrounded() ? "jumping" : "running";
+        this.applyRunningPose();
       }
     });
+  }
+
+  /**
+   * Mantém a hitbox ativa durante a parte ofensiva da animação. O primeiro
+   * pulso exibe o feedback do HUD; os seguintes apenas atualizam a colisão
+   * na posição atual de Alex, evitando repetir texto e som a cada 60 ms.
+   */
+  private emitAttackPulse(showFeedback: boolean): void {
+    this.scene.events.emit("player-attack", this.sprite.x, this.sprite.y, showFeedback);
+  }
+
+  /**
+   * Centraliza saídas antecipadas do golpe. Pulo e dash precisam restaurar
+   * imediatamente a pose padrão; morte e checkpoint substituem a animação
+   * logo em seguida e apenas invalidam os timers pendentes.
+   */
+  private transitionState(nextState: PlayerState, restorePoseAfterAttack = false): void {
+    const interruptedAttack = this.state === "attacking" && nextState !== "attacking";
+    if (interruptedAttack) this.attackSequence += 1;
+    this.state = nextState;
+    if (interruptedAttack && restorePoseAfterAttack) this.applyRunningPose();
   }
 
   // ---- Scan (seção 14.9) ----
@@ -322,7 +373,23 @@ export class Player {
 
     this.scanTimer = PHYSICS.scan.durationMs;
     this.onScanPulse(true);
+    this.showScanFeedback();
     if (this.state === "running") this.state = "scanning";
+  }
+
+  private showScanFeedback(): void {
+    const ring = this.scene.add.circle(this.sprite.x, this.sprite.y - 30, 18, 0x36e2ff, 0.08);
+    ring.setStrokeStyle(3, 0x36e2ff, 0.95);
+    ring.setDepth(this.sprite.depth + 1);
+    this.scene.tweens.add({
+      targets: ring,
+      radius: 220,
+      alpha: 0,
+      duration: PHYSICS.scan.durationMs,
+      ease: "Cubic.easeOut",
+      onUpdate: () => ring.setPosition(this.sprite.x, this.sprite.y - 30),
+      onComplete: () => ring.destroy(),
+    });
   }
 
   // ---- Dash (seção 14.10) ----
@@ -332,17 +399,20 @@ export class Player {
     if (this.dashCooldownTimer > 0) return;
     if (!this.input.isDashJustDown()) return;
 
-    this.state = "dashing";
+    this.transitionState("dashing", true);
     this.dashTimer = PHYSICS.dash.durationMs;
     this.dashCooldownTimer = PHYSICS.dash.cooldownMs;
     this.sprite.setVelocityX(PHYSICS.dash.speed);
-    this.scene.events.emit("player-dash-start");
-    this.audio?.sfx(SFX.dash);
+    this.scene.events.emit(
+      "player-dash-start",
+      this.sprite.x,
+      this.sprite.y,
+      PHYSICS.dash.cooldownMs,
+    );
     this.scene.time.delayedCall(PHYSICS.dash.durationMs, () => {
       if (this.state === "dashing") {
         this.state = this.isGrounded() ? "running" : "jumping";
       }
-      this.scene.events.emit("player-dash-ready");
     });
   }
 

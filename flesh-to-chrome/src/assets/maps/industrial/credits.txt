@@ -1,0 +1,4 @@
+Fase 2 — Industrial (Tiled)
+Layout: levelDesign.md Fase 2 + GDD §16.2
+Tileset: Atomic Realm Industrial 32×32
+Mapa preservado como referência para o futuro blockout da Fase 2.

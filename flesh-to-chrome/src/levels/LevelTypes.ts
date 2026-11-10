@@ -50,6 +50,27 @@ export interface CheckpointEntry {
   x: number;
 }
 
+export interface BreakableEntry {
+  id: string;
+  x: number;
+  width: number;
+  height: number;
+  /** Texto opcional exibido sobre o obstáculo, usado no primeiro tutorial. */
+  prompt?: string;
+}
+
+export type AbilityGateKind = "scan" | "dash";
+
+export interface AbilityGateEntry {
+  id: string;
+  ability: AbilityGateKind;
+  x: number;
+  width: number;
+  height: number;
+  /** Texto opcional exibido no primeiro encontro com a mecânica. */
+  prompt?: string;
+}
+
 export interface LevelData {
   id: string;
   name: string;
@@ -61,6 +82,8 @@ export interface LevelData {
   overheadObstacles: OverheadObstacle[];
   credits: CreditEntry[];
   checkpoints: CheckpointEntry[];
+  breakables: BreakableEntry[];
+  abilityGates: AbilityGateEntry[];
   /** x a partir do qual a fase é considerada concluída (ex.: entrada da clínica) */
   endGateX: number;
   playerSpawnX: number;
