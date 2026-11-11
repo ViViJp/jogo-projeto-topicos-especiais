@@ -927,7 +927,10 @@ Dependendo da versão/exportação do Tiled, a informação exibida na interface
   5 (Topo, clima `motes`);
 - novo valor de clima `motes` (partículas de luz flutuando);
 - corrida multiplayer com o mesmo fundo do Topo, visível desde o lobby
-  (painel translúcido atrás dos textos do lobby).
+  (painel translúcido atrás dos textos do lobby);
+- removidos da layer `hazards` da Fase 1 os tiles visuais de água tóxica,
+  que flutuavam na frente do canal do parallax; os objetos `toxic_water_*`
+  continuam como poços letais (o jogo não tem morte por queda).
 
 ### v0.22 — 2026-11-10
 
