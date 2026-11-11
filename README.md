@@ -133,15 +133,15 @@ Os mesmos testes podem ser executados pela raiz com `npm test`.
 
 A especificação da disciplina fica em [`isn/`](isn/). O índice da sprint 1 é [`isn/docs/sprint1/README.md`](isn/docs/sprint1/README.md).
 
-A infraestrutura da campanha fica em [`pulumi/`](pulumi/). É o que se executa com Pulumi; o cliente do jogo continua em `flesh-to-chrome/`.
+A infraestrutura fica em [`pulumi/`](pulumi/): stacks `dev` e `prod`, zona `nihil-legere-possum.lat` em produção, cinco tabelas DynamoDB e cinco Lambdas. O cliente do jogo continua em `flesh-to-chrome/`.
 
 ```bash
 cd pulumi
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-pulumi stack select prod --create
+pulumi stack select dev --create
 pulumi up
 ```
 
-A stack tem que se chamar `prod`. Instruções em [`pulumi/README.md`](pulumi/README.md).
+Instruções em [`pulumi/README.md`](pulumi/README.md).
