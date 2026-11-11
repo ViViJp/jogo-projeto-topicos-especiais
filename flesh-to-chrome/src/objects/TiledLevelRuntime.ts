@@ -3,7 +3,7 @@ import { CheckpointMarker } from "./CheckpointMarker";
 import { Player } from "../entities/Player";
 import { EnemyRuntime } from "./EnemyRuntime";
 import { AbilityState } from "../systems/AbilityState";
-import { TEX } from "../utils/PlaceholderTextures";
+import { CREDIT_ANIMATION_KEY, TEX } from "../utils/PlaceholderTextures";
 import {
   TILED_FASE1_MAP_KEY,
   TILED_FASE1_TILESET_KEY,
@@ -351,6 +351,7 @@ export class TiledLevelRuntime {
     for (const c of this.credits) {
       if (this.consolidatedThisPhase.has(c.id)) continue;
       const sprite = this.scene.physics.add.sprite(c.x, c.y, TEX.credit);
+      sprite.anims.play(CREDIT_ANIMATION_KEY);
       sprite.body!.setAllowGravity(false);
       sprite.setData("creditId", c.id);
       sprite.setData("creditValue", c.value);
@@ -559,7 +560,7 @@ export class TiledLevelRuntime {
       if (this.checkpointTriggered.has(cp.id)) continue;
       if (Math.abs(px - cp.x) < 26) {
         this.checkpointTriggered.add(cp.id);
-        const withFeedback = this.callbacks.onCheckpoint(cp.id, cp.x, cp.y) !== false;
+        const withFeedback = this.callbacks.onCheckpoint(cp.id, cp.x + cp.width / 2, cp.y) !== false;
         this.checkpointMarkers.get(cp.id)?.activate(withFeedback);
       }
     }

@@ -13,8 +13,15 @@ Documento da branch `feat/visual-audio-polish`.
 - Corrida, aterrissagem, pulo, pulo duplo, slide, ataque, scan, dash, morte,
   inimigos, créditos, checkpoint, conclusão de fase, implantes e interfaces
   possuem feedback sonoro.
-- O slide usa dois frames dedicados; ataque, impacto, morte, pouso e derrota
-  de inimigos receberam partículas/tweens curtos sem alterar hitboxes.
+- O slide usa quatro frames dedicados a 10 FPS para cada estado de implante.
+  A entrada não repete: ao manter o comando, Alex conserva o quarto frame.
+  O checkpoint usa cinco frames dedicados para cada estado de implante,
+  separados em sentar, interagir e levantar; a sequência completa dura 1,5 s.
+  A televisão sincroniza com pulsos e varredura em ciano/verde.
+- O crédito coletável usa o spritesheet cyberpunk final de quatro frames em
+  todas as cinco fases e no multiplayer, preservando a flutuação existente.
+  Ataque, impacto, morte, pouso e derrota de inimigos receberam
+  partículas/tweens curtos sem alterar hitboxes.
 - O HUD ganhou painel, hierarquia e nomenclatura consistentes com a interface
   diegética do jogo.
 
@@ -41,10 +48,13 @@ npm run build
 No playtest manual, confirme em 16:9 e ultrawide:
 
 1. nenhuma BGM continua tocando sobre a cena seguinte;
-2. slide, ataque, morte e derrota dos inimigos permanecem legíveis;
+2. o slide executa quatro poses uma vez, mantém a base alinhada e atravessa
+   corretamente os obstáculos baixos das Fases 1 e 2;
 3. após registrar os masters, os sons de passos não se acumulam nem continuam
    durante pausa;
 4. prólogo, ReForge e finais exibem os retratos finais sem deformação.
+5. em cada fase, Alex permanece à esquerda da TV, conclui a animação de
+   levantar antes de correr e pausa/salva/retorna sem atravessar o gabinete.
 
 Os fundos/parallax não pertencem a esta branch e serão tratados em um passe
 separado.

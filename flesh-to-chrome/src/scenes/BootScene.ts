@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { generatePlaceholderTextures } from "../utils/PlaceholderTextures";
+import { generatePlaceholderTextures, TEX } from "../utils/PlaceholderTextures";
 import { AudioManager } from "../systems/AudioManager";
 
 export class BootScene extends Phaser.Scene {
@@ -9,6 +9,13 @@ export class BootScene extends Phaser.Scene {
 
   preload(): void {
     AudioManager.preload(this);
+    if (!this.textures.exists(TEX.credit)) {
+      this.load.spritesheet(
+        TEX.credit,
+        new URL("../assets/props/collectibles/credit-cyberpunk.png", import.meta.url).href,
+        { frameWidth: 32, frameHeight: 32 },
+      );
+    }
   }
 
   create(): void {

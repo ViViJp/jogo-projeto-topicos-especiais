@@ -74,6 +74,16 @@ const runtimeImages = [
   "src/assets/player/alex-arms/alex-arms.png",
   "src/assets/player/alex-eyes/alex-eyes.png",
   "src/assets/player/alex-dash/alex-dash.png",
+  "src/assets/player/alex-slide/alex-slide-flesh.png",
+  "src/assets/player/alex-slide/alex-slide-legs.png",
+  "src/assets/player/alex-slide/alex-slide-arms.png",
+  "src/assets/player/alex-slide/alex-slide-eyes.png",
+  "src/assets/player/alex-slide/alex-slide-dash.png",
+  "src/assets/player/alex-checkpoint/alex-checkpoint-flesh.png",
+  "src/assets/player/alex-checkpoint/alex-checkpoint-legs.png",
+  "src/assets/player/alex-checkpoint/alex-checkpoint-arms.png",
+  "src/assets/player/alex-checkpoint/alex-checkpoint-eyes.png",
+  "src/assets/player/alex-checkpoint/alex-checkpoint-dash.png",
   "src/assets/player/alex-dialogue/alex-complete-dialogue.png",
   "src/assets/tiles/esgoto/tiles/tilesetSewer.png",
   "src/assets/tiles/esgoto/crystal-cave-tiles.png",
@@ -88,6 +98,7 @@ const runtimeImages = [
   "src/assets/props/obstacles/reforge-security-seal.png",
   "src/assets/props/hazards/urban-electric-floor.png",
   "src/assets/props/checkpoint/tv-checkpoint.png",
+  "src/assets/props/collectibles/credit-cyberpunk.png",
   "src/assets/npcs/enemies/bandido/bandido.png",
   "src/assets/npcs/enemies/drone/drone.png",
   "src/assets/narrative/prologue/familia.png",
@@ -123,6 +134,17 @@ const runtimeImages = [
 ];
 
 const runtimeImageContracts = new Map([
+  ["src/assets/player/alex-slide/alex-slide-flesh.png", [256, 64]],
+  ["src/assets/player/alex-slide/alex-slide-legs.png", [256, 64]],
+  ["src/assets/player/alex-slide/alex-slide-arms.png", [256, 64]],
+  ["src/assets/player/alex-slide/alex-slide-eyes.png", [256, 64]],
+  ["src/assets/player/alex-slide/alex-slide-dash.png", [256, 64]],
+  ["src/assets/player/alex-checkpoint/alex-checkpoint-flesh.png", [320, 64]],
+  ["src/assets/player/alex-checkpoint/alex-checkpoint-legs.png", [320, 64]],
+  ["src/assets/player/alex-checkpoint/alex-checkpoint-arms.png", [320, 64]],
+  ["src/assets/player/alex-checkpoint/alex-checkpoint-eyes.png", [320, 64]],
+  ["src/assets/player/alex-checkpoint/alex-checkpoint-dash.png", [320, 64]],
+  ["src/assets/props/collectibles/credit-cyberpunk.png", [128, 32]],
   ["src/assets/scenes/clinic/clinic-bg.png", [960, 320]],
   ["src/assets/npcs/enemies/bandido/bandido.png", [192, 48]],
   ["src/assets/npcs/enemies/drone/drone.png", [64, 32]],
@@ -151,6 +173,63 @@ const runtimeImageContracts = new Map([
 const readJson = (filename) => JSON.parse(fs.readFileSync(filename, "utf8"));
 const property = (object, name) => object.properties?.find((item) => item.name === name)?.value;
 const fail = (message) => errors.push(message);
+
+/** Decodificação mínima para validar o alinhamento alfa dos sprites RGBA. */
+function readRgbaPng(filename) {
+  const png = fs.readFileSync(filename);
+  let offset = 8;
+  let width = 0;
+  let height = 0;
+  const idat = [];
+  while (offset < png.length) {
+    const length = png.readUInt32BE(offset);
+    const type = png.toString("ascii", offset + 4, offset + 8);
+    const data = png.subarray(offset + 8, offset + 8 + length);
+    if (type === "IHDR") {
+      width = data.readUInt32BE(0);
+      height = data.readUInt32BE(4);
+      if (data[8] !== 8 || data[9] !== 6 || data[12] !== 0) {
+        throw new Error(`${filename}: esperado PNG RGBA 8-bit não entrelaçado`);
+      }
+    } else if (type === "IDAT") {
+      idat.push(data);
+    } else if (type === "IEND") {
+      break;
+    }
+    offset += length + 12;
+  }
+  const packed = inflateSync(Buffer.concat(idat));
+  const stride = width * 4;
+  const pixels = Buffer.alloc(stride * height);
+  let inputOffset = 0;
+  const paeth = (left, up, diagonal) => {
+    const estimate = left + up - diagonal;
+    const leftDistance = Math.abs(estimate - left);
+    const upDistance = Math.abs(estimate - up);
+    const diagonalDistance = Math.abs(estimate - diagonal);
+    return leftDistance <= upDistance && leftDistance <= diagonalDistance
+      ? left
+      : upDistance <= diagonalDistance ? up : diagonal;
+  };
+  for (let y = 0; y < height; y += 1) {
+    const filter = packed[inputOffset++];
+    for (let x = 0; x < stride; x += 1) {
+      const raw = packed[inputOffset++];
+      const target = y * stride + x;
+      const left = x >= 4 ? pixels[target - 4] : 0;
+      const up = y > 0 ? pixels[target - stride] : 0;
+      const diagonal = y > 0 && x >= 4 ? pixels[target - stride - 4] : 0;
+      const predictor = filter === 0 ? 0
+        : filter === 1 ? left
+          : filter === 2 ? up
+            : filter === 3 ? Math.floor((left + up) / 2)
+              : filter === 4 ? paeth(left, up, diagonal) : NaN;
+      if (!Number.isFinite(predictor)) throw new Error(`${filename}: filtro PNG desconhecido ${filter}`);
+      pixels[target] = (raw + predictor) & 0xff;
+    }
+  }
+  return { width, height, pixels };
+}
 
 function normalizeEditableMap(map, mapDir) {
   delete map.editorsettings;
@@ -198,6 +277,18 @@ for (const image of runtimeImages) {
     if (!isDeepStrictEqual(actualSize, expectedSize)) {
       fail(`${image}: dimensão deve ser ${expectedSize[0]}x${expectedSize[1]}, recebido ${actualSize[0]}x${actualSize[1]}`);
     }
+  }
+}
+
+for (const stage of ["flesh", "legs", "arms", "eyes", "dash"]) {
+  const relativePath = `src/assets/player/alex-checkpoint/alex-checkpoint-${stage}.png`;
+  const { width, height, pixels } = readRgbaPng(path.join(projectRoot, relativePath));
+  const stride = width * 4;
+  for (let frame = 0; frame < 5; frame += 1) {
+    const touchesGround = Array.from({ length: 64 }, (_, x) => (
+      pixels[(height - 1) * stride + (frame * 64 + x) * 4 + 3]
+    )).some((alpha) => alpha > 0);
+    if (!touchesGround) fail(`${relativePath}: frame ${frame} precisa tocar a base de 64 px`);
   }
 }
 

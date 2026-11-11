@@ -80,15 +80,17 @@ export class PrologueScene extends Phaser.Scene {
     const width = this.scale.width;
     const height = this.scale.height;
     const centerX = width / 2;
+    const panelWidth = Math.min(1120, width - 80);
     const panelHeight = Math.min(610, height - 90);
     const panelTop = (height - panelHeight) / 2;
+    const footerY = panelTop + panelHeight - 24;
     this.cameras.main.setBackgroundColor(0x05050a);
     AudioManager.playBgm(this, BGM.menu, 0.22);
     this.input$ = new InputManager(this);
     this.pageIndex = 0;
     this.finished = false;
 
-    this.add.rectangle(centerX, height / 2, Math.min(1120, width - 80), panelHeight, 0x10101b, 1)
+    this.add.rectangle(centerX, height / 2, panelWidth, panelHeight, 0x10101b, 1)
       .setStrokeStyle(2, 0x7cfcea, 0.45);
     this.add.text(centerX, panelTop + 25, "PRÓLOGO", {
       fontFamily: "Courier New, monospace",
@@ -119,12 +121,12 @@ export class PrologueScene extends Phaser.Scene {
       lineSpacing: 8,
       wordWrap: { width: Math.min(980, width - 160) },
     }).setOrigin(0.5);
-    this.pageCounter = this.add.text(width - 100, height - 48, "", {
+    this.pageCounter = this.add.text(centerX + panelWidth / 2 - 48, footerY, "", {
       fontFamily: "Courier New, monospace",
       fontSize: "14px",
       color: "#565f80",
     }).setOrigin(0.5);
-    const prompt = this.add.text(centerX, height - 48, "ENTER / A para continuar", {
+    const prompt = this.add.text(centerX, footerY, "ENTER / A para continuar", {
       fontFamily: "Courier New, monospace",
       fontSize: "16px",
       color: "#8892b0",

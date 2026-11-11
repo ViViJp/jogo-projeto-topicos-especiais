@@ -6,7 +6,7 @@ import {
   TILED_FASE4_TILESETS,
 } from "../levels/TiledFase4";
 import { AbilityState } from "../systems/AbilityState";
-import { TEX } from "../utils/PlaceholderTextures";
+import { CREDIT_ANIMATION_KEY, TEX } from "../utils/PlaceholderTextures";
 import { CheckpointMarker } from "./CheckpointMarker";
 import { nearestScanObstacleIndex } from "./HazardMotion";
 
@@ -279,6 +279,7 @@ export class TiledPhase4Runtime {
     for (const credit of this.credits) {
       if (this.consolidatedThisPhase.has(credit.id)) continue;
       const sprite = this.scene.physics.add.sprite(credit.x, credit.y, TEX.credit);
+      sprite.anims.play(CREDIT_ANIMATION_KEY);
       sprite.body!.setAllowGravity(false);
       sprite.setData("creditValue", credit.value);
       sprite.setDepth(6);
@@ -675,7 +676,11 @@ export class TiledPhase4Runtime {
       if (this.checkpointTriggered.has(checkpoint.id)) continue;
       if (Math.abs(player.sprite.x - checkpoint.x) < 28) {
         this.checkpointTriggered.add(checkpoint.id);
-        const withFeedback = this.callbacks.onCheckpoint(checkpoint.id, checkpoint.x, checkpoint.y) !== false;
+        const withFeedback = this.callbacks.onCheckpoint(
+          checkpoint.id,
+          checkpoint.x + checkpoint.width / 2,
+          checkpoint.y,
+        ) !== false;
         this.checkpointMarkers.get(checkpoint.id)?.activate(withFeedback);
       }
     }

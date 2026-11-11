@@ -1,9 +1,10 @@
 /**
  * Sistema de créditos - GDD seção 14.4.
  *
- * A carteira (`total`) é a pontuação persistente da campanha e nunca
- * diminui (exceto em Novo Jogo). Créditos coletados só entram na carteira
- * quando "consolidados" (ao cruzar um checkpoint ou terminar a fase).
+ * A carteira (`total`) é a pontuação persistente da campanha. Ela só recua
+ * quando o jogador escolhe reiniciar toda a fase, desfazendo o progresso
+ * daquele setor. Créditos coletados entram na carteira quando
+ * "consolidados" (ao cruzar um checkpoint ou terminar a fase).
  * Créditos coletados depois do último checkpoint são perdidos ao morrer,
  * e cada crédito tem um id único para impedir duplicação (anti-farming).
  */
@@ -41,6 +42,24 @@ export class CreditsSystem {
   discardUncollected(): void {
     this.sessionUncollectedIds.clear();
     this.sessionUncollectedValue = 0;
+  }
+
+  /**
+   * Reinício manual: desfaz tudo que foi obtido na fase atual, inclusive o
+   * que já havia sido consolidado em checkpoint. Créditos das fases
+   * anteriores permanecem na carteira.
+   */
+  resetPhase(phaseCredits: Array<{ id: string; value: number }>): void {
+    this.discardUncollected();
+    const valuesById = new Map(phaseCredits.map((credit) => [credit.id, credit.value]));
+    let consolidatedPhaseValue = 0;
+    for (const id of this.consolidatedIds) {
+      const value = valuesById.get(id);
+      if (value === undefined) continue;
+      consolidatedPhaseValue += value;
+      this.consolidatedIds.delete(id);
+    }
+    this.total = Math.max(0, this.total - consolidatedPhaseValue);
   }
 
   getTotal(): number {

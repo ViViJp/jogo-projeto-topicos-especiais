@@ -75,10 +75,22 @@ import {
 import { generatePlaceholderTextures } from "../utils/PlaceholderTextures";
 import {
   ALEX_ARMS_TEXTURE_KEY,
+  ALEX_CHECKPOINT_ARMS_TEXTURE_KEY,
+  ALEX_CHECKPOINT_DASH_TEXTURE_KEY,
+  ALEX_CHECKPOINT_EYES_TEXTURE_KEY,
+  ALEX_CHECKPOINT_LEGS_TEXTURE_KEY,
+  ALEX_CHECKPOINT_SHEET_CONFIG,
+  ALEX_CHECKPOINT_TEXTURE_KEY,
   ALEX_DASH_TEXTURE_KEY,
   ALEX_EYES_TEXTURE_KEY,
   ALEX_LEGS_TEXTURE_KEY,
   ALEX_SHEET_CONFIG,
+  ALEX_SLIDE_ARMS_TEXTURE_KEY,
+  ALEX_SLIDE_DASH_TEXTURE_KEY,
+  ALEX_SLIDE_EYES_TEXTURE_KEY,
+  ALEX_SLIDE_LEGS_TEXTURE_KEY,
+  ALEX_SLIDE_SHEET_CONFIG,
+  ALEX_SLIDE_TEXTURE_KEY,
   ALEX_TEXTURE_KEY,
 } from "../utils/AlexSprite";
 
@@ -262,6 +274,30 @@ export class GameScene extends Phaser.Scene {
     for (const stage of alexStages) {
       if (!this.textures.exists(stage.key)) {
         this.load.spritesheet(stage.key, stage.url.href, ALEX_SHEET_CONFIG);
+      }
+    }
+    const alexSlideStages: Array<{ key: string; url: URL }> = [
+      { key: ALEX_SLIDE_TEXTURE_KEY, url: new URL("../assets/player/alex-slide/alex-slide-flesh.png", import.meta.url) },
+      { key: ALEX_SLIDE_LEGS_TEXTURE_KEY, url: new URL("../assets/player/alex-slide/alex-slide-legs.png", import.meta.url) },
+      { key: ALEX_SLIDE_ARMS_TEXTURE_KEY, url: new URL("../assets/player/alex-slide/alex-slide-arms.png", import.meta.url) },
+      { key: ALEX_SLIDE_EYES_TEXTURE_KEY, url: new URL("../assets/player/alex-slide/alex-slide-eyes.png", import.meta.url) },
+      { key: ALEX_SLIDE_DASH_TEXTURE_KEY, url: new URL("../assets/player/alex-slide/alex-slide-dash.png", import.meta.url) },
+    ];
+    for (const stage of alexSlideStages) {
+      if (!this.textures.exists(stage.key)) {
+        this.load.spritesheet(stage.key, stage.url.href, ALEX_SLIDE_SHEET_CONFIG);
+      }
+    }
+    const alexCheckpointStages: Array<{ key: string; url: URL }> = [
+      { key: ALEX_CHECKPOINT_TEXTURE_KEY, url: new URL("../assets/player/alex-checkpoint/alex-checkpoint-flesh.png", import.meta.url) },
+      { key: ALEX_CHECKPOINT_LEGS_TEXTURE_KEY, url: new URL("../assets/player/alex-checkpoint/alex-checkpoint-legs.png", import.meta.url) },
+      { key: ALEX_CHECKPOINT_ARMS_TEXTURE_KEY, url: new URL("../assets/player/alex-checkpoint/alex-checkpoint-arms.png", import.meta.url) },
+      { key: ALEX_CHECKPOINT_EYES_TEXTURE_KEY, url: new URL("../assets/player/alex-checkpoint/alex-checkpoint-eyes.png", import.meta.url) },
+      { key: ALEX_CHECKPOINT_DASH_TEXTURE_KEY, url: new URL("../assets/player/alex-checkpoint/alex-checkpoint-dash.png", import.meta.url) },
+    ];
+    for (const stage of alexCheckpointStages) {
+      if (!this.textures.exists(stage.key)) {
+        this.load.spritesheet(stage.key, stage.url.href, ALEX_CHECKPOINT_SHEET_CONFIG);
       }
     }
     if (this.data$.descent) {
@@ -860,17 +896,18 @@ export class GameScene extends Phaser.Scene {
     // A TV fica à direita do objeto de checkpoint. A pose sentada se projeta
     // para a direita, então Alex é deslocado para que rosto e mãos fiquem
     // diante da tela, sem o corpo atravessar o gabinete.
-    this.player.beginCheckpointInteraction(x - 24, y);
+    this.player.beginCheckpointInteraction(x - GAMEPLAY_TIMING.checkpointPlayerOffsetX, y);
     AudioManager.playSfx(this, SFX.checkpoint, { volume: 0.55 });
     this.hud.flashPrompt(this.data$.descent
       ? `Checkpoint ${id} sincronizado — memoria preservada`
       : `Checkpoint ${id} sincronizado — créditos consolidados`);
     this.checkpointInteraction?.destroy();
     this.checkpointInteraction = this.time.delayedCall(
-      GAMEPLAY_TIMING.checkpointInteractionMs,
+      GAMEPLAY_TIMING.checkpointInteractionMs - GAMEPLAY_TIMING.checkpointStandMs,
       () => {
-        this.player.endCheckpointInteraction();
-        this.checkpointInteraction = undefined;
+        this.player.endCheckpointInteraction(() => {
+          this.checkpointInteraction = undefined;
+        });
       },
     );
     return true;
@@ -1088,11 +1125,14 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  /** Reinício manual sempre volta ao spawn, mas preserva créditos já consolidados. */
+  /**
+   * Reinício manual volta ao spawn e desfaz todos os créditos desta fase.
+   * Morte/respawn continua sendo o fluxo que preserva o checkpoint.
+   */
   private restartFromPhaseStart(): void {
     if (this.restarting) return;
     this.restarting = true;
-    this.credits.discardUncollected();
+    this.credits.resetPhase(this.phaseCredits());
     const consolidatedIds = this.credits.getConsolidatedIds();
     const wallet = this.credits.getTotal();
     if (!this.data$.testMode) {

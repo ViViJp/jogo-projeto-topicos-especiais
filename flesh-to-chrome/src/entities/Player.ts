@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import {
   BASE_RUN_SPEED,
+  GAMEPLAY_TIMING,
   PHYSICS,
   PLAYER_SIZE,
   PLAYER_BODY_OFFSET,
@@ -11,7 +12,9 @@ import { AbilityState } from "../systems/AbilityState";
 import { InputManager } from "../systems/InputManager";
 import {
   alexAttackAnimationKey,
-  alexCheckpointAnimationKey,
+  alexCheckpointInteractAnimationKey,
+  alexCheckpointSitAnimationKey,
+  alexCheckpointStandAnimationKey,
   alexHurtAnimationKey,
   alexRunAnimationKey,
   alexSlideAnimationKey,
@@ -46,7 +49,9 @@ export class Player {
   private abilities: AbilityState;
   private readonly runAnimationKey: string;
   private readonly attackAnimationKey: string;
-  private readonly checkpointAnimationKey: string;
+  private readonly checkpointSitAnimationKey: string;
+  private readonly checkpointInteractAnimationKey: string;
+  private readonly checkpointStandAnimationKey: string;
   private readonly slideAnimationKey: string;
   private readonly hurtAnimationKey: string;
 
@@ -57,6 +62,8 @@ export class Player {
   private attackRecoveryTimer = 0;
   /** Invalida callbacks de um golpe que foi interrompido por outra ação. */
   private attackSequence = 0;
+  /** Invalida etapas atrasadas de uma interação cancelada/reiniciada. */
+  private checkpointSequence = 0;
   private dashTimer = 0;
   private dashCooldownTimer = 0;
   private pressedTimer = 0;
@@ -88,7 +95,9 @@ export class Player {
     ensureAlexAnimations(scene, textureKey);
     this.runAnimationKey = alexRunAnimationKey(textureKey);
     this.attackAnimationKey = alexAttackAnimationKey(textureKey);
-    this.checkpointAnimationKey = alexCheckpointAnimationKey(textureKey);
+    this.checkpointSitAnimationKey = alexCheckpointSitAnimationKey(textureKey);
+    this.checkpointInteractAnimationKey = alexCheckpointInteractAnimationKey(textureKey);
+    this.checkpointStandAnimationKey = alexCheckpointStandAnimationKey(textureKey);
     this.slideAnimationKey = alexSlideAnimationKey(textureKey);
     this.hurtAnimationKey = alexHurtAnimationKey(textureKey);
     this.sprite = scene.physics.add.sprite(x, y, textureKey);
@@ -136,20 +145,31 @@ export class Player {
     body.setAllowGravity(false);
     body.reset(x, y);
     this.sprite.setVelocity(0, 0);
-    this.sprite.anims.play(this.checkpointAnimationKey, true);
+    const sequence = ++this.checkpointSequence;
+    this.sprite.anims.play(this.checkpointSitAnimationKey, true);
+    this.scene.time.delayedCall(GAMEPLAY_TIMING.checkpointSitMs, () => {
+      if (this.state !== "checkpoint" || sequence !== this.checkpointSequence) return;
+      this.sprite.anims.play(this.checkpointInteractAnimationKey, true);
+    });
     this.depthBeforeCheckpoint = this.sprite.depth;
     // A TV é um objeto de primeiro plano (depth 2–3 conforme a fase).
     // Durante a pose de interação Alex precisa aparecer sentado diante dela.
     this.sprite.setDepth(10);
   }
 
-  endCheckpointInteraction(): void {
+  endCheckpointInteraction(onComplete?: () => void): void {
     if (this.state !== "checkpoint") return;
-    this.state = "running";
-    this.sprite.setDepth(this.depthBeforeCheckpoint);
-    (this.sprite.body as Phaser.Physics.Arcade.Body).setAllowGravity(true);
-    this.applyRunningPose();
-    this.sprite.setVelocityX(BASE_RUN_SPEED);
+    const sequence = ++this.checkpointSequence;
+    this.sprite.anims.play(this.checkpointStandAnimationKey, true);
+    this.scene.time.delayedCall(GAMEPLAY_TIMING.checkpointStandMs, () => {
+      if (this.state !== "checkpoint" || sequence !== this.checkpointSequence) return;
+      this.state = "running";
+      this.sprite.setDepth(this.depthBeforeCheckpoint);
+      (this.sprite.body as Phaser.Physics.Arcade.Body).setAllowGravity(true);
+      this.applyRunningPose();
+      this.sprite.setVelocityX(BASE_RUN_SPEED);
+      onComplete?.();
+    });
   }
 
   kill(): void {
@@ -174,6 +194,7 @@ export class Player {
   /** Reativa a mesma instancia sem reiniciar a cena ou o cronometro da corrida. */
   respawn(x: number, y: number): void {
     this.attackSequence += 1;
+    this.checkpointSequence += 1;
     this.state = "running";
     this.doubleJumpUsed = false;
     this.slideTimer = 0;
@@ -189,6 +210,7 @@ export class Player {
     this.sprite.setVisible(true).setActive(true).setAlpha(1).setAngle(0).clearTint();
     const body = this.sprite.body!;
     body.enable = true;
+    (body as Phaser.Physics.Arcade.Body).setAllowGravity(true);
     body.reset(x, y);
     this.applyRunningPose();
     this.sprite.setVelocityX(BASE_RUN_SPEED);

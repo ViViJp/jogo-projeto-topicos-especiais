@@ -37,10 +37,22 @@ import { InputManager } from "../systems/InputManager";
 import { AudioManager, BGM } from "../systems/AudioManager";
 import {
   ALEX_ARMS_TEXTURE_KEY,
+  ALEX_CHECKPOINT_ARMS_TEXTURE_KEY,
+  ALEX_CHECKPOINT_DASH_TEXTURE_KEY,
+  ALEX_CHECKPOINT_EYES_TEXTURE_KEY,
+  ALEX_CHECKPOINT_LEGS_TEXTURE_KEY,
+  ALEX_CHECKPOINT_SHEET_CONFIG,
+  ALEX_CHECKPOINT_TEXTURE_KEY,
   ALEX_DASH_TEXTURE_KEY,
   ALEX_EYES_TEXTURE_KEY,
   ALEX_LEGS_TEXTURE_KEY,
   ALEX_SHEET_CONFIG,
+  ALEX_SLIDE_ARMS_TEXTURE_KEY,
+  ALEX_SLIDE_DASH_TEXTURE_KEY,
+  ALEX_SLIDE_EYES_TEXTURE_KEY,
+  ALEX_SLIDE_LEGS_TEXTURE_KEY,
+  ALEX_SLIDE_SHEET_CONFIG,
+  ALEX_SLIDE_TEXTURE_KEY,
   ALEX_TEXTURE_KEY,
   alexRunAnimationKey,
   alexSlideAnimationKey,
@@ -73,6 +85,7 @@ export class MultiplayerScene extends Phaser.Scene {
   private player?: Player;
   private runtime?: TiledPhase5Runtime;
   private opponentSprite?: Phaser.GameObjects.Sprite;
+  private opponentVisualState?: PlayerSnapshotMessage["state"];
   private scanOverlay?: Phaser.GameObjects.Rectangle;
 
   private statusText?: Phaser.GameObjects.Text;
@@ -133,6 +146,26 @@ export class MultiplayerScene extends Phaser.Scene {
     spritesheets.forEach(({ key, url }) => {
       if (!this.textures.exists(key)) this.load.spritesheet(key, url.href, ALEX_SHEET_CONFIG);
     });
+    const slideSpritesheets = [
+      { key: ALEX_SLIDE_TEXTURE_KEY, url: new URL("../assets/player/alex-slide/alex-slide-flesh.png", import.meta.url) },
+      { key: ALEX_SLIDE_LEGS_TEXTURE_KEY, url: new URL("../assets/player/alex-slide/alex-slide-legs.png", import.meta.url) },
+      { key: ALEX_SLIDE_ARMS_TEXTURE_KEY, url: new URL("../assets/player/alex-slide/alex-slide-arms.png", import.meta.url) },
+      { key: ALEX_SLIDE_EYES_TEXTURE_KEY, url: new URL("../assets/player/alex-slide/alex-slide-eyes.png", import.meta.url) },
+      { key: ALEX_SLIDE_DASH_TEXTURE_KEY, url: new URL("../assets/player/alex-slide/alex-slide-dash.png", import.meta.url) },
+    ];
+    slideSpritesheets.forEach(({ key, url }) => {
+      if (!this.textures.exists(key)) this.load.spritesheet(key, url.href, ALEX_SLIDE_SHEET_CONFIG);
+    });
+    const checkpointSpritesheets = [
+      { key: ALEX_CHECKPOINT_TEXTURE_KEY, url: new URL("../assets/player/alex-checkpoint/alex-checkpoint-flesh.png", import.meta.url) },
+      { key: ALEX_CHECKPOINT_LEGS_TEXTURE_KEY, url: new URL("../assets/player/alex-checkpoint/alex-checkpoint-legs.png", import.meta.url) },
+      { key: ALEX_CHECKPOINT_ARMS_TEXTURE_KEY, url: new URL("../assets/player/alex-checkpoint/alex-checkpoint-arms.png", import.meta.url) },
+      { key: ALEX_CHECKPOINT_EYES_TEXTURE_KEY, url: new URL("../assets/player/alex-checkpoint/alex-checkpoint-eyes.png", import.meta.url) },
+      { key: ALEX_CHECKPOINT_DASH_TEXTURE_KEY, url: new URL("../assets/player/alex-checkpoint/alex-checkpoint-dash.png", import.meta.url) },
+    ];
+    checkpointSpritesheets.forEach(({ key, url }) => {
+      if (!this.textures.exists(key)) this.load.spritesheet(key, url.href, ALEX_CHECKPOINT_SHEET_CONFIG);
+    });
 
     const mapAssets = [
       {
@@ -186,6 +219,7 @@ export class MultiplayerScene extends Phaser.Scene {
     this.player = undefined;
     this.runtime = undefined;
     this.opponentSprite = undefined;
+    this.opponentVisualState = undefined;
     this.scanOverlay = undefined;
     this.statusText = undefined;
     this.peersText = undefined;
@@ -271,6 +305,7 @@ export class MultiplayerScene extends Phaser.Scene {
     this.lastRemoteCredits = 0;
     this.remoteCheckpointReached = false;
     this.remoteTarget = undefined;
+    this.opponentVisualState = undefined;
     this.remoteClockOffsetMs = undefined;
   }
 
@@ -998,10 +1033,13 @@ export class MultiplayerScene extends Phaser.Scene {
     this.opponentSprite.y = Phaser.Math.Linear(this.opponentSprite.y, this.remoteTarget.y, interpolation);
     this.opponentSprite.setAlpha(this.remoteTarget.state === "dead" ? 0.25 : 0.68);
     if (this.remoteTarget.state === "sliding") {
-      this.opponentSprite.anims.play(alexSlideAnimationKey(ALEX_DASH_TEXTURE_KEY), true);
-    } else {
+      if (this.opponentVisualState !== "sliding") {
+        this.opponentSprite.anims.play(alexSlideAnimationKey(ALEX_DASH_TEXTURE_KEY));
+      }
+    } else if (this.opponentVisualState !== this.remoteTarget.state || !this.opponentSprite.anims.isPlaying) {
       this.opponentSprite.anims.play(alexRunAnimationKey(ALEX_DASH_TEXTURE_KEY), true);
     }
+    this.opponentVisualState = this.remoteTarget.state;
   }
 
   private updateCamera(): void {

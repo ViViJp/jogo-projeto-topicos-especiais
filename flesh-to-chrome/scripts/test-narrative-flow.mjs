@@ -310,6 +310,9 @@ assert.match(prologue, /father\/pai-antes\.png/);
 assert.match(prologue, /prologue\/jornal-pai\.png/);
 assert.match(prologue, /PAI DE ALEX — ANTES DA ASCENSÃO/);
 assert.match(prologue, /PAI DE ALEX — APÓS A CONVERSÃO/);
+assert.match(prologue, /const footerY = panelTop \+ panelHeight - 24/,
+  "comando e contador do prólogo devem permanecer dentro da moldura");
+assert.match(prologue, /this\.add\.text\(centerX, footerY, "ENTER \/ A para continuar"/);
 for (const phase of ["fase1", "fase2-intro", "fase3", "fase4"]) {
   assert.match(clinic, new RegExp(`(?:"${phase}"|${phase}):`), `clínica narrativa ausente para ${phase}`);
 }

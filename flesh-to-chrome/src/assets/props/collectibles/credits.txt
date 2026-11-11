@@ -1,0 +1,6 @@
+Crédito cyberpunk — Flesh to Chrome
+
+Arquivo: credit-cyberpunk.png
+Origem: spritesheet de quatro frames fornecido pela equipe em 11/11/2026.
+Dimensão: 128×32 (quatro frames de 32×32).
+Uso: coletável de crédito nas cinco fases e no modo multiplayer.

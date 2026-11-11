@@ -21,6 +21,8 @@ já creditados nas respectivas pastas.
 | `src/assets/narrative/reforge-door/reforge-door-open.png` | Variante autoral da mesma porta | Estado aberto depois de validar o fragmento de memória | Integrado ao MVP; arte definitiva para esta branch |
 | `src/assets/props/hazards/urban-electric-floor.png` | Geração autoral alinhada à paleta do Meio Urbano | Piso elétrico animado e letal, exclusivo da terceira fase da descida | Integrado ao MVP; arte definitiva para esta branch |
 | `src/assets/props/obstacles/reforge-security-seal.png` | Geração autoral de lacre mecânico ReForge | Barreira atacável do setor Corporativo; fragmentada pela animação de quebra | Integrado ao MVP; arte definitiva para esta branch |
+| `src/assets/player/alex-checkpoint/alex-checkpoint-*.png` | Geração assistida baseada nas cinco variantes oficiais de Alex; TV usada apenas como referência de orientação | Sequências dedicadas de sentar, sincronizar e levantar nos checkpoints | Arte final em cinco folhas de 320×64 |
+| `src/assets/props/collectibles/credit-cyberpunk.png` | Spritesheet de quatro frames fornecido pela equipe | Substitui o círculo provisório dos créditos em todas as fases | Arte final em 128×32 |
 
 As portas, o piso e o lacre não devem ser reutilizados fora das condições
 acima sem atualização do level design. O arquivo `holograma-pai.png` permanece

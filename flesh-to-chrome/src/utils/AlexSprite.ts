@@ -10,9 +10,8 @@ import type { AbilityState } from "../systems/AbilityState";
  *
  * A referência de protótipo entregue pela equipe (`PreloadScene.js`) só
  * define a corrida (linha 11, 9 frames) e o "hurt" (linha 20, 6 frames).
- * O spritesheet LPC não tem uma pose de "deslizar" - usamos o frame 2 da
- * linha 33 ("sentado", de perfil) como a pose estática mais próxima
- * disponível (medida via bounding-box alfa, ver `GameConfig.ts`).
+ * Slide e checkpoint usam folhas dedicadas, separadas do LPC: quatro frames
+ * para o slide e cinco frames para a interação completa com a TV.
  */
 const LPC_COLS = 13;
 
@@ -28,9 +27,20 @@ export const ALEX_DASH_TEXTURE_KEY = "alex-dash";
 export const ALEX_RUN_ANIM = "alex-run";
 export const ALEX_HURT_ANIM = "alex-hurt";
 export const ALEX_ATTACK_ANIM = "alex-attack";
-export const ALEX_CHECKPOINT_ANIM = "alex-checkpoint-play";
+export const ALEX_CHECKPOINT_SIT_ANIM = "alex-checkpoint-sit";
+export const ALEX_CHECKPOINT_INTERACT_ANIM = "alex-checkpoint-interact";
+export const ALEX_CHECKPOINT_STAND_ANIM = "alex-checkpoint-stand";
 export const ALEX_SLIDE_ANIM = "alex-slide";
-export const ALEX_SLIDE_FRAME = frameIndex(33, 2);
+export const ALEX_SLIDE_TEXTURE_KEY = "alex-slide-flesh";
+export const ALEX_SLIDE_LEGS_TEXTURE_KEY = "alex-slide-legs";
+export const ALEX_SLIDE_ARMS_TEXTURE_KEY = "alex-slide-arms";
+export const ALEX_SLIDE_EYES_TEXTURE_KEY = "alex-slide-eyes";
+export const ALEX_SLIDE_DASH_TEXTURE_KEY = "alex-slide-dash";
+export const ALEX_CHECKPOINT_TEXTURE_KEY = "alex-checkpoint-flesh";
+export const ALEX_CHECKPOINT_LEGS_TEXTURE_KEY = "alex-checkpoint-legs";
+export const ALEX_CHECKPOINT_ARMS_TEXTURE_KEY = "alex-checkpoint-arms";
+export const ALEX_CHECKPOINT_EYES_TEXTURE_KEY = "alex-checkpoint-eyes";
+export const ALEX_CHECKPOINT_DASH_TEXTURE_KEY = "alex-checkpoint-dash";
 
 const WALK_RIGHT = { row: 11, frames: 9 };
 const HURT = { row: 20, frames: 6 };
@@ -38,11 +48,6 @@ const HURT = { row: 20, frames: 6 };
 // todas as variantes de Alex; antes o jogo ignorava essa animação e exibia
 // somente um arco gráfico provisório.
 const ATTACK_RIGHT = { row: 15, frames: 6 };
-// Bloco LPC de personagem sentado, voltado para a DIREITA: Alex fica de
-// perfil para a TV. A linha 35 usada anteriormente é uma pose em pé; os dois
-// frames sentados corretos estão na linha 33.
-const CHECKPOINT_PLAY_RIGHT = { row: 33, frames: 2 };
-const SLIDE_RIGHT = { row: 33, start: 1, end: 2 };
 
 export function alexTextureForAbilities(abilities: AbilityState): string {
   if (abilities.thrusters) return ALEX_DASH_TEXTURE_KEY;
@@ -56,10 +61,22 @@ export function alexRunAnimationKey(textureKey: string): string {
   return textureKey === ALEX_TEXTURE_KEY ? ALEX_RUN_ANIM : `${textureKey}-run`;
 }
 
-export function alexCheckpointAnimationKey(textureKey: string): string {
+export function alexCheckpointSitAnimationKey(textureKey: string): string {
   return textureKey === ALEX_TEXTURE_KEY
-    ? ALEX_CHECKPOINT_ANIM
-    : `${textureKey}-checkpoint-play`;
+    ? ALEX_CHECKPOINT_SIT_ANIM
+    : `${textureKey}-checkpoint-sit`;
+}
+
+export function alexCheckpointInteractAnimationKey(textureKey: string): string {
+  return textureKey === ALEX_TEXTURE_KEY
+    ? ALEX_CHECKPOINT_INTERACT_ANIM
+    : `${textureKey}-checkpoint-interact`;
+}
+
+export function alexCheckpointStandAnimationKey(textureKey: string): string {
+  return textureKey === ALEX_TEXTURE_KEY
+    ? ALEX_CHECKPOINT_STAND_ANIM
+    : `${textureKey}-checkpoint-stand`;
 }
 
 export function alexAttackAnimationKey(textureKey: string): string {
@@ -68,6 +85,22 @@ export function alexAttackAnimationKey(textureKey: string): string {
 
 export function alexSlideAnimationKey(textureKey: string): string {
   return textureKey === ALEX_TEXTURE_KEY ? ALEX_SLIDE_ANIM : `${textureKey}-slide`;
+}
+
+export function alexSlideTextureKey(textureKey: string): string {
+  if (textureKey === ALEX_DASH_TEXTURE_KEY) return ALEX_SLIDE_DASH_TEXTURE_KEY;
+  if (textureKey === ALEX_EYES_TEXTURE_KEY) return ALEX_SLIDE_EYES_TEXTURE_KEY;
+  if (textureKey === ALEX_ARMS_TEXTURE_KEY) return ALEX_SLIDE_ARMS_TEXTURE_KEY;
+  if (textureKey === ALEX_LEGS_TEXTURE_KEY) return ALEX_SLIDE_LEGS_TEXTURE_KEY;
+  return ALEX_SLIDE_TEXTURE_KEY;
+}
+
+export function alexCheckpointTextureKey(textureKey: string): string {
+  if (textureKey === ALEX_DASH_TEXTURE_KEY) return ALEX_CHECKPOINT_DASH_TEXTURE_KEY;
+  if (textureKey === ALEX_EYES_TEXTURE_KEY) return ALEX_CHECKPOINT_EYES_TEXTURE_KEY;
+  if (textureKey === ALEX_ARMS_TEXTURE_KEY) return ALEX_CHECKPOINT_ARMS_TEXTURE_KEY;
+  if (textureKey === ALEX_LEGS_TEXTURE_KEY) return ALEX_CHECKPOINT_LEGS_TEXTURE_KEY;
+  return ALEX_CHECKPOINT_TEXTURE_KEY;
 }
 
 export function alexHurtAnimationKey(textureKey: string): string {
@@ -105,17 +138,11 @@ export function ensureAlexAnimations(scene: Phaser.Scene, textureKey = ALEX_TEXT
   if (!scene.anims.exists(slideAnimationKey)) {
     scene.anims.create({
       key: slideAnimationKey,
-      frames: scene.anims.generateFrameNumbers(textureKey, {
-        start: frameIndex(SLIDE_RIGHT.row, SLIDE_RIGHT.start),
-        end: frameIndex(SLIDE_RIGHT.row, SLIDE_RIGHT.end),
-      }),
-      // Um slide comum termina antes de a sequência recomeçar. Se a duração
-      // da mecânica for ampliada no futuro, a pose só volta a ciclar depois
-      // desta pausa, evitando a alternância frenética dos dois frames.
-      frameRate: 3,
-      repeat: -1,
-      repeatDelay: 450,
-      yoyo: true,
+      frames: scene.anims.generateFrameNumbers(alexSlideTextureKey(textureKey), { start: 0, end: 3 }),
+      // A entrada ocorre uma única vez. Ao prolongar o slide, Phaser mantém o
+      // quarto frame em vez de reiniciar a queda do personagem.
+      frameRate: 10,
+      repeat: 0,
     });
   }
 
@@ -134,18 +161,39 @@ export function ensureAlexAnimations(scene: Phaser.Scene, textureKey = ALEX_TEXT
     });
   }
 
-  const checkpointAnimationKey = alexCheckpointAnimationKey(textureKey);
-  if (!scene.anims.exists(checkpointAnimationKey)) {
+  const checkpointTextureKey = alexCheckpointTextureKey(textureKey);
+  const checkpointSitAnimationKey = alexCheckpointSitAnimationKey(textureKey);
+  if (!scene.anims.exists(checkpointSitAnimationKey)) {
     scene.anims.create({
-      key: checkpointAnimationKey,
-      frames: scene.anims.generateFrameNumbers(textureKey, {
-        start: frameIndex(CHECKPOINT_PLAY_RIGHT.row, 0),
-        end: frameIndex(CHECKPOINT_PLAY_RIGHT.row, CHECKPOINT_PLAY_RIGHT.frames - 1),
-      }),
-      frameRate: 4,
+      key: checkpointSitAnimationKey,
+      frames: scene.anims.generateFrameNumbers(checkpointTextureKey, { start: 0, end: 2 }),
+      frameRate: 10,
+      repeat: 0,
+    });
+  }
+
+  const checkpointInteractAnimationKey = alexCheckpointInteractAnimationKey(textureKey);
+  if (!scene.anims.exists(checkpointInteractAnimationKey)) {
+    scene.anims.create({
+      key: checkpointInteractAnimationKey,
+      frames: scene.anims.generateFrameNumbers(checkpointTextureKey, { start: 2, end: 3 }),
+      frameRate: 9,
       repeat: -1,
+      yoyo: true,
+    });
+  }
+
+  const checkpointStandAnimationKey = alexCheckpointStandAnimationKey(textureKey);
+  if (!scene.anims.exists(checkpointStandAnimationKey)) {
+    scene.anims.create({
+      key: checkpointStandAnimationKey,
+      frames: scene.anims.generateFrameNumbers(checkpointTextureKey, { start: 3, end: 4 }),
+      frameRate: 10,
+      repeat: 0,
     });
   }
 }
 
 export const ALEX_SHEET_CONFIG = { frameWidth: PLAYER_FRAME, frameHeight: PLAYER_FRAME };
+export const ALEX_SLIDE_SHEET_CONFIG = { frameWidth: PLAYER_FRAME, frameHeight: PLAYER_FRAME };
+export const ALEX_CHECKPOINT_SHEET_CONFIG = { frameWidth: PLAYER_FRAME, frameHeight: PLAYER_FRAME };

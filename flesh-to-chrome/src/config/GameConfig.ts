@@ -125,7 +125,12 @@ export const PHYSICS = {
 
 /** Tempos de gameplay compartilhados pelos runtimes Tiled. */
 export const GAMEPLAY_TIMING = {
-  checkpointInteractionMs: 900,
+  /** Sequência completa: sentar, sincronizar e terminar de levantar. */
+  checkpointInteractionMs: 1500,
+  checkpointSitMs: 300,
+  checkpointStandMs: 250,
+  /** Mantém Alex ao lado esquerdo da TV, sem atravessar o gabinete. */
+  checkpointPlayerOffsetX: 52,
   industrialHazards: {
     press: { cycleMs: 2200, activeMs: 620, warningMs: 420 },
     steam: { cycleMs: 1800, activeMs: 680, warningMs: 320 },

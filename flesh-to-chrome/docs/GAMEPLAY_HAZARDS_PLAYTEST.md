@@ -20,15 +20,19 @@ Documento da branch `fix/gameplay-hazards-and-flow`.
   letal e oculta por completo a barreira e o aviso `SCAN`. A zona física vai
   do primeiro tile visível à superfície do chão. A desativação dura pela
   tentativa e volta após morte, sem qualquer janela aleatória de relógio.
-- Checkpoints: Alex para por 900 ms diante da TV, senta voltado para a tela e
-  anima mãos/controle em uma sequência diferente do slide. A pose permanece
-  em primeiro plano e o checkpoint consolida e salva antes de continuar. No
+- Checkpoints: Alex para por aproximadamente 1,5 s à esquerda da TV e percorre
+  cinco poses dedicadas de parar, sentar, sincronizar e levantar. As três
+  animações existem para Flesh, pernas, braços, olhos e propulsores; Alex só
+  volta a correr depois do último frame. A TV pulsa em ciano/verde durante a
+  sincronização, e o checkpoint consolida e salva antes da sequência. No
   respawn, a TV volta já ativada sem repetir pose, som, mensagem ou consolidação.
 - HUD: o catálogo da fase mantém todos os créditos, inclusive os consolidados;
   apenas os sprites coletados deixam de ser recriados. Assim numerador e total
   permanecem corretos após checkpoint e respawn.
-- Reinício manual: volta ao spawn da fase, mantém IDs/créditos consolidados e
-  descarta os não consolidados, conforme o GDD.
+- Reinício manual: volta ao spawn, remove créditos consolidados e não
+  consolidados da fase atual e restaura a carteira ao valor de entrada do
+  setor. Créditos ganhos em fases anteriores permanecem. Morte comum continua
+  preservando o último checkpoint.
 - Pausa: física, tweens, animações, relógio da cena, hazards e cooldowns ficam
   congelados.
 
@@ -46,7 +50,8 @@ npm run build
 
 `test:gameplay` valida as três janelas e o progresso contínuo do ciclo
 industrial, as quatro rotinas de movimento, o alinhamento do vapor, o sprite
-dedicado da prensa, a animação/profundidade do checkpoint, os GIDs exclusivos dos obstáculos baixos,
+dedicado da prensa, os cinco sprites e três animações do checkpoint, seu tempo,
+profundidade e posicionamento uniforme nas cinco fases, os GIDs exclusivos dos obstáculos baixos,
 continuidade geométrica do braço rotativo, seleção espacial das barreiras por
 scan e a presença de spawn, checkpoint e saída nas cinco fases Tiled.
 
@@ -72,8 +77,8 @@ oculta a arte e o aviso, desliga o corpo letal e libera a passagem.
 Teste de pausa: o relógio do hazard industrial permaneceu em **366,502 ms**
 durante 800 ms pausados e avançou para **633,256 ms** somente após retomar. O
 cooldown do dash permaneceu em **2.000 ms** durante a pausa e caiu para
-**1.750,246 ms** após 250 ms de jogo retomado. O reinício manual zerou X/Y do
-checkpoint e preservou carteira e IDs consolidados.
+**1.750,246 ms** após 250 ms de jogo retomado. O reinício manual zera X/Y do
+checkpoint e, pela regra atual, também desfaz carteira e IDs obtidos no setor.
 
 ## Roteiro de playtest manual
 
@@ -82,14 +87,20 @@ linha:
 
 | Fase | Ponto de controle | Resultado esperado |
 | --- | --- | --- |
-| 1 | água, fios/cano, checkpoint, morte e clínica | slide e salto preservados; respawn no checkpoint |
-| 2 | cada tipo industrial, dutos baixos e esteiras | movimento comunica ativação; hitbox acompanha arte/pluma; prensa recolhida não toca a silhueta em pé; máquina inativa não mata; duto não parece plataforma sólida |
+| 1 | água, fios/cano, checkpoint, morte e clínica | slide de quatro frames mantém a base no chão, passa sob os fios e não reinicia a entrada ao segurar; respawn no checkpoint |
+| 2 | cada tipo industrial, dutos baixos e esteiras | slide atravessa os dutos sem colisão visual; movimento comunica ativação; hitbox acompanha arte/pluma; prensa recolhida não toca a silhueta em pé; máquina inativa não mata; duto não parece plataforma sólida |
 | 3 | barricadas, inimigos, checkpoint e morte | ataque e restauração sem duplicação |
 | 4 | paredes falsas, barreiras de segurança, propaganda e checkpoint | parede falsa bloqueia Alex até o primeiro scan válido e então permanece invisível/intangível; barreira visível mata e o scan oculta/desativa somente a próxima; propaganda permanece legível e checkpoint não possui torre ao fundo |
 | 5 | dash, barreiras, quebráveis e barreiras rotativas | barreira visível mata; scan a torna invisível e libera a passagem sem timing aleatório; visual sempre coincide com a colisão; quebráveis explodem em seis fragmentos, com impacto, rotação, queda e fade |
 
+Em cada uma das cinco linhas, colete ao menos um crédito e ative a TV: o
+crédito deve usar os quatro frames cyberpunk sem exibir o círculo amarelo;
+Alex deve permanecer ao lado esquerdo do gabinete, sentar, sincronizar,
+levantar por completo e somente então retomar a corrida.
+
 Em qualquer fase, pause durante um hazard e durante o cooldown de dash,
 aguarde alguns segundos e retome: estado e tempo restantes devem ser os
 mesmos. Depois ative o checkpoint, abra a pausa e use **Reiniciar Fase**: Alex
-deve voltar ao spawn, os créditos consolidados permanecem e os disponíveis
-reaparecem.
+deve voltar ao spawn, todos os créditos desse setor devem reaparecer, o HUD
+deve voltar para `0/total` e a carteira deve retornar ao valor que possuía na
+entrada da fase.

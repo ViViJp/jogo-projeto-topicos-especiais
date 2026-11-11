@@ -1,0 +1,9 @@
+Alex slide animation — Flesh to Chrome
+
+Folhas finais de quatro frames em 64×64 para os estados Flesh, pernas,
+braços, olhos e propulsores. Geradas com assistência do OpenAI Imagegen em
+11/11/2026, usando como referências a pose de slide fornecida pela equipe e
+as cinco variantes LPC existentes de Alex. Normalização de grade, remoção de
+artefatos pequenos e alinhamento de base realizados no projeto.
+
+Uso exclusivo neste jogo. Sem conteúdo de terceiros incorporado.

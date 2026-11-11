@@ -52,6 +52,14 @@ assert.ok(config.PHYSICS.attack.animDurationMs >= 350, "ataque precisa permanece
 assert.ok(config.PHYSICS.attack.activeMs >= 250, "ataque precisa de janela ativa útil");
 assert.ok(config.PHYSICS.attack.range >= 80, "ataque precisa alcançar o inimigo à frente");
 assert.ok(config.PHYSICS.attack.activeMs < config.PHYSICS.attack.animDurationMs);
+assert.equal(config.GAMEPLAY_TIMING.checkpointInteractionMs, 1500);
+assert.ok(
+  config.GAMEPLAY_TIMING.checkpointSitMs + config.GAMEPLAY_TIMING.checkpointStandMs
+    < config.GAMEPLAY_TIMING.checkpointInteractionMs,
+  "checkpoint deve reservar tempo para a sincronização entre sentar e levantar",
+);
+assert.ok(config.GAMEPLAY_TIMING.checkpointPlayerOffsetX >= 48,
+  "Alex deve permanecer ao lado da TV, sem atravessar o gabinete");
 
 const credits = new CreditsSystem(30, ["old-phase-credit"]);
 credits.collect("current-phase-credit", 10);
@@ -61,6 +69,20 @@ credits.consolidate();
 assert.equal(credits.getTotal(), 40);
 assert.equal(credits.getPhaseDisplayValue(10), 10, "HUD preserva consolidado da fase após respawn");
 assert.deepEqual([...credits.getConsolidatedIds()].sort(), ["current-phase-credit", "old-phase-credit"]);
+
+const restartCredits = new CreditsSystem(130, ["previous-phase-credit", "phase-a", "phase-b"]);
+restartCredits.collect("phase-c", 10);
+restartCredits.resetPhase([
+  { id: "phase-a", value: 10 },
+  { id: "phase-b", value: 20 },
+  { id: "phase-c", value: 10 },
+]);
+assert.equal(restartCredits.getTotal(), 100,
+  "reinício manual deve devolver a carteira ao valor de entrada da fase");
+assert.deepEqual([...restartCredits.getConsolidatedIds()], ["previous-phase-credit"],
+  "reinício manual deve preservar somente créditos de fases anteriores");
+assert.equal(restartCredits.getPhaseDisplayValue(0), 0,
+  "créditos ainda não consolidados também devem ser apagados no reinício");
 
 const horizontal = motion.rotatingBarrierPoints(100, 200, 96, 7, 0);
 assert.equal(horizontal.length, 7);
@@ -238,7 +260,11 @@ assert.match(phase5Runtime, /gateObjects\[0\]\?\.x \?\? endObject\?\.x/);
 const playerSource = fs.readFileSync(path.join(projectDirectory, "src/entities/Player.ts"), "utf8");
 assert.match(playerSource, /this\.sprite\.setDepth\(10\)/);
 assert.match(playerSource, /this\.sprite\.setDepth\(this\.depthBeforeCheckpoint\)/);
-assert.match(playerSource, /this\.sprite\.anims\.play\(this\.checkpointAnimationKey, true\)/);
+assert.match(playerSource, /this\.sprite\.anims\.play\(this\.checkpointSitAnimationKey, true\)/);
+assert.match(playerSource, /this\.sprite\.anims\.play\(this\.checkpointInteractAnimationKey, true\)/);
+assert.match(playerSource, /this\.sprite\.anims\.play\(this\.checkpointStandAnimationKey, true\)/);
+assert.match(playerSource, /GAMEPLAY_TIMING\.checkpointStandMs[\s\S]*?this\.state = "running"/,
+  "corrida só pode voltar depois que Alex terminar de levantar");
 assert.match(playerSource, /this\.sprite\.anims\.play\(this\.attackAnimationKey, true\)/);
 assert.match(playerSource, /delay <= PHYSICS\.attack\.activeMs/);
 assert.match(playerSource, /this\.emitAttackPulse\(false\)/);
@@ -261,7 +287,10 @@ const checkpointMethod = playerSource.slice(
 );
 assert.doesNotMatch(checkpointMethod, /ALEX_SLIDE_FRAME/, "checkpoint não pode reutilizar a pose de slide");
 const alexSpriteSource = fs.readFileSync(path.join(projectDirectory, "src/utils/AlexSprite.ts"), "utf8");
-assert.match(alexSpriteSource, /CHECKPOINT_PLAY_RIGHT = \{ row: 33, frames: 2 \}/);
+assert.match(alexSpriteSource, /alexCheckpointTextureKey\(textureKey\)/);
+assert.match(alexSpriteSource, /generateFrameNumbers\(checkpointTextureKey, \{ start: 0, end: 2 \}\)/);
+assert.match(alexSpriteSource, /generateFrameNumbers\(checkpointTextureKey, \{ start: 2, end: 3 \}\)/);
+assert.match(alexSpriteSource, /generateFrameNumbers\(checkpointTextureKey, \{ start: 3, end: 4 \}\)/);
 assert.match(alexSpriteSource, /ATTACK_RIGHT = \{ row: 15, frames: 6 \}/);
 assert.match(alexSpriteSource, /frameRate: 16/);
 const enemyRuntime = fs.readFileSync(path.join(projectDirectory, "src/objects/EnemyRuntime.ts"), "utf8");
@@ -282,7 +311,16 @@ const hudSource = fs.readFileSync(path.join(projectDirectory, "src/systems/HUD.t
 assert.match(hudSource, /setFillStyle\(0x21d7ff, 1\)/, "dash pronto deve usar azul elétrico");
 assert.match(hudSource, /batteryBack,[\s\S]*this\.dashBatteryFill,[\s\S]*frame,/,
   "preenchimento da bateria precisa ficar sobre o fundo e sob a moldura");
-assert.match(gameScene, /beginCheckpointInteraction\(x - 24, y\)/);
+assert.match(gameScene, /beginCheckpointInteraction\(x - GAMEPLAY_TIMING\.checkpointPlayerOffsetX, y\)/);
+assert.match(gameScene, /checkpointInteractionMs - GAMEPLAY_TIMING\.checkpointStandMs/);
+const manualRestartMethod = gameScene.slice(
+  gameScene.indexOf("private restartFromPhaseStart"),
+  gameScene.indexOf("private handleScanPulse"),
+);
+assert.match(manualRestartMethod, /this\.credits\.resetPhase\(this\.phaseCredits\(\)\)/,
+  "reinício manual deve zerar créditos da fase nas cinco implementações");
+assert.match(manualRestartMethod, /checkpointX: 0/);
+assert.match(manualRestartMethod, /checkpointY: 0/);
 assert.match(gameScene, /showFeedback = true[\s\S]*?if \(showFeedback\) this\.hud\.flashPrompt\("ATAQUE", 300\)/,
   "somente o primeiro pulso do golpe deve atualizar o HUD");
 assert.match(gameScene, /const alreadyActive = this\.data\$\.checkpointX > 0/);
@@ -313,6 +351,9 @@ assert.doesNotMatch(
 const checkpointMarker = fs.readFileSync(path.join(projectDirectory, "src/objects/CheckpointMarker.ts"), "utf8");
 assert.match(checkpointMarker, /activate\(withFeedback = true\)/);
 assert.match(checkpointMarker, /if \(!withFeedback\) return/);
+assert.match(checkpointMarker, /0x36e2ff/, "sincronização da TV deve pulsar em ciano");
+assert.match(checkpointMarker, /0x68ff9c/, "sincronização da TV deve pulsar em verde");
+assert.match(checkpointMarker, /targets: scanLine/, "TV deve executar uma varredura luminosa");
 const tiledLevelRuntime = fs.readFileSync(path.join(projectDirectory, "src/objects/TiledLevelRuntime.ts"), "utf8");
 assert.match(tiledLevelRuntime, /prepareDescentEpilogue\(startX: number, endX: number\)/,
   "epílogo deve preparar um corredor próprio no mapa do Esgoto");
@@ -332,6 +373,8 @@ for (const runtime of [
 ]) {
   const source = fs.readFileSync(path.join(projectDirectory, "src/objects", runtime), "utf8");
   assert.match(source, /activate\(withFeedback\)/, `${runtime}: respawn deve restaurar TV sem feedback`);
+  assert.match(source, /onCheckpoint\([\s\S]*?\.x \+ [a-z]+\.width \/ 2/,
+    `${runtime}: interação deve usar o centro visual da TV`);
 }
 
 const audioManagerSource = fs.readFileSync(path.join(projectDirectory, "src/systems/AudioManager.ts"), "utf8");
@@ -356,8 +399,47 @@ assert.doesNotMatch(playerSource, /setFrame\(ALEX_SLIDE_FRAME\)/,
   "slide não pode voltar ao frame estático provisório");
 assert.match(playerSource, /this\.slideTimer <= 0 && holdingSlide[\s\S]*?this\.slideTimer = PHYSICS\.slide\.durationMs/,
   "segurar slide deve renovar a janela sem reiniciar animação ou SFX");
-assert.match(alexSpriteSource, /frameRate: 3,[\s\S]*?repeat: -1,[\s\S]*?repeatDelay: 450/,
-  "slide deve completar uma passagem lenta antes de poder repetir");
+assert.match(alexSpriteSource, /alexSlideTextureKey\(textureKey\), \{ start: 0, end: 3 \}/,
+  "slide deve utilizar os quatro frames da folha dedicada");
+assert.match(alexSpriteSource, /frameRate: 10,[\s\S]*?repeat: 0/,
+  "entrada do slide deve tocar uma vez e manter o quarto frame");
+for (const stage of ["flesh", "legs", "arms", "eyes", "dash"]) {
+  assert.match(gameScene, new RegExp(`alex-slide-${stage}\\.png`), `GameScene: slide ${stage}`);
+  assert.ok(
+    fs.existsSync(path.join(projectDirectory, `src/assets/player/alex-slide/alex-slide-${stage}.png`)),
+    `asset de slide ausente: ${stage}`,
+  );
+}
+for (const stage of ["flesh", "legs", "arms", "eyes", "dash"]) {
+  assert.match(gameScene, new RegExp(`alex-checkpoint-${stage}\\.png`), `GameScene: checkpoint ${stage}`);
+  assert.ok(
+    fs.existsSync(path.join(projectDirectory, `src/assets/player/alex-checkpoint/alex-checkpoint-${stage}.png`)),
+    `asset de checkpoint ausente: ${stage}`,
+  );
+}
+const bootSceneSource = fs.readFileSync(path.join(projectDirectory, "src/scenes/BootScene.ts"), "utf8");
+const placeholderTextureSource = fs.readFileSync(
+  path.join(projectDirectory, "src/utils/PlaceholderTextures.ts"),
+  "utf8",
+);
+assert.match(bootSceneSource, /credit-cyberpunk\.png/,
+  "BootScene deve carregar o spritesheet final do crédito");
+assert.match(placeholderTextureSource, /CREDIT_ANIMATION_KEY = "credit-cyberpunk-spin"/);
+assert.match(placeholderTextureSource, /generateFrameNumbers\(TEX\.credit, \{ start: 0, end: 3 \}\)/);
+assert.doesNotMatch(placeholderTextureSource, /circle\(scene, TEX\.credit/,
+  "crédito não pode voltar ao círculo provisório");
+for (const runtime of [
+  "LevelRuntime.ts",
+  "TiledLevelRuntime.ts",
+  "TiledPhase2Runtime.ts",
+  "TiledPhase3Runtime.ts",
+  "TiledPhase4Runtime.ts",
+  "TiledPhase5Runtime.ts",
+]) {
+  const source = fs.readFileSync(path.join(projectDirectory, "src/objects", runtime), "utf8");
+  assert.match(source, /sprite\.anims\.play\(CREDIT_ANIMATION_KEY\)/,
+    `${runtime}: crédito deve executar os quatro frames finais`);
+}
 for (const sfx of ["jump", "land", "slide", "attack", "dash", "scan", "death", "footstep"]) {
   assert.match(playerSource, new RegExp(`SFX\\.${sfx}`), `Player: feedback ${sfx}`);
 }
