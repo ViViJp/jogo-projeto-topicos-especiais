@@ -1,5 +1,17 @@
 import { STORAGE_KEY } from "../config/GameConfig";
-import { AbilityState, createInitialAbilityState } from "./AbilityState";
+import { AbilityState, createCompleteAbilityState, createInitialAbilityState } from "./AbilityState";
+import { DESCENT_STEPS, descentStepAt, descentStepForPhase } from "./DescentProgression";
+
+export interface DescentState {
+  active: boolean;
+  brokenChain: boolean;
+  /** Última ReForge concluída; o corredor jogável do Esgoto ainda não terminou. */
+  epiloguePending: boolean;
+  currentStep: number;
+  recoveredFragmentIds: string[];
+  retryUsedPhaseIds: string[];
+  pendingRemoval: keyof AbilityState | null;
+}
 
 /**
  * Formato do save - GDD seção 20.1.
@@ -30,11 +42,7 @@ export interface SaveData {
   wallet: number;
   abilities: AbilityState;
   /** Seção 18 - preenchido a partir do Marco 4 (descida Flesh/Hollow). */
-  descentState: {
-    active: boolean;
-    brokenChain: boolean;
-    recoveredFragmentIds: string[];
-  };
+  descentState: DescentState;
   /** Seção 20.2/20.3 - save narrativo automático antes da escolha do Portão. */
   preGateSave: SaveData | null;
   endingReached: "chrome" | "flesh" | "hollow" | null;
@@ -47,7 +55,15 @@ function defaultSave(): SaveData {
     checkpoint: { x: 0, y: 0, consolidatedCreditIds: [] },
     wallet: 0,
     abilities: createInitialAbilityState(),
-    descentState: { active: false, brokenChain: false, recoveredFragmentIds: [] },
+    descentState: {
+      active: false,
+      brokenChain: false,
+      epiloguePending: false,
+      currentStep: 0,
+      recoveredFragmentIds: [],
+      retryUsedPhaseIds: [],
+      pendingRemoval: null,
+    },
     preGateSave: null,
     endingReached: null,
   };
@@ -67,7 +83,11 @@ function cloneSaveData(data: SaveData, includePreGateSave = true): SaveData {
     descentState: {
       active: data.descentState.active,
       brokenChain: data.descentState.brokenChain,
+      epiloguePending: data.descentState.epiloguePending,
+      currentStep: data.descentState.currentStep,
       recoveredFragmentIds: [...data.descentState.recoveredFragmentIds],
+      retryUsedPhaseIds: [...data.descentState.retryUsedPhaseIds],
+      pendingRemoval: data.descentState.pendingRemoval,
     },
     preGateSave: includePreGateSave && data.preGateSave
       ? cloneSaveData(data.preGateSave, false)
@@ -101,6 +121,15 @@ function normalizeSaveData(parsed: Partial<SaveData>): SaveData {
       recoveredFragmentIds: Array.isArray(descentState.recoveredFragmentIds)
         ? [...descentState.recoveredFragmentIds]
         : [],
+      retryUsedPhaseIds: Array.isArray(descentState.retryUsedPhaseIds)
+        ? [...descentState.retryUsedPhaseIds]
+        : [],
+      currentStep: Number.isInteger(descentState.currentStep)
+        ? Math.max(0, Math.min(DESCENT_STEPS.length, descentState.currentStep ?? 0))
+        : 0,
+      pendingRemoval: ["legs", "arms", "eyes", "thrusters"].includes(descentState.pendingRemoval ?? "")
+        ? descentState.pendingRemoval as keyof AbilityState
+        : null,
     },
     preGateSave: null,
     endingReached,
@@ -162,6 +191,119 @@ export class SaveState {
     this.persist();
   }
 
+  /** Inicia a revisita ao Topo sem apagar o snapshot pre-Portao. */
+  beginDescent(): void {
+    // O Portão só existe depois da conversão dos quatro implantes. Além de
+    // proteger saves antigos, isto mantém o início narrativo da descida fiel
+    // ao Portão da campanha e seleciona o sprite Alex completo.
+    this.data.abilities = createCompleteAbilityState();
+    this.data.descentState = {
+      active: true,
+      brokenChain: false,
+      epiloguePending: false,
+      currentStep: 0,
+      recoveredFragmentIds: [],
+      retryUsedPhaseIds: [],
+      pendingRemoval: null,
+    };
+    this.data.currentPhaseId = DESCENT_STEPS[0].phaseId;
+    this.data.checkpoint = { x: 0, y: 0, consolidatedCreditIds: [] };
+    this.data.wallet = 0;
+    this.data.endingReached = null;
+    this.persist();
+  }
+
+  isDescentActive(): boolean {
+    return this.data.descentState.active;
+  }
+
+  recoverDescentFragment(fragmentId: string): boolean {
+    const step = descentStepAt(this.data.descentState.currentStep);
+    if (!this.data.descentState.active || this.data.descentState.brokenChain || !step) return false;
+    if (step.phaseId !== this.data.currentPhaseId || step.fragmentId !== fragmentId) return false;
+    if (!this.data.descentState.recoveredFragmentIds.includes(fragmentId)) {
+      this.data.descentState.recoveredFragmentIds.push(fragmentId);
+      this.persist();
+    }
+    return true;
+  }
+
+  hasRecoveredCurrentFragment(): boolean {
+    const step = descentStepAt(this.data.descentState.currentStep);
+    return Boolean(step && this.data.descentState.recoveredFragmentIds.includes(step.fragmentId));
+  }
+
+  /** Resultado da chegada ao fim de um setor da descida. */
+  completeDescentPhase(): "reforge" | "retry" | "hollow" {
+    const step = descentStepAt(this.data.descentState.currentStep);
+    if (!step || step.phaseId !== this.data.currentPhaseId || this.data.descentState.brokenChain) {
+      this.breakDescentChain();
+      return "hollow";
+    }
+    if (this.data.descentState.recoveredFragmentIds.includes(step.fragmentId)) {
+      this.data.descentState.pendingRemoval = step.implant;
+      this.persist();
+      return "reforge";
+    }
+    if (this.data.descentState.retryUsedPhaseIds.includes(step.phaseId)) {
+      this.breakDescentChain();
+      return "hollow";
+    }
+    // A oportunidade e consumida ao concluir a fase sem o glitch, nao por morte/reinicio manual.
+    this.data.descentState.retryUsedPhaseIds.push(step.phaseId);
+    this.data.checkpoint = { x: 0, y: 0, consolidatedCreditIds: [] };
+    this.persist();
+    return "retry";
+  }
+
+  declineDescentRetry(): void {
+    this.breakDescentChain();
+  }
+
+  private breakDescentChain(): void {
+    this.data.descentState.brokenChain = true;
+    this.data.descentState.active = false;
+    this.data.descentState.epiloguePending = false;
+    this.data.descentState.pendingRemoval = null;
+    this.data.checkpoint = { x: 0, y: 0, consolidatedCreditIds: [] };
+    this.persist();
+  }
+
+  /** Confirma a troca ReForge e avanca somente depois da remocao persistida. */
+  completeBioprinting(): { nextPhaseId: string; finished: boolean } | null {
+    const descent = this.data.descentState;
+    const step = descentStepAt(descent.currentStep);
+    if (!descent.active || !step || descent.pendingRemoval !== step.implant) return null;
+    this.data.abilities[step.implant] = false;
+    descent.pendingRemoval = null;
+    descent.currentStep += 1;
+    this.data.currentPhaseId = step.nextPhaseId;
+    this.data.checkpoint = { x: 0, y: 0, consolidatedCreditIds: [] };
+    this.data.wallet = 0;
+    const finished = descent.currentStep >= DESCENT_STEPS.length;
+    if (finished) {
+      descent.active = false;
+      descent.epiloguePending = true;
+    }
+    this.persist();
+    return { nextPhaseId: step.nextPhaseId, finished };
+  }
+
+  /** Registra que Alex percorreu o último trecho antes de abrir o epílogo Flesh. */
+  completeDescentEpilogue(): boolean {
+    const descent = this.data.descentState;
+    if (!descent.epiloguePending || descent.currentStep < DESCENT_STEPS.length) return false;
+    descent.epiloguePending = false;
+    this.data.checkpoint = { x: 0, y: 0, consolidatedCreditIds: [] };
+    this.persist();
+    return true;
+  }
+
+  /** Ajuda de consistencia para saves antigos/interrompidos. */
+  currentDescentImplant(): keyof AbilityState | null {
+    return descentStepForPhase(this.data.currentPhaseId)?.implant ?? null;
+  }
+
   hasPreGateSave(): boolean {
     return this.data.preGateSave !== null;
   }
@@ -190,6 +332,7 @@ export class SaveState {
 
   markEndingReached(ending: Exclude<SaveData["endingReached"], null>): void {
     this.data.endingReached = ending;
+    this.data.descentState.epiloguePending = false;
     this.persist();
   }
 

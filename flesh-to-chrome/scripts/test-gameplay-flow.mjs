@@ -133,11 +133,28 @@ for (const credit of phase5Credits) {
 const phase5RuntimeSource = fs.readFileSync(path.join(projectDirectory, "src/objects/TiledPhase5Runtime.ts"), "utf8");
 assert.match(phase5RuntimeSource, /height \/ 2 - 16/, "fase5: barreira rotativa precisa de janela horizontal segura");
 assert.match(phase5RuntimeSource, /TILED_PHASE5_BARRICADE_TEXTURE_KEY/);
+assert.match(phase5RuntimeSource, /this\.spawnBarricadeFragments\(target\.visual\)/,
+  "barricadas da Fase 5 devem executar a animação antes de desaparecer");
+assert.match(phase5RuntimeSource, /const columns = 3;[\s\S]*?const rows = 2;/,
+  "animação da Fase 5 deve dividir a barricada em seis fragmentos");
+assert.match(phase5RuntimeSource, /onComplete: \(\) => \{[\s\S]*?alpha: 0,[\s\S]*?fragment\.destroy\(\)/,
+  "fragmentos devem subir no impacto, cair e desaparecer");
 assert.match(phase5RuntimeSource, /groundY \+ ASSET_BASELINE_PADDING/);
 assert.match(phase5RuntimeSource, /TILED_PHASE5_GATE_TEXTURE_KEY/);
 assert.match(phase5RuntimeSource, /bottomY \+ ASSET_BASELINE_PADDING/);
+assert.match(phase5RuntimeSource, /hideAfterX\(worldX: number\)/,
+  "recorte Flesh do Topo deve remover conteúdo posterior à porta ReForge");
+assert.match(phase5RuntimeSource, /const groundExtension = layer === this\.groundLayer \? 128 : 0/,
+  "a soleira do Topo deve sustentar toda a largura da porta ReForge");
 
 const gameScene = fs.readFileSync(path.join(projectDirectory, "src/scenes/GameScene.ts"), "utf8");
+const mainSource = fs.readFileSync(path.join(projectDirectory, "src/main.ts"), "utf8");
+assert.match(mainSource, /mode: Phaser\.Scale\.EXPAND/,
+  "canvas deve preencher todo o viewport sem barras laterais");
+assert.match(gameScene, /const viewportWidth = this\.cameras\.main\.width/,
+  "câmera deve considerar a largura expandida do viewport");
+assert.match(gameScene, /this\.scale\.width \/ 2, this\.scale\.height \/ 2/,
+  "overlays devem permanecer centralizados no viewport expandido");
 assert.match(gameScene, /this\.time\.paused = true/);
 assert.match(gameScene, /this\.anims\.pauseAll\(\)/);
 assert.match(gameScene, /checkpointX: 0/);
@@ -148,6 +165,14 @@ for (const runtime of ["TiledPhase2Runtime.ts", "TiledPhase4Runtime.ts", "TiledP
 }
 const phase2Runtime = fs.readFileSync(path.join(projectDirectory, "src/objects/TiledPhase2Runtime.ts"), "utf8");
 assert.match(phase2Runtime, /hazardCycleSample/);
+assert.match(phase2Runtime, /excludeObstaclesThroughX/,
+  "recorte industrial deve poder excluir ameaças sobrepostas ao spawn");
+assert.match(phase2Runtime, /excludedLowCeilings\.forEach\(\(object\) => this\.hideObjectTiles\(this\.lowCeilingsLayer, object, true\)\)/,
+  "teto baixo excluído da D4 não pode permanecer visível no spawn");
+assert.match(phase2Runtime, /const startRow = allRowsInColumns \? 0/,
+  "offset visual do teto baixo exige limpar todas as linhas das colunas excluídas");
+assert.match(phase2Runtime, /lowCeilingObjects\.filter\(\(object\) => !this\.isExcludedStartObstacle\(object\)\)/,
+  "teto baixo excluído da D4 não pode manter a zona letal");
 assert.match(phase2Runtime, /updateFromGameObject/);
 assert.match(phase2Runtime, /TILED_PHASE2_PRESS_TEXTURE_KEY/);
 assert.match(phase2Runtime, /const nozzleY = hazard\.y \+ hazard\.height - this\.map\.tileHeight/);
@@ -244,6 +269,15 @@ assert.match(enemyRuntime, /bandido: 1\.45/);
 assert.match(enemyRuntime, /drone: 1\.8/);
 assert.doesNotMatch(enemyRuntime, /setAlpha\(0\.35\)/, "inimigos não podem permanecer opacos");
 assert.match(enemyRuntime, /PHYSICS\.attack\.range/);
+const phase3Runtime = fs.readFileSync(path.join(projectDirectory, "src/objects/TiledPhase3Runtime.ts"), "utf8");
+assert.match(phase3Runtime, /excludeEnemiesThroughX/,
+  "recorte urbano deve poder excluir inimigos sobrepostos ao spawn");
+assert.match(phase4Runtime, /hideBeforeX\(worldX: number, flatGroundWidthPx = 0\)/,
+  "recorte corporativo deve ocultar o segmento anterior ao spawn");
+assert.match(phase4Runtime, /this\.groundLayer\.putTileAt\(template\.index, col, template\.row\)/,
+  "recorte corporativo deve reconstruir um piso plano à esquerda do spawn");
+assert.match(phase4Runtime, /moveFatherAdToDescentStart\(startX: number\)/,
+  "propaganda do pai deve poder marcar o início do caminho de volta");
 const hudSource = fs.readFileSync(path.join(projectDirectory, "src/systems/HUD.ts"), "utf8");
 assert.match(hudSource, /setFillStyle\(0x21d7ff, 1\)/, "dash pronto deve usar azul elétrico");
 assert.match(hudSource, /batteryBack,[\s\S]*this\.dashBatteryFill,[\s\S]*frame,/,
@@ -255,6 +289,14 @@ assert.match(gameScene, /const alreadyActive = this\.data\$\.checkpointX > 0/);
 assert.match(gameScene, /if \(alreadyActive\) return false/);
 assert.match(gameScene, /checkpointX: 0/);
 assert.match(gameScene, /checkpointY: 0/);
+assert.match(gameScene, /runtime\.hideBeforeX\(descentRoute\.startX, this\.scale\.width\)/,
+  "o piso de aproximação do Corporativo deve cobrir uma tela inteira");
+assert.match(gameScene, /runtime\.moveFatherAdToDescentStart\(descentRoute\.startX\)/,
+  "a descida Corporativa deve começar pela propaganda do pai");
+assert.match(gameScene, /excludeObstaclesThroughX:[\s\S]*?descentRoute\.startX \+ descentRoute\.spawnSafeStartPx/,
+  "D4 deve aplicar a janela segura aos hazards e tetos baixos");
+assert.match(gameScene, /excludeEnemiesThroughX:[\s\S]*?descentRoute\.startX \+ descentRoute\.spawnSafeStartPx/,
+  "D3 deve aplicar a mesma janela segura aos inimigos");
 const pausedBranch = gameScene.slice(gameScene.indexOf("if (this.isPaused)"), gameScene.indexOf("this.player.update(delta)"));
 assert.match(pausedBranch, /return;/, "pausa deve retornar antes de atualizar Player e cooldowns");
 assert.match(gameScene, /S \/ ↓ para voltar ao menu principal/);
@@ -271,6 +313,16 @@ assert.doesNotMatch(
 const checkpointMarker = fs.readFileSync(path.join(projectDirectory, "src/objects/CheckpointMarker.ts"), "utf8");
 assert.match(checkpointMarker, /activate\(withFeedback = true\)/);
 assert.match(checkpointMarker, /if \(!withFeedback\) return/);
+const tiledLevelRuntime = fs.readFileSync(path.join(projectDirectory, "src/objects/TiledLevelRuntime.ts"), "utf8");
+assert.match(tiledLevelRuntime, /prepareDescentEpilogue\(startX: number, endX: number\)/,
+  "epílogo deve preparar um corredor próprio no mapa do Esgoto");
+assert.match(tiledLevelRuntime, /this\.groundLayer\.removeTileAt\(col, row\)/);
+assert.match(tiledLevelRuntime, /this\.groundLayer\.putTileAt\(template\.pattern\[patternIndex\], col, template\.row\)/,
+  "corredor final deve preencher todos os vãos com chão do próprio mapa");
+assert.match(tiledLevelRuntime, /hazard\.zone\.setActive\(false\)/,
+  "epílogo sem implantes não pode reutilizar hazards da subida");
+assert.match(gameScene, /runtime\.prepareDescentEpilogue\(descentRoute\.startX, descentRoute\.endX\)/,
+  "GameScene deve ativar o corredor seguro somente no epílogo");
 for (const runtime of [
   "TiledLevelRuntime.ts",
   "TiledPhase2Runtime.ts",

@@ -93,6 +93,7 @@ export class TiledPhase2Runtime {
 
   private readonly fallDeathY: number;
   private readonly hazardsLayer?: Phaser.Tilemaps.TilemapLayer;
+  private readonly lowCeilingsLayer?: Phaser.Tilemaps.TilemapLayer;
   private readonly checkpointTriggered = new Set<string>();
   private readonly checkpointMarkers = new Map<string, CheckpointMarker>();
   private readonly checkpoints: Phase2Checkpoint[] = [];
@@ -112,6 +113,7 @@ export class TiledPhase2Runtime {
       onCheckpoint: (id: string, x: number, y: number) => boolean | void;
       onEndGate: (destination: string, implant?: keyof AbilityState) => void;
     },
+    private readonly options: { excludeObstaclesThroughX?: number } = {},
   ) {
     this.map = scene.make.tilemap({ key: TILED_FASE2_MAP_KEY });
 
@@ -135,7 +137,7 @@ export class TiledPhase2Runtime {
     this.groundLayer = ground;
 
     this.hazardsLayer = this.createVisualLayer("hazards", tilesets, 1, offsetY);
-    this.createVisualLayer("deco-low-ceilings", tilesets, 1, offsetY);
+    this.lowCeilingsLayer = this.createVisualLayer("deco-low-ceilings", tilesets, 1, offsetY);
     this.createVisualLayer("deco", tilesets, 2, offsetY);
 
     this.lengthPx = this.map.widthInPixels;
@@ -159,10 +161,20 @@ export class TiledPhase2Runtime {
       ? implant as keyof AbilityState
       : undefined;
 
+    const hazardObjects = byType("hazard");
+    const lowCeilingObjects = byType("low_ceiling");
+    const excludedHazards = hazardObjects.filter((object) => this.isExcludedStartObstacle(object));
+    const excludedLowCeilings = lowCeilingObjects.filter((object) => this.isExcludedStartObstacle(object));
+    excludedHazards.forEach((object) => this.hideObjectTiles(this.hazardsLayer, object));
+    excludedLowCeilings.forEach((object) => this.hideObjectTiles(this.lowCeilingsLayer, object, true));
+
     this.readCredits(byType("credit"), offsetY);
     this.readCheckpoints(byType("checkpoint"), offsetY);
-    this.buildHazards(byType("hazard"), offsetY);
-    this.buildLowCeilings(byType("low_ceiling"), offsetY);
+    this.buildHazards(hazardObjects.filter((object) => !this.isExcludedStartObstacle(object)), offsetY);
+    this.buildLowCeilings(
+      lowCeilingObjects.filter((object) => !this.isExcludedStartObstacle(object)),
+      offsetY,
+    );
     this.readConveyors(byType("conveyor"), offsetY);
     this.buildTutorials(byType("tutorial"), offsetY);
     this.buildCredits();
@@ -192,6 +204,34 @@ export class TiledPhase2Runtime {
     const props = (object.properties ?? []) as Array<{ name: string; value: unknown }>;
     const value = props.find((property) => property.name === name)?.value;
     return typeof value === "string" ? value : undefined;
+  }
+
+  private isExcludedStartObstacle(object: Phaser.Types.Tilemaps.TiledObject): boolean {
+    const cutoff = this.options.excludeObstaclesThroughX;
+    return cutoff !== undefined && (object.x ?? 0) < cutoff;
+  }
+
+  private hideObjectTiles(
+    layer: Phaser.Tilemaps.TilemapLayer | undefined,
+    object: Phaser.Types.Tilemaps.TiledObject,
+    allRowsInColumns = false,
+  ): void {
+    if (!layer) return;
+    const startCol = Math.floor((object.x ?? 0) / this.map.tileWidth);
+    const endCol = Math.ceil(((object.x ?? 0) + (object.width ?? 0)) / this.map.tileWidth);
+    // A layer visual dos tetos tem offset próprio e foi desenhada acima da
+    // zona lógica. Como ela é exclusiva desses tetos, limpamos todas as
+    // linhas dentro das colunas do objeto para não deixar a plataforma órfã.
+    const startRow = allRowsInColumns ? 0 : Math.floor((object.y ?? 0) / this.map.tileHeight);
+    const endRow = allRowsInColumns
+      ? this.map.height
+      : Math.ceil(((object.y ?? 0) + (object.height ?? 0)) / this.map.tileHeight);
+    for (let col = startCol; col < endCol; col += 1) {
+      for (let row = startRow; row < endRow; row += 1) {
+        const tile = layer.getTileAt(col, row);
+        if (tile) tile.visible = false;
+      }
+    }
   }
 
   private readNumber(
@@ -638,6 +678,14 @@ export class TiledPhase2Runtime {
       this.endGateTriggered = true;
       this.callbacks.onEndGate(this.clinicDestination, this.clinicImplant);
     }
+  }
+
+  hideCredits(): void {
+    this.creditSprites.forEach((sprite) => {
+      const body = sprite.body as Phaser.Physics.Arcade.Body | null;
+      if (body) body.enable = false;
+      sprite.setActive(false).setVisible(false);
+    });
   }
 
   setScanActive(_active: boolean): void {

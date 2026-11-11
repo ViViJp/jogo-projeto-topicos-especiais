@@ -97,6 +97,11 @@ export class TiledPhase4Runtime {
   private readonly tutorialLabels: Phaser.GameObjects.Text[] = [];
   private readonly narrativeLabels: Phaser.GameObjects.Text[] = [];
   private readonly narrativeVisuals: Phaser.GameObjects.Image[] = [];
+  private readonly tileLayers: Phaser.Tilemaps.TilemapLayer[] = [];
+  private fatherAd?: {
+    visual: Phaser.GameObjects.Image;
+    label: Phaser.GameObjects.Text;
+  };
   private endGateTriggered = false;
   private playerRef?: Player;
 
@@ -125,6 +130,7 @@ export class TiledPhase4Runtime {
     ground.setCollisionByExclusion([-1, 0]);
     ground.setDepth(0);
     this.groundLayer = ground;
+    this.tileLayers.push(ground);
 
     this.scanVisualsLayer = this.createVisualLayer("scan-visuals", tilesets, 1);
     this.hazardsLayer = this.createVisualLayer("hazards", tilesets, 2);
@@ -173,7 +179,60 @@ export class TiledPhase4Runtime {
     if (!layer) return undefined;
     layer.setPosition(layer.x, layer.y + TILED_FASE4_OFFSET_Y);
     layer.setDepth(depth);
+    this.tileLayers.push(layer);
     return layer;
+  }
+
+  /**
+   * O recorte da descida começa no meio do mapa. A câmera mantém Alex a 35%
+   * da tela e, sem este corte visual, ainda mostra plataformas abandonadas
+   * do trecho anterior atrás dele, embora não exista caminho de volta.
+   */
+  hideBeforeX(worldX: number, flatGroundWidthPx = 0): void {
+    const startColumn = Phaser.Math.Clamp(
+      Math.floor(worldX / this.map.tileWidth),
+      0,
+      this.map.width - 1,
+    );
+    const groundTemplate = Array.from({ length: this.map.height }, (_, row) => {
+      const tile = this.groundLayer.getTileAt(startColumn, row);
+      return tile && tile.index !== -1 ? { row, index: tile.index } : null;
+    }).filter((entry): entry is { row: number; index: number } => entry !== null);
+    const lastHiddenColumn = Math.floor((worldX - 1) / this.map.tileWidth);
+    for (const layer of this.tileLayers) {
+      for (let col = 0; col <= lastHiddenColumn; col += 1) {
+        for (let row = 0; row < this.map.height; row += 1) {
+          const tile = layer.getTileAt(col, row);
+          if (tile) tile.visible = false;
+        }
+      }
+    }
+    if (flatGroundWidthPx <= 0) return;
+    const firstGroundColumn = Math.max(
+      0,
+      startColumn - Math.ceil(flatGroundWidthPx / this.map.tileWidth),
+    );
+    for (let col = firstGroundColumn; col < startColumn; col += 1) {
+      for (const template of groundTemplate) {
+        const tile = this.groundLayer.putTileAt(template.index, col, template.row);
+        if (tile) tile.visible = true;
+      }
+    }
+    this.groundLayer.setCollisionByExclusion([-1, 0]);
+  }
+
+  /**
+   * Na descida, a propaganda é o primeiro sinal de que Alex está refazendo o
+   * caminho. O crédito e o fragmento permanecem nas coordenadas finais do
+   * mapa; somente a composição narrativa é deslocada.
+   */
+  moveFatherAdToDescentStart(startX: number): void {
+    if (!this.fatherAd) return;
+    this.fatherAd.visual.setX(startX + 210);
+    this.fatherAd.label
+      .setX(startX + 430)
+      .setData("triggerX", startX)
+      .setData("triggerWidth", 1024);
   }
 
   private readString(
@@ -461,6 +520,7 @@ export class TiledPhase4Runtime {
       label.setData("triggerX", x);
       label.setData("triggerWidth", width);
       this.narrativeLabels.push(label);
+      this.fatherAd = { visual: propaganda, label };
     }
   }
 
@@ -628,6 +688,14 @@ export class TiledPhase4Runtime {
       this.endGateTriggered = true;
       this.callbacks.onEndGate(this.clinicDestination, this.clinicImplant);
     }
+  }
+
+  hideCredits(): void {
+    this.creditSprites.forEach((sprite) => {
+      const body = sprite.body as Phaser.Physics.Arcade.Body | null;
+      if (body) body.enable = false;
+      sprite.setActive(false).setVisible(false);
+    });
   }
 
   destroy(): void {

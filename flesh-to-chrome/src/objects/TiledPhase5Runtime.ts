@@ -130,6 +130,7 @@ export class TiledPhase5Runtime {
   private readonly breakableDefinitions: RuntimeBreakableDefinition[] = [];
   private readonly labels: Phaser.GameObjects.Text[] = [];
   private readonly endMarkerObjects: Array<{ destroy(): void }> = [];
+  private readonly tileLayers: Phaser.Tilemaps.TilemapLayer[] = [];
   private readonly offsetY: number;
   private readonly creditValue: number;
   private readonly contextLabel: string;
@@ -172,6 +173,7 @@ export class TiledPhase5Runtime {
     ground.setCollisionByExclusion([-1, 0]);
     ground.setDepth(0);
     this.groundLayer = ground;
+    this.tileLayers.push(ground);
 
     this.scanVisualsLayer = this.createVisualLayer("scan-visuals", tilesets, 1);
     this.hazardsLayer = this.createVisualLayer("hazards", tilesets, 2);
@@ -214,7 +216,25 @@ export class TiledPhase5Runtime {
     if (!layer) return undefined;
     layer.setPosition(layer.x, layer.y + this.offsetY);
     layer.setDepth(depth);
+    this.tileLayers.push(layer);
     return layer;
+  }
+
+  /** Remove do recorte Flesh o trecho contemplativo que pertence à subida. */
+  hideAfterX(worldX: number): void {
+    for (const layer of this.tileLayers) {
+      // A soleira precisa continuar além do centro da porta; cortar o chão
+      // exatamente no endX fazia metade direita do sprite flutuar no vazio.
+      const groundExtension = layer === this.groundLayer ? 128 : 0;
+      const firstHiddenColumn = Math.ceil((worldX + groundExtension) / this.map.tileWidth);
+      for (let col = firstHiddenColumn; col < this.map.width; col += 1) {
+        for (let row = 0; row < this.map.height; row += 1) {
+          const tile = layer.getTileAt(col, row);
+          if (tile) tile.visible = false;
+        }
+      }
+    }
+    this.labels.filter((label) => label.x >= worldX).forEach((label) => label.setVisible(false));
   }
 
   private readString(
@@ -692,9 +712,79 @@ export class TiledPhase5Runtime {
     target.collider?.destroy();
     target.collider = undefined;
     this.setBreakableTilesVisible(target, false);
+    this.spawnBarricadeFragments(target.visual);
     target.visual.destroy();
     target.body.destroy();
     this.playerRef?.resolvePressedSuccess();
+  }
+
+  /**
+   * Divide o sprite 96x44 em seis estilhaços. O primeiro tween dá o impacto
+   * do golpe; o segundo simula a queda e dissolve os pedaços. Como a descida
+   * Flesh usa este mesmo runtime, a animação vale para ambos os contextos.
+   */
+  private spawnBarricadeFragments(barricade: Phaser.GameObjects.Image): void {
+    const columns = 3;
+    const rows = 2;
+    const sourceWidth = barricade.texture.getSourceImage().width / columns;
+    const sourceHeight = barricade.texture.getSourceImage().height / rows;
+    const displayWidth = barricade.displayWidth / columns;
+    const displayHeight = barricade.displayHeight / rows;
+    const visualLeft = barricade.x - barricade.displayWidth / 2;
+    const visualTop = barricade.y - barricade.displayHeight;
+
+    for (let row = 0; row < rows; row += 1) {
+      for (let col = 0; col < columns; col += 1) {
+        const horizontalDirection = col === 0 ? -1 : col === columns - 1 ? 1 : Phaser.Math.RND.sign();
+        const fragment = this.scene.add
+          .image(
+            visualLeft + (col + 0.5) * displayWidth,
+            visualTop + (row + 0.5) * displayHeight,
+            TILED_PHASE5_BARRICADE_TEXTURE_KEY,
+          )
+          .setCrop(
+            Math.floor(col * sourceWidth),
+            Math.floor(row * sourceHeight),
+            Math.ceil(sourceWidth),
+            Math.ceil(sourceHeight),
+          )
+          .setDisplaySize(displayWidth, displayHeight)
+          .setDepth(6);
+
+        this.scene.tweens.add({
+          targets: fragment,
+          x: fragment.x + horizontalDirection * Phaser.Math.Between(18, 34),
+          y: fragment.y - Phaser.Math.Between(row === 0 ? 24 : 12, row === 0 ? 40 : 25),
+          angle: horizontalDirection * Phaser.Math.Between(20, 65),
+          duration: Phaser.Math.Between(110, 160),
+          ease: "Quad.easeOut",
+          onComplete: () => {
+            this.scene.tweens.add({
+              targets: fragment,
+              x: fragment.x + horizontalDirection * Phaser.Math.Between(10, 24),
+              y: fragment.y + Phaser.Math.Between(42, 72),
+              angle: fragment.angle + horizontalDirection * Phaser.Math.Between(35, 85),
+              alpha: 0,
+              duration: Phaser.Math.Between(170, 240),
+              ease: "Quad.easeIn",
+              onComplete: () => fragment.destroy(),
+            });
+          },
+        });
+      }
+    }
+
+    const impact = this.scene.add
+      .circle(barricade.x, barricade.y - barricade.displayHeight / 2, 10, 0x7cfcea, 0.85)
+      .setDepth(7);
+    this.scene.tweens.add({
+      targets: impact,
+      scale: 3.2,
+      alpha: 0,
+      duration: 180,
+      ease: "Quad.easeOut",
+      onComplete: () => impact.destroy(),
+    });
   }
 
   private destroyBreakableInAttackRange(attackX: number, attackY: number): void {
@@ -890,6 +980,14 @@ export class TiledPhase5Runtime {
       this.endGateTriggered = true;
       this.callbacks.onEndGate();
     }
+  }
+
+  hideCredits(): void {
+    this.creditSprites.forEach((sprite) => {
+      const body = sprite.body as Phaser.Physics.Arcade.Body | null;
+      if (body) body.enable = false;
+      sprite.setActive(false).setVisible(false);
+    });
   }
 
   destroy(): void {

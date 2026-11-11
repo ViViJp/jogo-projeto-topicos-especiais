@@ -113,6 +113,7 @@ export class TiledLevelRuntime {
   private readonly electricWireTweens: Phaser.Tweens.Tween[] = [];
   private enemyRuntime?: EnemyRuntime;
   private playerRef?: Player;
+  private epilogueCorridor = false;
 
   private endGateTriggered = false;
 
@@ -233,6 +234,60 @@ export class TiledLevelRuntime {
     const props = (o.properties ?? []) as Array<{ name: string; value: unknown }>;
     const p = props.find((pp) => pp.name === name);
     return typeof p?.value === "string" ? p.value : undefined;
+  }
+
+  /**
+   * Converte um recorte final da Fase 1 em corredor contemplativo. Alex já
+   * não possui implantes neste ponto, então o epílogo não pode reutilizar os
+   * vãos, plataformas elevadas ou perigos da subida.
+   */
+  prepareDescentEpilogue(startX: number, endX: number): void {
+    this.epilogueCorridor = true;
+    const firstCol = Phaser.Math.Clamp(
+      Math.floor(startX / this.map.tileWidth),
+      0,
+      this.map.width - 1,
+    );
+    const lastCol = Phaser.Math.Clamp(
+      Math.ceil((endX + 96) / this.map.tileWidth),
+      firstCol,
+      this.map.width - 1,
+    );
+    const patternWidth = 6;
+    const patternStartCol = Math.max(0, firstCol - patternWidth);
+    const groundRows = Array.from({ length: this.map.height }, (_, row) => {
+      const pattern = Array.from({ length: patternWidth }, (_, offset) => (
+        this.groundLayer.getTileAt(patternStartCol + offset, row)?.index ?? -1
+      ));
+      return pattern.every((index) => index > 0) ? { row, pattern } : null;
+    }).filter((entry): entry is { row: number; pattern: number[] } => entry !== null);
+    const groundRowSet = new Set(groundRows.map((entry) => entry.row));
+
+    for (let col = firstCol; col <= lastCol; col += 1) {
+      for (let row = 0; row < this.map.height; row += 1) {
+        if (!groundRowSet.has(row)) this.groundLayer.removeTileAt(col, row);
+      }
+      for (const template of groundRows) {
+        const patternIndex = (col - firstCol) % patternWidth;
+        this.groundLayer.putTileAt(template.pattern[patternIndex], col, template.row);
+      }
+    }
+    this.groundLayer.setCollisionByExclusion([-1, 0]);
+
+    if (this.hazardsLayer) {
+      for (let col = firstCol; col <= lastCol; col += 1) {
+        for (let row = 0; row < this.map.height; row += 1) {
+          this.hazardsLayer.removeTileAt(col, row);
+        }
+      }
+    }
+    for (const hazard of this.hazardZones) {
+      const body = hazard.zone.body as Phaser.Physics.Arcade.StaticBody | null;
+      if (body) body.enable = false;
+      hazard.zone.setActive(false);
+    }
+    this.electricWireTweens.forEach((tween) => tween.remove());
+    this.electricWireVisuals.forEach((visual) => visual.setVisible(false));
   }
 
   /**
@@ -466,12 +521,21 @@ export class TiledLevelRuntime {
   }
 
   private getEnemyObjects(): Phaser.Types.Tilemaps.TiledObject[] {
+    if (this.epilogueCorridor) return [];
     return this.map.getObjectLayer("objects")?.objects.filter((object) => object.type === "enemy") ?? [];
   }
 
   setScanActive(active: boolean): void {
     if (active) this.enemyRuntime?.scan(this.playerRef?.sprite.x ?? 0);
     else this.enemyRuntime?.stopScan();
+  }
+
+  hideCredits(): void {
+    this.creditSprites.forEach((sprite) => {
+      const body = sprite.body as Phaser.Physics.Arcade.Body | null;
+      if (body) body.enable = false;
+      sprite.setActive(false).setVisible(false);
+    });
   }
 
   /** Deve ser chamado a cada frame pela GameScene. */

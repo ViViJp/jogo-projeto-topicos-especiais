@@ -491,15 +491,35 @@ propriedade string `ending`, com valor `chrome` ou `flesh`.
 Esses objetos não são hazards. Ao concluir a Fase 5, a campanha consolida os
 créditos, cria o save narrativo pré-Portão e abre `GateScene`. A cena apresenta
 as opções Chrome e Flesh com teclado, controle ou ponteiro. Chrome encaminha ao
-Final Chrome; Flesh permanece sinalizado como conteúdo em desenvolvimento até
-a implementação da descida. Em modo de teste, alcançar `phase_end` continua
-retornando ao seletor sem alterar o save.
+Final Chrome; Flesh abre a reprovação de George e inicia a descida no Topo. Em
+modo de teste, alcançar `phase_end` continua retornando ao seletor sem alterar o
+save enquanto a descida não tiver sido confirmada.
 
-## 7. Classes planejadas / ainda não formalizadas
+### 6.17 **memory_glitch**
+
+Point Object exclusivo da descida, existente uma vez em cada mapa do Topo,
+Corporativo, Meio Urbano e Industrial. A propriedade booleana `descent_only`
+deve ser `true`. O objeto representa o núcleo de uma memória reprimida e só é
+ativado quando o setor está sendo executado no contexto Flesh/Hollow.
+
+## 7. Recortes da descida
+
+Os pontos de início e fim dos recortes estão implementados na configuração
+`DESCENT_ROUTES`, sem duplicar os mapas Tiled. Isso equivale funcionalmente ao
+`descent_spawn`: ao entrar com `descent=true`, o runtime ignora o spawn da
+subida, posiciona Alex no início do recorte e usa uma saída própria antes da
+clínica normal. Reinício e retry também retornam a esse ponto.
+
+Se os pontos forem movidos para o editor no futuro, a classe oficial será
+`descent_spawn` e deverá preservar as coordenadas/durações registradas no GDD.
+
+## 7.1 Classes planejadas / ainda não formalizadas
 
 Esta classe só entra no contrato oficial quando for efetivamente criada no mapa e implementada:
 
 - **animated_prop**
+- **descent_spawn** — representação futura, no Tiled, do início que hoje vem
+  de `DESCENT_ROUTES`.
 
 Ao criar uma delas, documentar:
 

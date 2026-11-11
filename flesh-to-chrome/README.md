@@ -266,8 +266,8 @@ carregada de seu blockout Tiled real e interpretada por um runtime próprio:
   hazards ocultos, lasers e portas automáticas temporizadas.
 - **Fase 5 — Topo da Cidade:** dash com bateria no HUD, lasers, barreiras
   rotativas, portas automáticas, quebráveis e trecho final do Portão.
-  A escolha narrativa Chrome/Flesh ainda está representada apenas no
-  blockout e não encaminha finais distintos.
+  A escolha narrativa encaminha o Final Chrome ou a descida Flesh/Hollow,
+  incluindo confronto com George, memórias, ReForge e retirada de implantes.
 
 Também estão ativos o save único em `localStorage`, checkpoints com posição
 X/Y, consolidação e descarte de créditos, progressão de implantes nas quatro

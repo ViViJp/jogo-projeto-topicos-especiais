@@ -597,3 +597,42 @@
                 ┌──────┴──────┐
                 ↓             ↓
               CHROME         FLESH
+
+
+# Recortes da Descida
+
+## D2 — Corporativo
+
+- a propaganda do pai abre o recorte e sinaliza que Alex está refazendo o
+  caminho da subida;
+- o fragmento de memória continua no fim do percurso;
+- a mudança vale apenas para a descida: o crédito comum e a composição
+  original permanecem no final da Fase 4 durante a subida.
+
+## D3 — Meio Urbano
+
+- mantém o vocabulário urbano de barricadas, inimigos e eletricidade;
+- inclui uma grade elétrica horizontal de 320 px, larga demais para salto
+  simples e vencida com salto duplo;
+- a grade usa sprite próprio em azul-petróleo/ciano, derivado visualmente dos
+  portões elétricos originais; não há tile horizontal adequado no tileset da
+  Fase 3;
+- contato com a grade segue a regra de hazard fatal em um hit.
+
+## D4 — Industrial
+
+- o trecho começa em piso neutro, sem hazard, inimigo ou teto baixo sobreposto
+  a Alex;
+- o teto baixo autorado em `x=20.480–20.672` pertence ao fluxo da subida e é
+  ocultado por completo, junto com sua zona letal, no contexto da descida;
+- utiliza os gaps industriais já autorados para testar salto duplo, sem criar
+  ou reutilizar o piso elétrico exclusivo da D3 — Meio Urbano;
+- o primeiro obstáculo ativo precisa preservar uma janela mínima de reação.
+
+## Epílogo — Esgoto
+
+- dura aproximadamente 5 segundos / 1.600 px;
+- começa e termina em chão contínuo, sem vãos ou plataformas elevadas;
+- não contém hazards, inimigos, créditos, tutorial ou checkpoint;
+- Alex apenas corre em direção à casa antes da transição para o Final Flesh;
+- o trecho comunica retorno e encerramento, não um quinto desafio da descida.
