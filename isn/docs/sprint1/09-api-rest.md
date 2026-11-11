@@ -1,6 +1,6 @@
 # Contrato REST inicial — proposta para ISN
 
-Este documento especifica a API prevista, **não uma API já implementada**. Prefixo proposto `/api/v1`, transporte HTTPS e JSON. A base usa API Gateway HTTP com integração por microsserviço Lambda e autenticação Cognito/Google; D03/D07 estão aprovadas; detalhes restantes estão em D04/D06/D08 e no documento 12. Este contrato não especifica o protocolo de sincronização por frame.
+Este documento é o contrato REST. Transporte HTTPS e JSON. As rotas publicadas na HTTP API ficam na raiz, sem o prefixo `/api/v1` que chegou a ser proposto: o handler compara `rawPath` com caminhos como `/me` e `/matches`, e o domínio personalizado não acrescenta prefixo. Rotas ainda descritas como proposta, como cosméticos e ticket de conexão, não estão publicadas. A base usa API Gateway HTTP com integração por microsserviço Lambda; a autenticação Cognito/Google fica para a integração de login. D03/D07 estão aprovadas; detalhes restantes estão em D04/D06/D08 e no documento 12. Este contrato não especifica o protocolo de sincronização por frame.
 
 ## Convenções
 

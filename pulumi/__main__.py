@@ -9,6 +9,9 @@ stack = pulumi.get_stack()
 if stack not in ("dev", "prod"):
     raise Exception("A stack precisa se chamar dev ou prod.")
 
+config = pulumi.Config()
+publish_domain = config.get_bool("publishDomain") or False
+
 prefix = f"flesh-to-chrome-{stack}"
 root = Path(__file__).parent
 services_dir = root / "services"
@@ -146,7 +149,7 @@ def http_api(functions):
         name=f"{prefix}-http",
         protocol_type="HTTP",
         cors_configuration=aws.apigatewayv2.ApiCorsConfigurationArgs(
-            allow_origins=["*"],
+            allow_origins=["*"] if not is_prod else [f"https://{domain}", f"https://www.{domain}"],
             allow_methods=["GET", "POST", "PUT", "PATCH", "OPTIONS"],
             allow_headers=["authorization", "content-type"],
         ),
@@ -391,7 +394,7 @@ functions = {
     service: publish(service, table_resource) for service, table_resource in services.items()
 }
 api, stage = http_api(functions)
-if is_prod:
+if is_prod and publish_domain:
     prod_names(api, stage)
 else:
     frontend_cdn()

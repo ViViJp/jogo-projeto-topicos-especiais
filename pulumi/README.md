@@ -17,13 +17,16 @@ Nas duas stacks, também:
 
 Na stack `prod`, também:
 
-- zona pública Route 53 de `nihil-legere-possum.lat`
+- zona pública Route 53 de `nihil-legere-possum.lat`, com NS e SOA exportados em `nameservers`
+- CORS limitado a `https://nihil-legere-possum.lat` e `https://www.nihil-legere-possum.lat`
+
+Com `flesh-to-chrome:publishDomain` em `false`, a prod para aí e publica CloudFront e HTTP API nos hostnames gerados pela AWS. Com `publishDomain` em `true`, depois da delegação do domínio, a mesma stack acrescenta:
+
 - certificado ACM em `us-east-1` para o apex e `www`, usado pela CloudFront
 - certificado ACM em `sa-east-1` para `api.nihil-legere-possum.lat`, usado pelo domínio regional da HTTP API
 - aliases A e AAAA do apex e de `www` para a CloudFront, e alias A de `api` para o API Gateway
-- os registros NS e SOA da zona, exportados em `nameservers`
 
-A stack dev usa o HTTPS que a CloudFront e o API Gateway já entregam nos hostnames gerados pela AWS. Ela não pede certificado do domínio e não cria zona.
+A stack dev usa o HTTPS dos hostnames gerados pela AWS. O CORS dela aceita qualquer origem, para o teste local. Ela não pede certificado do domínio e não cria zona.
 
 Não há stack com outro nome. AWS SAM não está na especificação da sprint 1; o desenvolvimento em nuvem desta entrega é Pulumi.
 
@@ -50,16 +53,29 @@ pulumi preview
 pulumi up
 ```
 
-Produção usa a outra stack:
+Na stack dev, o preview pode criar as tabelas, as Lambdas e os papéis IAM se essa stack ainda estiver vazia. Se ela já existir, esses recursos permanecem e o plano acrescenta o bucket, a CloudFront e a HTTP API. Não deve aparecer zona nova nem remoção da tabela `flesh-to-chrome-campanha`, da Lambda antiga ou da zona `flesh-to-chrome.negoci.online`.
+
+Depois do `pulumi up` da dev, o output `frontend` é o host da CloudFront. Abra `https://` mais esse host: a página HTML tem de carregar. O bucket S3 não tem site público. No output `http_api`:
+
+```bash
+curl -sS "$HTTP_API/me"
+curl -sS "$HTTP_API/auth/google/start"
+```
+
+A primeira resposta traz `UNAUTHENTICATED`. A segunda traz `NOT_READY`.
+
+Produção segue em quatro passos. Antes do primeiro, confirme no registrador que `nihil-legere-possum.lat` está sob controle de quem vai delegar. O arquivo `Pulumi.prod.yaml` começa com `publishDomain: false`.
 
 ```bash
 pulumi stack select prod --create
+pulumi preview
 pulumi up
+pulumi stack output nameservers
 ```
 
-As funções esperam o evento HTTP API v2 com `requestContext.authorizer.jwt.claims.sub`. Sem esse sujeito respondem 401. As rotas de Google em Conta respondem 503: Cognito não faz parte desta entrega.
+Esse primeiro `up` cria a zona, a US$ 0,50 por mês, e não pede certificado. Copie os nameservers e delegue o domínio no registrador. Quando a delegação responder, mude `publishDomain` para `true` e rode `pulumi up` de novo. Aí entram os certificados, a validação DNS e os aliases. Não ligue `publishDomain` antes da delegação: o `up` fica esperando o certificado e estoura o tempo. A zona `flesh-to-chrome.negoci.online` não entra nesta stack.
 
-`pulumi up` na stack prod cria a zona do domínio, a US$ 0,50 por mês, e fica esperando a delegação dos nameservers para emitir os certificados. Não rode prod sem ler o preview. A zona `flesh-to-chrome.negoci.online` não entra nesta stack.
+As funções esperam o evento HTTP API v2 com `requestContext.authorizer.jwt.claims.sub`. Sem esse sujeito respondem 401. As rotas de Google em Conta respondem 503: Cognito não faz parte desta entrega.
 
 ## O que esta entrega não publica
 
