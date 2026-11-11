@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
 import ts from "typescript";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const projectDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const moduleCache = new Map();
@@ -38,6 +38,141 @@ function loadTypeScriptModule(filename) {
     localStorage,
   });
   return module.exports;
+}
+
+class FakeDisplayObject {
+  constructor(value = "") {
+    this.value = value;
+    this.handlers = new Map();
+    this.texture = { setFilter: () => this.texture };
+  }
+
+  on(event, handler) { this.handlers.set(event, handler); return this; }
+  emit(event) { this.handlers.get(event)?.(); return this; }
+  setAlpha() { return this; }
+  setColor() { return this; }
+  setDisplaySize() { return this; }
+  setInteractive() { return this; }
+  setOrigin() { return this; }
+  setScale() { return this; }
+  setStrokeStyle() { return this; }
+  setText(value) { this.value = value; return this; }
+  setTint() { return this; }
+  setVisible() { return this; }
+}
+
+function createUiHarness(width = 1_920, height = 720) {
+  const starts = [];
+  const sprites = [];
+  const texts = [];
+
+  class Scene {
+    constructor() {
+      this.scale = { width, height };
+      this.cameras = { main: { setBackgroundColor() {}, shake() {}, fadeOut() {} } };
+      this.scene = { start: (key, data) => starts.push({ key, data }) };
+      this.add = {
+        circle: () => new FakeDisplayObject(),
+        image: (_x, _y, texture) => new FakeDisplayObject(texture),
+        rectangle: () => new FakeDisplayObject(),
+        sprite: (_x, _y, texture, frame) => {
+          sprites.push({ texture, frame });
+          return new FakeDisplayObject(texture);
+        },
+        text: (_x, _y, value) => {
+          const text = new FakeDisplayObject(value);
+          texts.push(text);
+          return text;
+        },
+      };
+      this.tweens = { add() {} };
+      this.sound = { add: () => ({ play() {}, stop() {} }) };
+      this.events = { once() {} };
+      this.input = { on() {} };
+    }
+  }
+
+  return {
+    Phaser: {
+      Scene,
+      Scenes: { Events: { SHUTDOWN: "shutdown" } },
+      Textures: { FilterMode: { NEAREST: "nearest" } },
+    },
+    starts,
+    sprites,
+    texts,
+  };
+}
+
+class FakeInputManager {
+  isCancelJustDown() { return false; }
+  isConfirmJustDown() { return false; }
+  isMenuDownJustDown() { return false; }
+  isMenuLeftJustDown() { return false; }
+  isMenuRightJustDown() { return false; }
+  isMenuUpJustDown() { return false; }
+  postUpdate() {}
+}
+
+function loadSceneModule(filename, harness, saveStateModule) {
+  const cache = new Map();
+  const load = (moduleFilename) => {
+    const absolutePath = path.resolve(moduleFilename);
+    if (cache.has(absolutePath)) return cache.get(absolutePath).exports;
+    const source = fs.readFileSync(absolutePath, "utf8");
+    const output = ts.transpileModule(source, {
+      compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+      fileName: absolutePath,
+    }).outputText.replaceAll("import.meta.url", JSON.stringify(pathToFileURL(absolutePath).href));
+    const module = { exports: {} };
+    cache.set(absolutePath, module);
+    const localRequire = (specifier) => {
+      if (specifier === "phaser") return { __esModule: true, default: harness.Phaser };
+      if (specifier.endsWith("/InputManager")) return { InputManager: FakeInputManager };
+      if (specifier.endsWith("/SaveState")) return saveStateModule;
+      if (!specifier.startsWith(".")) throw new Error(`Import não suportado no teste de UI: ${specifier}`);
+      return load(path.resolve(path.dirname(absolutePath), `${specifier}.ts`));
+    };
+    new vm.Script(output, { filename: absolutePath }).runInNewContext({
+      module,
+      exports: module.exports,
+      require: localRequire,
+      console,
+      URL,
+    });
+    return module.exports;
+  };
+  return load(filename);
+}
+
+function interactiveInput(active) {
+  return {
+    isCancelJustDown: () => active === "cancel",
+    isConfirmJustDown: () => active === "confirm",
+    isMenuDownJustDown: () => active === "down",
+    isMenuLeftJustDown: () => active === "left",
+    isMenuRightJustDown: () => active === "right",
+    isMenuUpJustDown: () => active === "up",
+    postUpdate() {},
+  };
+}
+
+function fakeSaveModule(data) {
+  const calls = { decline: 0, load: 0, mark: [], begin: 0 };
+  const instance = {
+    beginDescent() { calls.begin += 1; },
+    declineDescentRetry() { calls.decline += 1; },
+    get() { return data; },
+    markEndingReached(ending) { calls.mark.push(ending); },
+  };
+  return {
+    calls,
+    module: {
+      SaveState: class {
+        static load() { calls.load += 1; return instance; }
+      },
+    },
+  };
 }
 
 const { SaveState } = loadTypeScriptModule(path.join(projectDirectory, "src/systems/SaveState.ts"));
@@ -348,6 +483,160 @@ for (const asset of [
   "reforge-security-seal.png",
 ]) {
   assert.match(assetRegistry, new RegExp(asset.replaceAll(".", "\\.")), `${asset}: registro de asset ausente`);
+}
+
+// Interações reais dos handlers das cenas com um Phaser mínimo. Estes casos
+// complementam os contratos estáticos e falham se uma ação de UI voltar a
+// escrever no save ou iniciar a cena incorreta.
+const uiData = {
+  currentPhaseId: "fase1",
+  checkpoint: { x: 0, y: 0, consolidatedCreditIds: [] },
+  wallet: 0,
+  abilities: { legs: true, arms: true, eyes: false, thrusters: false },
+  descentState: {
+    active: false,
+    brokenChain: false,
+    epiloguePending: true,
+    currentStep: 2,
+    recoveredFragmentIds: [],
+    retryUsedPhaseIds: [],
+    pendingRemoval: null,
+  },
+  endingReached: null,
+};
+
+{
+  const harness = createUiHarness();
+  const save = fakeSaveModule(uiData);
+  const { GateScene } = loadSceneModule(
+    path.join(projectDirectory, "src/scenes/GateScene.ts"), harness, save.module,
+  );
+  const scene = new GateScene();
+  scene.init({ testMode: true });
+  scene.selected = "flesh";
+  scene.previewNotice = new FakeDisplayObject();
+  scene.confirmChoice();
+  assert.equal(save.calls.load, 0, "prévia Flesh não deve sequer carregar o SaveState ao confirmar");
+  assert.equal(save.calls.begin, 0, "prévia Flesh não deve iniciar a descida no save real");
+  assert.equal(harness.starts.length, 0, "prévia Flesh deve permanecer no Portão com a orientação");
+}
+
+{
+  const harness = createUiHarness();
+  const retryData = {
+    ...uiData,
+    currentPhaseId: "fase3",
+    descentState: { ...uiData.descentState, active: true, epiloguePending: false, currentStep: 2 },
+  };
+  const save = fakeSaveModule(retryData);
+  const { DescentRetryScene } = loadSceneModule(
+    path.join(projectDirectory, "src/scenes/DescentRetryScene.ts"), harness, save.module,
+  );
+  const scene = new DescentRetryScene();
+  scene.create();
+  assert.ok(harness.texts.some((text) => String(text.value).includes("OS AMIGOS")),
+    "retry deve mostrar o nome da memória perdida");
+
+  scene.retrySelected = false;
+  scene.input$ = interactiveInput("left");
+  scene.update();
+  assert.equal(scene.retrySelected, true);
+  scene.input$ = interactiveInput("left");
+  scene.update();
+  assert.equal(scene.retrySelected, true, "esquerda repetida deve continuar em Repetir setor");
+  scene.input$ = interactiveInput("right");
+  scene.update();
+  assert.equal(scene.retrySelected, false);
+  scene.input$ = interactiveInput("right");
+  scene.update();
+  assert.equal(scene.retrySelected, false, "direita repetida deve continuar em Aceitar Hollow");
+
+  scene.retrySelected = true;
+  scene.input$ = interactiveInput("confirm");
+  scene.update();
+  assert.equal(harness.starts.at(-1)?.key, "GameScene",
+    "ENTER/A do teclado ou controle deve confirmar Repetir setor");
+
+  const mouseChoice = scene.choice(0, 0, "CONTINUAR", false);
+  mouseChoice.emit("pointerdown");
+  assert.equal(harness.starts.at(-1)?.key, "EpilogueScene", "clique deve confirmar Aceitar Hollow");
+  assert.equal(save.calls.decline, 1);
+}
+
+{
+  const harness = createUiHarness();
+  const pendingData = {
+    ...uiData,
+    descentState: { ...uiData.descentState, currentStep: 4, epiloguePending: true },
+  };
+  const save = fakeSaveModule(pendingData);
+  const { MenuScene } = loadSceneModule(
+    path.join(projectDirectory, "src/scenes/MenuScene.ts"), harness, save.module,
+  );
+  const scene = new MenuScene();
+  scene.continueGame();
+  assert.equal(harness.starts.at(-1)?.key, "GameScene");
+  assert.equal(harness.starts.at(-1)?.data?.phaseId, "fase1");
+  assert.equal(harness.starts.at(-1)?.data?.descent, true,
+    "Continuar após a quarta ReForge deve restaurar o corredor do Esgoto");
+}
+
+{
+  const harness = createUiHarness();
+  const save = fakeSaveModule(uiData);
+  const { EndingScene } = loadSceneModule(
+    path.join(projectDirectory, "src/scenes/EndingScene.ts"), harness, save.module,
+  );
+  const scene = new EndingScene();
+  scene.init({ ending: "hollow" });
+  scene.create();
+  assert.equal(harness.sprites.at(-1)?.texture, "alex-arms",
+    "Final Hollow deve usar o estágio corporal correspondente aos implantes restantes");
+}
+
+{
+  const harness = createUiHarness();
+  const fleshData = {
+    ...uiData,
+    abilities: { legs: false, arms: false, eyes: false, thrusters: false },
+    descentState: { ...uiData.descentState, epiloguePending: false, currentStep: 4 },
+  };
+  const save = fakeSaveModule(fleshData);
+  const { EpilogueScene } = loadSceneModule(
+    path.join(projectDirectory, "src/scenes/EpilogueScene.ts"), harness, save.module,
+  );
+  const epilogueScene = new EpilogueScene();
+  epilogueScene.init({ ending: "flesh" });
+  epilogueScene.create();
+  epilogueScene.input$ = interactiveInput("confirm");
+  epilogueScene.update();
+  assert.deepEqual(save.calls.mark, [], "concluir o percurso visual ainda não registra Final Flesh");
+  assert.equal(harness.starts.at(-1)?.key, "EndingScene");
+
+  const { EndingScene } = loadSceneModule(
+    path.join(projectDirectory, "src/scenes/EndingScene.ts"), harness, save.module,
+  );
+  const endingScene = new EndingScene();
+  endingScene.init({ ending: "flesh" });
+  endingScene.create();
+  endingScene.advance();
+  endingScene.advance();
+  assert.deepEqual(save.calls.mark, [], "Final Flesh não pode ser registrado antes do último quadro");
+  endingScene.advance();
+  assert.deepEqual(save.calls.mark, ["flesh"], "última confirmação deve registrar Final Flesh");
+}
+
+for (const [sceneSource, name] of [
+  [retry, "DescentRetryScene"],
+  [ending, "EndingScene"],
+  [epilogue, "EpilogueScene"],
+]) {
+  assert.match(sceneSource, /this\.scale\.width/,
+    `${name} deve posicionar o layout pela largura expandida atual`);
+  assert.match(sceneSource, /this\.scale\.height/,
+    `${name} deve posicionar o layout pela altura expandida atual`);
+  assert.doesNotMatch(sceneSource, /SCREEN_WIDTH|SCREEN_HEIGHT/,
+    `${name} não deve permanecer preso à resolução-base`);
 }
 
 console.log("Narrativa: Chrome, descida, retry, ReForge, Flesh, Hollow e epilogo reproduziveis OK.");

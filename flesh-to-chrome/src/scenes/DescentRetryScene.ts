@@ -1,7 +1,7 @@
 import Phaser from "phaser";
-import { SCREEN_HEIGHT, SCREEN_WIDTH } from "../config/GameConfig";
 import { InputManager } from "../systems/InputManager";
 import { SaveState } from "../systems/SaveState";
+import { descentStepAt } from "../systems/DescentProgression";
 
 export class DescentRetryScene extends Phaser.Scene {
   private input$!: InputManager;
@@ -14,21 +14,31 @@ export class DescentRetryScene extends Phaser.Scene {
   }
 
   create(): void {
+    const width = this.scale.width;
+    const height = this.scale.height;
+    const centerX = width / 2;
+    const choiceOffsetX = Math.min(210, width * 0.2);
+    const step = descentStepAt(SaveState.load().get().descentState.currentStep);
+    const lostMemory = step?.memoryTitle ?? "FRAGMENTO DESCONHECIDO";
     this.input$ = new InputManager(this);
     this.retrySelected = true;
     this.cameras.main.setBackgroundColor(0x08050d);
-    this.add.text(SCREEN_WIDTH / 2, 155, "MEMORIA PERDIDA", {
+    this.add.text(centerX, height * 0.215, `MEMORIA PERDIDA // ${lostMemory}`, {
       fontFamily: "Courier New, monospace", fontSize: "38px", color: "#ff71ce",
+      align: "center", wordWrap: { width: Math.min(width - 80, 1_000) },
     }).setOrigin(0.5);
     this.add.text(
-      SCREEN_WIDTH / 2,
-      260,
+      centerX,
+      height * 0.36,
       "Alex sente que esqueceu um dos motivos de estar descendo.\nEsta e a unica segunda oportunidade para recuperar o glitch.",
-      { fontFamily: "Courier New, monospace", fontSize: "21px", color: "#e8ecff", align: "center", lineSpacing: 10 },
+      {
+        fontFamily: "Courier New, monospace", fontSize: "21px", color: "#e8ecff",
+        align: "center", lineSpacing: 10, wordWrap: { width: Math.min(width - 100, 960) },
+      },
     ).setOrigin(0.5);
-    this.retryText = this.choice(SCREEN_WIDTH / 2 - 210, "REPETIR SETOR\nCadeia ativa", true);
-    this.abandonText = this.choice(SCREEN_WIDTH / 2 + 210, "CONTINUAR\nAceitar Hollow", false);
-    this.add.text(SCREEN_WIDTH / 2, SCREEN_HEIGHT - 55, "← → escolher   ENTER / A confirmar", {
+    this.retryText = this.choice(centerX - choiceOffsetX, height * 0.63, "REPETIR SETOR\nCadeia ativa", true);
+    this.abandonText = this.choice(centerX + choiceOffsetX, height * 0.63, "CONTINUAR\nAceitar Hollow", false);
+    this.add.text(centerX, height - 55, "← → escolher   ENTER / A confirmar", {
       fontFamily: "Courier New, monospace", fontSize: "16px", color: "#77809d",
     }).setOrigin(0.5);
     this.renderChoice();
@@ -45,8 +55,8 @@ export class DescentRetryScene extends Phaser.Scene {
     this.input$.postUpdate();
   }
 
-  private choice(x: number, label: string, retrySelected: boolean): Phaser.GameObjects.Text {
-    const text = this.add.text(x, 455, label, {
+  private choice(x: number, y: number, label: string, retrySelected: boolean): Phaser.GameObjects.Text {
+    const text = this.add.text(x, y, label, {
       fontFamily: "Courier New, monospace", fontSize: "22px", color: "#e8ecff", align: "center",
       backgroundColor: "#12101ddd", padding: { x: 24, y: 18 },
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });

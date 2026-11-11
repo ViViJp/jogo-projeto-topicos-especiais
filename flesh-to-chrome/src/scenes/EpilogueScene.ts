@@ -1,5 +1,4 @@
 import Phaser from "phaser";
-import { SCREEN_HEIGHT, SCREEN_WIDTH } from "../config/GameConfig";
 import { InputManager } from "../systems/InputManager";
 import { SaveState } from "../systems/SaveState";
 import { abilityStateToBodyStage } from "../systems/AbilityState";
@@ -43,27 +42,33 @@ export class EpilogueScene extends Phaser.Scene {
   }
 
   create(): void {
+    const width = this.scale.width;
+    const height = this.scale.height;
+    const centerX = width / 2;
+    const floorY = height - 200;
+    const doorX = centerX + Math.min(400, width * 0.32);
+    const alexStartX = centerX - Math.min(510, width * 0.41);
     this.input$ = new InputManager(this);
     this.leaving = false;
     const data = SaveState.load().get();
     const flesh = this.data$.ending === "flesh";
     const texture = flesh ? "epilogue-alex-flesh" : alexTextureForAbilities(data.abilities);
     this.cameras.main.setBackgroundColor(flesh ? 0x142119 : 0x111019);
-    this.add.rectangle(0, 520, SCREEN_WIDTH, 200, 0x24352c).setOrigin(0, 0);
-    this.add.circle(1040, 125, 72, flesh ? 0xffd37c : 0x8e789d, 0.82);
-    this.add.rectangle(1040, 440, 230, 180, 0x1d1716).setStrokeStyle(5, 0x6d4f42);
-    const alex = this.add.sprite(130, 510, texture, 26).setScale(2.2);
-    this.tweens.add({ targets: alex, x: 900, duration: 5200, ease: "Linear" });
-    this.add.text(SCREEN_WIDTH / 2, 65, "EPILOGO — ESGOTO", {
+    this.add.rectangle(0, floorY, width, 200, 0x24352c).setOrigin(0, 0);
+    this.add.circle(doorX, height * 0.175, 72, flesh ? 0xffd37c : 0x8e789d, 0.82);
+    this.add.rectangle(doorX, floorY - 80, 230, 180, 0x1d1716).setStrokeStyle(5, 0x6d4f42);
+    const alex = this.add.sprite(alexStartX, floorY - 10, texture, 26).setScale(2.2);
+    this.tweens.add({ targets: alex, x: doorX - 140, duration: 5200, ease: "Linear" });
+    this.add.text(centerX, 65, "EPILOGO — ESGOTO", {
       fontFamily: "Courier New, monospace", fontSize: "32px", color: flesh ? "#FFD37C" : "#b7a7c4",
     }).setOrigin(0.5);
     const bodyStage = abilityStateToBodyStage(data.abilities);
-    this.add.text(SCREEN_WIDTH / 2, 145, flesh
+    this.add.text(centerX, 145, flesh
       ? "Sem habilidades especiais, com cicatrizes do bioprinting,\nAlex percorre o ultimo trecho ate a luz de casa."
       : `Ainda carregando ${bodyStage} implante(s), Alex chega a porta.\nA distancia que resta nao pode ser atravessada correndo.`, {
       fontFamily: "Courier New, monospace", fontSize: "21px", color: "#e8ecff", align: "center", lineSpacing: 9,
     }).setOrigin(0.5);
-    this.add.text(SCREEN_WIDTH / 2, SCREEN_HEIGHT - 48, "ENTER / A para concluir", {
+    this.add.text(centerX, height - 48, "ENTER / A para concluir", {
       fontFamily: "Courier New, monospace", fontSize: "16px", color: "#8d96ad",
     }).setOrigin(0.5);
   }

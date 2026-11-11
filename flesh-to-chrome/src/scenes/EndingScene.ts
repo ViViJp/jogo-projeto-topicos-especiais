@@ -1,5 +1,4 @@
 import Phaser from "phaser";
-import { SCREEN_HEIGHT, SCREEN_WIDTH } from "../config/GameConfig";
 import { InputManager } from "../systems/InputManager";
 import { SaveState } from "../systems/SaveState";
 import { abilityStateToBodyStage } from "../systems/AbilityState";
@@ -177,14 +176,20 @@ export class EndingScene extends Phaser.Scene {
   }
 
   create(): void {
+    const width = this.scale.width;
+    const height = this.scale.height;
+    const centerX = width / 2;
+    const panelHeight = Math.min(610, height - 110);
+    const panelTop = (height - panelHeight) / 2;
+    const visualY = panelTop + 195;
     this.cameras.main.setBackgroundColor(0x05050a);
     this.input$ = new InputManager(this);
     this.pageIndex = 0;
     this.returning = false;
 
-    this.add.rectangle(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, 1120, 610, 0x0c0d18, 1)
+    this.add.rectangle(centerX, height / 2, Math.min(1120, width - 80), panelHeight, 0x0c0d18, 1)
       .setStrokeStyle(2, 0xffd37c, 0.42);
-    this.add.text(SCREEN_WIDTH / 2, 52, "EPÍLOGO", {
+    this.add.text(centerX, Math.max(28, panelTop - 3), "EPÍLOGO", {
       fontFamily: "Courier New, monospace",
       fontSize: "18px",
       color: "#565f80",
@@ -192,13 +197,13 @@ export class EndingScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     const portraitTexture = this.ending === "chrome" ? FATHER_PORTRAIT_KEY : FAMILY_PORTRAIT_KEY;
-    this.portrait = this.add.image(SCREEN_WIDTH / 2 - 170, 250, portraitTexture);
+    this.portrait = this.add.image(centerX - 170, visualY, portraitTexture);
     if (this.ending === "chrome") this.portrait.setDisplaySize(192, 192);
     else this.portrait.setDisplaySize(307, 192);
     this.portrait.texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
     this.portraitCaption = this.add.text(
-      SCREEN_WIDTH / 2 - 170,
-      360,
+      centerX - 170,
+      visualY + 110,
       this.ending === "chrome" ? "PAI DE ALEX // CONVERSÃO CORPORATIVA" : "FAMÍLIA DE ALEX // CASA",
       {
         fontFamily: "Courier New, monospace",
@@ -215,12 +220,12 @@ export class EndingScene extends Phaser.Scene {
       : this.ending === "hollow"
         ? alexTextureForAbilities(saveData.abilities)
         : ALEX_CHROME_KEY;
-    this.alex = this.add.sprite(SCREEN_WIDTH / 2 + 140, 286, alexTexture, 26)
+    this.alex = this.add.sprite(centerX + 140, visualY + 36, alexTexture, 26)
       .setScale(3.2);
     if (this.ending === "hollow") this.alex.setTint(0xc7b8d0);
     this.alexCaption = this.add.text(
-      SCREEN_WIDTH / 2 + 140,
-      370,
+      centerX + 140,
+      visualY + 120,
       this.ending === "hollow"
         ? `CROMO REMANESCENTE // ${remainingImplants} IMPLANTE${remainingImplants === 1 ? "" : "S"}`
         : "",
@@ -232,26 +237,26 @@ export class EndingScene extends Phaser.Scene {
         padding: { x: 7, y: 4 },
       },
     ).setOrigin(0.5).setVisible(this.ending === "hollow");
-    this.title = this.add.text(SCREEN_WIDTH / 2, 410, "", {
+    this.title = this.add.text(centerX, panelTop + 355, "", {
       fontFamily: "Courier New, monospace",
       fontSize: "30px",
       color: "#7CFCEA",
       align: "center",
     }).setOrigin(0.5);
-    this.body = this.add.text(SCREEN_WIDTH / 2, 505, "", {
+    this.body = this.add.text(centerX, panelTop + 450, "", {
       fontFamily: "Courier New, monospace",
       fontSize: "20px",
       color: "#e8ecff",
       align: "center",
       lineSpacing: 9,
-      wordWrap: { width: 960 },
+      wordWrap: { width: Math.min(width - 160, 960) },
     }).setOrigin(0.5);
-    this.counter = this.add.text(SCREEN_WIDTH - 100, SCREEN_HEIGHT - 45, "", {
+    this.counter = this.add.text(width - 100, height - 45, "", {
       fontFamily: "Courier New, monospace",
       fontSize: "14px",
       color: "#565f80",
     }).setOrigin(0.5);
-    const prompt = this.add.text(SCREEN_WIDTH / 2, SCREEN_HEIGHT - 45, "ENTER / A para continuar", {
+    const prompt = this.add.text(centerX, height - 45, "ENTER / A para continuar", {
       fontFamily: "Courier New, monospace",
       fontSize: "16px",
       color: "#8892b0",
@@ -280,7 +285,7 @@ export class EndingScene extends Phaser.Scene {
     this.alexCaption.setVisible(this.ending === "hollow" && page.alexVisible);
     this.counter.setText(`${this.pageIndex + 1}/${this.pages.length}`);
     if (this.pageIndex === this.pages.length - 1 && this.ending === "chrome") {
-      this.tweens.add({ targets: this.alex, x: SCREEN_WIDTH + 150, duration: 3000, ease: "Sine.easeIn" });
+      this.tweens.add({ targets: this.alex, x: this.scale.width + 150, duration: 3000, ease: "Sine.easeIn" });
     }
   }
 

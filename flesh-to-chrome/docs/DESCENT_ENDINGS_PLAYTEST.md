@@ -66,13 +66,18 @@
 
 1. Use `Continuar do Portao`, escolha Flesh e termine um setor sem tocar no glitch.
 2. Resultado esperado na primeira falha: tela `MEMORIA PERDIDA`, com as opcoes
-   de repetir ou aceitar Hollow.
+   de repetir ou aceitar Hollow e o nome da memória correspondente ao setor.
+   Esquerda sempre seleciona repetir, direita sempre seleciona Hollow e ambas
+   as opções aceitam clique.
 3. Escolha repetir e termine novamente sem o glitch.
 4. Resultado esperado: a cadeia quebra sem uma terceira tentativa; o epilogo
    mostra o corpo correspondente aos implantes ainda presentes e leva a
    `FINAL HOLLOW`.
 5. Repita a verificacao escolhendo `CONTINUAR` na primeira oferta; o resultado
    tambem deve ser Hollow.
+6. Repita as cenas de retry, epílogo e finais em uma janela ultrawide. Painéis,
+   escolhas, porta, personagem, textos e rodapé devem permanecer centralizados
+   na área lógica expandida, sem se prender aos 1280 px da resolução-base.
 
 ## Verificacao automatica
 

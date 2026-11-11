@@ -1065,7 +1065,9 @@ Ao concluir um setor sem recuperar o glitch:
 
 1. aparece a mensagem:
 
-> **“Alex sente que esqueceu um dos motivos de estar descendo.”**
+> **“MEMÓRIA PERDIDA // [nome da memória]”**
+
+   seguida de **“Alex sente que esqueceu um dos motivos de estar descendo.”**;
 
 2. o jogador recebe uma única oportunidade especial de repetir a fase;
 3. se aceitar, reinicia do começo com a cadeia ativa;

@@ -68,9 +68,12 @@ npm run build
 
 O teste `test:narrative` valida cenas registradas, assets narrativos, arco das
 quatro clínicas, transição da Fase 5, escolhas Chrome/Flesh, recusa de George e a
-criação/restauração real do save pré-Portão em `localStorage` simulado. Também
-valida glitches, retirada sequencial dos implantes, retry, ReForge e os três
-finais reproduzíveis.
+criação/restauração real do save pré-Portão em `localStorage` simulado. Um
+harness mínimo de Phaser também instancia as cenas e aciona seus handlers para
+validar prévia sem escrita, retry por direção/confirmar/clique, retomada do
+Esgoto, variante corporal Hollow e registro tardio de Flesh. A suíte ainda
+valida glitches, retirada sequencial dos implantes, ReForge e os três finais
+reproduzíveis.
 
 ## Roteiro manual
 
