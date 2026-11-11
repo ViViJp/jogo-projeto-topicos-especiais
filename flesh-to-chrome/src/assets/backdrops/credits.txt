@@ -1,0 +1,17 @@
+Fundos com parallax — Fases 1 a 5
+
+Gerados por scripts/backdrops/gerar_fundos.py (pixel art 2x).
+Contrato Tiled/Phaser: docs/TILED_PHASER_CONTRACT.md §3.1.
+
+esgoto/      arte original do projeto (procedural).
+industrial/  arte original do projeto (procedural).
+meio-urbano/ urbano-ceu, urbano-predios-longe e urbano-predios-perto são
+             recolorizações (smog) de "Warped City" por ansimuz, CC0-1.0
+             https://ansimuz.itch.io/warped-city
+             (originais em tiles/meio-urbano/ENVIRONMENT/background/).
+             urbano-smog: arte original do projeto (procedural).
+corporativo/ arte original do projeto (procedural).
+topo/        arte original do projeto (procedural); também usada na
+             corrida multiplayer.
+
+Qualquer PNG pode ser trocado por arte feita à mão mantendo o nome do arquivo.

@@ -334,4 +334,49 @@ for (const runtime of [
   assert.match(source, /activate\(withFeedback\)/, `${runtime}: respawn deve restaurar TV sem feedback`);
 }
 
+// Fundo com parallax (image layers do Tiled) e clima das Fases 1-5.
+const backdrop = loadTypeScriptModule("src/levels/BackdropLayers.ts");
+const backdropPhases = [
+  { map: maps[0], offsetY: 224, ambient: "drips" },
+  { map: maps[1], offsetY: 176, ambient: "embers" },
+  { map: maps[2], offsetY: 0, ambient: "rain" },
+  { map: maps[3], offsetY: 176, ambient: undefined }, // corporativo: limpo, sem clima
+  { map: maps[4], offsetY: 176, ambient: "motes" },
+  // corrida multiplayer: mesma arte e configuração do Topo (Fase 5)
+  { map: "src/assets/maps/multiplayer/multiplayer-race.json", offsetY: 176, ambient: "motes" },
+];
+for (const { map: relativePath, offsetY, ambient } of backdropPhases) {
+  const map = JSON.parse(fs.readFileSync(path.join(projectDirectory, relativePath), "utf8"));
+  const layers = backdrop.readBackdropLayers(map, offsetY);
+  assert.ok(layers.length >= 3, `${relativePath}: fundo precisa de camadas de parallax`);
+  for (const layer of layers) {
+    assert.ok(layer.repeatX, `${relativePath}: ${layer.name} deve repetir na horizontal`);
+    assert.ok(layer.parallaxX >= 0 && layer.parallaxX < 1, `${relativePath}: ${layer.name} deve andar mais devagar que o mapa`);
+    assert.ok(layer.y >= 0 && layer.y < config.SCREEN_HEIGHT, `${relativePath}: ${layer.name} fora da tela (y=${layer.y})`);
+  }
+  assert.equal(layers[0].y, 0, `${relativePath}: a camada mais ao fundo cobre a tela desde o topo`);
+  assert.equal(backdrop.readAmbient(map)?.kind, ambient, `${relativePath}: clima`);
+}
+const sampleMap = {
+  layers: [
+    { type: "tilelayer", name: "ground" },
+    { type: "imagelayer", name: "a", image: "../../backdrops/x/a.png", offsety: -10, parallaxx: 0.5, repeatx: true },
+    { type: "imagelayer", name: "oculta", image: "b.png", visible: false },
+    { type: "imagelayer", name: "padrao", image: "c.png", properties: [{ name: "drift_x", value: -4 }] },
+  ],
+  properties: [{ name: "ambient", value: "neve" }],
+};
+const sampleLayers = backdrop.readBackdropLayers(sampleMap, 100);
+// Array.from: o módulo roda em outro contexto do vm (outro Array.prototype).
+assert.deepEqual(Array.from(sampleLayers, (layer) => layer.imageName), ["a.png", "c.png"], "camada oculta no Tiled não aparece");
+assert.equal(sampleLayers[0].y, 90, "offsety do Tiled + deslocamento da fase");
+assert.equal(sampleLayers[1].parallaxX, 1, "parallax padrão do Tiled é 1");
+assert.equal(sampleLayers[1].driftX, -4);
+assert.equal(backdrop.readAmbient(sampleMap), undefined, "clima desconhecido é ignorado");
+assert.equal(backdrop.repeatedLayerScroll(1000, { parallaxX: 0.5, offsetX: 0 }, 0, 640), 500);
+assert.equal(backdrop.repeatedLayerScroll(0, { parallaxX: 0.5, offsetX: 10 }, 0, 640), 630, "deslocamento negativo dá a volta");
+assert.equal(backdrop.repeatedLayerScroll(333, { parallaxX: 0.3, offsetX: 0 }, 0.4, 1280) % 1, 0, "posição inteira (pixelArt)");
+assert.equal(backdrop.wrapScreenX(-5, 0, 1, 1280), 1275);
+
 console.log("Gameplay flow: movimentos, barreiras por scan e estrutura das cinco fases validados.");
+console.log("Fundo: camadas de parallax e clima das Fases 1-5 e da corrida multiplayer validados.");

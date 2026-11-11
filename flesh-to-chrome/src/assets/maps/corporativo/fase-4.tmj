@@ -4,6 +4,70 @@
   "height": 16,
   "infinite": false,
   "layers": [
+  {
+   "id": 8,
+   "image": "../../backdrops/corporativo/corp-cidade.png",
+   "imageheight": 720,
+   "imagewidth": 1280,
+   "name": "parallax-cidade",
+   "offsetx": 0,
+   "offsety": -176,
+   "opacity": 1,
+   "parallaxx": 0.04,
+   "repeatx": true,
+   "type": "imagelayer",
+   "visible": true,
+   "x": 0,
+   "y": 0
+  },
+  {
+   "id": 9,
+   "image": "../../backdrops/corporativo/corp-fachada.png",
+   "imageheight": 640,
+   "imagewidth": 1280,
+   "name": "parallax-fachada",
+   "offsetx": 0,
+   "offsety": -176,
+   "opacity": 1,
+   "parallaxx": 0.18,
+   "repeatx": true,
+   "type": "imagelayer",
+   "visible": true,
+   "x": 0,
+   "y": 0
+  },
+  {
+   "id": 10,
+   "image": "../../backdrops/corporativo/corp-telas.png",
+   "imageheight": 400,
+   "imagewidth": 1280,
+   "name": "parallax-telas",
+   "offsetx": 0,
+   "offsety": -176,
+   "opacity": 1,
+   "parallaxx": 0.35,
+   "repeatx": true,
+   "type": "imagelayer",
+   "visible": true,
+   "x": 0,
+   "y": 0
+  },
+  {
+   "id": 11,
+   "image": "../../backdrops/corporativo/corp-rodape.png",
+   "imageheight": 80,
+   "imagewidth": 1280,
+   "name": "parallax-rodape",
+   "offsetx": 0,
+   "offsety": 464,
+   "opacity": 1,
+   "parallaxx": 0.6,
+   "repeatx": true,
+   "type": "imagelayer",
+   "visible": true,
+   "x": 0,
+   "y": 0
+  },
     {
       "data": [
         0,
@@ -93618,7 +93682,7 @@
       "y": 0
     }
   ],
-  "nextlayerid": 8,
+  "nextlayerid": 12,
   "nextobjectid": 9005,
   "orientation": "orthogonal",
   "properties": [
