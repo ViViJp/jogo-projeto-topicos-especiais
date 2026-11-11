@@ -334,4 +334,43 @@ for (const runtime of [
   assert.match(source, /activate\(withFeedback\)/, `${runtime}: respawn deve restaurar TV sem feedback`);
 }
 
+const audioManagerSource = fs.readFileSync(path.join(projectDirectory, "src/systems/AudioManager.ts"), "utf8");
+for (const key of ["phase1", "phase2", "phase3", "phase4", "phase5", "clinic", "gate", "menu"]) {
+  assert.match(audioManagerSource, new RegExp(`${key}: "bgm-`), `AudioManager: BGM ${key}`);
+}
+assert.match(audioManagerSource, /this\.activeMusic\?\.stop\(\);[\s\S]*?this\.activeMusic\?\.destroy\(\);/,
+  "troca de BGM precisa encerrar a faixa anterior");
+assert.match(audioManagerSource, /AUDIO_SOURCES: Required<AudioSources> = \{ music: \{\}, sfx: \{\} \}/,
+  "catálogo deve aguardar os arquivos de áudio definitivos");
+assert.match(audioManagerSource, /if \(!scene\.cache\?\.audio\?\.exists\(key\)\) \{[\s\S]*?this\.stopBgm\(\)/,
+  "cena sem master registrado não pode manter a BGM anterior");
+for (const sfx of ["jump", "land", "slide", "attack", "dash", "scan", "death", "enemyHit", "uiConfirm"]) {
+  assert.match(audioManagerSource, new RegExp(`${sfx}: "sfx-`), `AudioManager: SFX ${sfx}`);
+}
+assert.match(gameScene, /AudioManager\.playBgm\(this, bgmForPhase\(this\.data\$\.phaseId\)/);
+assert.match(gameScene, /AudioManager\.pauseBgm\(\)/);
+assert.match(gameScene, /AudioManager\.resumeBgm\(\)/);
+assert.match(playerSource, /this\.sprite\.anims\.play\(this\.slideAnimationKey, true\)/,
+  "slide deve usar animação dedicada");
+assert.doesNotMatch(playerSource, /setFrame\(ALEX_SLIDE_FRAME\)/,
+  "slide não pode voltar ao frame estático provisório");
+assert.match(playerSource, /this\.slideTimer <= 0 && holdingSlide[\s\S]*?this\.slideTimer = PHYSICS\.slide\.durationMs/,
+  "segurar slide deve renovar a janela sem reiniciar animação ou SFX");
+assert.match(alexSpriteSource, /frameRate: 3,[\s\S]*?repeat: -1,[\s\S]*?repeatDelay: 450/,
+  "slide deve completar uma passagem lenta antes de poder repetir");
+for (const sfx of ["jump", "land", "slide", "attack", "dash", "scan", "death", "footstep"]) {
+  assert.match(playerSource, new RegExp(`SFX\\.${sfx}`), `Player: feedback ${sfx}`);
+}
+assert.match(enemyRuntime, /spawnDefeatFx/);
+assert.match(enemyRuntime, /SFX\.enemyHit/);
+const descentGlitchRuntime = fs.readFileSync(
+  path.join(projectDirectory, "src/objects/DescentGlitchRuntime.ts"),
+  "utf8",
+);
+assert.match(descentGlitchRuntime, /AudioManager\.playSfx\(this\.scene, SFX\.glitch/,
+  "fragmentos de memória devem ter feedback sonoro próprio");
+
+assert.match(hudSource, /fillRoundedRect\(14, 12, 360, 98, 8\)/,
+  "HUD deve manter painel próprio para legibilidade sobre os mapas");
+
 console.log("Gameplay flow: movimentos, barreiras por scan e estrutura das cinco fases validados.");

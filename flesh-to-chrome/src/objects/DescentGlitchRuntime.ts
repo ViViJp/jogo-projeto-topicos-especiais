@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import type { Player } from "../entities/Player";
 import type { DescentStep } from "../systems/DescentProgression";
+import { AudioManager, SFX } from "../systems/AudioManager";
 
 export const DESCENT_GLITCH_TEXTURE_PREFIX = "descent-glitch";
 
@@ -54,6 +55,7 @@ export class DescentGlitchRuntime {
       if (this.collected) return;
       this.collected = true;
       body.enable = false;
+      AudioManager.playSfx(this.scene, SFX.glitch, { volume: 0.58 });
       this.sprite.setVisible(false);
       this.halo.setVisible(false);
       onRecovered(step.fragmentId);

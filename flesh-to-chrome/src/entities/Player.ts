@@ -10,13 +10,15 @@ import {
 import { AbilityState } from "../systems/AbilityState";
 import { InputManager } from "../systems/InputManager";
 import {
-  ALEX_SLIDE_FRAME,
   alexAttackAnimationKey,
   alexCheckpointAnimationKey,
+  alexHurtAnimationKey,
   alexRunAnimationKey,
+  alexSlideAnimationKey,
   alexTextureForAbilities,
   ensureAlexAnimations,
 } from "../utils/AlexSprite";
+import { AudioManager, SFX } from "../systems/AudioManager";
 
 export type PlayerState =
   | "running"
@@ -45,6 +47,8 @@ export class Player {
   private readonly runAnimationKey: string;
   private readonly attackAnimationKey: string;
   private readonly checkpointAnimationKey: string;
+  private readonly slideAnimationKey: string;
+  private readonly hurtAnimationKey: string;
 
   private state: PlayerState = "running";
   private doubleJumpUsed = false;
@@ -58,6 +62,9 @@ export class Player {
   private pressedTimer = 0;
   private scanTimer = 0;
   private depthBeforeCheckpoint = 0;
+  private wasGrounded = false;
+  private footstepTimer = 0;
+  private slideFxTimer = 0;
 
   private onDeath: () => void;
   private onScanPulse: (active: boolean) => void;
@@ -82,6 +89,8 @@ export class Player {
     this.runAnimationKey = alexRunAnimationKey(textureKey);
     this.attackAnimationKey = alexAttackAnimationKey(textureKey);
     this.checkpointAnimationKey = alexCheckpointAnimationKey(textureKey);
+    this.slideAnimationKey = alexSlideAnimationKey(textureKey);
+    this.hurtAnimationKey = alexHurtAnimationKey(textureKey);
     this.sprite = scene.physics.add.sprite(x, y, textureKey);
     this.sprite.setOrigin(0.5, 1);
     this.sprite.setCollideWorldBounds(false);
@@ -148,6 +157,17 @@ export class Player {
     this.transitionState("dead");
     this.sprite.setVelocity(0, 0);
     this.sprite.body!.enable = false;
+    this.sprite.anims.play(this.hurtAnimationKey, true);
+    this.sprite.setTint(0xff8299);
+    AudioManager.playSfx(this.scene, SFX.death, { volume: 0.72 });
+    this.scene.tweens.add({
+      targets: this.sprite,
+      angle: -18,
+      alpha: 0.35,
+      y: this.sprite.y - 14,
+      duration: 620,
+      ease: "Cubic.easeOut",
+    });
     this.onDeath();
   }
 
@@ -163,8 +183,10 @@ export class Player {
     this.dashCooldownTimer = 0;
     this.pressedTimer = 0;
     this.scanTimer = 0;
+    this.footstepTimer = 0;
+    this.slideFxTimer = 0;
     this.currentBreakable = null;
-    this.sprite.setVisible(true).setActive(true);
+    this.sprite.setVisible(true).setActive(true).setAlpha(1).setAngle(0).clearTint();
     const body = this.sprite.body!;
     body.enable = true;
     body.reset(x, y);
@@ -194,6 +216,11 @@ export class Player {
     }
 
     const grounded = this.isGrounded();
+    if (grounded && !this.wasGrounded) {
+      AudioManager.playSfx(this.scene, SFX.land, { volume: 0.32 });
+      this.spawnLandingFx();
+    }
+    this.wasGrounded = grounded;
     if (grounded) {
       this.doubleJumpUsed = false;
       if (this.state === "jumping") {
@@ -213,6 +240,20 @@ export class Player {
     if (this.state === "running" || this.state === "jumping") {
       if (this.dashTimer <= 0) {
         this.sprite.setVelocityX(BASE_RUN_SPEED);
+      }
+    }
+    if (grounded && this.state === "running") {
+      this.footstepTimer -= deltaMs;
+      if (this.footstepTimer <= 0) {
+        AudioManager.playSfx(this.scene, SFX.footstep, { volume: 0.16 });
+        this.footstepTimer = 250;
+      }
+    }
+    if (this.state === "sliding") {
+      this.slideFxTimer -= deltaMs;
+      if (this.slideFxTimer <= 0) {
+        this.spawnSlideFx();
+        this.slideFxTimer = 90;
       }
     }
   }
@@ -246,11 +287,13 @@ export class Player {
     if (this.state === "sliding") {
       this.slideElapsed += deltaMs;
       const pastMinimum = this.slideElapsed >= PHYSICS.slide.minDurationMs;
-      // Teto de segurança (duração máxima) ou, após o mínimo, o jogador
-      // soltou o botão: em ambos os casos, levanta. Isso corrige o slide
-      // "não voltando" ao soltar o botão (o teto de 550ms fazia Alex ficar
-      // agachado bem além do tempo que o jogador segurou o botão).
-      if (this.slideTimer <= 0 || (pastMinimum && !this.input.isSlideDown())) {
+      const holdingSlide = this.input.isSlideDown();
+      // Segurar renova a janela sem sair e entrar novamente no estado. Isso
+      // preserva uma única animação/som contínuos; a repetição visual lenta
+      // só acontece se o jogador realmente prolongar o slide.
+      if (this.slideTimer <= 0 && holdingSlide) {
+        this.slideTimer = PHYSICS.slide.durationMs;
+      } else if (this.slideTimer <= 0 || (pastMinimum && !holdingSlide)) {
         this.endSlide();
       }
     }
@@ -263,9 +306,11 @@ export class Player {
     if (this.state === "sliding" || this.state === "dashing") return;
 
     if (grounded) {
+      AudioManager.playSfx(this.scene, SFX.jump, { volume: 0.5 });
       this.sprite.setVelocityY(PHYSICS.jump.velocityY);
       this.transitionState("jumping", true);
     } else if (this.abilities.legs && !this.doubleJumpUsed) {
+      AudioManager.playSfx(this.scene, SFX.effort, { volume: 0.55 });
       this.sprite.setVelocityY(PHYSICS.doubleJump.velocityY);
       this.doubleJumpUsed = true;
       this.transitionState("jumping", true);
@@ -282,6 +327,8 @@ export class Player {
     this.state = "sliding";
     this.slideTimer = PHYSICS.slide.durationMs;
     this.slideElapsed = 0;
+    this.slideFxTimer = 0;
+    AudioManager.playSfx(this.scene, SFX.slide, { volume: 0.5 });
     this.applySlidingPose();
   }
 
@@ -304,8 +351,7 @@ export class Player {
   }
 
   private applySlidingPose(): void {
-    this.sprite.anims.stop();
-    this.sprite.setFrame(ALEX_SLIDE_FRAME);
+    this.sprite.anims.play(this.slideAnimationKey, true);
     this.sprite.body!.setSize(PLAYER_SLIDE_SIZE.width, PLAYER_SLIDE_SIZE.height);
     this.sprite.body!.setOffset(PLAYER_SLIDE_BODY_OFFSET.x, PLAYER_SLIDE_BODY_OFFSET.y);
   }
@@ -322,6 +368,8 @@ export class Player {
     const attackSequence = ++this.attackSequence;
     this.attackRecoveryTimer = PHYSICS.attack.recoveryMs;
     this.sprite.anims.play(this.attackAnimationKey, true);
+    AudioManager.playSfx(this.scene, SFX.attack, { volume: 0.58 });
+    this.spawnAttackFx();
     this.emitAttackPulse(true);
     for (
       let delay = PHYSICS.attack.pulseIntervalMs;
@@ -372,6 +420,7 @@ export class Player {
     if (!this.input.isScanJustDown()) return;
 
     this.scanTimer = PHYSICS.scan.durationMs;
+    AudioManager.playSfx(this.scene, SFX.scan, { volume: 0.48 });
     this.onScanPulse(true);
     this.showScanFeedback();
     if (this.state === "running") this.state = "scanning";
@@ -403,6 +452,7 @@ export class Player {
     this.dashTimer = PHYSICS.dash.durationMs;
     this.dashCooldownTimer = PHYSICS.dash.cooldownMs;
     this.sprite.setVelocityX(PHYSICS.dash.speed);
+    AudioManager.playSfx(this.scene, SFX.dash, { volume: 0.62 });
     this.scene.events.emit(
       "player-dash-start",
       this.sprite.x,
@@ -418,5 +468,54 @@ export class Player {
 
   destroy(): void {
     this.sprite.destroy();
+  }
+
+  private spawnAttackFx(): void {
+    const slash = this.scene.add.arc(
+      this.sprite.x + 34,
+      this.sprite.y - 30,
+      34,
+      -70,
+      70,
+      false,
+      0x7cfcea,
+      0.18,
+    ).setStrokeStyle(4, 0xe8ffff, 0.95).setDepth(this.sprite.depth + 1);
+    this.scene.tweens.add({
+      targets: slash,
+      alpha: 0,
+      scaleX: 1.45,
+      scaleY: 1.2,
+      duration: 260,
+      onComplete: () => slash.destroy(),
+    });
+  }
+
+  private spawnSlideFx(): void {
+    const dust = this.scene.add.circle(this.sprite.x - 18, this.sprite.y - 4, 5, 0x9ad7df, 0.38)
+      .setDepth(this.sprite.depth - 1);
+    this.scene.tweens.add({
+      targets: dust,
+      x: dust.x - 28,
+      y: dust.y - 8,
+      alpha: 0,
+      scale: 1.7,
+      duration: 280,
+      onComplete: () => dust.destroy(),
+    });
+  }
+
+  private spawnLandingFx(): void {
+    for (const offset of [-9, 9]) {
+      const spark = this.scene.add.rectangle(this.sprite.x + offset, this.sprite.y - 2, 8, 2, 0x7cfcea, 0.65)
+        .setDepth(this.sprite.depth - 1);
+      this.scene.tweens.add({
+        targets: spark,
+        x: spark.x + offset * 1.8,
+        alpha: 0,
+        duration: 220,
+        onComplete: () => spark.destroy(),
+      });
+    }
   }
 }

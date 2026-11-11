@@ -1,9 +1,9 @@
 import Phaser from "phaser";
 import { InputManager } from "../systems/InputManager";
 import { SaveState } from "../systems/SaveState";
+import { AudioManager, BGM, SFX } from "../systems/AudioManager";
 
 const GATE_TEXTURE_KEY = "narrative-gate";
-const GATE_MUSIC_KEY = "bgm-gate";
 
 type GateChoice = "chrome" | "flesh";
 
@@ -17,7 +17,6 @@ export class GateScene extends Phaser.Scene {
   private selected: GateChoice = "chrome";
   private choiceTexts = new Map<GateChoice, Phaser.GameObjects.Text>();
   private choosing = false;
-  private music?: Phaser.Sound.BaseSound;
   private testMode = false;
   private previewNotice!: Phaser.GameObjects.Text;
 
@@ -36,12 +35,6 @@ export class GateScene extends Phaser.Scene {
         new URL("../assets/narrative/gate/portao.png", import.meta.url).href,
       );
     }
-    if (!this.cache.audio.exists(GATE_MUSIC_KEY)) {
-      this.load.audio(
-        GATE_MUSIC_KEY,
-        new URL("../assets/audio/music/bgm-portao.wav", import.meta.url).href,
-      );
-    }
   }
 
   create(): void {
@@ -53,6 +46,7 @@ export class GateScene extends Phaser.Scene {
     const choiceOffsetX = Math.min(220, width * 0.24);
 
     this.cameras.main.setBackgroundColor(0x100718);
+    AudioManager.playBgm(this, BGM.gate, 0.35);
     this.input$ = new InputManager(this);
     this.selected = "chrome";
     this.choosing = false;
@@ -101,9 +95,6 @@ export class GateScene extends Phaser.Scene {
     }).setOrigin(0.5);
     this.updateSelection();
 
-    this.music = this.sound.add(GATE_MUSIC_KEY, { loop: true, volume: 0.35 });
-    this.music.play();
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.music?.stop());
   }
 
   update(): void {
@@ -161,6 +152,7 @@ export class GateScene extends Phaser.Scene {
 
   private confirmChoice(): void {
     if (this.choosing) return;
+    AudioManager.playSfx(this, SFX.uiConfirm, { volume: 0.42 });
     if (this.selected === "flesh") {
       if (this.testMode) {
         this.previewNotice.setText(
@@ -173,14 +165,12 @@ export class GateScene extends Phaser.Scene {
       const save = SaveState.load();
       save.beginDescent();
       const data = save.get();
-      this.music?.stop();
       if (!data.descentState.active) return;
       this.scene.start("GeorgeRefusalScene");
       return;
     }
 
     this.choosing = true;
-    this.music?.stop();
     this.cameras.main.fadeOut(450, 0, 0, 0, (_camera: Phaser.Cameras.Scene2D.Camera, progress: number) => {
       if (progress === 1) {
         this.scene.start("EndingScene", { ending: "chrome", testMode: this.testMode });

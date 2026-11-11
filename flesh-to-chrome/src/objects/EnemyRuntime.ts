@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { PHYSICS } from "../config/GameConfig";
 import { Player } from "../entities/Player";
+import { AudioManager, SFX } from "../systems/AudioManager";
 
 export type EnemyKind = "bandido" | "drone";
 
@@ -127,14 +128,39 @@ export class EnemyRuntime {
       enemy.sprite.setData("hp", 0);
       enemy.sprite.body!.enable = false;
       enemy.sprite.setTint(0xffffff);
+      AudioManager.playSfx(this.scene, SFX.enemyHit, { volume: 0.62 });
+      this.spawnDefeatFx(enemy.sprite.x, enemy.sprite.y - enemy.sprite.displayHeight / 2);
       this.scene.tweens.add({
         targets: enemy.sprite,
         alpha: 0,
-        duration: 100,
+        scaleX: enemy.sprite.scaleX * 1.18,
+        scaleY: enemy.sprite.scaleY * 0.72,
+        angle: 18,
+        duration: 220,
         onComplete: () => enemy.sprite.setActive(false).setVisible(false),
       });
       this.scene.events.emit("enemy-defeated", enemy.id);
     }
+  }
+
+  private spawnDefeatFx(x: number, y: number): void {
+    for (let index = 0; index < 7; index += 1) {
+      const angle = (Math.PI * 2 * index) / 7;
+      const fragment = this.scene.add.rectangle(x, y, 5, 3, index % 2 ? 0xff71ce : 0x7cfcea, 0.95)
+        .setDepth(8)
+        .setRotation(angle);
+      this.scene.tweens.add({
+        targets: fragment,
+        x: x + Math.cos(angle) * 46,
+        y: y + Math.sin(angle) * 34 + 18,
+        rotation: angle + 2.2,
+        alpha: 0,
+        duration: 360,
+        ease: "Cubic.easeOut",
+        onComplete: () => fragment.destroy(),
+      });
+    }
+    this.scene.cameras.main.flash(80, 124, 252, 234, false);
   }
 
   /** Ativa o pulso do visor e revela inimigos próximos. */

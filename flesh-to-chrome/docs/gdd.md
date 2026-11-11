@@ -1414,7 +1414,7 @@ Não haverá `HubScene`.
 - HUD
 - Save State
 - Camera
-- Audio
+- Audio Manager (BGM exclusiva por cena e barramento de SFX)
 - Fragment/Memory State
 - Recycling State
 - Multiplayer Sync
@@ -1517,6 +1517,12 @@ Flesh to Chrome é um jogo 2D. Nenhum asset 3D é necessário para o escopo atua
 - máquinas da ReForge Industries;
 - stingers/cues dos finais;
 - trilha ou loops por fase.
+
+**Estado de implementação — Branch 4:** as chaves de oito trilhas e os pontos
+de disparo dos efeitos principais estão integrados pelo `AudioManager`. A troca
+de cena encerra a BGM anterior antes de iniciar a próxima, e a pausa congela e
+retoma a música junto com o gameplay. A seleção e o registro dos masters
+definitivos permanecem pendentes.
 
 ## 23.4 Code
 
@@ -1677,7 +1683,9 @@ Depois que todos os itens anteriores estiverem estáveis:
 - persistência de cosméticos;
 - vitrine de preço representativo;
 - pagamento simulado;
-- parallax e áudio não essenciais.
+
+- parallax, tratado em uma branch visual separada;
+- seleção e integração dos masters definitivos de áudio.
 
 ## 24.7 Feature Freeze
 

@@ -17,9 +17,17 @@ export class HUD {
   private dashBatteryStatus: Phaser.GameObjects.Text;
   private dashRechargeTween?: Phaser.Tweens.Tween;
   private dashReady = true;
+  private hudChrome: Phaser.GameObjects.Graphics;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
+    this.hudChrome = scene.add.graphics().setScrollFactor(0).setDepth(999);
+    this.hudChrome.fillStyle(0x050a12, 0.82);
+    this.hudChrome.fillRoundedRect(14, 12, 360, 98, 8);
+    this.hudChrome.lineStyle(2, 0x36e2ff, 0.5);
+    this.hudChrome.strokeRoundedRect(14, 12, 360, 98, 8);
+    this.hudChrome.fillStyle(0x36e2ff, 0.8);
+    this.hudChrome.fillRect(14, 12, 5, 98);
     const style: Phaser.Types.GameObjects.Text.TextStyle = {
       fontFamily: "Courier New, monospace",
       fontSize: "20px",
@@ -29,17 +37,17 @@ export class HUD {
     };
 
     this.phaseText = scene.add
-      .text(24, 20, "Créditos da fase: 0/0", style)
+      .text(30, 22, "SETOR // CRÉDITOS 0/0", style)
       .setScrollFactor(0)
       .setDepth(1000);
 
     this.totalText = scene.add
-      .text(24, 48, "Total: 0", style)
+      .text(30, 50, "CARTEIRA // 0 CR", style)
       .setScrollFactor(0)
       .setDepth(1000);
 
     this.abilityIcons = scene.add
-      .text(24, 76, "", { ...style, fontSize: "16px", color: "#B8C1FF" })
+      .text(30, 79, "", { ...style, fontSize: "14px", color: "#B8C1FF" })
       .setScrollFactor(0)
       .setDepth(1000);
 
@@ -103,8 +111,8 @@ export class HUD {
   }
 
   setCredits(phaseValue: number, phaseTotal: number, total: number): void {
-    this.phaseText.setText(`Créditos da fase: ${phaseValue}/${phaseTotal}`);
-    this.totalText.setText(`Total: ${total}`);
+    this.phaseText.setText(`SETOR // CRÉDITOS ${phaseValue}/${phaseTotal}`);
+    this.totalText.setText(`CARTEIRA // ${total} CR`);
   }
 
   setAbilities(labels: string[]): void {
@@ -188,6 +196,7 @@ export class HUD {
 
   destroy(): void {
     this.dashRechargeTween?.stop();
+    this.hudChrome.destroy();
     this.phaseText.destroy();
     this.totalText.destroy();
     this.abilityIcons.destroy();

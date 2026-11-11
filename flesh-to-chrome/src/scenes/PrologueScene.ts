@@ -1,6 +1,6 @@
 import Phaser from "phaser";
-import { SCREEN_HEIGHT, SCREEN_WIDTH } from "../config/GameConfig";
 import { InputManager } from "../systems/InputManager";
+import { AudioManager, BGM, SFX } from "../systems/AudioManager";
 import type { GameSceneData } from "./GameScene";
 
 const PROLOGUE_FAMILY_KEY = "prologue-family";
@@ -77,48 +77,54 @@ export class PrologueScene extends Phaser.Scene {
   }
 
   create(): void {
+    const width = this.scale.width;
+    const height = this.scale.height;
+    const centerX = width / 2;
+    const panelHeight = Math.min(610, height - 90);
+    const panelTop = (height - panelHeight) / 2;
     this.cameras.main.setBackgroundColor(0x05050a);
+    AudioManager.playBgm(this, BGM.menu, 0.22);
     this.input$ = new InputManager(this);
     this.pageIndex = 0;
     this.finished = false;
 
-    this.add.rectangle(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, 1120, 610, 0x10101b, 1)
+    this.add.rectangle(centerX, height / 2, Math.min(1120, width - 80), panelHeight, 0x10101b, 1)
       .setStrokeStyle(2, 0x7cfcea, 0.45);
-    this.add.text(SCREEN_WIDTH / 2, 80, "PRÓLOGO", {
+    this.add.text(centerX, panelTop + 25, "PRÓLOGO", {
       fontFamily: "Courier New, monospace",
       fontSize: "24px",
       color: "#7CFCEA",
       letterSpacing: 5,
     }).setOrigin(0.5);
 
-    this.image = this.add.image(SCREEN_WIDTH / 2, 245, PROLOGUE_FAMILY_KEY);
-    this.imageCaption = this.add.text(SCREEN_WIDTH / 2, 390, "", {
+    this.image = this.add.image(centerX, panelTop + 190, PROLOGUE_FAMILY_KEY);
+    this.imageCaption = this.add.text(centerX, panelTop + 335, "", {
       fontFamily: "Courier New, monospace",
       fontSize: "14px",
       color: "#7CFCEA",
       backgroundColor: "#080812dd",
       padding: { x: 8, y: 4 },
     }).setOrigin(0.5);
-    this.title = this.add.text(SCREEN_WIDTH / 2, 440, "", {
+    this.title = this.add.text(centerX, panelTop + 385, "", {
       fontFamily: "Courier New, monospace",
       fontSize: "24px",
       color: "#FFD37C",
       align: "center",
     }).setOrigin(0.5);
-    this.body = this.add.text(SCREEN_WIDTH / 2, 535, "", {
+    this.body = this.add.text(centerX, panelTop + 480, "", {
       fontFamily: "Courier New, monospace",
       fontSize: "18px",
       color: "#e8ecff",
       align: "center",
       lineSpacing: 8,
-      wordWrap: { width: 980 },
+      wordWrap: { width: Math.min(980, width - 160) },
     }).setOrigin(0.5);
-    this.pageCounter = this.add.text(SCREEN_WIDTH - 100, SCREEN_HEIGHT - 48, "", {
+    this.pageCounter = this.add.text(width - 100, height - 48, "", {
       fontFamily: "Courier New, monospace",
       fontSize: "14px",
       color: "#565f80",
     }).setOrigin(0.5);
-    const prompt = this.add.text(SCREEN_WIDTH / 2, SCREEN_HEIGHT - 48, "ENTER / A para continuar", {
+    const prompt = this.add.text(centerX, height - 48, "ENTER / A para continuar", {
       fontFamily: "Courier New, monospace",
       fontSize: "16px",
       color: "#8892b0",
@@ -151,6 +157,7 @@ export class PrologueScene extends Phaser.Scene {
 
   private advance(): void {
     if (this.finished) return;
+    AudioManager.playSfx(this, SFX.uiConfirm, { volume: 0.35 });
     if (this.pageIndex < PAGES.length - 1) {
       this.pageIndex += 1;
       this.renderPage();

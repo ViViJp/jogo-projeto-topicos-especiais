@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { InputManager } from "../systems/InputManager";
 import { SaveState } from "../systems/SaveState";
+import { AudioManager, BGM, SFX } from "../systems/AudioManager";
 import { abilityStateToBodyStage } from "../systems/AbilityState";
 import {
   ALEX_ARMS_TEXTURE_KEY,
@@ -16,7 +17,6 @@ const FATHER_PORTRAIT_KEY = "ending-father";
 const FAMILY_PORTRAIT_KEY = "ending-family";
 const ALEX_CHROME_KEY = "ending-alex-chrome";
 const ALEX_FLESH_KEY = "ending-alex-flesh";
-const ENDING_MUSIC_KEY = "bgm-ending-chrome";
 
 interface EndingPage {
   title: string;
@@ -113,7 +113,6 @@ export class EndingScene extends Phaser.Scene {
   private portraitCaption!: Phaser.GameObjects.Text;
   private alex!: Phaser.GameObjects.Sprite;
   private alexCaption!: Phaser.GameObjects.Text;
-  private music?: Phaser.Sound.BaseSound;
   private ending: EndingKind = "chrome";
   private pages: EndingPage[] = CHROME_PAGES;
   private testMode = false;
@@ -167,12 +166,6 @@ export class EndingScene extends Phaser.Scene {
         this.load.spritesheet(stage.key, stage.url.href, ALEX_SHEET_CONFIG);
       }
     }
-    if (!this.cache.audio.exists(ENDING_MUSIC_KEY)) {
-      this.load.audio(
-        ENDING_MUSIC_KEY,
-        new URL("../assets/audio/music/bgm-portao.wav", import.meta.url).href,
-      );
-    }
   }
 
   create(): void {
@@ -183,6 +176,7 @@ export class EndingScene extends Phaser.Scene {
     const panelTop = (height - panelHeight) / 2;
     const visualY = panelTop + 195;
     this.cameras.main.setBackgroundColor(0x05050a);
+    AudioManager.playBgm(this, BGM.gate, 0.28);
     this.input$ = new InputManager(this);
     this.pageIndex = 0;
     this.returning = false;
@@ -263,9 +257,6 @@ export class EndingScene extends Phaser.Scene {
     }).setOrigin(0.5);
     this.tweens.add({ targets: prompt, alpha: 0.3, yoyo: true, repeat: -1, duration: 700 });
 
-    this.music = this.sound.add(ENDING_MUSIC_KEY, { loop: true, volume: 0.28 });
-    this.music.play();
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.music?.stop());
     this.renderPage();
     this.input.on("pointerdown", () => this.advance());
   }
@@ -291,6 +282,7 @@ export class EndingScene extends Phaser.Scene {
 
   private advance(): void {
     if (this.returning) return;
+    AudioManager.playSfx(this, SFX.uiConfirm, { volume: 0.34 });
     if (this.pageIndex < this.pages.length - 1) {
       this.pageIndex += 1;
       this.renderPage();

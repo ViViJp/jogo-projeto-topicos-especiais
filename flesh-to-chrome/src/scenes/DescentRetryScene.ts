@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { InputManager } from "../systems/InputManager";
 import { SaveState } from "../systems/SaveState";
 import { descentStepAt } from "../systems/DescentProgression";
+import { AudioManager, BGM, SFX } from "../systems/AudioManager";
 
 export class DescentRetryScene extends Phaser.Scene {
   private input$!: InputManager;
@@ -21,6 +22,7 @@ export class DescentRetryScene extends Phaser.Scene {
     const step = descentStepAt(SaveState.load().get().descentState.currentStep);
     const lostMemory = step?.memoryTitle ?? "FRAGMENTO DESCONHECIDO";
     this.input$ = new InputManager(this);
+    AudioManager.playBgm(this, BGM.gate, 0.24);
     this.retrySelected = true;
     this.cameras.main.setBackgroundColor(0x08050d);
     this.add.text(centerX, height * 0.215, `MEMORIA PERDIDA // ${lostMemory}`, {
@@ -74,6 +76,7 @@ export class DescentRetryScene extends Phaser.Scene {
   }
 
   private confirmChoice(): void {
+    AudioManager.playSfx(this, SFX.uiConfirm, { volume: 0.4 });
     const save = SaveState.load();
     if (this.retrySelected) {
       const data = save.get();

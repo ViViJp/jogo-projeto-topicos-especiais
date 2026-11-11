@@ -1,9 +1,9 @@
 import Phaser from "phaser";
-import { SCREEN_WIDTH } from "../config/GameConfig";
 import { AbilityState } from "../systems/AbilityState";
 import { InputManager } from "../systems/InputManager";
 import { SaveState } from "../systems/SaveState";
 import type { GameSceneData } from "./GameScene";
+import { AudioManager, BGM, SFX } from "../systems/AudioManager";
 
 interface ClinicSceneData {
   completedPhaseId: string;
@@ -26,8 +26,6 @@ interface ClinicBeat {
 
 const CLINIC_BACKGROUND_KEY = "clinic-background";
 const CLINIC_GEORGE_KEY = "clinic-george";
-const CLINIC_MUSIC_KEY = "bgm-clinic-narrative";
-const CLINIC_IMPLANT_SFX_KEY = "sfx-clinic-implant";
 
 const BEATS: Record<string, ClinicBeat> = {
   fase1: {
@@ -89,7 +87,6 @@ export class ClinicScene extends Phaser.Scene {
   private speakerText!: Phaser.GameObjects.Text;
   private dialogueText!: Phaser.GameObjects.Text;
   private pageText!: Phaser.GameObjects.Text;
-  private music?: Phaser.Sound.BaseSound;
 
   constructor() {
     super("ClinicScene");
@@ -119,75 +116,65 @@ export class ClinicScene extends Phaser.Scene {
     };
     if (this.textures.exists(CLINIC_GEORGE_KEY)) this.textures.remove(CLINIC_GEORGE_KEY);
     this.load.image(CLINIC_GEORGE_KEY, georgeUrls[this.beat.georgeAsset].href);
-    if (!this.cache.audio.exists(CLINIC_MUSIC_KEY)) {
-      this.load.audio(
-        CLINIC_MUSIC_KEY,
-        new URL("../assets/audio/music/bgm-clinic.wav", import.meta.url).href,
-      );
-    }
-    if (!this.cache.audio.exists(CLINIC_IMPLANT_SFX_KEY)) {
-      this.load.audio(
-        CLINIC_IMPLANT_SFX_KEY,
-        new URL("../assets/audio/sfx/sfx-implant.wav", import.meta.url).href,
-      );
-    }
   }
 
   create(): void {
+    const width = this.scale.width;
+    const height = this.scale.height;
+    const centerX = width / 2;
     this.cameras.main.setBackgroundColor(0x120a1a);
     this.input$ = new InputManager(this);
     this.pageIndex = 0;
     this.finished = false;
 
-    this.add.image(SCREEN_WIDTH / 2, 250, CLINIC_BACKGROUND_KEY).setDisplaySize(1280, 427);
-    this.add.rectangle(SCREEN_WIDTH / 2, 555, SCREEN_WIDTH, 330, 0x08050c, 0.94);
-    this.add.rectangle(SCREEN_WIDTH / 2, 65, 920, 112, 0x08050c, 0.82).setDepth(3);
-    this.add.image(250, 390, CLINIC_GEORGE_KEY).setDisplaySize(210, 210).setDepth(3);
+    AudioManager.playBgm(this, BGM.clinic, 0.3);
+    this.add.image(centerX, 250, CLINIC_BACKGROUND_KEY).setDisplaySize(width, 427);
+    this.add.rectangle(centerX, height - 165, width, 330, 0x08050c, 0.94);
+    this.add.rectangle(centerX, 65, Math.min(920, width - 80), 112, 0x08050c, 0.82).setDepth(3);
+    this.add.image(centerX - Math.min(390, width * 0.31), 390, CLINIC_GEORGE_KEY).setDisplaySize(210, 210).setDepth(3);
 
-    this.add.text(SCREEN_WIDTH / 2, 45, "CLÍNICA DE GEORGE VEKTOR", {
+    this.add.text(centerX, 45, "CLÍNICA DE GEORGE VEKTOR", {
       fontFamily: "Courier New, monospace",
       fontSize: "31px",
       color: "#e0a8ff",
     }).setOrigin(0.5).setDepth(4).setShadow(0, 2, "#000000", 6, true, true);
-    this.add.text(SCREEN_WIDTH / 2, 92, this.beat.stageLabel, {
+    this.add.text(centerX, 92, this.beat.stageLabel, {
       fontFamily: "Courier New, monospace",
       fontSize: "16px",
       color: "#FFD37C",
       letterSpacing: 3,
     }).setOrigin(0.5).setDepth(4);
 
-    this.speakerText = this.add.text(420, 455, "", {
+    const dialogueX = centerX - Math.min(220, width * 0.17);
+    this.speakerText = this.add.text(dialogueX, 455, "", {
       fontFamily: "Courier New, monospace",
       fontSize: "18px",
       color: "#7CFCEA",
     });
-    this.dialogueText = this.add.text(420, 490, "", {
+    this.dialogueText = this.add.text(dialogueX, 490, "", {
       fontFamily: "Courier New, monospace",
       fontSize: "20px",
       color: "#e8ecff",
-      wordWrap: { width: 740 },
+      wordWrap: { width: Math.min(740, width * 0.58) },
       lineSpacing: 8,
     });
-    this.pageText = this.add.text(SCREEN_WIDTH - 95, 650, "", {
+    this.pageText = this.add.text(width - 95, height - 70, "", {
       fontFamily: "Courier New, monospace",
       fontSize: "14px",
       color: "#565f80",
     }).setOrigin(0.5);
-    this.add.text(110, 650, `CARTEIRA ${this.data$.wallet} CR`, {
+    this.add.text(110, height - 70, `CARTEIRA ${this.data$.wallet} CR`, {
       fontFamily: "Courier New, monospace",
       fontSize: "14px",
       color: "#FFD37C",
     }).setOrigin(0.5).setDepth(4);
-    const prompt = this.add.text(SCREEN_WIDTH / 2, 665, "ENTER / A para continuar", {
+    const prompt = this.add.text(centerX, height - 55, "ENTER / A para continuar", {
       fontFamily: "Courier New, monospace",
       fontSize: "16px",
       color: "#8892b0",
     }).setOrigin(0.5);
     this.tweens.add({ targets: prompt, alpha: 0.3, yoyo: true, repeat: -1, duration: 700 });
 
-    this.music = this.sound.add(CLINIC_MUSIC_KEY, { loop: true, volume: 0.3 });
-    this.music.play();
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.music?.stop());
     this.renderPage();
     this.input.on("pointerdown", () => this.advance());
   }
@@ -208,13 +195,14 @@ export class ClinicScene extends Phaser.Scene {
       this.dialogueText.setText(
         `${this.beat.implantLabel.toUpperCase()} integrados com sucesso.\nHabilidade liberada: ${this.beat.abilityLabel}.`,
       );
-      this.sound.play(CLINIC_IMPLANT_SFX_KEY, { volume: 0.55 });
+      AudioManager.playSfx(this, SFX.implant, { volume: 0.6 });
     }
     this.pageText.setText(`${this.pageIndex + 1}/${dialoguePages + 1}`);
   }
 
   private advance(): void {
     if (this.finished) return;
+    AudioManager.playSfx(this, SFX.uiConfirm, { volume: 0.32 });
     if (this.pageIndex < this.beat.pages.length) {
       this.pageIndex += 1;
       this.renderPage();

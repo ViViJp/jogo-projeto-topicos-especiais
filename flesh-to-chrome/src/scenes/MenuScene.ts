@@ -1,8 +1,8 @@
 import Phaser from "phaser";
-import { SCREEN_WIDTH, SCREEN_HEIGHT } from "../config/GameConfig";
 import { InputManager } from "../systems/InputManager";
 import { SaveState } from "../systems/SaveState";
 import { GameSceneData } from "./GameScene";
+import { AudioManager, BGM, SFX } from "../systems/AudioManager";
 
 interface MenuOption {
   label: string;
@@ -33,6 +33,9 @@ export class MenuScene extends Phaser.Scene {
   }
 
   create(): void {
+    const width = this.scale.width;
+    const height = this.scale.height;
+    const centerX = width / 2;
     // A instancia da cena e reutilizada ao voltar do jogo/multiplayer.
     this.optionTexts = [];
     this.selectedIndex = 0;
@@ -41,10 +44,11 @@ export class MenuScene extends Phaser.Scene {
     this.mode = "main";
 
     this.cameras.main.setBackgroundColor(0x05050a);
+    AudioManager.playBgm(this, BGM.menu, 0.28);
     this.input$ = new InputManager(this);
 
     this.add
-      .text(SCREEN_WIDTH / 2, 150, "FLESH TO CHROME", {
+      .text(centerX, 150, "FLESH TO CHROME", {
         fontFamily: "Courier New, monospace",
         fontSize: "56px",
         color: "#7CFCEA",
@@ -52,7 +56,7 @@ export class MenuScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.add
-      .text(SCREEN_WIDTH / 2, 210, "protótipo técnico — Glitch City", {
+      .text(centerX, 210, "GLITCH CITY // SISTEMA DE ASCENSÃO", {
         fontFamily: "Courier New, monospace",
         fontSize: "18px",
         color: "#8892b0",
@@ -61,7 +65,7 @@ export class MenuScene extends Phaser.Scene {
 
     this.hasSave = SaveState.hasExistingSave();
     this.menuHint = this.add
-      .text(SCREEN_WIDTH / 2, 270, "MENU PRINCIPAL", {
+      .text(centerX, 270, "MENU PRINCIPAL", {
         fontFamily: "Courier New, monospace",
         fontSize: "16px",
         color: "#565f80",
@@ -72,8 +76,8 @@ export class MenuScene extends Phaser.Scene {
 
     this.add
       .text(
-        SCREEN_WIDTH / 2,
-        SCREEN_HEIGHT - 40,
+        centerX,
+        height - 40,
         "↑↓ / W S ou DIRECIONAL navegar   ENTER / A confirmar   ESC / B voltar",
         {
           fontFamily: "Courier New, monospace",
@@ -121,7 +125,7 @@ export class MenuScene extends Phaser.Scene {
     const spacing = this.mode === "phase-select" ? 48 : 56;
     this.options.forEach((option, index) => {
       const text = this.add
-        .text(SCREEN_WIDTH / 2, startY + index * spacing, option.label, {
+        .text(this.scale.width / 2, startY + index * spacing, option.label, {
           fontFamily: "Courier New, monospace",
           fontSize: this.mode === "phase-select" ? "23px" : "28px",
           color: "#e8ecff",
@@ -183,6 +187,9 @@ export class MenuScene extends Phaser.Scene {
   }
 
   private setSelected(index: number): void {
+    if (index !== this.selectedIndex && this.optionTexts.length > 0) {
+      AudioManager.playSfx(this, SFX.uiSelect, { volume: 0.28 });
+    }
     this.selectedIndex = index;
     this.optionTexts.forEach((text, optionIndex) => {
       text.setColor(optionIndex === index ? "#FFD37C" : "#e8ecff");
@@ -192,6 +199,7 @@ export class MenuScene extends Phaser.Scene {
 
   private confirmSelection(): void {
     if (this.confirmVisible) return;
+    AudioManager.playSfx(this, SFX.uiConfirm, { volume: 0.42 });
     this.options[this.selectedIndex]?.action();
   }
 
@@ -258,8 +266,8 @@ export class MenuScene extends Phaser.Scene {
     this.confirmVisible = true;
     this.confirmText = this.add
       .text(
-        SCREEN_WIDTH / 2,
-        SCREEN_HEIGHT - 110,
+        this.scale.width / 2,
+        this.scale.height - 110,
         "Isso vai apagar o save atual. ENTER/A confirma, ESC/B/SELECT cancela.",
         {
           fontFamily: "Courier New, monospace",

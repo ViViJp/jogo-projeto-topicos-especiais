@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { descentStepAt } from "../systems/DescentProgression";
 import { InputManager } from "../systems/InputManager";
 import { SaveState } from "../systems/SaveState";
+import { AudioManager, BGM, SFX } from "../systems/AudioManager";
 
 const REFORGE_BG = "reforge-bg";
 const REFORGE_FATHER = "reforge-father";
@@ -38,6 +39,7 @@ export class ReForgeScene extends Phaser.Scene {
 
   create(): void {
     this.input$ = new InputManager(this);
+    AudioManager.playBgm(this, BGM.clinic, 0.26);
     this.page = 0;
     this.finished = false;
     this.advancePage = undefined;
@@ -91,6 +93,7 @@ export class ReForgeScene extends Phaser.Scene {
     const advance = () => {
       if (this.finished) return;
       if (this.page < pages.length - 1) {
+        AudioManager.playSfx(this, this.page >= 1 ? SFX.clinicTools : SFX.uiConfirm, { volume: 0.42 });
         this.page += 1;
         body.setText(pages[this.page]);
         counter.setText(`${this.page + 1}/${pages.length}`);
@@ -99,6 +102,7 @@ export class ReForgeScene extends Phaser.Scene {
         return;
       }
       this.finished = true;
+      AudioManager.playSfx(this, SFX.implant, { volume: 0.62 });
       const result = SaveState.load().completeBioprinting();
       if (!result) {
         this.scene.start("MenuScene");

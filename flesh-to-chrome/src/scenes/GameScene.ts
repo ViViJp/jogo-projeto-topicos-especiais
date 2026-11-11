@@ -5,6 +5,7 @@ import { InputManager } from "../systems/InputManager";
 import { CreditsSystem } from "../systems/CreditsSystem";
 import { HUD } from "../systems/HUD";
 import { SaveState } from "../systems/SaveState";
+import { AudioManager, SFX, bgmForPhase } from "../systems/AudioManager";
 import { descentRouteForPhase, descentStepForPhase } from "../systems/DescentProgression";
 import { DescentGlitchRuntime, DESCENT_GLITCH_TEXTURE_PREFIX } from "../objects/DescentGlitchRuntime";
 import {
@@ -139,7 +140,6 @@ const PHASE_BACKGROUND: Record<string, number> = {
   fase5: TILED_FASE5_BACKGROUND,
 };
 
-const CHECKPOINT_SFX_KEY = "sfx-checkpoint";
 const PHASES_WITH_CLINIC = new Set(["fase1", "fase2-intro", "fase3", "fase4"]);
 
 interface TestClinicChoiceData {
@@ -249,6 +249,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   preload(): void {
+    AudioManager.preload(this);
     // Alex usa o spritesheet LPC real (v0.2.0) em ambos os formatos de
     // nível (Tiled ou desenhado à mão - v0.2.1 revert não mexeu nisso).
     const alexStages: Array<{ key: string; url: URL }> = [
@@ -301,13 +302,6 @@ export class GameScene extends Phaser.Scene {
         }
       }
     }
-    if (!this.cache.audio.exists(CHECKPOINT_SFX_KEY)) {
-      this.load.audio(
-        CHECKPOINT_SFX_KEY,
-        new URL("../assets/audio/sfx/sfx-checkpoint.wav", import.meta.url).href,
-      );
-    }
-
     if (this.data$.phaseId === "fase1") {
       if (!this.textures.exists(TILED_FASE1_TILESET_KEY)) {
         this.load.image(TILED_FASE1_TILESET_KEY, this.tilesetSewerUrl().href);
@@ -524,6 +518,7 @@ export class GameScene extends Phaser.Scene {
 
     this.physics.world.gravity.y = GRAVITY_Y;
     this.cameras.main.setBackgroundColor(PHASE_BACKGROUND[this.data$.phaseId] ?? TILED_FASE1_BACKGROUND);
+    AudioManager.playBgm(this, bgmForPhase(this.data$.phaseId), this.data$.descent ? 0.24 : 0.32);
 
     this.save = SaveState.load();
     this.input$ = new InputManager(this);
@@ -840,6 +835,7 @@ export class GameScene extends Phaser.Scene {
 
   private handleCreditCollected(id: string, value: number): void {
     this.credits.collect(id, value);
+    AudioManager.playSfx(this, SFX.credit, { volume: 0.42 });
     this.updateHud();
   }
 
@@ -865,7 +861,7 @@ export class GameScene extends Phaser.Scene {
     // para a direita, então Alex é deslocado para que rosto e mãos fiquem
     // diante da tela, sem o corpo atravessar o gabinete.
     this.player.beginCheckpointInteraction(x - 24, y);
-    this.sound.play(CHECKPOINT_SFX_KEY, { volume: 0.55 });
+    AudioManager.playSfx(this, SFX.checkpoint, { volume: 0.55 });
     this.hud.flashPrompt(this.data$.descent
       ? `Checkpoint ${id} sincronizado — memoria preservada`
       : `Checkpoint ${id} sincronizado — créditos consolidados`);
@@ -905,6 +901,7 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     this.credits.consolidate();
+    AudioManager.playSfx(this, SFX.phaseClear, { volume: 0.62 });
     if (!this.data$.testMode) {
       this.save.updateCheckpoint(
         this.player.sprite.x,
@@ -1146,6 +1143,7 @@ export class GameScene extends Phaser.Scene {
   private togglePause(): void {
     this.isPaused = !this.isPaused;
     if (this.isPaused) {
+      AudioManager.pauseBgm();
       this.physics.world.pause();
       this.tweens.pauseAll();
       this.time.paused = true;
@@ -1166,6 +1164,7 @@ export class GameScene extends Phaser.Scene {
         .setScrollFactor(0)
         .setDepth(2000);
     } else {
+      AudioManager.resumeBgm();
       this.physics.world.resume();
       this.tweens.resumeAll();
       this.time.paused = false;

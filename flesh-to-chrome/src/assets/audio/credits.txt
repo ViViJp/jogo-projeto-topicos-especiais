@@ -8,9 +8,13 @@ flesh-to-chrome/src/assets/audio/
   credits.txt
 ```
 
-## Music (BGM) — no repo
-Loops curtos `.wav` (~200 KB cada) **sintetizados** para caber no GitHub.
-Mood diferente por fase (freq/pulse). Trocar pelos packs OGA quando puder:
+## Music (BGM) — aguardando seleção
+
+Os masters provisórios foram removidos em 11/11/2026. As chaves e o
+roteamento permanecem definidos em `src/systems/AudioManager.ts`, mas o
+catálogo `AUDIO_SOURCES` fica vazio até a escolha manual das faixas finais.
+
+Nomes de uso planejados:
 
 | Arquivo | Uso | Pack CC0 sugerido (OGA) |
 | --- | --- | --- |
@@ -28,8 +32,13 @@ Corrupt Data Stream: https://opengameart.org/content/corrupt-data-stream
 
 Cópias full (opcional, local): `_downloads/audio/full-bgm/` (gitignore).
 
-## SFX
-`sfx-*.wav` sintetizados (domínio público no projeto).  
-Lista: jump, land, slide, effort, footstep, hurt, death, credit, checkpoint, attack, dash, scan, ui-select, ui-confirm, hazard-water, hazard-laser, enemy-hit, glitch, phase-clear, implant, clinic-tools.
+## SFX — aguardando seleção
 
-Mesmos nomes de arquivo = dá para trocar por Kenney/Freesound sem mudar código.
+Os arquivos provisórios também foram removidos. As chamadas continuam usando
+as chaves: jump, land, slide, effort, footstep, hurt, death, credit,
+checkpoint, attack, dash, scan, ui-select, ui-confirm, hazard-water,
+hazard-laser, enemy-hit, glitch, phase-clear, implant e clinic-tools.
+
+Depois de adicionar os arquivos escolhidos, registre suas URLs com
+`AudioManager.configure(...)` antes do `BootScene.preload()` ou preencha
+diretamente `AUDIO_SOURCES`.

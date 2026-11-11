@@ -29,6 +29,7 @@ export const ALEX_RUN_ANIM = "alex-run";
 export const ALEX_HURT_ANIM = "alex-hurt";
 export const ALEX_ATTACK_ANIM = "alex-attack";
 export const ALEX_CHECKPOINT_ANIM = "alex-checkpoint-play";
+export const ALEX_SLIDE_ANIM = "alex-slide";
 export const ALEX_SLIDE_FRAME = frameIndex(33, 2);
 
 const WALK_RIGHT = { row: 11, frames: 9 };
@@ -41,6 +42,7 @@ const ATTACK_RIGHT = { row: 15, frames: 6 };
 // perfil para a TV. A linha 35 usada anteriormente é uma pose em pé; os dois
 // frames sentados corretos estão na linha 33.
 const CHECKPOINT_PLAY_RIGHT = { row: 33, frames: 2 };
+const SLIDE_RIGHT = { row: 33, start: 1, end: 2 };
 
 export function alexTextureForAbilities(abilities: AbilityState): string {
   if (abilities.thrusters) return ALEX_DASH_TEXTURE_KEY;
@@ -64,6 +66,14 @@ export function alexAttackAnimationKey(textureKey: string): string {
   return textureKey === ALEX_TEXTURE_KEY ? ALEX_ATTACK_ANIM : `${textureKey}-attack`;
 }
 
+export function alexSlideAnimationKey(textureKey: string): string {
+  return textureKey === ALEX_TEXTURE_KEY ? ALEX_SLIDE_ANIM : `${textureKey}-slide`;
+}
+
+export function alexHurtAnimationKey(textureKey: string): string {
+  return textureKey === ALEX_TEXTURE_KEY ? ALEX_HURT_ANIM : `${textureKey}-hurt`;
+}
+
 export function ensureAlexAnimations(scene: Phaser.Scene, textureKey = ALEX_TEXTURE_KEY): void {
   const runAnimationKey = alexRunAnimationKey(textureKey);
   if (!scene.anims.exists(runAnimationKey)) {
@@ -78,7 +88,7 @@ export function ensureAlexAnimations(scene: Phaser.Scene, textureKey = ALEX_TEXT
     });
   }
 
-  const hurtAnimationKey = textureKey === ALEX_TEXTURE_KEY ? ALEX_HURT_ANIM : `${textureKey}-hurt`;
+  const hurtAnimationKey = alexHurtAnimationKey(textureKey);
   if (!scene.anims.exists(hurtAnimationKey)) {
     scene.anims.create({
       key: hurtAnimationKey,
@@ -88,6 +98,24 @@ export function ensureAlexAnimations(scene: Phaser.Scene, textureKey = ALEX_TEXT
       }),
       frameRate: 8,
       repeat: 0,
+    });
+  }
+
+  const slideAnimationKey = alexSlideAnimationKey(textureKey);
+  if (!scene.anims.exists(slideAnimationKey)) {
+    scene.anims.create({
+      key: slideAnimationKey,
+      frames: scene.anims.generateFrameNumbers(textureKey, {
+        start: frameIndex(SLIDE_RIGHT.row, SLIDE_RIGHT.start),
+        end: frameIndex(SLIDE_RIGHT.row, SLIDE_RIGHT.end),
+      }),
+      // Um slide comum termina antes de a sequência recomeçar. Se a duração
+      // da mecânica for ampliada no futuro, a pose só volta a ciclar depois
+      // desta pausa, evitando a alternância frenética dos dois frames.
+      frameRate: 3,
+      repeat: -1,
+      repeatDelay: 450,
+      yoyo: true,
     });
   }
 

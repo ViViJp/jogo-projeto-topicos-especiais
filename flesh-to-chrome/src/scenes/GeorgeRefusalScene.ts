@@ -1,12 +1,12 @@
 import Phaser from "phaser";
 import { InputManager } from "../systems/InputManager";
+import { AudioManager, BGM, SFX } from "../systems/AudioManager";
 import { SaveState } from "../systems/SaveState";
 import type { GameSceneData } from "./GameScene";
 
 const BACKGROUND_KEY = "george-refusal-background";
 const GEORGE_ANGRY_KEY = "george-angry";
 const ALEX_COMPLETE_KEY = "george-refusal-alex";
-const MUSIC_KEY = "george-refusal-music";
 
 const DIALOGUE = [
   {
@@ -56,7 +56,6 @@ export class GeorgeRefusalScene extends Phaser.Scene {
   private counterText!: Phaser.GameObjects.Text;
   private george!: Phaser.GameObjects.Image;
   private alex!: Phaser.GameObjects.Image;
-  private music?: Phaser.Sound.BaseSound;
 
   constructor() {
     super("GeorgeRefusalScene");
@@ -81,12 +80,6 @@ export class GeorgeRefusalScene extends Phaser.Scene {
         new URL("../assets/player/alex-dialogue/alex-complete-dialogue.png", import.meta.url).href,
       );
     }
-    if (!this.cache.audio.exists(MUSIC_KEY)) {
-      this.load.audio(
-        MUSIC_KEY,
-        new URL("../assets/audio/music/bgm-clinic.wav", import.meta.url).href,
-      );
-    }
   }
 
   create(): void {
@@ -96,6 +89,7 @@ export class GeorgeRefusalScene extends Phaser.Scene {
     this.pageIndex = 0;
     this.finished = false;
     this.cameras.main.setBackgroundColor(0x08050c);
+    AudioManager.playBgm(this, BGM.clinic, 0.28);
 
     this.add.image(width / 2, 235, BACKGROUND_KEY).setDisplaySize(width, 470);
     this.add.rectangle(width / 2, height - 145, width, 300, 0x08050c, 0.96);
@@ -146,9 +140,6 @@ export class GeorgeRefusalScene extends Phaser.Scene {
     }).setOrigin(0.5);
     this.tweens.add({ targets: prompt, alpha: 0.3, yoyo: true, repeat: -1, duration: 700 });
 
-    this.music = this.sound.add(MUSIC_KEY, { loop: true, volume: 0.28 });
-    this.music.play();
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.music?.stop());
     this.input.on("pointerdown", () => this.advance());
     this.renderPage();
   }
@@ -170,6 +161,7 @@ export class GeorgeRefusalScene extends Phaser.Scene {
 
   private advance(): void {
     if (this.finished) return;
+    AudioManager.playSfx(this, SFX.uiConfirm, { volume: 0.34 });
     if (this.pageIndex < DIALOGUE.length - 1) {
       this.pageIndex += 1;
       this.renderPage();

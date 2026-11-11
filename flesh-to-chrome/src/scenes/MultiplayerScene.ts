@@ -34,15 +34,16 @@ import {
   TiledPhase5Runtime,
 } from "../objects/TiledPhase5Runtime";
 import { InputManager } from "../systems/InputManager";
+import { AudioManager, BGM } from "../systems/AudioManager";
 import {
   ALEX_ARMS_TEXTURE_KEY,
   ALEX_DASH_TEXTURE_KEY,
   ALEX_EYES_TEXTURE_KEY,
   ALEX_LEGS_TEXTURE_KEY,
   ALEX_SHEET_CONFIG,
-  ALEX_SLIDE_FRAME,
   ALEX_TEXTURE_KEY,
   alexRunAnimationKey,
+  alexSlideAnimationKey,
 } from "../utils/AlexSprite";
 import { generatePlaceholderTextures } from "../utils/PlaceholderTextures";
 
@@ -178,6 +179,7 @@ export class MultiplayerScene extends Phaser.Scene {
 
   create(): void {
     generatePlaceholderTextures(this);
+    AudioManager.playBgm(this, BGM.phase5, 0.3);
     this.cameras.main.setBackgroundColor(TILED_MULTIPLAYER_BACKGROUND);
     this.cameras.main.setScroll(0, 0);
     this.lobbyObjects = [];
@@ -996,8 +998,7 @@ export class MultiplayerScene extends Phaser.Scene {
     this.opponentSprite.y = Phaser.Math.Linear(this.opponentSprite.y, this.remoteTarget.y, interpolation);
     this.opponentSprite.setAlpha(this.remoteTarget.state === "dead" ? 0.25 : 0.68);
     if (this.remoteTarget.state === "sliding") {
-      this.opponentSprite.anims.stop();
-      this.opponentSprite.setFrame(ALEX_SLIDE_FRAME);
+      this.opponentSprite.anims.play(alexSlideAnimationKey(ALEX_DASH_TEXTURE_KEY), true);
     } else {
       this.opponentSprite.anims.play(alexRunAnimationKey(ALEX_DASH_TEXTURE_KEY), true);
     }

@@ -83,12 +83,8 @@ export const PHYSICS = {
     airControl: 140,
   },
   slide: {
-    /**
-     * Duração MÁXIMA (teto de segurança) - seção 14.3 do GDD: "duração
-     * fixa" e "não pode ser cancelado por pulo". O GDD não proíbe soltar o
-     * botão para levantar antes disso, então tratamos isso como o teto,
-     * não como um tempo obrigatório.
-     */
+    /** Janela-base do slide. Manter o comando renova a janela sem reiniciar
+     * o estado, a animação ou o SFX; soltar após `minDurationMs` levanta. */
     durationMs: 550, // provisório - seção 26.1
     /**
      * Duração MÍNIMA: evita levantar no meio de um único frame (toque
