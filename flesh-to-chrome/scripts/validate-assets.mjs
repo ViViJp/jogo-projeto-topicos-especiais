@@ -186,6 +186,19 @@ function stripTilesetEditorMetadata(map) {
   return map;
 }
 
+// Imagens de fundo registradas para o Parcel (nome do arquivo -> caminho).
+const registeredBackdrops = new Map();
+{
+  const source = fs.readFileSync(path.join(projectRoot, "src/levels/BackdropAssets.ts"), "utf8");
+  for (const match of source.matchAll(/"([^"]+\.png)":\s*new URL\("\.\.\/([^"]+)", import\.meta\.url\)/g)) {
+    const [, name, relative] = match;
+    registeredBackdrops.set(name, relative);
+    if (path.basename(relative) !== name) fail(`BackdropAssets.ts: chave ${name} aponta para ${relative}`);
+    if (!fs.existsSync(path.join(projectRoot, "src", relative))) fail(`BackdropAssets.ts: imagem ausente: src/${relative}`);
+  }
+  if (registeredBackdrops.size === 0) fail("BackdropAssets.ts: nenhuma imagem de fundo encontrada (formato do registro mudou?)");
+}
+
 for (const image of runtimeImages) {
   const imagePath = path.join(projectRoot, image);
   if (!fs.existsSync(imagePath)) {
@@ -326,8 +339,32 @@ for (const phase of phases) {
     const invalid = layer.data.find((rawGid) => (rawGid & 0x1fffffff) > maxGid);
     if (invalid !== undefined) fail(`${phase.id}: GID fora dos tilesets na layer ${layer.name}: ${invalid}`);
   }
+  // Fundo com parallax (contrato §3.1): toda image layer precisa apontar para
+  // um PNG existente, com o tamanho declarado, e registrado em
+  // BACKDROP_IMAGE_URLS (senão o Parcel não empacota e o jogo ignora a camada).
+  const imageLayers = map.layers.filter((item) => item.type === "imagelayer");
+  for (const layer of imageLayers) {
+    const imagePath = layer.image ? path.resolve(mapDir, layer.image) : "";
+    if (!layer.image || !fs.existsSync(imagePath)) {
+      fail(`${phase.id}: imagem ausente na image layer ${layer.name}: ${String(layer.image)}`);
+      continue;
+    }
+    const png = fs.readFileSync(imagePath);
+    const size = [png.readUInt32BE(16), png.readUInt32BE(20)];
+    if (!isDeepStrictEqual(size, [layer.imagewidth, layer.imageheight])) {
+      fail(`${phase.id}: image layer ${layer.name}: o mapa declara ${layer.imagewidth}x${layer.imageheight}, o PNG tem ${size[0]}x${size[1]} (recarregue a imagem no Tiled)`);
+    }
+    const imageName = path.basename(layer.image);
+    if (!registeredBackdrops.has(imageName)) {
+      fail(`${phase.id}: image layer ${layer.name} usa ${imageName}, que não está registrada em src/levels/BackdropAssets.ts`);
+    }
+  }
+  const ambient = property(map, "ambient");
+  if (ambient !== undefined && !["drips", "embers", "rain", "motes"].includes(ambient)) {
+    fail(`${phase.id}: propriedade de mapa ambient inválida: ${ambient}`);
+  }
 
-  console.log(`${phase.id}: OK (${map.width}x${map.height}, ${objects.length} objetos, ${map.tilesets.length} tilesets)`);
+  console.log(`${phase.id}: OK (${map.width}x${map.height}, ${objects.length} objetos, ${map.tilesets.length} tilesets${imageLayers.length ? `, ${imageLayers.length} camadas de parallax` : ""})`);
 }
 
 if (errors.length > 0) {

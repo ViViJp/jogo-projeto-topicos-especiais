@@ -1,7 +1,7 @@
 # Flesh to Chrome — Contrato Tiled ↔ Phaser
 
-**Versão:** 0.20
-**Data:** 2026-11-03
+**Versão:** 0.23
+**Data:** 2026-11-10
 **Status:** contrato vivo — atualizar sempre que uma nova classe, propriedade, camada ou valor de comportamento for criado no Tiled.
 
 ## 1. Objetivo
@@ -88,6 +88,59 @@ A ordem recomendada no painel do Tiled, de cima para baixo, é:
 - **background**: sem colisão.
 - **objects**: nunca deve ser renderizada como parte visual do cenário final.
 - Um elemento letal não deve depender apenas de um tile visual: ele deve possuir um objeto lógico correspondente.
+
+### 3.1 Fundo com parallax (Image Layers) e clima
+
+Fases 1 a 5 e corrida multiplayer (`multiplayer-race.tmj`, mesma configuração
+da Fase 5). O fundo é montado com **Image Layers** do Tiled
+(*Layer → New → Image Layer*), sem código por fase.
+
+- Toda Image Layer vira uma camada de fundo e é desenhada **atrás de todas as
+  tile layers**, mesmo que esteja acima delas no painel. Entre si, seguem a
+  ordem do painel: a mais baixa fica mais ao fundo. Por convenção ficam no pé
+  do painel, com nome `parallax-*`.
+- **Parallax Factor X** controla a velocidade em relação à câmera: `0` fica
+  parada (céu), `1` anda junto com o mapa. Use valores entre 0 e 1. O Parallax
+  Factor Y não tem efeito (o jogo não rola na vertical).
+- **Repeat X** deve ficar ligado: a imagem se repete por toda a fase.
+- **Offset Y** é medido no espaço do mapa, igual ao que se vê no Tiled; o jogo
+  soma o deslocamento vertical da fase. Valores negativos cobrem a área acima
+  do mapa (ex.: na Fase 1, `-224` = topo da tela).
+- **Opacity** e o "olho" (**Visible**) são respeitados.
+- Propriedade opcional **drift_x** (`float`, px/s): movimento próprio contínuo
+  (névoa, fumaça, água). Negativo = para a esquerda.
+- Propriedade opcional **appear_x** (`float`, px do mapa): a camada fica
+  invisível até a borda esquerda da câmera passar desse X e surge em fade ao
+  longo dos 960 px seguintes. Troca o fundo num trecho da fase: na Fase 5,
+  `parallax-final-aurora` e `parallax-final-cidade` usam `28800` (início do
+  trecho contemplativo). No Tiled a camada aparece o tempo todo.
+- A imagem deve estar em `src/assets/backdrops/<setor>/` e ser registrada em
+  `src/levels/BackdropAssets.ts` (uma linha por arquivo). Arquivo fora do
+  registro é ignorado pelo jogo e acusado por `npm run validate:assets`.
+- Arte gerada por `scripts/backdrops/gerar_fundos.py`; pode ser substituída
+  por arte própria mantendo o nome do arquivo (se o tamanho mudar, recarregue
+  a imagem na Image Layer para o Tiled atualizar a largura/altura).
+
+**Contraste:** a faixa da tela onde Alex e os inimigos correm (y ≈ 440-600)
+deve ficar em tons médios e de pouco contraste. Fundo escuro nessa faixa
+apaga a silhueta dos personagens (ver `TILED_FASE1_BACKGROUND`). A Fase 5 é
+a exceção calibrada pelo time (`TILED_FASE5_BACKGROUND`, azul-noite). Evite
+também elementos claros ou chamativos no alto da tela (y < ~110), atrás do HUD.
+
+**Camada sem Repeat X:** o jogo posiciona pela borda esquerda da câmera
+(`x na tela = Offset X - scrollX × Parallax Factor`), enquanto o Tiled usa o
+centro da vista; para fundos repetidos isso não faz diferença.
+
+**Clima** — propriedades do **mapa** (*Map → Map Properties*):
+
+| Propriedade | Tipo | Valores |
+| --- | --- | --- |
+| `ambient` | string | `drips` (gotas, atrás do mapa), `embers` (fagulhas, atrás do mapa), `rain` (chuva fina, na frente da cena), `motes` (partículas de luz flutuando, atrás do mapa) |
+| `ambient_density` | float | multiplicador da quantidade, `0` a `3` (padrão `1`) |
+
+Na Fase 1, a antiga tile layer **background** (pano de fundo da caverna,
+x 0-1024) está oculta no Tiled porque o parallax ocupa essa função; ligar o
+olho dela volta a exibi-la no jogo.
 
 ## 4. Convenções gerais de objetos
 
@@ -872,6 +925,27 @@ Dependendo da versão/exportação do Tiled, a informação exibida na interface
 12. Somente depois bloquear **ground**, **hazards** e **objects** e iniciar **background → deco-back → deco**.
 
 ## 12. Histórico de alterações
+
+### v0.23 — 2026-11-10
+
+- fundo com parallax também nas Fases 4 (Distrito Corporativo, sem clima) e
+  5 (Topo, clima `motes`);
+- novo valor de clima `motes` (partículas de luz flutuando);
+- corrida multiplayer com o mesmo fundo do Topo, visível desde o lobby
+  (painel translúcido atrás dos textos do lobby);
+- removidos da layer `hazards` da Fase 1 os tiles visuais de água tóxica,
+  que flutuavam na frente do canal do parallax; os objetos `toxic_water_*`
+  continuam como poços letais (o jogo não tem morte por queda).
+
+### v0.22 — 2026-11-10
+
+- adicionado o fundo com parallax das Fases 1, 2 e 3 via Image Layers do
+  Tiled (§3.1), com `drift_x` por camada e clima por propriedade de mapa
+  (`ambient`, `ambient_density`);
+- ocultada no Tiled a tile layer `background` da Fase 1, substituída pelo
+  parallax; a Fase 1 passou a respeitar a visibilidade dessa camada;
+- `validate:assets` passou a conferir imagem, tamanho e registro de cada
+  Image Layer e os valores de `ambient`.
 
 ### v0.21 — 2026-11-08
 
