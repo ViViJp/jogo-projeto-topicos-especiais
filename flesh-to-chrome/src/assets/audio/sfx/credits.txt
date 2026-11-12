@@ -20,6 +20,22 @@ Arquivos fornecidos diretamente pela equipe do projeto:
 - `sfx-ui-confirm.mp3` — confirmação de escolhas e avanço narrativo;
 - `sfx-ui-select.mp3` — mudança de seleção no menu.
 
+## Ambientes e hazards integrados em 12/11/2026
+
+- `../ambience/amb-sewer.mp3` — ambiente contínuo da Fase 1/Esgoto;
+- `../ambience/amb-industrial.mp3` — ambiente contínuo da Fase 2/Industrial;
+- `sfx-conveyor-belt.mp3` — loop ativo somente enquanto Alex está sobre uma esteira;
+- `sfx-warning-beep.mp3` — entrada na janela de aviso dos hazards industriais;
+- `sfx-mechanical-arm.mp3` — ativação do braço mecânico industrial;
+- `sfx-steam-burst.mp3` — início do jato de vapor;
+- `sfx-hydraulic-press.mp3` — descida ativa da prensa hidráulica;
+- `sfx-electric-wire.mp3` — descarga contínua por proximidade dos fios da Fase 1;
+- `sfx-hazard-water.mp3` — água tóxica por proximidade na Fase 1.
+
+Os efeitos das máquinas só são disparados quando o hazard está dentro da área
+visível da câmera. Os loops de esteira, fio e água são interrompidos ao sair da
+área correspondente, morrer, reiniciar ou trocar de cena.
+
 Todos os arquivos desta entrega tiveram evento compatível identificado; não há
 questionamentos de mapeamento pendentes neste momento.
 

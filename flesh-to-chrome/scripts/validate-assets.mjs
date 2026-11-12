@@ -173,22 +173,32 @@ const runtimeImageContracts = new Map([
 const runtimeAudio = [
   "sfx-attack.mp3",
   "sfx-checkpoint.mp3",
+  "sfx-conveyor-belt.mp3",
   "sfx-credit.mp3",
   "sfx-dash.mp3",
   "sfx-death.mp3",
   "sfx-enemy-hit.mp3",
   "sfx-footstep.mp3",
   "sfx-glitch.mp3",
+  "sfx-hydraulic-press.mp3",
+  "sfx-hazard-water.mp3",
+  "sfx-electric-wire.mp3",
   "sfx-hurt.mp3",
   "sfx-implant.mp3",
   "sfx-jump.mp3",
   "sfx-land.mp3",
+  "sfx-mechanical-arm.mp3",
   "sfx-phase-clear.mp3",
   "sfx-scan.mp3",
   "sfx-slide.mp3",
+  "sfx-steam-burst.mp3",
   "sfx-ui-confirm.mp3",
   "sfx-ui-select.mp3",
-].map((filename) => `src/assets/audio/sfx/${filename}`);
+  "sfx-warning-beep.mp3",
+].map((filename) => `src/assets/audio/sfx/${filename}`).concat([
+  "src/assets/audio/ambience/amb-sewer.mp3",
+  "src/assets/audio/ambience/amb-industrial.mp3",
+]);
 
 const readJson = (filename) => JSON.parse(fs.readFileSync(filename, "utf8"));
 const property = (object, name) => object.properties?.find((item) => item.name === name)?.value;

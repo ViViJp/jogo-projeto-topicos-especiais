@@ -386,13 +386,21 @@ for (const key of ["phase1", "phase2", "phase3", "phase4", "phase5", "clinic", "
 assert.match(audioManagerSource, /this\.activeMusic\?\.stop\(\);[\s\S]*?this\.activeMusic\?\.destroy\(\);/,
   "troca de BGM precisa encerrar a faixa anterior");
 for (const filename of [
-  "attack", "checkpoint", "credit", "dash", "death", "enemy-hit", "footstep", "glitch", "hurt",
-  "implant", "jump", "land", "phase-clear", "scan", "slide", "ui-confirm", "ui-select",
+  "attack", "checkpoint", "conveyor-belt", "credit", "dash", "death", "electric-wire",
+  "enemy-hit", "footstep", "glitch", "hazard-water", "hurt", "hydraulic-press", "implant",
+  "jump", "land", "mechanical-arm", "phase-clear", "scan", "slide", "steam-burst",
+  "ui-confirm", "ui-select", "warning-beep",
 ]) {
   assert.match(audioManagerSource, new RegExp(`sfx-${filename}\\.mp3`),
     `AudioManager: master ausente para ${filename}`);
   assert.ok(fs.existsSync(path.join(projectDirectory, `src/assets/audio/sfx/sfx-${filename}.mp3`)),
     `arquivo SFX ausente: ${filename}`);
+}
+for (const [phase, filename] of [["phase1", "amb-sewer"], ["phase2", "amb-industrial"]]) {
+  assert.match(audioManagerSource, new RegExp(`\\[BGM\\.${phase}\\]: new URL\\("\\.\\.\/assets\/audio\/ambience\/${filename}\\.mp3"`),
+    `AudioManager: ambiente ausente para ${phase}`);
+  assert.ok(fs.existsSync(path.join(projectDirectory, `src/assets/audio/ambience/${filename}.mp3`)),
+    `arquivo de ambiente ausente: ${filename}`);
 }
 assert.match(audioManagerSource, /\[SFX\.effort\]: new URL\("\.\.\/assets\/audio\/sfx\/sfx-jump\.mp3"/,
   "salto duplo deve reutilizar o master de pulo enquanto não houver esforço dedicado");
@@ -418,6 +426,20 @@ assert.match(gameScene, /AudioManager\.pauseBgm\(\)/);
 assert.match(gameScene, /AudioManager\.resumeBgm\(\)/);
 assert.match(gameScene, /AudioManager\.startLoop\(this, SFX\.checkpoint/);
 assert.match(gameScene, /AudioManager\.stopLoop\(SFX\.checkpoint\)/);
+assert.match(tiledLevelRuntime, /AudioManager\.startLoop\(this\.scene, SFX\.electricWire/,
+  "fio elétrico deve tocar somente por proximidade");
+assert.match(tiledLevelRuntime, /const electricWireAudible = visibleKind\("electric_wire"\)/,
+  "fio elétrico deve silenciar assim que seu visual sair da câmera");
+assert.match(tiledLevelRuntime, /AudioManager\.startLoop\(this\.scene, SFX\.hazardWater/,
+  "água tóxica deve tocar somente por proximidade");
+assert.match(phase2Runtime, /AudioManager\.startLoop\(this\.scene, SFX\.conveyorBelt/,
+  "esteira deve tocar somente durante contato");
+assert.match(phase2Runtime, /state === "warning"[\s\S]*?SFX\.warningBeep/,
+  "janela de aviso industrial deve emitir o bip dedicado");
+for (const sfx of ["hydraulicPress", "steamBurst", "mechanicalArm"]) {
+  assert.match(phase2Runtime, new RegExp(`SFX\\.${sfx}`),
+    `hazard industrial sem efeito dedicado: ${sfx}`);
+}
 assert.match(playerSource, /this\.sprite\.anims\.play\(this\.slideAnimationKey, true\)/,
   "slide deve usar animação dedicada");
 assert.doesNotMatch(playerSource, /setFrame\(ALEX_SLIDE_FRAME\)/,

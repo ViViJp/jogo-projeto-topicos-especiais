@@ -4,11 +4,11 @@ Documento da branch `feat/visual-audio-polish`.
 
 ## Cobertura audiovisual
 
-- `AudioManager` centraliza as chaves de oito BGMs e vinte e um efeitos. Uma
+- `AudioManager` centraliza as chaves de oito BGMs/ambientes e vinte e sete efeitos. Uma
   troca de cena interrompe e destrói a faixa anterior antes de iniciar a
   próxima.
 - Menu/prólogo, clínica, Portão/finais e cada uma das cinco fases possuem
-  roteamento explícito. A seleção atual de dezessete SFX está registrada; chaves
+  roteamento explícito. A seleção atual de vinte e quatro SFX está registrada; chaves
   ainda sem master permanecem silenciosas sem quebrar a cena.
 - Corrida, aterrissagem, pulo, pulo duplo, slide, ataque, scan, dash, morte,
   inimigos, créditos, checkpoint, conclusão de fase, implantes e interfaces
@@ -16,6 +16,10 @@ Documento da branch `feat/visual-audio-polish`.
 - Passos e slide usam loops associados ao estado de Alex; scan termina junto
   do pulso visual. Os loops pausam com o jogo e são destruídos no shutdown da
   cena, evitando caudas e sobreposição entre tentativas.
+- Esgoto e Industrial usam os ambientes fornecidos pela equipe. Na Fase 1,
+  água tóxica e fios elétricos respondem à proximidade. Na Fase 2, esteiras
+  soam somente durante o contato, o aviso usa um bip próprio e prensa, vapor e
+  braço mecânico disparam seus efeitos ao entrar no estado ativo e visível.
 - O slide usa quatro frames dedicados a 10 FPS para cada estado de implante.
   A entrada não repete: ao manter o comando, Alex conserva o quarto frame.
   O checkpoint usa cinco frames dedicados para cada estado de implante,

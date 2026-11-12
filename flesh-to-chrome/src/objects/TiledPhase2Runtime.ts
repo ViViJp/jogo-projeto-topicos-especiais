@@ -7,6 +7,7 @@ import {
   TILED_FASE2_TILESETS,
 } from "../levels/TiledFase2";
 import { AbilityState } from "../systems/AbilityState";
+import { AudioManager, SFX } from "../systems/AudioManager";
 import { CREDIT_ANIMATION_KEY, TEX } from "../utils/PlaceholderTextures";
 import { CheckpointMarker } from "./CheckpointMarker";
 import { HazardCycleState, HazardCycleTiming, hazardCycleSample } from "./HazardMotion";
@@ -104,6 +105,8 @@ export class TiledPhase2Runtime {
   private readonly tutorialLabels: Phaser.GameObjects.Text[] = [];
   private endGateTriggered = false;
   private elapsedMs = 0;
+  private hazardAudioEnabled = false;
+  private conveyorLoopActive = false;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -408,7 +411,9 @@ export class TiledPhase2Runtime {
   private updateHazards(now: number): void {
     for (const hazard of this.industrialHazards) {
       const sample = hazardCycleSample(now, hazard.timing);
+      const previousState = hazard.state;
       hazard.state = sample.state;
+      this.playHazardTransition(hazard, previousState, sample.state);
       const warning = sample.state === "warning";
       hazard.indicator
         .setVisible(warning)
@@ -416,6 +421,34 @@ export class TiledPhase2Runtime {
         .setStrokeStyle(2, 0xffcf5a, 0.5 + sample.progress * 0.4);
       this.updateHazardMotion(hazard, sample.state, sample.progress, now);
     }
+  }
+
+  private playHazardTransition(
+    hazard: IndustrialHazard,
+    previousState: HazardCycleState | undefined,
+    state: HazardCycleState,
+  ): void {
+    if (!this.hazardAudioEnabled || previousState === state || !this.isHazardAudible(hazard)) return;
+    if (state === "warning") {
+      AudioManager.playSfx(this.scene, SFX.warningBeep, { volume: 0.28 });
+      return;
+    }
+    if (state !== "active") return;
+    const key = hazard.kind === "press"
+      ? SFX.hydraulicPress
+      : hazard.kind === "steam"
+        ? SFX.steamBurst
+        : SFX.mechanicalArm;
+    AudioManager.playSfx(this.scene, key, { volume: 0.46 });
+  }
+
+  private isHazardAudible(hazard: IndustrialHazard): boolean {
+    const view = this.scene.cameras.main.worldView;
+    const margin = 96;
+    return hazard.x + hazard.width >= view.left - margin
+      && hazard.x <= view.right + margin
+      && hazard.y + hazard.height >= view.top - margin
+      && hazard.y <= view.bottom + margin;
   }
 
   private updateHazardMotion(
@@ -646,10 +679,25 @@ export class TiledPhase2Runtime {
 
   update(player: Player, deltaMs = 0): void {
     this.elapsedMs += Math.max(0, deltaMs);
+    this.hazardAudioEnabled = true;
     this.updateHazards(this.elapsedMs);
     const state = player.getState();
+    const conveyorSpeed = this.conveyorSpeedFor(player);
+    const conveyorAudible = conveyorSpeed !== 0
+      && state !== "dead"
+      && state !== "dashing"
+      && state !== "pressed"
+      && state !== "checkpoint";
+    if (conveyorAudible !== this.conveyorLoopActive) {
+      this.conveyorLoopActive = conveyorAudible;
+      if (conveyorAudible) {
+        AudioManager.startLoop(this.scene, SFX.conveyorBelt, { volume: 0.24 });
+      } else {
+        AudioManager.stopLoop(SFX.conveyorBelt);
+      }
+    }
     if (state !== "dead" && state !== "dashing" && state !== "pressed" && state !== "checkpoint") {
-      player.sprite.setVelocityX(BASE_RUN_SPEED + this.conveyorSpeedFor(player));
+      player.sprite.setVelocityX(BASE_RUN_SPEED + conveyorSpeed);
     }
 
     this.creditSprites.forEach((sprite, id) => {
@@ -698,6 +746,8 @@ export class TiledPhase2Runtime {
   }
 
   destroy(): void {
+    AudioManager.stopLoop(SFX.conveyorBelt);
+    this.conveyorLoopActive = false;
     this.creditSprites.forEach((sprite) => sprite.destroy());
     this.checkpointMarkers.forEach((marker) => marker.destroy());
     this.industrialHazards.forEach((hazard) => {

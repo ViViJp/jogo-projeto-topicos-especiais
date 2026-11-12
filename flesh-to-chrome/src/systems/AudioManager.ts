@@ -15,6 +15,7 @@ export const SFX = {
   attack: "sfx-attack",
   checkpoint: "sfx-checkpoint",
   clinicTools: "sfx-clinic-tools",
+  conveyorBelt: "sfx-conveyor-belt",
   credit: "sfx-credit",
   dash: "sfx-dash",
   death: "sfx-death",
@@ -22,17 +23,22 @@ export const SFX = {
   enemyHit: "sfx-enemy-hit",
   footstep: "sfx-footstep",
   glitch: "sfx-glitch",
+  hydraulicPress: "sfx-hydraulic-press",
   hazardLaser: "sfx-hazard-laser",
   hazardWater: "sfx-hazard-water",
+  electricWire: "sfx-electric-wire",
   hurt: "sfx-hurt",
   implant: "sfx-implant",
   jump: "sfx-jump",
   land: "sfx-land",
+  mechanicalArm: "sfx-mechanical-arm",
   phaseClear: "sfx-phase-clear",
   scan: "sfx-scan",
   slide: "sfx-slide",
+  steamBurst: "sfx-steam-burst",
   uiConfirm: "sfx-ui-confirm",
   uiSelect: "sfx-ui-select",
+  warningBeep: "sfx-warning-beep",
 } as const;
 
 export type BgmKey = typeof BGM[keyof typeof BGM];
@@ -45,10 +51,14 @@ export interface AudioSources {
 
 /** Masters aprovados pela equipe. As chaves sem arquivo continuam como no-op. */
 export const AUDIO_SOURCES: Required<AudioSources> = {
-  music: {},
+  music: {
+    [BGM.phase1]: new URL("../assets/audio/ambience/amb-sewer.mp3", import.meta.url).href,
+    [BGM.phase2]: new URL("../assets/audio/ambience/amb-industrial.mp3", import.meta.url).href,
+  },
   sfx: {
     [SFX.attack]: new URL("../assets/audio/sfx/sfx-attack.mp3", import.meta.url).href,
     [SFX.checkpoint]: new URL("../assets/audio/sfx/sfx-checkpoint.mp3", import.meta.url).href,
+    [SFX.conveyorBelt]: new URL("../assets/audio/sfx/sfx-conveyor-belt.mp3", import.meta.url).href,
     [SFX.credit]: new URL("../assets/audio/sfx/sfx-credit.mp3", import.meta.url).href,
     [SFX.dash]: new URL("../assets/audio/sfx/sfx-dash.mp3", import.meta.url).href,
     [SFX.death]: new URL("../assets/audio/sfx/sfx-death.mp3", import.meta.url).href,
@@ -56,15 +66,21 @@ export const AUDIO_SOURCES: Required<AudioSources> = {
     [SFX.enemyHit]: new URL("../assets/audio/sfx/sfx-enemy-hit.mp3", import.meta.url).href,
     [SFX.footstep]: new URL("../assets/audio/sfx/sfx-footstep.mp3", import.meta.url).href,
     [SFX.glitch]: new URL("../assets/audio/sfx/sfx-glitch.mp3", import.meta.url).href,
+    [SFX.hydraulicPress]: new URL("../assets/audio/sfx/sfx-hydraulic-press.mp3", import.meta.url).href,
+    [SFX.hazardWater]: new URL("../assets/audio/sfx/sfx-hazard-water.mp3", import.meta.url).href,
+    [SFX.electricWire]: new URL("../assets/audio/sfx/sfx-electric-wire.mp3", import.meta.url).href,
     [SFX.hurt]: new URL("../assets/audio/sfx/sfx-hurt.mp3", import.meta.url).href,
     [SFX.implant]: new URL("../assets/audio/sfx/sfx-implant.mp3", import.meta.url).href,
     [SFX.jump]: new URL("../assets/audio/sfx/sfx-jump.mp3", import.meta.url).href,
     [SFX.land]: new URL("../assets/audio/sfx/sfx-land.mp3", import.meta.url).href,
+    [SFX.mechanicalArm]: new URL("../assets/audio/sfx/sfx-mechanical-arm.mp3", import.meta.url).href,
     [SFX.phaseClear]: new URL("../assets/audio/sfx/sfx-phase-clear.mp3", import.meta.url).href,
     [SFX.scan]: new URL("../assets/audio/sfx/sfx-scan.mp3", import.meta.url).href,
     [SFX.slide]: new URL("../assets/audio/sfx/sfx-slide.mp3", import.meta.url).href,
+    [SFX.steamBurst]: new URL("../assets/audio/sfx/sfx-steam-burst.mp3", import.meta.url).href,
     [SFX.uiConfirm]: new URL("../assets/audio/sfx/sfx-ui-confirm.mp3", import.meta.url).href,
     [SFX.uiSelect]: new URL("../assets/audio/sfx/sfx-ui-select.mp3", import.meta.url).href,
+    [SFX.warningBeep]: new URL("../assets/audio/sfx/sfx-warning-beep.mp3", import.meta.url).href,
   },
 };
 

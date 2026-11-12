@@ -3,16 +3,27 @@
 ## Estrutura
 ```
 flesh-to-chrome/src/assets/audio/
-  music/   # BGM loops por cena
+  ambience/ # ambientes em loop por fase
+  music/    # futuras BGMs por cena
   sfx/     # one-shots
   credits.txt
 ```
 
+## Ambientes integrados
+
+- `ambience/amb-sewer.mp3` — Fase 1/Esgoto;
+- `ambience/amb-industrial.mp3` — Fase 2/Industrial.
+
+Esses arquivos ocupam temporariamente as chaves `bgm-phase-1` e `bgm-phase-2`
+para aproveitar o controle de loop, pausa e troca de cena do `AudioManager`.
+As demais chaves musicais continuam silenciosas.
+
 ## Music (BGM) — aguardando seleção
 
 Os masters provisórios foram removidos em 11/11/2026. As chaves e o
-roteamento permanecem definidos em `src/systems/AudioManager.ts`, mas o
-catálogo `AUDIO_SOURCES` fica vazio até a escolha manual das faixas finais.
+roteamento permanecem definidos em `src/systems/AudioManager.ts`. Nenhuma
+música foi restaurada; somente os dois ambientes fornecidos pela equipe foram
+associados às fases correspondentes.
 
 Nomes de uso planejados:
 
@@ -40,5 +51,5 @@ checkpoint, glitch, implant, phase-clear, ui-confirm e ui-select. Passos,
 slide e scan são controlados pelo estado de Alex. Os masters longos de
 checkpoint e implante ficam limitados à duração visual dos procedimentos.
 
-Continuam aguardando seleção: clinic-tools, hazard-water e hazard-laser.
+Continuam aguardando seleção: clinic-tools e hazard-laser.
 Proveniência detalhada em `sfx/credits.txt`.

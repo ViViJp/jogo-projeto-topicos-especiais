@@ -3,6 +3,7 @@ import { CheckpointMarker } from "./CheckpointMarker";
 import { Player } from "../entities/Player";
 import { EnemyRuntime } from "./EnemyRuntime";
 import { AbilityState } from "../systems/AbilityState";
+import { AudioManager, SFX } from "../systems/AudioManager";
 import { CREDIT_ANIMATION_KEY, TEX } from "../utils/PlaceholderTextures";
 import {
   TILED_FASE1_MAP_KEY,
@@ -114,6 +115,8 @@ export class TiledLevelRuntime {
   private enemyRuntime?: EnemyRuntime;
   private playerRef?: Player;
   private epilogueCorridor = false;
+  private electricWireLoopActive = false;
+  private hazardWaterLoopActive = false;
 
   private endGateTriggered = false;
 
@@ -549,6 +552,7 @@ export class TiledLevelRuntime {
     this.enemyRuntime?.update();
     const px = player.sprite.x;
     const py = player.sprite.y;
+    this.updateEnvironmentalAudio(player, px);
 
     this.creditSprites.forEach((sprite, id) => {
       if (!sprite.active) return;
@@ -583,7 +587,50 @@ export class TiledLevelRuntime {
     }
   }
 
+  private updateEnvironmentalAudio(player: Player, playerX: number): void {
+    const audibleRange = Math.max(420, this.scene.cameras.main.width * 0.55);
+    const canHearHazards = !this.epilogueCorridor && player.getState() !== "dead";
+    const nearKind = (kind: string): boolean => canHearHazards && this.hazardZones.some((hazard) => (
+      hazard.kind === kind && Math.abs(hazard.zone.x - playerX) <= audibleRange
+    ));
+    const cameraView = this.scene.cameras.main.worldView;
+    const visibleKind = (kind: string): boolean => canHearHazards && this.hazardZones.some((hazard) => {
+      if (hazard.kind !== kind) return false;
+      const halfWidth = hazard.zone.displayWidth / 2;
+      const visualMargin = 32;
+      return hazard.zone.x + halfWidth + visualMargin >= cameraView.left
+        && hazard.zone.x - halfWidth - visualMargin <= cameraView.right;
+    });
+
+    // O estalo acompanha o fio na tela. A regra anterior usava um raio de
+    // centenas de pixels em torno de Alex e mantinha o loop mesmo depois de
+    // o sprite desaparecer pela esquerda da câmera.
+    const electricWireAudible = visibleKind("electric_wire");
+    if (electricWireAudible !== this.electricWireLoopActive) {
+      this.electricWireLoopActive = electricWireAudible;
+      if (electricWireAudible) {
+        AudioManager.startLoop(this.scene, SFX.electricWire, { volume: 0.22 });
+      } else {
+        AudioManager.stopLoop(SFX.electricWire);
+      }
+    }
+
+    const hazardWaterAudible = nearKind("toxic_water");
+    if (hazardWaterAudible !== this.hazardWaterLoopActive) {
+      this.hazardWaterLoopActive = hazardWaterAudible;
+      if (hazardWaterAudible) {
+        AudioManager.startLoop(this.scene, SFX.hazardWater, { volume: 0.2 });
+      } else {
+        AudioManager.stopLoop(SFX.hazardWater);
+      }
+    }
+  }
+
   destroy(): void {
+    AudioManager.stopLoop(SFX.electricWire);
+    AudioManager.stopLoop(SFX.hazardWater);
+    this.electricWireLoopActive = false;
+    this.hazardWaterLoopActive = false;
     this.enemyRuntime?.destroy();
     this.electricWireTweens.forEach((tween) => tween.remove());
     this.electricWireVisuals.forEach((visual) => visual.destroy());
