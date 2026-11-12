@@ -176,39 +176,26 @@ def cylinder(layer: Layer, x, y, w, h, base: str, light: str, dark: str):
     layer.rect(x + w - max(1, w // 6), y, max(1, w // 6), h, rgb(dark))
 
 
-def elbow_to_wall(layer: Layer, x, w, y, side: int, base: str, light: str, dark: str, flange: str, length=14):
-    """Joelho de 90° no pé de um cano vertical (x..x+w, terminando em y) que
-    vira para o lado (`side` -1 = esquerda, 1 = direita) e entra na parede
-    por um flange parafusado."""
-    ri, ro = 4, 4 + w  # raios interno/externo da curva
-    cx = x + ro if side > 0 else x + w - ro  # centro da curva
-    a0, a1 = (math.pi, math.pi / 2) if side > 0 else (0, math.pi / 2)
-
-    def band(r_in, r_out, color):
-        n = 12
-        outer = [(cx + r_out * math.cos(a0 + (a1 - a0) * i / n), y + r_out * math.sin(a0 + (a1 - a0) * i / n)) for i in range(n + 1)]
-        inner = [(cx + r_in * math.cos(a0 + (a1 - a0) * i / n), y + r_in * math.sin(a0 + (a1 - a0) * i / n)) for i in range(n, -1, -1)]
-        layer.poly(outer + inner, rgb(color))
-
-    # mesmas faixas de luz/sombra do cilindro, seguindo a curva
-    edge, strip = max(1, w // 5), max(1, w // 6)
-    band(ri, ro, base)
-    light_r, dark_r = (ro - edge - strip, ro - edge), (ri, ri + strip)
-    if side < 0:  # espelhado: a faixa clara fica do lado de dentro
-        light_r, dark_r = (ri + edge, ri + edge + strip), (ro - strip, ro)
-    band(*light_r, light)
-    band(*dark_r, dark)
-    # trecho horizontal até a parede, com as faixas na mesma altura da curva
-    x0 = cx if side > 0 else cx - length
-    layer.rect(x0, y + ri, length, w, rgb(base))
-    layer.rect(x0, y + light_r[0], length, strip, rgb(light))
-    layer.rect(x0, y + dark_r[0], length, dark_r[1] - dark_r[0], rgb(dark))
-    # colar na emenda com o cano vertical e flange preso na parede
-    layer.rect(x - 2, y - 4, w + 4, 4, rgb(flange))
-    fx = cx + length if side > 0 else cx - length - 4
-    layer.rect(fx, y + ri - 4, 4, w + 8, rgb(flange))
-    layer.px(fx + 1, y + ri - 3, rgb(light))
-    layer.px(fx + 1, y + ro + 2, rgb(light))
+def pour(layer: Layer, x, w, y, bottom, flange: str, seed: int):
+    """Boca aberta no pé de um cano vertical (x..x+w, terminando em y)
+    despejando água tóxica até `bottom`."""
+    rnd = random.Random(seed)
+    sx, sw = x + 2, w - 4
+    layer.rect(sx, y, sw, bottom - y, rgb("#6f9c80", 215))
+    layer.rect(sx, y, 1, bottom - y, rgb("#557a66", 215))
+    layer.rect(sx + sw - 1, y, 1, bottom - y, rgb("#557a66", 215))
+    # fios claros quebrados dão a leitura de água caindo
+    for fx in (sx + 2, sx + sw - 3):
+        yy = y + rnd.randint(0, 6)
+        while yy < bottom - 4:
+            seg = rnd.randint(5, 14)
+            layer.rect(fx, yy, 1, min(seg, bottom - 4 - yy), rgb("#9cc9ac", 230))
+            yy += seg + rnd.randint(3, 8)
+    # espuma onde o jato bate no canal
+    layer.rect(x - 4, bottom - 3, w + 8, 3, rgb("#9cc9ac", 200))
+    layer.rect(x - 8, bottom - 1, w + 16, 1, rgb("#9cc9ac", 150))
+    # colar da boca por cima do jato
+    layer.rect(x - 2, y - 4, w + 4, 5, rgb(flange))
 
 
 def hpipe(layer: Layer, y, thick, base: str, light: str, dark: str, flange: str, spacing=96, offset=0):
@@ -277,18 +264,19 @@ def fase1():
     for bx in range(0, LW, 128):
         mid.rect(bx + 60, 0, 3, 30, rgb("#4a5157"))
         mid.rect(bx + 56, 0, 11, 3, rgb("#4a5157"))
-    # Canos descem, dobram num joelho e entram na parede. Terminam acima de
-    # y lógico ~210 (tela ~420): abaixo disso ficam as passarelas e o cano
-    # atravessaria o chão.
-    for vx, bend_y, side in ((150, 188, -1), (470, 176, 1)):
-        cylinder(mid, vx, 48, 12, bend_y - 48, "#59616a", "#6d757b", "#4b5258")
+    # Canos terminam em boca aberta despejando água tóxica no canal (a base
+    # desta camada encosta no topo de esgoto-agua.png). O cano para acima de
+    # y lógico ~210 (tela ~420): abaixo disso ficam as passarelas e ele
+    # atravessaria o chão; só o jato passa por trás delas.
+    for vx, end_y in ((150, 188), (470, 176)):
+        cylinder(mid, vx, 48, 12, end_y - 48, "#59616a", "#6d757b", "#4b5258")
         mid.rect(vx - 2, 48, 16, 5, rgb("#4b5258"))
         mid.rect(vx - 2, 84, 16, 4, rgb("#4f565c"))
         # registro (volante)
         mid.ring(vx - 6, 112, 24, 24, rgb("#4a5157"), 3)
         mid.rect(vx + 5, 112, 2, 24, rgb("#4a5157"))
         mid.rect(vx - 6, 123, 24, 2, rgb("#4a5157"))
-        elbow_to_wall(mid, vx, 12, bend_y, side, "#59616a", "#6d757b", "#4b5258", "#4b5258")
+        pour(mid, vx, 12, end_y, 320, "#4b5258", vx)
     # grades com luz esverdeada e escorrido
     for gx, gy in ((300, 196), (590, 150)):
         glow(mid, gx + 20, gy + 14, 34, "#7fb08f", 40)
