@@ -43,12 +43,30 @@ export interface AudioSources {
   sfx?: Partial<Record<SfxKey, string>>;
 }
 
-/**
- * Catálogo intencionalmente vazio até a seleção dos masters definitivos.
- * As chaves, volumes e pontos de disparo permanecem prontos. Quando os
- * arquivos forem escolhidos, registre suas URLs antes do preload do Boot.
- */
-export const AUDIO_SOURCES: Required<AudioSources> = { music: {}, sfx: {} };
+/** Masters aprovados pela equipe. As chaves sem arquivo continuam como no-op. */
+export const AUDIO_SOURCES: Required<AudioSources> = {
+  music: {},
+  sfx: {
+    [SFX.attack]: new URL("../assets/audio/sfx/sfx-attack.mp3", import.meta.url).href,
+    [SFX.checkpoint]: new URL("../assets/audio/sfx/sfx-checkpoint.mp3", import.meta.url).href,
+    [SFX.credit]: new URL("../assets/audio/sfx/sfx-credit.mp3", import.meta.url).href,
+    [SFX.dash]: new URL("../assets/audio/sfx/sfx-dash.mp3", import.meta.url).href,
+    [SFX.death]: new URL("../assets/audio/sfx/sfx-death.mp3", import.meta.url).href,
+    [SFX.effort]: new URL("../assets/audio/sfx/sfx-jump.mp3", import.meta.url).href,
+    [SFX.enemyHit]: new URL("../assets/audio/sfx/sfx-enemy-hit.mp3", import.meta.url).href,
+    [SFX.footstep]: new URL("../assets/audio/sfx/sfx-footstep.mp3", import.meta.url).href,
+    [SFX.glitch]: new URL("../assets/audio/sfx/sfx-glitch.mp3", import.meta.url).href,
+    [SFX.hurt]: new URL("../assets/audio/sfx/sfx-hurt.mp3", import.meta.url).href,
+    [SFX.implant]: new URL("../assets/audio/sfx/sfx-implant.mp3", import.meta.url).href,
+    [SFX.jump]: new URL("../assets/audio/sfx/sfx-jump.mp3", import.meta.url).href,
+    [SFX.land]: new URL("../assets/audio/sfx/sfx-land.mp3", import.meta.url).href,
+    [SFX.phaseClear]: new URL("../assets/audio/sfx/sfx-phase-clear.mp3", import.meta.url).href,
+    [SFX.scan]: new URL("../assets/audio/sfx/sfx-scan.mp3", import.meta.url).href,
+    [SFX.slide]: new URL("../assets/audio/sfx/sfx-slide.mp3", import.meta.url).href,
+    [SFX.uiConfirm]: new URL("../assets/audio/sfx/sfx-ui-confirm.mp3", import.meta.url).href,
+    [SFX.uiSelect]: new URL("../assets/audio/sfx/sfx-ui-select.mp3", import.meta.url).href,
+  },
+};
 
 /**
  * Barramento audiovisual global. Toda troca de BGM interrompe a faixa anterior
@@ -57,6 +75,7 @@ export const AUDIO_SOURCES: Required<AudioSources> = { music: {}, sfx: {} };
 export class AudioManager {
   private static activeMusic?: Phaser.Sound.BaseSound;
   private static activeKey?: BgmKey;
+  private static activeLoops = new Map<SfxKey, Phaser.Sound.BaseSound>();
 
   static configure(sources: AudioSources): void {
     Object.assign(AUDIO_SOURCES.music, sources.music);
@@ -96,12 +115,43 @@ export class AudioManager {
     scene.sound.play(key, { volume: 0.55, ...config });
   }
 
+  /** Sons longos ligados a um estado (corrida, slide e scan), sem sobreposição. */
+  static startLoop(
+    scene: Phaser.Scene,
+    key: SfxKey,
+    config: Phaser.Types.Sound.SoundConfig = {},
+  ): void {
+    if (!scene.cache?.audio?.exists(key)) return;
+    const current = this.activeLoops.get(key);
+    if (current?.isPlaying || current?.isPaused) return;
+    current?.destroy();
+    const sound = scene.sound.add(key, { volume: 0.55, loop: true, ...config });
+    this.activeLoops.set(key, sound);
+    sound.play();
+    scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      if (this.activeLoops.get(key) === sound) this.stopLoop(key);
+    });
+  }
+
+  static stopLoop(key: SfxKey): void {
+    const sound = this.activeLoops.get(key);
+    sound?.stop();
+    sound?.destroy();
+    this.activeLoops.delete(key);
+  }
+
   static pauseBgm(): void {
     if (this.activeMusic?.isPlaying) this.activeMusic.pause();
+    this.activeLoops.forEach((sound) => {
+      if (sound.isPlaying) sound.pause();
+    });
   }
 
   static resumeBgm(): void {
     if (this.activeMusic?.isPaused) this.activeMusic.resume();
+    this.activeLoops.forEach((sound) => {
+      if (sound.isPaused) sound.resume();
+    });
   }
 
   static stopBgm(): void {

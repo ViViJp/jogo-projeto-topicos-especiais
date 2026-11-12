@@ -170,6 +170,26 @@ const runtimeImageContracts = new Map([
   ["src/assets/npcs/george/george-clinic/george-clinic-03.png", [96, 96]],
 ]);
 
+const runtimeAudio = [
+  "sfx-attack.mp3",
+  "sfx-checkpoint.mp3",
+  "sfx-credit.mp3",
+  "sfx-dash.mp3",
+  "sfx-death.mp3",
+  "sfx-enemy-hit.mp3",
+  "sfx-footstep.mp3",
+  "sfx-glitch.mp3",
+  "sfx-hurt.mp3",
+  "sfx-implant.mp3",
+  "sfx-jump.mp3",
+  "sfx-land.mp3",
+  "sfx-phase-clear.mp3",
+  "sfx-scan.mp3",
+  "sfx-slide.mp3",
+  "sfx-ui-confirm.mp3",
+  "sfx-ui-select.mp3",
+].map((filename) => `src/assets/audio/sfx/${filename}`);
+
 const readJson = (filename) => JSON.parse(fs.readFileSync(filename, "utf8"));
 const property = (object, name) => object.properties?.find((item) => item.name === name)?.value;
 const fail = (message) => errors.push(message);
@@ -277,6 +297,20 @@ for (const image of runtimeImages) {
     if (!isDeepStrictEqual(actualSize, expectedSize)) {
       fail(`${image}: dimensão deve ser ${expectedSize[0]}x${expectedSize[1]}, recebido ${actualSize[0]}x${actualSize[1]}`);
     }
+  }
+}
+
+for (const audio of runtimeAudio) {
+  const audioPath = path.join(projectRoot, audio);
+  if (!fs.existsSync(audioPath)) {
+    fail(`asset de áudio ausente: ${audio}`);
+    continue;
+  }
+  const data = fs.readFileSync(audioPath);
+  const hasId3 = data.subarray(0, 3).toString("ascii") === "ID3";
+  const hasMpegSync = data[0] === 0xff && (data[1] & 0xe0) === 0xe0;
+  if (data.length < 1024 || (!hasId3 && !hasMpegSync)) {
+    fail(`${audio}: master MP3 inválido ou vazio`);
   }
 }
 

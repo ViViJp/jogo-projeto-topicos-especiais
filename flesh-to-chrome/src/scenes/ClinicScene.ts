@@ -195,7 +195,7 @@ export class ClinicScene extends Phaser.Scene {
       this.dialogueText.setText(
         `${this.beat.implantLabel.toUpperCase()} integrados com sucesso.\nHabilidade liberada: ${this.beat.abilityLabel}.`,
       );
-      AudioManager.playSfx(this, SFX.implant, { volume: 0.6 });
+      AudioManager.startLoop(this, SFX.implant, { volume: 0.6 });
     }
     this.pageText.setText(`${this.pageIndex + 1}/${dialoguePages + 1}`);
   }
@@ -209,6 +209,7 @@ export class ClinicScene extends Phaser.Scene {
       return;
     }
     this.finished = true;
+    AudioManager.stopLoop(SFX.implant);
     if (this.data$.testMode) {
       this.scene.start("MenuScene");
       return;

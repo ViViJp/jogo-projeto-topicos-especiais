@@ -271,6 +271,8 @@ assert.match(playerSource, /this\.emitAttackPulse\(false\)/);
 assert.match(playerSource, /const attackSequence = \+\+this\.attackSequence/);
 assert.match(playerSource, /this\.attackSequence === attackSequence/);
 assert.doesNotMatch(playerSource, /showAttackFeedback/, "ataque deve usar o spritesheet, não o arco provisório");
+assert.doesNotMatch(playerSource, /spawnAttackFx/,
+  "ataque não deve recriar o arco visual removido no polimento");
 const jumpMethod = playerSource.slice(playerSource.indexOf("private handleJump"), playerSource.indexOf("private handleSlide"));
 assert.match(jumpMethod, /this\.transitionState\("jumping", true\)/,
   "ataque → pulo deve invalidar o golpe e restaurar a pose");
@@ -383,16 +385,39 @@ for (const key of ["phase1", "phase2", "phase3", "phase4", "phase5", "clinic", "
 }
 assert.match(audioManagerSource, /this\.activeMusic\?\.stop\(\);[\s\S]*?this\.activeMusic\?\.destroy\(\);/,
   "troca de BGM precisa encerrar a faixa anterior");
-assert.match(audioManagerSource, /AUDIO_SOURCES: Required<AudioSources> = \{ music: \{\}, sfx: \{\} \}/,
-  "catálogo deve aguardar os arquivos de áudio definitivos");
+for (const filename of [
+  "attack", "checkpoint", "credit", "dash", "death", "enemy-hit", "footstep", "glitch", "hurt",
+  "implant", "jump", "land", "phase-clear", "scan", "slide", "ui-confirm", "ui-select",
+]) {
+  assert.match(audioManagerSource, new RegExp(`sfx-${filename}\\.mp3`),
+    `AudioManager: master ausente para ${filename}`);
+  assert.ok(fs.existsSync(path.join(projectDirectory, `src/assets/audio/sfx/sfx-${filename}.mp3`)),
+    `arquivo SFX ausente: ${filename}`);
+}
+assert.match(audioManagerSource, /\[SFX\.effort\]: new URL\("\.\.\/assets\/audio\/sfx\/sfx-jump\.mp3"/,
+  "salto duplo deve reutilizar o master de pulo enquanto não houver esforço dedicado");
+assert.match(audioManagerSource, /activeLoops = new Map/);
+assert.match(audioManagerSource, /static startLoop\([\s\S]*?loop: true/);
+assert.match(audioManagerSource, /static stopLoop\([\s\S]*?sound\?\.destroy\(\)/);
+assert.match(audioManagerSource, /pauseBgm\(\)[\s\S]*?activeLoops[\s\S]*?sound\.pause\(\)/,
+  "pausa do jogo também deve suspender loops de ação");
 assert.match(audioManagerSource, /if \(!scene\.cache\?\.audio\?\.exists\(key\)\) \{[\s\S]*?this\.stopBgm\(\)/,
   "cena sem master registrado não pode manter a BGM anterior");
 for (const sfx of ["jump", "land", "slide", "attack", "dash", "scan", "death", "enemyHit", "uiConfirm"]) {
   assert.match(audioManagerSource, new RegExp(`${sfx}: "sfx-`), `AudioManager: SFX ${sfx}`);
 }
+assert.match(playerSource, /AudioManager\.startLoop\(this\.scene, SFX\.footstep/);
+assert.match(playerSource, /AudioManager\.startLoop\(this\.scene, SFX\.slide/);
+assert.match(playerSource, /AudioManager\.startLoop\(this\.scene, SFX\.scan/);
+assert.match(playerSource, /AudioManager\.playSfx\(this\.scene, SFX\.hurt/);
+assert.match(playerSource, /private stopContinuousSfx\(\): void/);
+assert.match(playerSource, /grounded && !this\.wasGrounded && this\.landingSoundArmed/,
+  "aterrissagem não deve tocar no spawn da fase");
 assert.match(gameScene, /AudioManager\.playBgm\(this, bgmForPhase\(this\.data\$\.phaseId\)/);
 assert.match(gameScene, /AudioManager\.pauseBgm\(\)/);
 assert.match(gameScene, /AudioManager\.resumeBgm\(\)/);
+assert.match(gameScene, /AudioManager\.startLoop\(this, SFX\.checkpoint/);
+assert.match(gameScene, /AudioManager\.stopLoop\(SFX\.checkpoint\)/);
 assert.match(playerSource, /this\.sprite\.anims\.play\(this\.slideAnimationKey, true\)/,
   "slide deve usar animação dedicada");
 assert.doesNotMatch(playerSource, /setFrame\(ALEX_SLIDE_FRAME\)/,

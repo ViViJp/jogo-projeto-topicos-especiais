@@ -32,13 +32,13 @@ Corrupt Data Stream: https://opengameart.org/content/corrupt-data-stream
 
 Cópias full (opcional, local): `_downloads/audio/full-bgm/` (gitignore).
 
-## SFX — aguardando seleção
+## SFX — seleção integrada em 12/11/2026
 
-Os arquivos provisórios também foram removidos. As chamadas continuam usando
-as chaves: jump, land, slide, effort, footstep, hurt, death, credit,
-checkpoint, attack, dash, scan, ui-select, ui-confirm, hazard-water,
-hazard-laser, enemy-hit, glitch, phase-clear, implant e clinic-tools.
+Foram registrados os masters fornecidos pela equipe para jump/effort, land,
+slide, footstep, hurt, death, attack, dash, scan, enemy-hit, credit,
+checkpoint, glitch, implant, phase-clear, ui-confirm e ui-select. Passos,
+slide e scan são controlados pelo estado de Alex. Os masters longos de
+checkpoint e implante ficam limitados à duração visual dos procedimentos.
 
-Depois de adicionar os arquivos escolhidos, registre suas URLs com
-`AudioManager.configure(...)` antes do `BootScene.preload()` ou preencha
-diretamente `AUDIO_SOURCES`.
+Continuam aguardando seleção: clinic-tools, hazard-water e hazard-laser.
+Proveniência detalhada em `sfx/credits.txt`.

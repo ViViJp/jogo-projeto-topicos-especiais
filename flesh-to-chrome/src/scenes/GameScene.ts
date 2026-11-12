@@ -5,6 +5,7 @@ import { InputManager } from "../systems/InputManager";
 import { CreditsSystem } from "../systems/CreditsSystem";
 import { HUD } from "../systems/HUD";
 import { SaveState } from "../systems/SaveState";
+import { DescentPreviewSession } from "../systems/DescentPreviewSession";
 import { AudioManager, SFX, bgmForPhase } from "../systems/AudioManager";
 import { descentRouteForPhase, descentStepForPhase } from "../systems/DescentProgression";
 import { DescentGlitchRuntime, DESCENT_GLITCH_TEXTURE_PREFIX } from "../objects/DescentGlitchRuntime";
@@ -116,7 +117,13 @@ export interface GameSceneData {
   abilities?: AbilityState;
   /** Reutiliza o mesmo mapa no caminho inverso narrativo Flesh/Hollow. */
   descent?: boolean;
+  /** Progressão descartável da descida iniciada pelo seletor de testes. */
+  descentPreview?: DescentPreviewSession;
 }
+
+type RuntimeGameSceneData = Required<Omit<GameSceneData, "descentPreview">> & {
+  descentPreview?: DescentPreviewSession;
+};
 
 /**
  * Fundo por fase. Ajustado em v0.2.1 (feedback de playtest: "o personagem
@@ -185,7 +192,7 @@ export class GameScene extends Phaser.Scene {
   private credits!: CreditsSystem;
   private hud!: HUD;
   private save!: SaveState;
-  private data$!: Required<GameSceneData>;
+  private data$!: RuntimeGameSceneData;
   private isPaused = false;
   private pauseText?: Phaser.GameObjects.Text;
   private scanOverlay?: Phaser.GameObjects.Rectangle;
@@ -235,6 +242,7 @@ export class GameScene extends Phaser.Scene {
       wallet: data.wallet ?? 0,
       abilities: data.abilities ?? createInitialAbilityState(),
       descent: data.descent ?? false,
+      descentPreview: data.descentPreview,
     };
     this.restarting = false;
     // Cada prévia ativa apenas as mecânicas já apresentadas na campanha.
@@ -607,7 +615,8 @@ export class GameScene extends Phaser.Scene {
     if (!route) throw new Error(`Recorte de descida ausente para ${this.data$.phaseId}`);
     const step = descentStepForPhase(this.data$.phaseId);
     const recovered = step
-      ? this.save.get().descentState.recoveredFragmentIds.includes(step.fragmentId)
+      ? (this.data$.descentPreview?.get().descentState.recoveredFragmentIds
+        ?? this.save.get().descentState.recoveredFragmentIds).includes(step.fragmentId)
       : false;
     this.descentRouteRuntime = new DescentRouteRuntime(
       this,
@@ -647,7 +656,10 @@ export class GameScene extends Phaser.Scene {
       step,
       recovered,
       (fragmentId) => {
-        if (!this.save.recoverDescentFragment(fragmentId)) return;
+        const recoveredFragment = this.data$.descentPreview
+          ? this.data$.descentPreview.recoverDescentFragment(fragmentId)
+          : this.save.recoverDescentFragment(fragmentId);
+        if (!recoveredFragment) return;
         this.descentRouteRuntime?.setMemoryRecovered(true);
         this.cameras.main.flash(320, 124, 252, 234);
         this.hud.flashPrompt(`MEMORIA RECUPERADA — ${step.memoryTitle}`, 1800);
@@ -897,7 +909,7 @@ export class GameScene extends Phaser.Scene {
     // para a direita, então Alex é deslocado para que rosto e mãos fiquem
     // diante da tela, sem o corpo atravessar o gabinete.
     this.player.beginCheckpointInteraction(x - GAMEPLAY_TIMING.checkpointPlayerOffsetX, y);
-    AudioManager.playSfx(this, SFX.checkpoint, { volume: 0.55 });
+    AudioManager.startLoop(this, SFX.checkpoint, { volume: 0.55 });
     this.hud.flashPrompt(this.data$.descent
       ? `Checkpoint ${id} sincronizado — memoria preservada`
       : `Checkpoint ${id} sincronizado — créditos consolidados`);
@@ -906,6 +918,7 @@ export class GameScene extends Phaser.Scene {
       GAMEPLAY_TIMING.checkpointInteractionMs - GAMEPLAY_TIMING.checkpointStandMs,
       () => {
         this.player.endCheckpointInteraction(() => {
+          AudioManager.stopLoop(SFX.checkpoint);
           this.checkpointInteraction = undefined;
         });
       },
@@ -923,18 +936,28 @@ export class GameScene extends Phaser.Scene {
       if (this.restarting) return;
       this.restarting = true;
       this.player.sprite.setVelocity(0, 0);
+      const descentProgression = this.data$.descentPreview ?? this.save;
+      const previewData = this.data$.descentPreview
+        ? { testMode: true, descentPreview: this.data$.descentPreview }
+        : undefined;
       if (descentRouteForPhase(this.data$.phaseId)?.epilogue) {
-        this.save.completeDescentEpilogue();
-        this.time.delayedCall(250, () => this.scene.start("EpilogueScene", { ending: "flesh" }));
+        descentProgression.completeDescentEpilogue();
+        this.time.delayedCall(250, () => this.scene.start("EpilogueScene", {
+          ending: "flesh",
+          ...previewData,
+        }));
         return;
       }
-      const result = this.save.completeDescentPhase();
+      const result = descentProgression.completeDescentPhase();
       const destination = result === "reforge"
         ? "ReForgeScene"
         : result === "retry"
           ? "DescentRetryScene"
           : "EpilogueScene";
-      this.time.delayedCall(250, () => this.scene.start(destination, result === "hollow" ? { ending: "hollow" } : undefined));
+      const destinationData = result === "hollow"
+        ? { ending: "hollow", ...previewData }
+        : previewData;
+      this.time.delayedCall(250, () => this.scene.start(destination, destinationData));
       return;
     }
     this.credits.consolidate();
@@ -1121,6 +1144,7 @@ export class GameScene extends Phaser.Scene {
         wallet: this.credits.getTotal(),
         abilities: this.data$.abilities,
         descent: this.data$.descent,
+        descentPreview: this.data$.descentPreview,
       } as GameSceneData);
     });
   }
@@ -1148,6 +1172,7 @@ export class GameScene extends Phaser.Scene {
       wallet,
       abilities: this.data$.abilities,
       descent: this.data$.descent,
+      descentPreview: this.data$.descentPreview,
     } as GameSceneData);
   }
 

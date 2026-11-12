@@ -3,15 +3,29 @@ import { InputManager } from "../systems/InputManager";
 import { SaveState } from "../systems/SaveState";
 import { descentStepAt } from "../systems/DescentProgression";
 import { AudioManager, BGM, SFX } from "../systems/AudioManager";
+import { DescentPreviewSession } from "../systems/DescentPreviewSession";
+import type { GameSceneData } from "./GameScene";
+
+interface DescentRetrySceneData {
+  testMode?: boolean;
+  descentPreview?: DescentPreviewSession;
+}
 
 export class DescentRetryScene extends Phaser.Scene {
   private input$!: InputManager;
   private retrySelected = true;
   private retryText!: Phaser.GameObjects.Text;
   private abandonText!: Phaser.GameObjects.Text;
+  private testMode = false;
+  private descentPreview?: DescentPreviewSession;
 
   constructor() {
     super("DescentRetryScene");
+  }
+
+  init(data: DescentRetrySceneData): void {
+    this.testMode = data.testMode ?? false;
+    this.descentPreview = data.descentPreview;
   }
 
   create(): void {
@@ -19,7 +33,12 @@ export class DescentRetryScene extends Phaser.Scene {
     const height = this.scale.height;
     const centerX = width / 2;
     const choiceOffsetX = Math.min(210, width * 0.2);
-    const step = descentStepAt(SaveState.load().get().descentState.currentStep);
+    if (this.testMode && !this.descentPreview) {
+      this.scene.start("MenuScene");
+      return;
+    }
+    const progression = this.descentPreview ?? SaveState.load();
+    const step = descentStepAt(progression.get().descentState.currentStep);
     const lostMemory = step?.memoryTitle ?? "FRAGMENTO DESCONHECIDO";
     this.input$ = new InputManager(this);
     AudioManager.playBgm(this, BGM.gate, 0.24);
@@ -77,21 +96,27 @@ export class DescentRetryScene extends Phaser.Scene {
 
   private confirmChoice(): void {
     AudioManager.playSfx(this, SFX.uiConfirm, { volume: 0.4 });
-    const save = SaveState.load();
+    const progression = this.descentPreview ?? SaveState.load();
     if (this.retrySelected) {
-      const data = save.get();
+      const data = progression.get();
       this.scene.start("GameScene", {
         phaseId: data.currentPhaseId,
+        testMode: this.testMode,
         checkpointX: 0,
         checkpointY: 0,
         consolidatedCreditIds: [],
         wallet: 0,
         abilities: data.abilities,
         descent: true,
-      });
+        descentPreview: this.descentPreview,
+      } as GameSceneData);
     } else {
-      save.declineDescentRetry();
-      this.scene.start("EpilogueScene", { ending: "hollow" });
+      progression.declineDescentRetry();
+      this.scene.start("EpilogueScene", {
+        ending: "hollow",
+        testMode: this.testMode,
+        descentPreview: this.descentPreview,
+      });
     }
   }
 

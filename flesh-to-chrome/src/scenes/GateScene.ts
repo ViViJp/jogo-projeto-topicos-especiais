@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { InputManager } from "../systems/InputManager";
 import { SaveState } from "../systems/SaveState";
 import { AudioManager, BGM, SFX } from "../systems/AudioManager";
+import { DescentPreviewSession } from "../systems/DescentPreviewSession";
 
 const GATE_TEXTURE_KEY = "narrative-gate";
 
@@ -18,7 +19,6 @@ export class GateScene extends Phaser.Scene {
   private choiceTexts = new Map<GateChoice, Phaser.GameObjects.Text>();
   private choosing = false;
   private testMode = false;
-  private previewNotice!: Phaser.GameObjects.Text;
 
   constructor() {
     super("GateScene");
@@ -52,8 +52,10 @@ export class GateScene extends Phaser.Scene {
     this.choosing = false;
     this.choiceTexts.clear();
 
-    const save = SaveState.load();
-    if (!this.testMode && !save.hasPreGateSave()) save.createPreGateSave();
+    if (!this.testMode) {
+      const save = SaveState.load();
+      if (!save.hasPreGateSave()) save.createPreGateSave();
+    }
 
     this.add.rectangle(centerX, height / 2, width, height, 0x100718, 1);
     this.add.image(centerX, gateY, GATE_TEXTURE_KEY).setDisplaySize(288, gateHeight);
@@ -78,13 +80,6 @@ export class GateScene extends Phaser.Scene {
 
     this.createChoice("chrome", centerX - choiceOffsetX, "CHROME", "Aceitar a conversão completa");
     this.createChoice("flesh", centerX + choiceOffsetX, "FLESH", "Recusar e iniciar a descida");
-    this.previewNotice = this.add.text(centerX, height - 92, "", {
-      fontFamily: "Courier New, monospace",
-      fontSize: "15px",
-      color: "#ff9a4d",
-      align: "center",
-      wordWrap: { width: Math.min(width - 80, 900) },
-    }).setOrigin(0.5);
     const controlsHelp = this.testMode
       ? "← → / DIRECIONAL escolher   ENTER / A confirmar   ESC / B voltar ao seletor"
       : "← → / DIRECIONAL escolher   ENTER / A confirmar";
@@ -155,10 +150,11 @@ export class GateScene extends Phaser.Scene {
     AudioManager.playSfx(this, SFX.uiConfirm, { volume: 0.42 });
     if (this.selected === "flesh") {
       if (this.testMode) {
-        this.previewNotice.setText(
-          "A descida Flesh altera a campanha. Inicie este caminho pelo Portão do seu save.",
-        );
-        this.cameras.main.shake(120, 0.002);
+        this.choosing = true;
+        this.scene.start("GeorgeRefusalScene", {
+          testMode: true,
+          descentPreview: new DescentPreviewSession(),
+        });
         return;
       }
       this.choosing = true;
@@ -171,10 +167,9 @@ export class GateScene extends Phaser.Scene {
     }
 
     this.choosing = true;
-    this.cameras.main.fadeOut(450, 0, 0, 0, (_camera: Phaser.Cameras.Scene2D.Camera, progress: number) => {
-      if (progress === 1) {
-        this.scene.start("EndingScene", { ending: "chrome", testMode: this.testMode });
-      }
+    this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
+      this.scene.start("EndingScene", { ending: "chrome", testMode: this.testMode });
     });
+    this.cameras.main.fadeOut(450, 0, 0, 0);
   }
 }

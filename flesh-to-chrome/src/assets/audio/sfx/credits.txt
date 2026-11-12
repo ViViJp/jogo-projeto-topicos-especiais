@@ -1,0 +1,27 @@
+# SFX integrados em 12/11/2026
+
+Arquivos fornecidos diretamente pela equipe do projeto:
+
+- `sfx-attack.mp3` — ataque de Alex;
+- `sfx-checkpoint.mp3` — sincronização com a TV, limitada à interação;
+- `sfx-credit.mp3` — coleta de crédito;
+- `sfx-dash.mp3` — propulsores/dash;
+- `sfx-death.mp3` — morte de Alex;
+- `sfx-enemy-hit.mp3` — inimigo derrotado;
+- `sfx-footstep.mp3` — loop de corrida;
+- `sfx-glitch.mp3` — recuperação de fragmento de memória;
+- `sfx-hurt.mp3` — impacto contra quebrável;
+- `sfx-implant.mp3` — instalação e remoção de implante durante o procedimento;
+- `sfx-jump.mp3` — pulo e esforço do salto duplo;
+- `sfx-land.mp3` — aterrissagem;
+- `sfx-phase-clear.mp3` — conclusão de fase;
+- `sfx-scan.mp3` — pulso do visor;
+- `sfx-slide.mp3` — loop de deslizamento;
+- `sfx-ui-confirm.mp3` — confirmação de escolhas e avanço narrativo;
+- `sfx-ui-select.mp3` — mudança de seleção no menu.
+
+Todos os arquivos desta entrega tiveram evento compatível identificado; não há
+questionamentos de mapeamento pendentes neste momento.
+
+Origem/licença externa: não informada. Confirmar com a equipe antes de uma
+distribuição pública ou comercial.

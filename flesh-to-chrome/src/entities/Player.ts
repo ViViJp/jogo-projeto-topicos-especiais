@@ -70,7 +70,7 @@ export class Player {
   private scanTimer = 0;
   private depthBeforeCheckpoint = 0;
   private wasGrounded = false;
-  private footstepTimer = 0;
+  private landingSoundArmed = false;
   private slideFxTimer = 0;
 
   private onDeath: () => void;
@@ -123,6 +123,8 @@ export class Player {
     this.currentBreakable = breakable;
     this.pressedTimer = PHYSICS.breakable.reactionWindowMs;
     this.sprite.setVelocityX(0);
+    AudioManager.stopLoop(SFX.footstep);
+    AudioManager.playSfx(this.scene, SFX.hurt, { volume: 0.5 });
   }
 
   /** Chamado pelo sistema de colisão quando o quebrável é destruído a tempo. */
@@ -137,6 +139,7 @@ export class Player {
   beginCheckpointInteraction(x = this.sprite.x, y = this.sprite.y): void {
     if (this.state === "dead" || this.state === "checkpoint") return;
     if (this.scanTimer > 0) this.onScanPulse(false);
+    this.stopContinuousSfx();
     this.scanTimer = 0;
     this.dashTimer = 0;
     this.currentBreakable = null;
@@ -175,6 +178,7 @@ export class Player {
   kill(): void {
     if (this.state === "dead") return;
     this.transitionState("dead");
+    this.stopContinuousSfx();
     this.sprite.setVelocity(0, 0);
     this.sprite.body!.enable = false;
     this.sprite.anims.play(this.hurtAnimationKey, true);
@@ -204,8 +208,10 @@ export class Player {
     this.dashCooldownTimer = 0;
     this.pressedTimer = 0;
     this.scanTimer = 0;
-    this.footstepTimer = 0;
     this.slideFxTimer = 0;
+    this.wasGrounded = false;
+    this.landingSoundArmed = false;
+    this.stopContinuousSfx();
     this.currentBreakable = null;
     this.sprite.setVisible(true).setActive(true).setAlpha(1).setAngle(0).clearTint();
     const body = this.sprite.body!;
@@ -238,10 +244,12 @@ export class Player {
     }
 
     const grounded = this.isGrounded();
-    if (grounded && !this.wasGrounded) {
+    if (grounded && !this.wasGrounded && this.landingSoundArmed) {
       AudioManager.playSfx(this.scene, SFX.land, { volume: 0.32 });
       this.spawnLandingFx();
     }
+    if (!grounded) this.landingSoundArmed = true;
+    else this.landingSoundArmed = false;
     this.wasGrounded = grounded;
     if (grounded) {
       this.doubleJumpUsed = false;
@@ -265,11 +273,9 @@ export class Player {
       }
     }
     if (grounded && this.state === "running") {
-      this.footstepTimer -= deltaMs;
-      if (this.footstepTimer <= 0) {
-        AudioManager.playSfx(this.scene, SFX.footstep, { volume: 0.16 });
-        this.footstepTimer = 250;
-      }
+      AudioManager.startLoop(this.scene, SFX.footstep, { volume: 0.16 });
+    } else {
+      AudioManager.stopLoop(SFX.footstep);
     }
     if (this.state === "sliding") {
       this.slideFxTimer -= deltaMs;
@@ -301,6 +307,7 @@ export class Player {
     if (this.scanTimer > 0) {
       this.scanTimer -= deltaMs;
       if (this.scanTimer <= 0) {
+        AudioManager.stopLoop(SFX.scan);
         this.onScanPulse(false);
         if (this.state === "scanning") this.state = "running";
       }
@@ -350,11 +357,12 @@ export class Player {
     this.slideTimer = PHYSICS.slide.durationMs;
     this.slideElapsed = 0;
     this.slideFxTimer = 0;
-    AudioManager.playSfx(this.scene, SFX.slide, { volume: 0.5 });
+    AudioManager.startLoop(this.scene, SFX.slide, { volume: 0.5 });
     this.applySlidingPose();
   }
 
   private endSlide(): void {
+    AudioManager.stopLoop(SFX.slide);
     this.state = "running";
     this.applyRunningPose();
   }
@@ -391,7 +399,6 @@ export class Player {
     this.attackRecoveryTimer = PHYSICS.attack.recoveryMs;
     this.sprite.anims.play(this.attackAnimationKey, true);
     AudioManager.playSfx(this.scene, SFX.attack, { volume: 0.58 });
-    this.spawnAttackFx();
     this.emitAttackPulse(true);
     for (
       let delay = PHYSICS.attack.pulseIntervalMs;
@@ -442,7 +449,7 @@ export class Player {
     if (!this.input.isScanJustDown()) return;
 
     this.scanTimer = PHYSICS.scan.durationMs;
-    AudioManager.playSfx(this.scene, SFX.scan, { volume: 0.48 });
+    AudioManager.startLoop(this.scene, SFX.scan, { volume: 0.48 });
     this.onScanPulse(true);
     this.showScanFeedback();
     if (this.state === "running") this.state = "scanning";
@@ -489,28 +496,14 @@ export class Player {
   }
 
   destroy(): void {
+    this.stopContinuousSfx();
     this.sprite.destroy();
   }
 
-  private spawnAttackFx(): void {
-    const slash = this.scene.add.arc(
-      this.sprite.x + 34,
-      this.sprite.y - 30,
-      34,
-      -70,
-      70,
-      false,
-      0x7cfcea,
-      0.18,
-    ).setStrokeStyle(4, 0xe8ffff, 0.95).setDepth(this.sprite.depth + 1);
-    this.scene.tweens.add({
-      targets: slash,
-      alpha: 0,
-      scaleX: 1.45,
-      scaleY: 1.2,
-      duration: 260,
-      onComplete: () => slash.destroy(),
-    });
+  private stopContinuousSfx(): void {
+    AudioManager.stopLoop(SFX.footstep);
+    AudioManager.stopLoop(SFX.slide);
+    AudioManager.stopLoop(SFX.scan);
   }
 
   private spawnSlideFx(): void {

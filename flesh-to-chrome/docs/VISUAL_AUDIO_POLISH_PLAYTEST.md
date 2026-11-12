@@ -8,11 +8,14 @@ Documento da branch `feat/visual-audio-polish`.
   troca de cena interrompe e destrói a faixa anterior antes de iniciar a
   próxima.
 - Menu/prólogo, clínica, Portão/finais e cada uma das cinco fases possuem
-  roteamento explícito. O catálogo de fontes está vazio enquanto os masters
-  definitivos são selecionados; a ausência de um arquivo não quebra a cena.
+  roteamento explícito. A seleção atual de dezessete SFX está registrada; chaves
+  ainda sem master permanecem silenciosas sem quebrar a cena.
 - Corrida, aterrissagem, pulo, pulo duplo, slide, ataque, scan, dash, morte,
   inimigos, créditos, checkpoint, conclusão de fase, implantes e interfaces
   possuem feedback sonoro.
+- Passos e slide usam loops associados ao estado de Alex; scan termina junto
+  do pulso visual. Os loops pausam com o jogo e são destruídos no shutdown da
+  cena, evitando caudas e sobreposição entre tentativas.
 - O slide usa quatro frames dedicados a 10 FPS para cada estado de implante.
   A entrada não repete: ao manter o comando, Alex conserva o quarto frame.
   O checkpoint usa cinco frames dedicados para cada estado de implante,

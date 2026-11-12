@@ -3,10 +3,17 @@ import { descentStepAt } from "../systems/DescentProgression";
 import { InputManager } from "../systems/InputManager";
 import { SaveState } from "../systems/SaveState";
 import { AudioManager, BGM, SFX } from "../systems/AudioManager";
+import { DescentPreviewSession } from "../systems/DescentPreviewSession";
+import type { GameSceneData } from "./GameScene";
 
 const REFORGE_BG = "reforge-bg";
 const REFORGE_FATHER = "reforge-father";
 const REFORGE_CYBORG = "reforge-cyborg";
+
+interface ReForgeSceneData {
+  testMode?: boolean;
+  descentPreview?: DescentPreviewSession;
+}
 
 const IMPLANT_NAMES = {
   legs: "PERNAS MECANICAS",
@@ -20,9 +27,16 @@ export class ReForgeScene extends Phaser.Scene {
   private page = 0;
   private finished = false;
   private advancePage?: () => void;
+  private testMode = false;
+  private descentPreview?: DescentPreviewSession;
 
   constructor() {
     super("ReForgeScene");
+  }
+
+  init(data: ReForgeSceneData): void {
+    this.testMode = data.testMode ?? false;
+    this.descentPreview = data.descentPreview;
   }
 
   preload(): void {
@@ -43,9 +57,14 @@ export class ReForgeScene extends Phaser.Scene {
     this.page = 0;
     this.finished = false;
     this.advancePage = undefined;
-    const save = SaveState.load().get();
-    const step = descentStepAt(save.descentState.currentStep);
-    if (!step || save.descentState.pendingRemoval !== step.implant) {
+    if (this.testMode && !this.descentPreview) {
+      this.scene.start("MenuScene");
+      return;
+    }
+    const progression = this.descentPreview ?? SaveState.load();
+    const descentData = progression.get();
+    const step = descentStepAt(descentData.descentState.currentStep);
+    if (!step || descentData.descentState.pendingRemoval !== step.implant) {
       this.scene.start("MenuScene");
       return;
     }
@@ -95,6 +114,7 @@ export class ReForgeScene extends Phaser.Scene {
       if (this.page < pages.length - 1) {
         AudioManager.playSfx(this, this.page >= 1 ? SFX.clinicTools : SFX.uiConfirm, { volume: 0.42 });
         this.page += 1;
+        if (this.page === 2) AudioManager.startLoop(this, SFX.implant, { volume: 0.62 });
         body.setText(pages[this.page]);
         counter.setText(`${this.page + 1}/${pages.length}`);
         avatarHologram.setVisible(this.page >= 1);
@@ -102,13 +122,16 @@ export class ReForgeScene extends Phaser.Scene {
         return;
       }
       this.finished = true;
-      AudioManager.playSfx(this, SFX.implant, { volume: 0.62 });
-      const result = SaveState.load().completeBioprinting();
+      AudioManager.stopLoop(SFX.implant);
+      const result = progression.completeBioprinting();
       if (!result) {
         this.scene.start("MenuScene");
         return;
       }
-      const data = SaveState.load().get();
+      const data = progression.get();
+      const previewData = this.descentPreview
+        ? { testMode: true, descentPreview: this.descentPreview }
+        : {};
       if (result.finished) {
         this.scene.start("GameScene", {
           phaseId: "fase1",
@@ -118,7 +141,8 @@ export class ReForgeScene extends Phaser.Scene {
           wallet: 0,
           abilities: data.abilities,
           descent: true,
-        });
+          ...previewData,
+        } as GameSceneData);
       } else {
         this.scene.start("GameScene", {
           phaseId: result.nextPhaseId,
@@ -128,7 +152,8 @@ export class ReForgeScene extends Phaser.Scene {
           wallet: 0,
           abilities: data.abilities,
           descent: true,
-        });
+          ...previewData,
+        } as GameSceneData);
       }
     };
     this.advancePage = advance;
