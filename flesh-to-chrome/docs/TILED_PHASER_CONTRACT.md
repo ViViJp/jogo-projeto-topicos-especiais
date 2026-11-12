@@ -109,6 +109,11 @@ da Fase 5). O fundo é montado com **Image Layers** do Tiled
 - **Opacity** e o "olho" (**Visible**) são respeitados.
 - Propriedade opcional **drift_x** (`float`, px/s): movimento próprio contínuo
   (névoa, fumaça, água). Negativo = para a esquerda.
+- Propriedade opcional **appear_x** (`float`, px do mapa): a camada fica
+  invisível até a borda esquerda da câmera passar desse X e surge em fade ao
+  longo dos 960 px seguintes. Troca o fundo num trecho da fase: na Fase 5,
+  `parallax-final-aurora` e `parallax-final-cidade` usam `28800` (início do
+  trecho contemplativo). No Tiled a camada aparece o tempo todo.
 - A imagem deve estar em `src/assets/backdrops/<setor>/` e ser registrada em
   `src/levels/BackdropAssets.ts` (uma linha por arquivo). Arquivo fora do
   registro é ignorado pelo jogo e acusado por `npm run validate:assets`.

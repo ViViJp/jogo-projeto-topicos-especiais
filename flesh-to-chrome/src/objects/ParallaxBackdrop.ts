@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { SCREEN_HEIGHT, SCREEN_WIDTH } from "../config/GameConfig";
 import { BACKDROP_IMAGE_URLS, backdropTextureKey } from "../levels/BackdropAssets";
 import {
+  appearAlpha,
   readAmbient,
   readBackdropLayers,
   repeatedLayerScroll,
@@ -16,7 +17,7 @@ import {
  * Fundo com parallax + clima de ambiente das fases Tiled.
  *
  * Tudo vem do próprio mapa: cada Image Layer vira uma camada (fator de
- * parallax, repetição, opacidade, offset e `drift_x` editáveis no Tiled) e a
+ * parallax, repetição, opacidade, offset, `drift_x` e `appear_x` editáveis no Tiled) e a
  * propriedade de mapa `ambient` liga gotas/fagulhas/chuva. Regras completas
  * em `src/levels/BackdropLayers.ts` e no contrato Tiled↔Phaser (§3.1).
  *
@@ -136,6 +137,10 @@ export class ParallaxBackdrop {
   update(cameraScrollX: number, deltaMs: number): void {
     this.watchFrameRate();
     for (const layer of this.layers) {
+      if (layer.spec.appearX !== undefined) {
+        const alpha = layer.spec.alpha * appearAlpha(cameraScrollX, layer.spec.appearX);
+        layer.images.forEach((image) => image.setAlpha(alpha));
+      }
       if (!layer.spec.repeatX || !layer.images[0]?.visible) continue;
       if (layer.spec.driftX !== 0) {
         layer.driftPx = (layer.driftPx + (layer.spec.driftX * deltaMs) / 1000) % layer.textureWidth;

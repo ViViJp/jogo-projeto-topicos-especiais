@@ -20,6 +20,9 @@
  * - Propriedade opcional `drift_x` (float, px/s): deslocamento contínuo
  *   próprio da camada (névoa, fumaça, água correndo). Negativo = para a
  *   esquerda.
+ * - Propriedade opcional `appear_x` (float, px do mapa): a camada só surge
+ *   (fade-in) depois que a câmera passa desse X. Serve para trocar o fundo
+ *   num trecho da fase (ex.: final contemplativo da Fase 5).
  *
  * Clima (propriedades do MAPA, Map > Map Properties):
  * - `ambient` (string): `drips` (gotas), `embers` (fagulhas), `rain` (chuva)
@@ -40,6 +43,8 @@ export interface BackdropLayerSpec {
   alpha: number;
   repeatX: boolean;
   driftX: number;
+  /** X do mapa a partir do qual a camada surge; ausente = sempre visível. */
+  appearX?: number;
 }
 
 export interface AmbientSpec {
@@ -93,6 +98,7 @@ export function readBackdropLayers(map: TiledMapLike, mapOffsetY: number): Backd
   const specs: BackdropLayerSpec[] = [];
   for (const layer of map.layers ?? []) {
     if (layer.type !== "imagelayer" || !layer.image || layer.visible === false) continue;
+    const appearX = propertyValue(layer.properties, "appear_x");
     specs.push({
       name: layer.name ?? fileName(layer.image),
       imageName: fileName(layer.image),
@@ -102,6 +108,7 @@ export function readBackdropLayers(map: TiledMapLike, mapOffsetY: number): Backd
       alpha: Math.min(1, Math.max(0, finiteOr(layer.opacity, 1))),
       repeatX: layer.repeatx === true,
       driftX: finiteOr(propertyValue(layer.properties, "drift_x"), 0),
+      appearX: typeof appearX === "number" && Number.isFinite(appearX) ? appearX : undefined,
     });
   }
   return specs;
@@ -128,6 +135,15 @@ export function repeatedLayerScroll(
 ): number {
   const raw = Math.round(cameraScrollX * spec.parallaxX - spec.offsetX - driftPx);
   return ((raw % textureWidth) + textureWidth) % textureWidth;
+}
+
+/** Distância de câmera (px) que uma camada com `appear_x` leva para surgir por completo: ~3 s de corrida. */
+const APPEAR_FADE_PX = 960;
+
+/** Opacidade relativa (0 a 1) de uma camada com `appear_x`; 1 se ela não usa a propriedade. */
+export function appearAlpha(cameraScrollX: number, appearX: number | undefined): number {
+  if (appearX === undefined) return 1;
+  return Math.min(1, Math.max(0, (cameraScrollX - appearX) / APPEAR_FADE_PX));
 }
 
 /** Posição X na tela de um ponto do "mundo de parallax" com repetição a cada `width`. */

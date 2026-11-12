@@ -30,6 +30,7 @@ export const BACKDROP_IMAGE_URLS: Readonly<Record<string, URL>> = {
   "urbano-predios-longe.png": new URL("../assets/backdrops/meio-urbano/urbano-predios-longe.png", import.meta.url),
   "urbano-predios-perto.png": new URL("../assets/backdrops/meio-urbano/urbano-predios-perto.png", import.meta.url),
   "urbano-smog.png": new URL("../assets/backdrops/meio-urbano/urbano-smog.png", import.meta.url),
+  "urbano-rodape.png": new URL("../assets/backdrops/meio-urbano/urbano-rodape.png", import.meta.url),
   // Fase 4 — Distrito Corporativo
   "corp-cidade.png": new URL("../assets/backdrops/corporativo/corp-cidade.png", import.meta.url),
   "corp-fachada.png": new URL("../assets/backdrops/corporativo/corp-fachada.png", import.meta.url),
@@ -40,6 +41,9 @@ export const BACKDROP_IMAGE_URLS: Readonly<Record<string, URL>> = {
   "topo-nuvens.png": new URL("../assets/backdrops/topo/topo-nuvens.png", import.meta.url),
   "topo-torres.png": new URL("../assets/backdrops/topo/topo-torres.png", import.meta.url),
   "topo-nevoa.png": new URL("../assets/backdrops/topo/topo-nevoa.png", import.meta.url),
+  // só no trecho contemplativo final (image layers com `appear_x`)
+  "topo-final-aurora.png": new URL("../assets/backdrops/topo/topo-final-aurora.png", import.meta.url),
+  "topo-final-cidade.png": new URL("../assets/backdrops/topo/topo-final-cidade.png", import.meta.url),
 };
 
 /** Nome do arquivo (sem pastas) de um caminho de imagem do Tiled. */

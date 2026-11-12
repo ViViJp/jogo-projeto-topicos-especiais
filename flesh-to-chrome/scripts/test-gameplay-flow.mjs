@@ -377,6 +377,12 @@ assert.equal(backdrop.repeatedLayerScroll(1000, { parallaxX: 0.5, offsetX: 0 }, 
 assert.equal(backdrop.repeatedLayerScroll(0, { parallaxX: 0.5, offsetX: 10 }, 0, 640), 630, "deslocamento negativo dá a volta");
 assert.equal(backdrop.repeatedLayerScroll(333, { parallaxX: 0.3, offsetX: 0 }, 0.4, 1280) % 1, 0, "posição inteira (pixelArt)");
 assert.equal(backdrop.wrapScreenX(-5, 0, 1, 1280), 1275);
+assert.equal(sampleLayers[0].appearX, undefined, "sem appear_x a camada é sempre visível");
+assert.equal(backdrop.appearAlpha(0, undefined), 1);
+assert.deepEqual([28000, 28800, 29280, 40000].map((x) => backdrop.appearAlpha(x, 28800)), [0, 0, 0.5, 1], "appear_x: fade-in depois do X");
+const fase5Final = backdrop.readBackdropLayers(JSON.parse(fs.readFileSync(path.join(projectDirectory, maps[4]), "utf8")), 176).filter((layer) => layer.appearX !== undefined);
+assert.equal(fase5Final.length, 2, "Fase 5: aurora e cidade alta só no trecho contemplativo");
+assert.ok(fase5Final.every((layer) => layer.appearX === 28800), "Fase 5: fundo final surge no início do trecho contemplativo");
 
 console.log("Gameplay flow: movimentos, barreiras por scan e estrutura das cinco fases validados.");
 console.log("Fundo: camadas de parallax e clima das Fases 1-5 e da corrida multiplayer validados.");

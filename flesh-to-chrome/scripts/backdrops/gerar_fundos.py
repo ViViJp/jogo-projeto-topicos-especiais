@@ -176,6 +176,41 @@ def cylinder(layer: Layer, x, y, w, h, base: str, light: str, dark: str):
     layer.rect(x + w - max(1, w // 6), y, max(1, w // 6), h, rgb(dark))
 
 
+def elbow_to_wall(layer: Layer, x, w, y, side: int, base: str, light: str, dark: str, flange: str, length=14):
+    """Joelho de 90° no pé de um cano vertical (x..x+w, terminando em y) que
+    vira para o lado (`side` -1 = esquerda, 1 = direita) e entra na parede
+    por um flange parafusado."""
+    ri, ro = 4, 4 + w  # raios interno/externo da curva
+    cx = x + ro if side > 0 else x + w - ro  # centro da curva
+    a0, a1 = (math.pi, math.pi / 2) if side > 0 else (0, math.pi / 2)
+
+    def band(r_in, r_out, color):
+        n = 12
+        outer = [(cx + r_out * math.cos(a0 + (a1 - a0) * i / n), y + r_out * math.sin(a0 + (a1 - a0) * i / n)) for i in range(n + 1)]
+        inner = [(cx + r_in * math.cos(a0 + (a1 - a0) * i / n), y + r_in * math.sin(a0 + (a1 - a0) * i / n)) for i in range(n, -1, -1)]
+        layer.poly(outer + inner, rgb(color))
+
+    # mesmas faixas de luz/sombra do cilindro, seguindo a curva
+    edge, strip = max(1, w // 5), max(1, w // 6)
+    band(ri, ro, base)
+    light_r, dark_r = (ro - edge - strip, ro - edge), (ri, ri + strip)
+    if side < 0:  # espelhado: a faixa clara fica do lado de dentro
+        light_r, dark_r = (ri + edge, ri + edge + strip), (ro - strip, ro)
+    band(*light_r, light)
+    band(*dark_r, dark)
+    # trecho horizontal até a parede, com as faixas na mesma altura da curva
+    x0 = cx if side > 0 else cx - length
+    layer.rect(x0, y + ri, length, w, rgb(base))
+    layer.rect(x0, y + light_r[0], length, strip, rgb(light))
+    layer.rect(x0, y + dark_r[0], length, dark_r[1] - dark_r[0], rgb(dark))
+    # colar na emenda com o cano vertical e flange preso na parede
+    layer.rect(x - 2, y - 4, w + 4, 4, rgb(flange))
+    fx = cx + length if side > 0 else cx - length - 4
+    layer.rect(fx, y + ri - 4, 4, w + 8, rgb(flange))
+    layer.px(fx + 1, y + ri - 3, rgb(light))
+    layer.px(fx + 1, y + ro + 2, rgb(light))
+
+
 def hpipe(layer: Layer, y, thick, base: str, light: str, dark: str, flange: str, spacing=96, offset=0):
     layer.rect(0, y, LW, thick, rgb(base))
     layer.rect(0, y + 1, LW, max(1, thick // 5), rgb(light))
@@ -242,15 +277,18 @@ def fase1():
     for bx in range(0, LW, 128):
         mid.rect(bx + 60, 0, 3, 30, rgb("#4a5157"))
         mid.rect(bx + 56, 0, 11, 3, rgb("#4a5157"))
-    for vx, vh in ((150, 290), (470, 300)):
-        cylinder(mid, vx, 48, 12, vh - 48, "#59616a", "#6d757b", "#4b5258")
+    # Canos descem, dobram num joelho e entram na parede. Terminam acima de
+    # y lógico ~210 (tela ~420): abaixo disso ficam as passarelas e o cano
+    # atravessaria o chão.
+    for vx, bend_y, side in ((150, 188, -1), (470, 176, 1)):
+        cylinder(mid, vx, 48, 12, bend_y - 48, "#59616a", "#6d757b", "#4b5258")
         mid.rect(vx - 2, 48, 16, 5, rgb("#4b5258"))
-        for fy in (120, 230):
-            mid.rect(vx - 2, fy, 16, 4, rgb("#4f565c"))
+        mid.rect(vx - 2, 84, 16, 4, rgb("#4f565c"))
         # registro (volante)
-        mid.ring(vx - 6, 160, 24, 24, rgb("#4a5157"), 3)
-        mid.rect(vx + 5, 160, 2, 24, rgb("#4a5157"))
-        mid.rect(vx - 6, 171, 24, 2, rgb("#4a5157"))
+        mid.ring(vx - 6, 112, 24, 24, rgb("#4a5157"), 3)
+        mid.rect(vx + 5, 112, 2, 24, rgb("#4a5157"))
+        mid.rect(vx - 6, 123, 24, 2, rgb("#4a5157"))
+        elbow_to_wall(mid, vx, 12, bend_y, side, "#59616a", "#6d757b", "#4b5258", "#4b5258")
     # grades com luz esverdeada e escorrido
     for gx, gy in ((300, 196), (590, 150)):
         glow(mid, gx + 20, gy + 14, 34, "#7fb08f", 40)
@@ -478,6 +516,33 @@ def fase3():
     dithered_cloud(haze, "#8f93a3", 95, dens * fade, 0.42)
     haze.save(os.path.join(out, "urbano-smog.png"))
 
+    # Rodapé: viaduto e avenida de baixo. Sem ele, a faixa abaixo do piso
+    # (y de tela > ~650) mostrava só o azul liso do fim do céu.
+    rnd = random.Random(33)
+    base = Layer(72)
+    dithered_cloud(base, "#2a2e49", 255, np.clip(np.arange(72)[:, None] / 22, 0, 1) * np.ones((1, LW)), 0.0)
+    base.rect(0, 22, LW, 50, rgb("#2a2e49"))
+    for _ in range(60):  # janelas e letreiros da rua de baixo
+        base.rect(rnd.randint(0, LW), rnd.randint(40, 68), rnd.choice([2, 3]), 1, rgb(rnd.choice(["#b0508f", "#4a9fb8", "#c9a46a"]), 170))
+    for px_ in range(40, LW, 160):  # pilares do viaduto
+        base.rect(px_, 35, 12, 37, rgb("#33385a"))
+        base.rect(px_, 35, 2, 37, rgb("#454b70"))
+    base.rect(0, 30, LW, 5, rgb("#3a3f5e"))
+    base.rect(0, 30, LW, 1, rgb("#565c82"))
+    base.rect(0, 26, LW, 1, rgb("#4a5074"))  # guarda-corpo
+    for px_ in range(0, LW, 16):
+        base.rect(px_, 26, 1, 4, rgb("#3a3f5e"))
+    for lx in range(20, LW, 80):  # postes
+        glow(base, lx + 5, 15, 10, "#f2c98a", 30)
+        base.rect(lx, 12, 1, 14, rgb("#3a3f5e"))
+        base.rect(lx, 12, 5, 1, rgb("#3a3f5e"))
+        base.px(lx + 5, 13, rgb("#f2c98a"))
+    for _ in range(14):  # faróis e lanternas dos carros
+        cx = rnd.randrange(8, LW, 4)
+        base.rect(cx, 28, 2, 1, rgb("#e8e2c0"))
+        base.px(cx - 5, 28, rgb("#d6506e"))
+    base.save(os.path.join(out, "urbano-rodape.png"))
+
 
 # ---------------------------------------------------------------------------
 # Fase 4 — Distrito Corporativo
@@ -687,6 +752,52 @@ def fase5():
     fade = np.sin(np.linspace(0, math.pi, 100))[:, None]
     dithered_cloud(wisps, "#8a7fb8", 120, dens * fade, 0.5)
     wisps.save(os.path.join(out, "topo-nevoa.png"))
+
+    # Trecho contemplativo final (camadas com `appear_x` no mapa): aurora no
+    # céu e a cidade alta iluminada ao longe, com a torre central.
+    rnd = random.Random(59)
+    aurora = Layer(360)
+    xs = np.arange(LW)[None, :] / LW * 2 * math.pi
+    ys = np.arange(360)[:, None]
+    rays = 0.55 + 0.45 * tileable_noise(LW, 1, 61, octaves=((8, 1.0), (20, 0.6)))
+    # cortinas acima de y lógico ~65 (tela ~130), fora da faixa do HUD
+    for color, base_y, amp, k, thick, alpha in (("#4fd6b0", 124, 26, 2, 16, 105), ("#9a7be0", 152, 20, 3, 12, 90), ("#5fb8e0", 100, 12, 1, 9, 80)):
+        d = ys - (base_y + amp * np.sin(k * xs + rnd.uniform(0, 6.3)))
+        # borda de baixo nítida, raios esmaecendo para cima
+        dens = np.where(d > 0, np.exp(-((d / (thick * 0.35)) ** 2)), np.exp(-((d / (thick * 2.2)) ** 2))) * rays
+        dithered_cloud(aurora, color, alpha, dens, 0.12)
+    aurora.save(os.path.join(out, "topo-final-aurora.png"))
+
+    city = Layer(320)
+    for bx_, tip in ((96, 70), (540, 84)):  # holofotes
+        city.poly([(bx_, 230), (tip - 14, 22), (tip + 14, 22)], rgb("#c9d3f0", 14))
+    lights = ["#f0c36a", "#f0c36a", "#5fd6ff", "#e9b0ff"]
+    x = 0
+    while x < LW - 12:
+        w = min(rnd.randint(14, 34), LW - x)
+        top = rnd.randint(120, 215)
+        city.rect(x, top, w, 320 - top, rgb("#222e52"))
+        city.rect(x, top, 2, 320 - top, rgb("#2e3c66"))
+        if rnd.random() < 0.4:
+            city.rect(x + w // 2, top - 12, 1, 12, rgb("#222e52"))
+            city.px(x + w // 2, top - 13, rgb("#ff6f8f"))
+        for wy in range(top + 5, 320, 5):
+            for wx in range(x + 4, x + w - 3, 4):
+                if rnd.random() < 0.3:
+                    city.px(wx, wy, rgb(rnd.choice(lights), 170))
+        x += w + rnd.randint(2, 10)
+    # torre central com anéis de luz e farol
+    cx = 320
+    glow(city, cx, 56, 44, "#8fe3ff", 18)
+    city.poly([(cx - 24, 320), (cx - 15, 124), (cx - 5, 52), (cx + 5, 52), (cx + 15, 124), (cx + 24, 320)], rgb("#1d2848"))
+    city.line([(cx - 24, 320), (cx - 15, 124), (cx - 5, 52)], rgb("#33426e"), 1)
+    city.rect(cx, 28, 1, 24, rgb("#1d2848"))
+    city.px(cx, 27, rgb("#ff6f8f"))
+    for y in range(64, 312, 14):
+        city.rect(cx - 1, y, 2, 9, rgb("#8fe3ff", 200))
+    for ry, rw in ((92, 60), (140, 84)):
+        city.ring(cx - rw // 2, ry - 5, rw, 10, rgb("#8fe3ff", 170), 1)
+    city.save(os.path.join(out, "topo-final-cidade.png"))
 
 
 if __name__ == "__main__":
