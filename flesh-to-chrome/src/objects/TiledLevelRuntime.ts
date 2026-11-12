@@ -141,6 +141,11 @@ export class TiledLevelRuntime {
 
     const background = this.map.createLayer("background", allTilesets, 0, offsetY) as Phaser.Tilemaps.TilemapLayer | null;
     background?.setDepth(-20);
+    // O parser do Phaser lê o "olho" (visible) do Tiled mas não o aplica à
+    // TilemapLayer. Desde o fundo com parallax (image layers, ver
+    // ParallaxBackdrop) o antigo pano de fundo da caverna fica oculto no
+    // Tiled; respeitar a flag permite religá-lo pelo editor sem tocar no código.
+    background?.setVisible(background.layer.visible);
 
     const decoBack = this.map.createLayer("deco-back", allTilesets, 0, offsetY) as Phaser.Tilemaps.TilemapLayer | null;
     decoBack?.setDepth(-15);

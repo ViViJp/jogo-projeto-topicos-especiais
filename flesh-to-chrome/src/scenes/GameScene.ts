@@ -29,6 +29,7 @@ import {
   TiledPhase2Runtime,
 } from "../objects/TiledPhase2Runtime";
 import { TiledPhase3Runtime } from "../objects/TiledPhase3Runtime";
+import { ParallaxBackdrop, preloadBackdrop } from "../objects/ParallaxBackdrop";
 import { TILED_FATHER_AD_TEXTURE_KEY, TiledPhase4Runtime } from "../objects/TiledPhase4Runtime";
 import {
   TILED_PHASE5_BARRICADE_TEXTURE_KEY,
@@ -43,6 +44,7 @@ import {
   TILED_FASE1_MAP_DATA,
   TILED_FASE1_BACKGROUND,
   TILED_FASE1_NAME,
+  TILED_FASE1_OFFSET_Y,
 } from "../levels/TiledFase1";
 import {
   TILED_FASE2_MAP_DATA,
@@ -189,6 +191,7 @@ export class GameScene extends Phaser.Scene {
   private tiledPhase5Runtime?: TiledPhase5Runtime;
   private descentRuntime?: DescentGlitchRuntime;
   private descentRouteRuntime?: DescentRouteRuntime;
+  private backdrop?: ParallaxBackdrop;
   private credits!: CreditsSystem;
   private hud!: HUD;
   private save!: SaveState;
@@ -223,6 +226,7 @@ export class GameScene extends Phaser.Scene {
     this.tiledPhase5Runtime = undefined;
     this.descentRuntime = undefined;
     this.descentRouteRuntime = undefined;
+    this.backdrop = undefined;
     this.isPaused = false;
     this.pauseText = undefined;
     this.scanOverlay = undefined;
@@ -382,6 +386,31 @@ export class GameScene extends Phaser.Scene {
       this.preloadPhase4Map();
     } else if (this.data$.phaseId === "fase5") {
       this.preloadPhase5Map();
+    }
+
+    const backdropSource = this.backdropSource();
+    if (backdropSource) preloadBackdrop(this, backdropSource.mapData);
+  }
+
+  /**
+   * Mapa Tiled + deslocamento vertical usados pelo fundo com parallax
+   * (image layers do mapa). Para ligar outra fase basta incluí-la aqui e
+   * criar as image layers no `.tmj` dela.
+   */
+  private backdropSource(): { mapData: unknown; offsetY: number } | undefined {
+    switch (this.data$.phaseId) {
+      case "fase1":
+        return { mapData: TILED_FASE1_MAP_DATA, offsetY: TILED_FASE1_OFFSET_Y };
+      case "fase2-intro":
+        return { mapData: TILED_FASE2_MAP_DATA, offsetY: TILED_FASE2_OFFSET_Y };
+      case "fase3":
+        return { mapData: TILED_FASE3_MAP_DATA, offsetY: 0 };
+      case "fase4":
+        return { mapData: TILED_FASE4_MAP_DATA, offsetY: TILED_FASE4_OFFSET_Y };
+      case "fase5":
+        return { mapData: TILED_FASE5_MAP_DATA, offsetY: TILED_FASE5_OFFSET_Y };
+      default:
+        return undefined;
     }
   }
 
@@ -593,6 +622,12 @@ export class GameScene extends Phaser.Scene {
     }
 
     if (this.data$.descent) this.createDescentOverlay();
+    const backdropSource = this.backdropSource();
+    if (backdropSource) {
+      const backdrop = new ParallaxBackdrop(this, backdropSource.mapData, backdropSource.offsetY);
+      this.backdrop = backdrop;
+      this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => backdrop.destroy());
+    }
 
     this.updateHud();
 
@@ -1294,6 +1329,7 @@ export class GameScene extends Phaser.Scene {
       )
     );
     this.cameras.main.scrollX = targetScrollX;
+    this.backdrop?.update(targetScrollX, delta);
 
     this.input$.postUpdate();
   }

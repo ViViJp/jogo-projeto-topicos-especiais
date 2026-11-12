@@ -27,6 +27,7 @@ import {
   WebSocketSignaling,
 } from "../multiplayer/SignalingTransport";
 import { WebRtcMesh } from "../multiplayer/WebRtcMesh";
+import { ParallaxBackdrop, preloadBackdrop } from "../objects/ParallaxBackdrop";
 import { TILED_CHECKPOINT_TEXTURE_KEY } from "../objects/TiledLevelRuntime";
 import {
   TILED_PHASE5_BARRICADE_TEXTURE_KEY,
@@ -84,6 +85,8 @@ export class MultiplayerScene extends Phaser.Scene {
   private mesh?: WebRtcMesh;
   private player?: Player;
   private runtime?: TiledPhase5Runtime;
+  /** Fundo do Topo (image layers do mapa); visível já no lobby. */
+  private backdrop?: ParallaxBackdrop;
   private opponentSprite?: Phaser.GameObjects.Sprite;
   private opponentVisualState?: PlayerSnapshotMessage["state"];
   private scanOverlay?: Phaser.GameObjects.Rectangle;
@@ -202,6 +205,7 @@ export class MultiplayerScene extends Phaser.Scene {
         new URL("../assets/props/checkpoint/tv-checkpoint.png", import.meta.url).href,
       );
     }
+    preloadBackdrop(this, TILED_MULTIPLAYER_MAP_DATA);
     if (!this.cache.tilemap.exists(TILED_MULTIPLAYER_MAP_KEY)) {
       this.cache.tilemap.add(TILED_MULTIPLAYER_MAP_KEY, {
         format: Phaser.Tilemaps.Formats.TILED_JSON,
@@ -215,6 +219,7 @@ export class MultiplayerScene extends Phaser.Scene {
     AudioManager.playBgm(this, BGM.phase5, 0.3);
     this.cameras.main.setBackgroundColor(TILED_MULTIPLAYER_BACKGROUND);
     this.cameras.main.setScroll(0, 0);
+    this.backdrop = new ParallaxBackdrop(this, TILED_MULTIPLAYER_MAP_DATA, TILED_MULTIPLAYER_OFFSET_Y);
     this.lobbyObjects = [];
     this.player = undefined;
     this.runtime = undefined;
@@ -237,6 +242,8 @@ export class MultiplayerScene extends Phaser.Scene {
       this.meshStartId += 1;
       this.clearStartHandshakeTimer();
       this.runtime?.destroy();
+      this.backdrop?.destroy();
+      this.backdrop = undefined;
       this.mesh?.stop();
       this.mesh = undefined;
     });
@@ -273,6 +280,7 @@ export class MultiplayerScene extends Phaser.Scene {
       this.lastSnapshotAt = time;
     }
     this.updateOpponent(delta);
+    this.backdrop?.update(this.cameras.main.scrollX, delta);
     this.input$.postUpdate();
   }
 
@@ -310,6 +318,19 @@ export class MultiplayerScene extends Phaser.Scene {
   }
 
   private createLobby(): void {
+    // Painel translúcido atrás dos textos: o fundo do Topo (torres e lua)
+    // atrapalhava a leitura das linhas pequenas. Some junto com o lobby.
+    this.addLobbyObject(
+      this.add
+        .rectangle(SCREEN_WIDTH / 2, 286, 880, 524, 0x0b1322, 0.78)
+        .setStrokeStyle(1, 0x2a3a5c)
+        .setDepth(-10)
+    );
+    this.addLobbyObject(
+      this.add
+        .rectangle(SCREEN_WIDTH / 2, SCREEN_HEIGHT - 40, 300, 28, 0x0b1322, 0.78)
+        .setDepth(-10)
+    );
     this.addLobbyObject(
       this.add
         .text(SCREEN_WIDTH / 2, 82, "CORRIDA WEBRTC", textStyle("#7CFCEA", "42px"))

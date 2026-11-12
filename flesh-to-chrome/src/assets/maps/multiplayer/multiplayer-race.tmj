@@ -4,6 +4,77 @@
   "height": 16,
   "infinite": false,
   "layers": [
+  {
+   "id": 8,
+   "image": "../../backdrops/topo/topo-ceu.png",
+   "imageheight": 720,
+   "imagewidth": 1280,
+   "name": "parallax-ceu",
+   "offsetx": 0,
+   "offsety": -176,
+   "opacity": 1,
+   "parallaxx": 0.02,
+   "repeatx": true,
+   "type": "imagelayer",
+   "visible": true,
+   "x": 0,
+   "y": 0
+  },
+  {
+   "id": 9,
+   "image": "../../backdrops/topo/topo-nuvens.png",
+   "imageheight": 340,
+   "imagewidth": 1280,
+   "name": "parallax-nuvens",
+   "offsetx": 0,
+   "offsety": 204,
+   "opacity": 1,
+   "parallaxx": 0.06,
+   "repeatx": true,
+   "type": "imagelayer",
+   "visible": true,
+   "x": 0,
+   "y": 0
+  },
+  {
+   "id": 10,
+   "image": "../../backdrops/topo/topo-torres.png",
+   "imageheight": 640,
+   "imagewidth": 1280,
+   "name": "parallax-torres",
+   "offsetx": 0,
+   "offsety": -96,
+   "opacity": 1,
+   "parallaxx": 0.15,
+   "repeatx": true,
+   "type": "imagelayer",
+   "visible": true,
+   "x": 0,
+   "y": 0
+  },
+  {
+   "id": 11,
+   "image": "../../backdrops/topo/topo-nevoa.png",
+   "imageheight": 200,
+   "imagewidth": 1280,
+   "name": "parallax-nevoa",
+   "offsetx": 0,
+   "offsety": 224,
+   "opacity": 0.6,
+   "parallaxx": 0.4,
+   "properties": [
+    {
+     "name": "drift_x",
+     "type": "float",
+     "value": -8
+    }
+   ],
+   "repeatx": true,
+   "type": "imagelayer",
+   "visible": true,
+   "x": 0,
+   "y": 0
+  },
     {
       "data": [
         0,
@@ -116744,10 +116815,20 @@
       "y": 0
     }
   ],
-  "nextlayerid": 8,
+  "nextlayerid": 12,
   "nextobjectid": 65,
   "orientation": "orthogonal",
   "properties": [
+  {
+   "name": "ambient",
+   "type": "string",
+   "value": "motes"
+  },
+  {
+   "name": "ambient_density",
+   "type": "float",
+   "value": 1
+  },
     {
       "name": "mode",
       "type": "string",
