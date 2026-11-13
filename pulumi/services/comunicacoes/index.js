@@ -1,7 +1,9 @@
 const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
 const { DynamoDBDocumentClient, GetCommand, PutCommand, QueryCommand, UpdateCommand } = require("@aws-sdk/lib-dynamodb");
+const { SESClient, SendEmailCommand } = require("@aws-sdk/client-ses");
 
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
+const ses = new SESClient({});
 const table = process.env.TABLE_NAME;
 
 function response(statusCode, body) {
@@ -25,6 +27,8 @@ function readBody(event) {
 const defaultPreferences = { categories: { welcome: true, ending: false, match: true }, channels: { game: true, email: false }, revision: 0 };
 
 exports.handler = async (event) => {
+  if (!event.requestContext?.http && event.action === "welcome") return sendWelcome(event);
+
   const requestId = event.requestContext?.requestId || "";
   const userId = event.requestContext?.authorizer?.jwt?.claims?.sub || "";
   if (!userId) return fail(401, "UNAUTHENTICATED", "Sessão ausente.", requestId);
@@ -107,3 +111,57 @@ exports.handler = async (event) => {
     return fail(503, "UNAVAILABLE", "Falha nas comunicações.", requestId);
   }
 };
+
+async function sendWelcome(event) {
+  const userId = event.userId || "";
+  const email = event.email || "";
+  const name = event.name || email || "jogador";
+  if (!userId) return { skipped: true };
+  const id = `welcome-${userId}`;
+  const now = new Date();
+  let created = false;
+  try {
+    await db.send(
+      new PutCommand({
+        TableName: table,
+        Item: {
+          pk: userId,
+          sk: `NOTE#${id}`,
+          id,
+          category: "welcome",
+          target: "game",
+          createdAt: now.toISOString(),
+          readAt: null,
+          expiresAt: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        },
+        ConditionExpression: "attribute_not_exists(pk)",
+      })
+    );
+    created = true;
+  } catch (err) {
+    if (err.name !== "ConditionalCheckFailedException") console.error(err);
+  }
+  const from = process.env.SES_FROM || "";
+  if (!created || !from || !email) return { notified: true, emailed: false };
+  try {
+    await ses.send(
+      new SendEmailCommand({
+        Source: from,
+        Destination: { ToAddresses: [email] },
+        Message: {
+          Subject: { Data: "Bem-vindo ao Flesh to Chrome", Charset: "UTF-8" },
+          Body: {
+            Text: {
+              Data: `Olá, ${name}. Sua conta foi criada. Se este e-mail falhar, o login continua valendo.`,
+              Charset: "UTF-8",
+            },
+          },
+        },
+      })
+    );
+    return { notified: true, emailed: true };
+  } catch (err) {
+    console.error(err);
+    return { notified: true, emailed: false };
+  }
+}
