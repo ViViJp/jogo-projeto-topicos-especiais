@@ -29,6 +29,7 @@ export class GateScene extends Phaser.Scene {
   }
 
   preload(): void {
+    AudioManager.preloadBgm(this, BGM.gate);
     if (!this.textures.exists(GATE_TEXTURE_KEY)) {
       this.load.image(
         GATE_TEXTURE_KEY,

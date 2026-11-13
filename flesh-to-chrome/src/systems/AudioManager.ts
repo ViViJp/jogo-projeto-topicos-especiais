@@ -9,6 +9,9 @@ export const BGM = {
   phase5: "bgm-phase-5",
   clinic: "bgm-clinic",
   gate: "bgm-gate",
+  endingChrome: "bgm-ending-chrome",
+  endingFlesh: "bgm-ending-flesh",
+  endingHollow: "bgm-ending-hollow",
 } as const;
 
 export const SFX = {
@@ -64,6 +67,12 @@ export const AUDIO_SOURCES: Required<AudioSources> = {
     [BGM.phase3]: new URL("../assets/audio/music/bgm-phase-3.ogg", import.meta.url).href,
     [BGM.phase4]: new URL("../assets/audio/music/bgm-phase-4.ogg", import.meta.url).href,
     [BGM.phase5]: new URL("../assets/audio/music/bgm-phase-5.ogg", import.meta.url).href,
+    [BGM.menu]: new URL("../assets/audio/music/bgm-menu.mp3", import.meta.url).href,
+    [BGM.clinic]: new URL("../assets/audio/music/bgm-clinic.ogg", import.meta.url).href,
+    [BGM.gate]: new URL("../assets/audio/music/bgm-gate.mp3", import.meta.url).href,
+    [BGM.endingChrome]: new URL("../assets/audio/music/bgm-ending-chrome.mp3", import.meta.url).href,
+    [BGM.endingFlesh]: new URL("../assets/audio/music/bgm-ending-flesh.mp3", import.meta.url).href,
+    [BGM.endingHollow]: new URL("../assets/audio/music/bgm-ending-hollow.ogg", import.meta.url).href,
   },
   sfx: {
     [SFX.attack]: new URL("../assets/audio/sfx/sfx-attack.mp3", import.meta.url).href,
@@ -117,7 +126,7 @@ export class AudioManager {
 
   /**
    * Efeitos pequenos compartilhados entre cenas. As BGMs completas não são
-   * carregadas aqui para o Boot não baixar as cinco faixas antes do menu.
+   * carregadas aqui para o Boot não baixar o catálogo musical antes do menu.
    */
   static preload(scene: Phaser.Scene): void {
     for (const [key, url] of Object.entries(AUDIO_SOURCES.sfx)) {
@@ -208,4 +217,10 @@ export function bgmForPhase(phaseId: string): BgmKey {
   if (phaseId === "fase3") return BGM.phase3;
   if (phaseId === "fase4") return BGM.phase4;
   return BGM.phase5;
+}
+
+export function bgmForEnding(ending: "chrome" | "flesh" | "hollow"): BgmKey {
+  if (ending === "flesh") return BGM.endingFlesh;
+  if (ending === "hollow") return BGM.endingHollow;
+  return BGM.endingChrome;
 }

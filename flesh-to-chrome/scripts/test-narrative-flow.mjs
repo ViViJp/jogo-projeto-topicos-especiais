@@ -146,6 +146,7 @@ function loadSceneModule(filename, harness, saveStateModule) {
       require: localRequire,
       console,
       URL,
+      process: { env: { NODE_ENV: "test", FTC_ENABLE_TEST_MENU: "1" } },
     });
     return module.exports;
   };
@@ -165,7 +166,7 @@ function interactiveInput(active) {
 }
 
 function fakeSaveModule(data) {
-  const calls = { decline: 0, load: 0, mark: [], begin: 0 };
+  const calls = { decline: 0, load: 0, mark: [], begin: 0, newGame: 0 };
   const instance = {
     beginDescent() { calls.begin += 1; },
     declineDescentRetry() { calls.decline += 1; },
@@ -177,6 +178,7 @@ function fakeSaveModule(data) {
     module: {
       SaveState: class {
         static load() { calls.load += 1; return instance; }
+        static newGame() { calls.newGame += 1; return instance; }
       },
     },
   };
@@ -306,6 +308,9 @@ assert.equal(memoryStorage.get("flesh-to-chrome:save:v1"), persistedCampaignBefo
 const read = (relativePath) => fs.readFileSync(path.join(projectDirectory, relativePath), "utf8");
 const main = read("src/main.ts");
 const menu = read("src/scenes/MenuScene.ts");
+const controls = read("src/scenes/ControlsScene.ts");
+const menuBackdrop = read("src/objects/MenuBackdrop.ts");
+const packageJson = JSON.parse(read("package.json"));
 const prologue = read("src/scenes/PrologueScene.ts");
 const clinic = read("src/scenes/ClinicScene.ts");
 const gate = read("src/scenes/GateScene.ts");
@@ -330,11 +335,42 @@ const narrativePlaytest = read("docs/NARRATIVE_FLOW_PLAYTEST.md");
 const assetRegistry = read("docs/ASSET_REGISTRY.md");
 
 assert.match(main, /PrologueScene/);
+assert.match(main, /ControlsScene/);
 assert.match(main, /GateScene/);
 assert.match(main, /GeorgeRefusalScene/);
 assert.match(menu, /Continuar do Portão/);
 assert.match(menu, /restorePreGateSave\(\)/);
-assert.match(menu, /this\.scene\.start\("PrologueScene"\)/);
+assert.match(menu, /this\.scene\.start\("ControlsScene", \{ campaignSetup \}\)/);
+assert.doesNotMatch(menu, /SaveState\.newGame\(\)/,
+  "Menu não pode apagar o save antes da confirmação na tela de controles");
+assert.match(menu, /label: "Controles"/,
+  "menu principal deve oferecer consulta permanente aos comandos");
+assert.match(menu, /SHOW_TEST_SELECTOR[\s\S]*?process\.env\.FTC_ENABLE_TEST_MENU === "1"/,
+  "seletor de fases deve ficar oculto no build público");
+assert.match(menu, /if \(SHOW_TEST_SELECTOR\) \{[\s\S]*?Selecionar Fase \(teste\)/);
+assert.match(packageJson.scripts.dev, /FTC_ENABLE_TEST_MENU=1/,
+  "servidor de desenvolvimento deve expor o seletor de fases");
+assert.doesNotMatch(packageJson.scripts.build, /FTC_ENABLE_TEST_MENU/,
+  "build público não pode habilitar o seletor de fases");
+for (const layer of [
+  "urbano-ceu.png",
+  "urbano-predios-longe.png",
+  "urbano-predios-perto.png",
+  "urbano-smog.png",
+  "urbano-rodape.png",
+]) assert.match(menuBackdrop, new RegExp(layer.replaceAll(".", "\\.")));
+assert.match(menuBackdrop, /fillGradientStyle/,
+  "fundo do menu deve preservar contraste atrás das opções");
+assert.match(menuBackdrop, /tilePositionX \+= layer\.speed/,
+  "camadas urbanas devem ter movimento sutil independente");
+assert.match(controls, /SaveState\.newGame\(\)[\s\S]*?this\.scene\.start\("PrologueScene"\)/,
+  "campanha só deve substituir o save ao confirmar Iniciar campanha");
+assert.match(controls, /GAMEPLAY_CONTROL_ACTIONS/);
+assert.match(controls, /GAMEPAD_BINDING_LABELS/);
+assert.match(controls, /AudioManager\.playBgm\(this, BGM\.menu/,
+  "tela de controles deve preservar a música do menu");
+assert.match(controls, /pointerdown/,
+  "tela de controles deve aceitar clique nas opções");
 assert.match(menu, /Portão — escolha final \(teste\)/);
 assert.match(menu, /this\.scene\.start\("GateScene", \{ testMode: true \}\)/);
 assert.match(menu, /restorePreGateSave\(\)[\s\S]*?this\.scene\.start\("GateScene", \{ testMode: false \}\)/,
@@ -566,6 +602,26 @@ const uiData = {
 {
   const harness = createUiHarness();
   const save = fakeSaveModule(uiData);
+  const { ControlsScene } = loadSceneModule(
+    path.join(projectDirectory, "src/scenes/ControlsScene.ts"), harness, save.module,
+  );
+  const scene = new ControlsScene();
+  scene.init({ campaignSetup: true });
+  scene.startCampaign();
+  assert.equal(save.calls.newGame, 1,
+    "Iniciar campanha na tela de controles deve criar o novo save");
+  assert.equal(harness.starts.at(-1)?.key, "PrologueScene");
+
+  const readOnlyScene = new ControlsScene();
+  readOnlyScene.init({ campaignSetup: false });
+  readOnlyScene.startCampaign();
+  assert.equal(save.calls.newGame, 1,
+    "consulta permanente dos controles não pode substituir o save");
+}
+
+{
+  const harness = createUiHarness();
+  const save = fakeSaveModule(uiData);
   const { GateScene } = loadSceneModule(
     path.join(projectDirectory, "src/scenes/GateScene.ts"), harness, save.module,
   );
@@ -689,6 +745,8 @@ for (const [sceneSource, name] of [
   [retry, "DescentRetryScene"],
   [ending, "EndingScene"],
   [epilogue, "EpilogueScene"],
+  [menu, "MenuScene"],
+  [controls, "ControlsScene"],
 ]) {
   assert.match(sceneSource, /this\.scale\.width/,
     `${name} deve posicionar o layout pela largura expandida atual`);

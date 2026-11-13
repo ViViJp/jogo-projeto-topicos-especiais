@@ -102,6 +102,7 @@ export class ClinicScene extends Phaser.Scene {
   }
 
   preload(): void {
+    AudioManager.preloadBgm(this, BGM.clinic);
     if (!this.textures.exists(CLINIC_BACKGROUND_KEY)) {
       this.load.image(
         CLINIC_BACKGROUND_KEY,

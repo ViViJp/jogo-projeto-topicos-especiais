@@ -1,7 +1,7 @@
 import Phaser from "phaser";
 import { InputManager } from "../systems/InputManager";
 import { SaveState } from "../systems/SaveState";
-import { AudioManager, BGM, SFX } from "../systems/AudioManager";
+import { AudioManager, SFX, bgmForEnding } from "../systems/AudioManager";
 import {
   AbilityState,
   abilityStateToBodyStage,
@@ -136,6 +136,7 @@ export class EndingScene extends Phaser.Scene {
   }
 
   preload(): void {
+    AudioManager.preloadBgm(this, bgmForEnding(this.ending));
     if (!this.textures.exists(CHROME_EPILOGUE_KEY)) {
       this.load.image(
         CHROME_EPILOGUE_KEY,
@@ -177,7 +178,7 @@ export class EndingScene extends Phaser.Scene {
     const panelTop = (height - panelHeight) / 2;
     const visualY = panelTop + 195;
     this.cameras.main.setBackgroundColor(0x05050a);
-    AudioManager.playBgm(this, BGM.gate, 0.28);
+    AudioManager.playBgm(this, bgmForEnding(this.ending), 0.28);
     this.input$ = new InputManager(this);
     this.pageIndex = 0;
     this.returning = false;

@@ -432,7 +432,10 @@ for (const runtime of [
 }
 
 const audioManagerSource = fs.readFileSync(path.join(projectDirectory, "src/systems/AudioManager.ts"), "utf8");
-for (const key of ["phase1", "phase2", "phase3", "phase4", "phase5", "clinic", "gate", "menu"]) {
+for (const key of [
+  "phase1", "phase2", "phase3", "phase4", "phase5", "clinic", "gate", "menu",
+  "endingChrome", "endingFlesh", "endingHollow",
+]) {
   assert.match(audioManagerSource, new RegExp(`${key}: "bgm-`), `AudioManager: BGM ${key}`);
 }
 assert.match(audioManagerSource, /this\.activeMusic\?\.stop\(\);[\s\S]*?this\.activeMusic\?\.destroy\(\);/,
@@ -441,7 +444,7 @@ assert.match(audioManagerSource, /static preloadBgm\(scene: Phaser\.Scene, key: 
   "BGMs completas devem possuir carregamento sob demanda");
 const sharedPreload = audioManagerSource.match(/static preload\(scene: Phaser\.Scene\): void \{([\s\S]*?)\n  \}/)?.[1] ?? "";
 assert.doesNotMatch(sharedPreload, /AUDIO_SOURCES\.music/,
-  "Boot não deve baixar as cinco BGMs antes do menu");
+  "Boot não deve baixar o catálogo de BGMs antes do menu");
 for (const filename of [
   "attack", "barrier-disable", "breakable-destroy", "checkpoint", "conveyor-belt", "credit",
   "dash", "death", "drone-hum", "electric-gate", "electric-wire", "enemy-hit", "footstep",
@@ -461,6 +464,24 @@ for (const phase of [1, 2, 3, 4, 5]) {
   assert.ok(fs.existsSync(path.join(projectDirectory, `src/assets/audio/music/${filename}`)),
     `arquivo de BGM ausente: ${filename}`);
 }
+for (const [key, filename] of [
+  ["menu", "bgm-menu.mp3"],
+  ["clinic", "bgm-clinic.ogg"],
+  ["gate", "bgm-gate.mp3"],
+  ["endingChrome", "bgm-ending-chrome.mp3"],
+  ["endingFlesh", "bgm-ending-flesh.mp3"],
+  ["endingHollow", "bgm-ending-hollow.ogg"],
+]) {
+  assert.match(
+    audioManagerSource,
+    new RegExp(`\\[BGM\\.${key}\\]: new URL\\("\\.\\.\\/assets\\/audio\\/music\\/${filename.replace(".", "\\.")}"`),
+    `AudioManager: BGM narrativa ausente para ${key}`,
+  );
+  assert.ok(fs.existsSync(path.join(projectDirectory, `src/assets/audio/music/${filename}`)),
+    `arquivo de BGM narrativa ausente: ${filename}`);
+}
+assert.match(audioManagerSource, /export function bgmForEnding\(ending: "chrome" \| "flesh" \| "hollow"\)/,
+  "cada final precisa selecionar sua própria música");
 assert.match(audioManagerSource, /\[SFX\.effort\]: new URL\("\.\.\/assets\/audio\/sfx\/sfx-jump\.mp3"/,
   "salto duplo deve reutilizar o master de pulo enquanto não houver esforço dedicado");
 assert.match(audioManagerSource, /activeLoops = new Map/);
@@ -483,6 +504,22 @@ assert.match(playerSource, /grounded && !this\.wasGrounded && this\.landingSound
 assert.match(gameScene, /AudioManager\.playBgm\(this, bgmForPhase\(this\.data\$\.phaseId\)/);
 assert.match(gameScene, /AudioManager\.preloadBgm\(this, bgmForPhase\(this\.data\$\.phaseId\)\)/,
   "GameScene deve carregar somente a BGM da fase atual");
+const narrativeBgmScenes = [
+  ["MenuScene.ts", /preloadBgm\(this, BGM\.menu\)/],
+  ["ControlsScene.ts", /preloadBgm\(this, BGM\.menu\)/],
+  ["PrologueScene.ts", /preloadBgm\(this, BGM\.menu\)/],
+  ["ClinicScene.ts", /preloadBgm\(this, BGM\.clinic\)/],
+  ["ReForgeScene.ts", /preloadBgm\(this, BGM\.clinic\)/],
+  ["GeorgeRefusalScene.ts", /preloadBgm\(this, BGM\.clinic\)/],
+  ["GateScene.ts", /preloadBgm\(this, BGM\.gate\)/],
+  ["DescentRetryScene.ts", /preloadBgm\(this, BGM\.gate\)/],
+  ["EpilogueScene.ts", /preloadBgm\(this, bgmForEnding\(this\.data\$\.ending\)\)/],
+  ["EndingScene.ts", /preloadBgm\(this, bgmForEnding\(this\.ending\)\)/],
+];
+for (const [sceneFile, preloadPattern] of narrativeBgmScenes) {
+  const source = fs.readFileSync(path.join(projectDirectory, "src/scenes", sceneFile), "utf8");
+  assert.match(source, preloadPattern, `${sceneFile}: BGM deve ser carregada sob demanda`);
+}
 assert.match(gameScene, /AudioManager\.pauseBgm\(\)/);
 assert.match(gameScene, /AudioManager\.resumeBgm\(\)/);
 assert.match(gameScene, /AudioManager\.startLoop\(this, SFX\.checkpoint/);

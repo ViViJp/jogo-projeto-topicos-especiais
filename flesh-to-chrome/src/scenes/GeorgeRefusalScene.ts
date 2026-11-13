@@ -75,6 +75,7 @@ export class GeorgeRefusalScene extends Phaser.Scene {
   }
 
   preload(): void {
+    AudioManager.preloadBgm(this, BGM.clinic);
     if (!this.textures.exists(BACKGROUND_KEY)) {
       this.load.image(
         BACKGROUND_KEY,

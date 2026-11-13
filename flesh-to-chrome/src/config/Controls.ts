@@ -16,6 +16,31 @@ export const KEY_BINDINGS = {
 
 export type GameAction = keyof typeof KEY_BINDINGS;
 
+export const GAMEPLAY_CONTROL_ACTIONS = [
+  "jump", "slide", "attack", "scan", "dash", "pause",
+] as const;
+export type GameplayControlAction = typeof GAMEPLAY_CONTROL_ACTIONS[number];
+
+const KEY_DISPLAY_NAMES: Readonly<Record<string, string>> = {
+  SPACE: "ESPAÇO",
+  UP: "↑",
+  DOWN: "↓",
+};
+
+export function keyboardBindingLabel(action: GameplayControlAction): string {
+  const keyboard = KEY_BINDINGS[action].map((key) => KEY_DISPLAY_NAMES[key] ?? key).join(" / ");
+  return action === "attack" ? `${keyboard} / MOUSE 1` : keyboard;
+}
+
+export const GAMEPAD_BINDING_LABELS: Readonly<Record<GameplayControlAction, string>> = {
+  jump: "A",
+  slide: "B / LB",
+  attack: "X",
+  scan: "Y / BACK",
+  dash: "RB",
+  pause: "START",
+};
+
 type GamepadBindings = Record<GameAction, readonly number[]>;
 
 /**

@@ -12,6 +12,7 @@ import { DescentRetryScene } from "./scenes/DescentRetryScene";
 import { ReForgeScene } from "./scenes/ReForgeScene";
 import { EpilogueScene } from "./scenes/EpilogueScene";
 import { GeorgeRefusalScene } from "./scenes/GeorgeRefusalScene";
+import { ControlsScene } from "./scenes/ControlsScene";
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -76,6 +77,7 @@ const config: Phaser.Types.Core.GameConfig = {
   scene: [
     BootScene,
     MenuScene,
+    ControlsScene,
     PrologueScene,
     GameScene,
     ClinicScene,

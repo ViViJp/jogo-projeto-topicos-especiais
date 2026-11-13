@@ -1,8 +1,9 @@
 import Phaser from "phaser";
+import { MenuBackdrop, drawTechPanel, preloadMenuBackdrop } from "../objects/MenuBackdrop";
+import { AudioManager, BGM, SFX } from "../systems/AudioManager";
 import { InputManager } from "../systems/InputManager";
 import { SaveState } from "../systems/SaveState";
 import { GameSceneData } from "./GameScene";
-import { AudioManager, BGM, SFX } from "../systems/AudioManager";
 
 interface MenuOption {
   label: string;
@@ -17,78 +18,95 @@ const TEST_PHASES = [
   { id: "fase5", label: "Fase 5 — Topo da Cidade" },
 ] as const;
 
+/** Somente os scripts locais de desenvolvimento habilitam as ferramentas de teste. */
+const SHOW_TEST_SELECTOR = process.env.FTC_ENABLE_TEST_MENU === "1";
+
 export class MenuScene extends Phaser.Scene {
   private input$!: InputManager;
+  private backdrop!: MenuBackdrop;
   private options: MenuOption[] = [];
   private optionTexts: Phaser.GameObjects.Text[] = [];
   private selectedIndex = 0;
   private confirmVisible = false;
   private confirmText?: Phaser.GameObjects.Text;
+  private confirmPanel?: Phaser.GameObjects.Graphics;
   private menuHint?: Phaser.GameObjects.Text;
   private hasSave = false;
   private mode: "main" | "phase-select" = "main";
+  private panelX = 48;
+  private panelY = 196;
+  private panelWidth = 500;
+  private panelHeight = 462;
 
   constructor() {
     super("MenuScene");
   }
 
+  preload(): void {
+    AudioManager.preloadBgm(this, BGM.menu);
+    preloadMenuBackdrop(this);
+  }
+
   create(): void {
     const width = this.scale.width;
     const height = this.scale.height;
-    const centerX = width / 2;
-    // A instancia da cena e reutilizada ao voltar do jogo/multiplayer.
+    this.panelX = Math.max(48, (width - 1_440) / 2 + 48);
+    this.panelY = Math.max(196, height * 0.27);
+    this.panelWidth = Math.min(500, width - this.panelX - 48);
+    this.panelHeight = height - this.panelY - 62;
+
     this.optionTexts = [];
     this.selectedIndex = 0;
     this.confirmVisible = false;
     this.confirmText = undefined;
+    this.confirmPanel = undefined;
     this.mode = "main";
 
     this.cameras.main.setBackgroundColor(0x05050a);
+    this.backdrop = new MenuBackdrop(this);
     AudioManager.playBgm(this, BGM.menu, 0.28);
     this.input$ = new InputManager(this);
 
-    this.add
-      .text(centerX, 150, "FLESH TO CHROME", {
-        fontFamily: "Courier New, monospace",
-        fontSize: "56px",
-        color: "#7CFCEA",
-      })
-      .setOrigin(0.5);
+    this.add.text(this.panelX, 58, "FLESH TO CHROME", {
+      fontFamily: "Courier New, monospace",
+      fontSize: "58px",
+      color: "#7CFCEA",
+      letterSpacing: 3,
+    }).setDepth(6).setShadow(0, 0, "#36e2ff", 10, true, true);
 
-    this.add
-      .text(centerX, 210, "GLITCH CITY // SISTEMA DE ASCENSÃO", {
-        fontFamily: "Courier New, monospace",
-        fontSize: "18px",
-        color: "#8892b0",
-      })
-      .setOrigin(0.5);
+    this.add.text(this.panelX + 3, 128, "GLITCH CITY // SISTEMA DE ASCENSÃO", {
+      fontFamily: "Courier New, monospace",
+      fontSize: "18px",
+      color: "#a8b5ce",
+      letterSpacing: 2,
+    }).setDepth(6);
+
+    drawTechPanel(this, this.panelX, this.panelY, this.panelWidth, this.panelHeight, 5, 0x36e2ff);
 
     this.hasSave = SaveState.hasExistingSave();
-    this.menuHint = this.add
-      .text(centerX, 270, "MENU PRINCIPAL", {
-        fontFamily: "Courier New, monospace",
-        fontSize: "16px",
-        color: "#565f80",
-      })
-      .setOrigin(0.5);
+    this.menuHint = this.add.text(this.panelX + 28, this.panelY + 24, "MENU PRINCIPAL", {
+      fontFamily: "Courier New, monospace",
+      fontSize: "16px",
+      color: "#7CFCEA",
+      letterSpacing: 2,
+    }).setDepth(6);
 
     this.showMainMenu();
 
-    this.add
-      .text(
-        centerX,
-        height - 40,
-        "↑↓ / W S ou DIRECIONAL navegar   ENTER / A confirmar   ESC / B voltar",
-        {
-          fontFamily: "Courier New, monospace",
-          fontSize: "14px",
-          color: "#565f80",
-        }
-      )
-      .setOrigin(0.5);
+    this.add.text(
+      this.panelX + this.panelWidth / 2,
+      height - 28,
+      "↑↓ / W S navegar   ENTER / A confirmar   ESC / B voltar",
+      {
+        fontFamily: "Courier New, monospace",
+        fontSize: "13px",
+        color: "#8d96ad",
+      },
+    ).setOrigin(0.5).setDepth(6);
   }
 
-  update(): void {
+  update(_time: number, delta: number): void {
+    this.backdrop.update(delta);
     if (this.confirmVisible) {
       if (this.input$.isCancelJustDown()) {
         this.hideConfirm();
@@ -121,17 +139,14 @@ export class MenuScene extends Phaser.Scene {
     this.optionTexts = [];
     this.selectedIndex = 0;
 
-    const startY = this.mode === "phase-select" ? 320 : 340;
-    const spacing = this.mode === "phase-select" ? 48 : 56;
+    const startY = this.panelY + 74;
+    const spacing = this.mode === "phase-select" ? 43 : 52;
     this.options.forEach((option, index) => {
-      const text = this.add
-        .text(this.scale.width / 2, startY + index * spacing, option.label, {
-          fontFamily: "Courier New, monospace",
-          fontSize: this.mode === "phase-select" ? "23px" : "28px",
-          color: "#e8ecff",
-        })
-        .setOrigin(0.5)
-        .setInteractive({ useHandCursor: true })
+      const text = this.add.text(this.panelX + 28, startY + index * spacing, option.label, {
+        fontFamily: "Courier New, monospace",
+        fontSize: this.mode === "phase-select" ? "19px" : "23px",
+        color: "#e8ecff",
+      }).setOrigin(0, 0.5).setDepth(6).setInteractive({ useHandCursor: true })
         .on("pointerover", () => this.setSelected(index))
         .on("pointerdown", () => {
           this.setSelected(index);
@@ -155,8 +170,11 @@ export class MenuScene extends Phaser.Scene {
       this.options.push({ label: "Continuar do Portão", action: () => this.continueFromGate() });
     }
     this.options.push({ label: "Novo Jogo", action: () => this.newGame(this.hasSave) });
-    this.options.push({ label: "Selecionar Fase (teste)", action: () => this.showPhaseSelect() });
+    this.options.push({ label: "Controles", action: () => this.openControls(false) });
     this.options.push({ label: "Multiplayer", action: () => this.openMultiplayer() });
+    if (SHOW_TEST_SELECTOR) {
+      this.options.push({ label: "Selecionar Fase (teste)", action: () => this.showPhaseSelect() });
+    }
     this.renderOptions();
   }
 
@@ -192,8 +210,9 @@ export class MenuScene extends Phaser.Scene {
     }
     this.selectedIndex = index;
     this.optionTexts.forEach((text, optionIndex) => {
+      text.setText(`${optionIndex === index ? "▶ " : "  "}${this.options[optionIndex].label.toUpperCase()}`);
       text.setColor(optionIndex === index ? "#FFD37C" : "#e8ecff");
-      text.setScale(optionIndex === index ? 1.06 : 1);
+      text.setScale(optionIndex === index ? 1.03 : 1);
     });
   }
 
@@ -205,6 +224,10 @@ export class MenuScene extends Phaser.Scene {
 
   private openMultiplayer(): void {
     this.scene.start("MultiplayerScene");
+  }
+
+  private openControls(campaignSetup: boolean): void {
+    this.scene.start("ControlsScene", { campaignSetup });
   }
 
   private continueGame(): void {
@@ -248,8 +271,6 @@ export class MenuScene extends Phaser.Scene {
   private continueFromGate(): void {
     const restored = SaveState.load().restorePreGateSave();
     if (!restored) return;
-    // Phaser preserva os dados anteriores quando uma cena é iniciada sem
-    // um novo objeto. Sobrescreve explicitamente a prévia do seletor.
     this.scene.start("GateScene", { testMode: false });
   }
 
@@ -258,37 +279,38 @@ export class MenuScene extends Phaser.Scene {
       this.showConfirm();
       return;
     }
-    SaveState.newGame();
-    this.scene.start("PrologueScene");
+    this.openControls(true);
   }
 
   private showConfirm(): void {
     this.confirmVisible = true;
-    this.confirmText = this.add
-      .text(
-        this.scale.width / 2,
-        this.scale.height - 110,
-        "Isso vai apagar o save atual. ENTER/A confirma, ESC/B/SELECT cancela.",
-        {
-          fontFamily: "Courier New, monospace",
-          fontSize: "18px",
-          color: "#ff8a8a",
-          backgroundColor: "#1a0a0aee",
-          padding: { x: 14, y: 10 },
-        }
-      )
-      .setOrigin(0.5);
+    const x = this.panelX + 16;
+    const y = this.panelY + this.panelHeight - 104;
+    this.confirmPanel = drawTechPanel(this, x, y, this.panelWidth - 32, 84, 8, 0xff718f);
+    this.confirmText = this.add.text(
+      this.panelX + this.panelWidth / 2,
+      y + 42,
+      "SUBSTITUIR O SAVE ATUAL?\nENTER / A confirma   ESC / B cancela",
+      {
+        fontFamily: "Courier New, monospace",
+        fontSize: "15px",
+        color: "#ff8a8a",
+        align: "center",
+      },
+    ).setOrigin(0.5).setDepth(9).setInteractive({ useHandCursor: true })
+      .on("pointerdown", () => this.confirmNewGame());
   }
 
   private confirmNewGame(): void {
     this.hideConfirm();
-    SaveState.newGame();
-    this.scene.start("PrologueScene");
+    this.openControls(true);
   }
 
   private hideConfirm(): void {
     this.confirmVisible = false;
     this.confirmText?.destroy();
+    this.confirmPanel?.destroy();
     this.confirmText = undefined;
+    this.confirmPanel = undefined;
   }
 }

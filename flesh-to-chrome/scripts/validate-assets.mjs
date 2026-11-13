@@ -214,6 +214,14 @@ const runtimeAudio = [
   "sfx-warning-beep.mp3",
 ].map((filename) => `src/assets/audio/sfx/${filename}`).concat(
   [1, 2, 3, 4, 5].map((phase) => `src/assets/audio/music/bgm-phase-${phase}.ogg`),
+  [
+    "bgm-menu.mp3",
+    "bgm-clinic.ogg",
+    "bgm-gate.mp3",
+    "bgm-ending-chrome.mp3",
+    "bgm-ending-flesh.mp3",
+    "bgm-ending-hollow.ogg",
+  ].map((filename) => `src/assets/audio/music/${filename}`),
 );
 
 const readJson = (filename) => JSON.parse(fs.readFileSync(filename, "utf8"));

@@ -4,15 +4,13 @@ Documento da branch `feat/visual-audio-polish`.
 
 ## Cobertura audiovisual
 
-- `AudioManager` centraliza oito chaves de BGM e trinta e quatro chaves de SFX.
-  Os cinco masters musicais existentes pertencem às fases e são carregados sob
-  demanda: o Boot registra apenas os efeitos pequenos, e `GameScene` solicita
-  somente a faixa da fase atual. Uma troca de cena interrompe e destrói a faixa
-  anterior antes de iniciar a próxima.
-- Menu/prólogo, clínica e Portão/finais mantêm roteamento explícito, mas ficam
-  silenciosos enquanto não tiverem masters aprovados. As trinta e duas fontes
-  de SFX existentes estão registradas; chaves ainda sem arquivo permanecem
-  como no-op sem quebrar a cena.
+- `AudioManager` centraliza onze chaves de BGM e trinta e quatro chaves de SFX.
+  As músicas das cinco fases, menu/prólogo, clínica/ReForge, Portão e finais
+  Chrome, Flesh e Hollow são carregadas sob demanda: o Boot registra apenas os
+  efeitos pequenos, e cada cena solicita somente sua faixa. Uma troca de cena
+  interrompe e destrói a música anterior antes de iniciar a próxima.
+- As trinta e duas fontes de SFX existentes estão registradas; chaves ainda sem
+  arquivo permanecem como no-op sem quebrar a cena.
 - Corrida, aterrissagem, pulo, pulo duplo, slide, ataque, scan, dash, morte,
   inimigos, créditos, checkpoint, conclusão de fase, implantes e interfaces
   possuem feedback sonoro.
@@ -40,6 +38,14 @@ Documento da branch `feat/visual-audio-polish`.
   partículas/tweens curtos sem alterar hitboxes.
 - O HUD ganhou painel, hierarquia e nomenclatura consistentes com a interface
   diegética do jogo.
+- O menu principal reutiliza as camadas urbanas da Fase 3 em um fundo animado,
+  coberto por degradê escuro. Título, painel tecnológico e indicador amarelo de
+  seleção se reposicionam a partir das dimensões atuais da tela. A opção de
+  seleção de fases fica disponível apenas no ambiente de desenvolvimento.
+- A nova tela de controles apresenta teclado/mouse, gamepad e os implantes que
+  liberam cada habilidade. Ela reutiliza a música do menu sem reiniciá-la. Ao
+  abrir a partir de **Novo Jogo**, o save só é substituído ao confirmar
+  **Iniciar Campanha**; a opção permanente **Controles** é somente consultiva.
 
 ## Assets narrativos finalizados
 
@@ -64,8 +70,8 @@ npm run build
 No playtest manual, confirme em 16:9 e ultrawide:
 
 1. nenhuma BGM continua tocando sobre a cena seguinte;
-   ao entrar em uma fase, a rede solicita somente o respectivo
-   `bgm-phase-N.ogg`, sem baixar as outras quatro faixas;
+   ao entrar em uma fase ou cena narrativa, a rede solicita somente o master
+   correspondente, sem baixar o restante do catálogo;
 2. o slide executa quatro poses uma vez, mantém a base alinhada e atravessa
    corretamente os obstáculos baixos das Fases 1 e 2;
 3. passos, esteira e slide não se acumulam nem continuam durante pausa; os
@@ -78,3 +84,11 @@ No playtest manual, confirme em 16:9 e ultrawide:
    sem esticar os pixels, alinham a garra à hitbox durante extensão/retração e
    piscam a luz laranja no aviso; as prensas também piscam sem adicionar um
    segundo alarme aos demais hazards.
+7. em 16:9 e ultrawide, o menu preenche toda a área visível, mantém título e
+   opções legíveis sobre Glitch City e não exibe **Selecionar Fase (teste)** no
+   build de produção;
+8. a tela de controles mantém os dois painéis, implantes e botões dentro da
+   moldura; teclado, mouse e gamepad conseguem iniciar a campanha e voltar;
+9. abrir **Controles** pelo menu e voltar não altera o save; abrir **Novo Jogo**,
+   voltar e cancelar também preserva o save, enquanto **Iniciar Campanha** o
+   substitui e segue para o prólogo.

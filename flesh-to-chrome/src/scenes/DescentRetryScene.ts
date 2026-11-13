@@ -28,6 +28,10 @@ export class DescentRetryScene extends Phaser.Scene {
     this.descentPreview = data.descentPreview;
   }
 
+  preload(): void {
+    AudioManager.preloadBgm(this, BGM.gate);
+  }
+
   create(): void {
     const width = this.scale.width;
     const height = this.scale.height;

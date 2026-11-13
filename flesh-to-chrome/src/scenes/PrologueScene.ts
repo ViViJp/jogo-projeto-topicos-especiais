@@ -56,6 +56,7 @@ export class PrologueScene extends Phaser.Scene {
   }
 
   preload(): void {
+    AudioManager.preloadBgm(this, BGM.menu);
     if (!this.textures.exists(PROLOGUE_FAMILY_KEY)) {
       this.load.image(
         PROLOGUE_FAMILY_KEY,

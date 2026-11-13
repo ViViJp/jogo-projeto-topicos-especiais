@@ -40,6 +40,7 @@ export class ReForgeScene extends Phaser.Scene {
   }
 
   preload(): void {
+    AudioManager.preloadBgm(this, BGM.clinic);
     if (!this.textures.exists(REFORGE_BG)) {
       this.load.image(REFORGE_BG, new URL("../assets/narrative/recycling/unidade-reciclagem.png", import.meta.url).href);
     }

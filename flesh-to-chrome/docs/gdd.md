@@ -1224,6 +1224,16 @@ O jogo aceita controles no padrão Web Gamepad e controles USB retrô com layout
 
 Como Flesh to Chrome é um auto-runner, Alex continua correndo automaticamente; esquerda e direita são usadas na navegação dos menus. O jogo detecta automaticamente o perfil USB/SNES e também aceita direcionais expostos pelo navegador como eixos.
 
+## 19.1.2 Tela de controles
+
+O menu principal mantém uma opção permanente **Controles**, disponível sem
+alterar o save. A tela apresenta lado a lado os comandos de teclado/mouse e de
+controle, além da relação entre cada habilidade e o implante que a libera.
+
+Ao escolher **Novo Jogo**, essa mesma tela funciona como confirmação final da
+campanha: o save anterior permanece intacto enquanto ela estiver aberta e só é
+substituído ao confirmar **Iniciar Campanha**. Voltar ao menu cancela a operação.
+
 ## 19.2 Pausa
 
 ### Campanha
@@ -1282,7 +1292,20 @@ Existe um único save de campanha.
 Se já existir save:
 
 1. exibir confirmação;
-2. apagar somente depois de confirmação.
+2. abrir a tela de controles no modo de preparação da campanha;
+3. preservar o save enquanto o jogador consulta os comandos ou volta ao menu;
+4. apagar e criar o novo save somente ao confirmar **Iniciar Campanha**;
+5. iniciar o prólogo.
+
+## 20.2.1 Apresentação do menu
+
+O menu utiliza Glitch City como fundo, com camadas urbanas em movimento leve,
+névoa e luzes discretas. Um degradê escuro e um painel tecnológico à esquerda
+preservam a legibilidade das opções. O título ocupa a região superior esquerda
+e a seleção ativa é marcada por `▶` em amarelo.
+
+**Selecionar Fase (teste)** é uma ferramenta exclusiva de desenvolvimento e
+não deve aparecer no build público.
 
 ## 20.3 Continue
 
@@ -1518,13 +1541,13 @@ Flesh to Chrome é um jogo 2D. Nenhum asset 3D é necessário para o escopo atua
 - stingers/cues dos finais;
 - trilha ou loops por fase.
 
-**Estado de implementação — Branch 4:** as oito chaves de trilha e os pontos de
+**Estado de implementação — Branch 4:** onze chaves de trilha e os pontos de
 disparo dos efeitos principais estão integrados pelo `AudioManager`. As cinco
-fases já usam masters musicais registrados em `src/assets/audio/credits.txt`;
-menu, clínica e Portão permanecem silenciosos até receberem faixas aprovadas.
-O Boot carrega somente os SFX compartilhados e cada cena solicita sua BGM sob
-demanda. A troca de cena encerra a música anterior, e a pausa congela e retoma
-a faixa junto com o gameplay.
+fases, menu/prólogo, clínica/ReForge, Portão e os finais Chrome, Flesh e Hollow
+usam masters registrados em `src/assets/audio/credits.txt`. O Boot carrega
+somente os SFX compartilhados e cada cena solicita sua BGM sob demanda. A troca
+de cena encerra a música anterior, e a pausa congela e retoma a faixa junto com
+o gameplay.
 
 ## 23.4 Code
 

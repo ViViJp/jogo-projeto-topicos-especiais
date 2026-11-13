@@ -4,9 +4,9 @@
   "description": "Flesh to Chrome - 2D cyberpunk auto-runner (academic project prototype)",
   "private": true,
   "scripts": {
-    "start": "parcel src/index.html --open --no-cache",
-    "dev": "parcel src/index.html --no-cache",
-    "dev:network": "parcel src/index.html --host 0.0.0.0 --no-cache",
+    "start": "FTC_ENABLE_TEST_MENU=1 parcel src/index.html --open --no-cache",
+    "dev": "FTC_ENABLE_TEST_MENU=1 parcel src/index.html --no-cache",
+    "dev:network": "FTC_ENABLE_TEST_MENU=1 parcel src/index.html --host 0.0.0.0 --no-cache",
     "dev:multiplayer": "node server/start-multiplayer-dev.mjs",
     "signaling": "node server/signaling-server.mjs",
     "build": "parcel build src/index.html --dist-dir dist --no-cache",

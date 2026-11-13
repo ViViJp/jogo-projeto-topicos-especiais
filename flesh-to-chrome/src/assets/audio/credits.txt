@@ -4,7 +4,7 @@
 ```
 flesh-to-chrome/src/assets/audio/
   ambience/ # ambientes antigos, não usados como BGM
-  music/    # músicas em loop por fase
+  music/    # músicas em loop por fase e cena narrativa
   sfx/     # one-shots
   credits.txt
 ```
@@ -15,13 +15,19 @@ flesh-to-chrome/src/assets/audio/
 - `music/bgm-phase-2.ogg` — Fase 2/Industrial;
 - `music/bgm-phase-3.ogg` — Fase 3/Meio Urbano;
 - `music/bgm-phase-4.ogg` — Fase 4/Corporativo;
-- `music/bgm-phase-5.ogg` — Fase 5/Topo.
+- `music/bgm-phase-5.ogg` — Fase 5/Topo;
+- `music/bgm-menu.mp3` — menu principal e prólogo;
+- `music/bgm-clinic.ogg` — clínica, ReForge e confronto com George;
+- `music/bgm-gate.mp3` — Portão e tela de retry da descida;
+- `music/bgm-ending-chrome.mp3` — epílogo do Final Chrome;
+- `music/bgm-ending-flesh.mp3` — corredor final e epílogo Flesh;
+- `music/bgm-ending-hollow.ogg` — corredor final e epílogo Hollow.
 
-Esses cinco masters substituem os ambientes anteriormente associados às chaves
-`bgm-phase-1` a `bgm-phase-4`; a Fase 5 também passa a ter música própria. O
-`AudioManager` mantém uma única faixa em loop, respeitando pausa e troca de cena.
+Os onze masters cobrem as cinco fases, as cenas narrativas recorrentes e os três
+desfechos. O `AudioManager` mantém uma única faixa em loop, respeitando pausa e
+troca de cena.
 
-## Proveniência e correspondência dos masters
+## Proveniência das músicas das fases
 
 Os arquivos foram fornecidos pela equipe junto às duas páginas de origem. A
 correspondência adotada foi conferida pelo manifesto e tamanho dos masters dos
@@ -47,7 +53,23 @@ CC0. As URLs e os nomes originais acima devem permanecer no pacote de créditos,
 mesmo que a atribuição não seja exigida pela licença.
 
 Para reduzir o carregamento inicial do jogo web, o Boot não solicita esses
-masters. Cada cena de gameplay carrega apenas a faixa que vai reproduzir.
+masters. Cada cena carrega apenas a faixa que vai reproduzir.
+
+## Músicas narrativas integradas em 13/11/2026
+
+Menu, clínica, Portão, Chrome, Flesh e Hollow foram fornecidas diretamente pela
+equipe com nomes que identificam inequivocamente seus destinos. Os dois arquivos
+recebidos com sufixo `.ogg.mp3` foram confirmados como MPEG/MP3 e normalizados
+para `.mp3`; nenhum áudio foi transcodificado.
+
+Os masters entregues para Portão e Final Chrome são binariamente idênticos.
+Eles permanecem sob chaves e nomes semânticos separados para que uma das faixas
+possa ser substituída depois sem alterar as cenas; o empacotador elimina a cópia
+duplicada no build atual.
+
+Os arquivos não incluem informação suficiente de autoria, site de origem ou
+licença. Registrar esses dados aqui antes de uma distribuição pública ou
+comercial. Não há dúvidas pendentes sobre o mapeamento dentro do jogo.
 
 ## SFX — seleção integrada em 12/11/2026
 

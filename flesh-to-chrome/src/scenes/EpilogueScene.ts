@@ -10,7 +10,7 @@ import {
   ALEX_SHEET_CONFIG,
   alexTextureForAbilities,
 } from "../utils/AlexSprite";
-import { AudioManager, BGM, SFX } from "../systems/AudioManager";
+import { AudioManager, SFX, bgmForEnding } from "../systems/AudioManager";
 import { DescentPreviewSession } from "../systems/DescentPreviewSession";
 
 interface EpilogueData {
@@ -29,7 +29,7 @@ export class EpilogueScene extends Phaser.Scene {
   init(data: EpilogueData): void { this.data$ = data; }
 
   preload(): void {
-    AudioManager.preloadBgm(this, BGM.phase1);
+    AudioManager.preloadBgm(this, bgmForEnding(this.data$.ending));
     if (!this.textures.exists("epilogue-alex-flesh")) {
       this.load.spritesheet(
         "epilogue-alex-flesh",
@@ -56,7 +56,7 @@ export class EpilogueScene extends Phaser.Scene {
     const doorX = centerX + Math.min(400, width * 0.32);
     const alexStartX = centerX - Math.min(510, width * 0.41);
     this.input$ = new InputManager(this);
-    AudioManager.playBgm(this, BGM.phase1, 0.24);
+    AudioManager.playBgm(this, bgmForEnding(this.data$.ending), 0.24);
     this.leaving = false;
     if (this.data$.testMode && !this.data$.descentPreview) {
       this.scene.start("MenuScene");
