@@ -13,8 +13,9 @@ já creditados nas respectivas pastas.
 | `src/assets/narrative/recycling/holograma-pai.png` | Variante holográfica baseada no retrato final do pai convertido | Holograma exclusivo da retirada das pernas/salto duplo | Arte final otimizada em 160×192 |
 | `src/assets/narrative/recycling/unidade-reciclagem.png` | Terminal industrial ReForge gerado para receber os avatares sobrepostos | Fundo das quatro sequências de bioprinting | Arte final otimizada em 240×320 |
 | `src/assets/narrative/prologue/familia.png` | Retrato autoral do avô e do tio no lar do nível inferior | Prólogo e epílogos Flesh/Hollow | Arte final otimizada em 512×320 |
+| `src/assets/narrative/endings/chrome-father-son.png` | Gerado com a ferramenta integrada de imagem da OpenAI em 12/11/2026, usando o retrato do pai e o design Chrome de Alex como referências locais | Ilustração conjunta das quatro páginas do Final Chrome: o pai chama e Alex segue sem reconhecê-lo | Arte narrativa final em 1672×941; exibida com filtragem linear |
 | `src/assets/narrative/father/pai-antes.png` | Retrato humano do pai, alinhado à família | Prólogo anterior à ascensão | Arte final otimizada em 256×256 |
-| `src/assets/narrative/father/pai-portrait.png` | Transformação ciborgue preservando a identidade do retrato humano | Final Chrome e derivados narrativos | Arte final otimizada em 256×256 |
+| `src/assets/narrative/father/pai-portrait.png` | Transformação ciborgue preservando a identidade do retrato humano | Referência de identidade do pai e derivados narrativos | Arte final otimizada em 256×256 |
 | `src/assets/narrative/prologue/jornal-pai.png` | Painel de notícia corporativa derivado do retrato convertido | Prólogo, anúncio da ascensão | Arte final otimizada em 480×256 |
 | `src/assets/narrative/father/propaganda-pai.png` | Variante compacta do painel corporativo | Propaganda da Fase 4 e início de seu retorno na descida | Arte final otimizada em 320×192 |
 | `src/assets/narrative/reforge-door/reforge-door-closed.png` | Geração autoral de porta industrial cyberpunk | Estado fechado quando o fragmento de memória ainda não foi recuperado | Integrado ao MVP; arte definitiva para esta branch |

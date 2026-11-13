@@ -398,7 +398,9 @@ export class TiledPhase5Runtime {
     );
     const arm = this.scene.add
       .image(centerX, centerY, TILED_PHASE5_ROTATING_BARRIER_TEXTURE_KEY)
-      .setDisplaySize(length, Math.max(42, length * 0.5))
+      // O PNG possui respiro vertical para girar sem cortar as extremidades.
+      // Uma caixa quase quadrada dá presença ao braço sem ampliar a colisão.
+      .setDisplaySize(length * 1.08, Math.max(84, length))
       .setDepth(7);
     const collisionNodes = Array.from({ length: nodeCount }, () => {
       const node = this.scene.add.zone(centerX, centerY, nodeSize, nodeSize);

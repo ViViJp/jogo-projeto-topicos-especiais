@@ -8,7 +8,8 @@ Registro detalhado das artes adicionadas na descida:
 `docs/ASSET_REGISTRY.md`.
 
 prologue/     — jornal, familia com avô e tio (cutscene §14.1)
-father/       — pai-antes (antes da conversão), pai-portrait (ciborgue), propaganda-pai (§14.2, Fase 4, final Chrome)
+father/       — pai-antes (antes da conversão), pai-portrait (ciborgue), propaganda-pai (§14.2, Fase 4)
+endings/      — ilustração conjunta de Alex Chrome e seu pai (Final Chrome)
 family/       — avo-portrait, tio-portrait (só cutscene, fora da jogabilidade)
 recycling/    — unidade-reciclagem, holograma-pai e operador ciborgue (§14.5, §17.8)
 gate/         — portao (decisão Chrome)

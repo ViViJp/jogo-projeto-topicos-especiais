@@ -491,13 +491,14 @@ const industrialRoute = DESCENT_ROUTES.find((route) => route.phaseId === "fase2-
 assert.ok(urbanRoute?.doubleJumpHazard, "grade elétrica exclusiva deve permanecer na D3");
 assert.equal(industrialRoute?.doubleJumpHazard, undefined,
   "D4 deve usar os gaps industriais do mapa, sem repetir o piso elétrico da D3");
-assert.match(ending, /father\/pai-portrait\.png/);
+assert.match(ending, /endings\/chrome-father-son\.png/,
+  "Final Chrome deve usar a ilustração conjunta do pai com Alex convertido");
 assert.match(ending, /prologue\/familia\.png/,
   "Flesh e Hollow devem mostrar avô e tio, não reutilizar o retrato do pai");
-assert.match(ending, /this\.ending === "chrome" \? FATHER_PORTRAIT_KEY : FAMILY_PORTRAIT_KEY/,
-  "retrato do pai deve permanecer exclusivo do Final Chrome");
-assert.match(ending, /this\.ending === "chrome" \? "PAI DE ALEX \/\/ CONVERSÃO CORPORATIVA" : "FAMÍLIA DE ALEX \/\/ CASA"/);
-assert.match(ending, /CONVERSÃO CORPORATIVA/);
+assert.match(ending, /this\.chromeIllustration\.setVisible\(isChrome && page\.alexVisible\)/,
+  "ilustração conjunta deve substituir os sprites pequenos no Final Chrome");
+assert.match(ending, /this\.add\.text\(centerX, panelTop \+ 24, "EPÍLOGO"/,
+  "título do epílogo deve ficar dentro da borda superior");
 assert.match(ending, /alexTextureForAbilities\(abilities\)/,
   "Final Hollow deve preservar o estágio corporal salvo no epílogo");
 assert.match(ending, /CROMO REMANESCENTE/);

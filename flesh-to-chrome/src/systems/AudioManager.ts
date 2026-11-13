@@ -59,10 +59,11 @@ export interface AudioSources {
 /** Masters aprovados pela equipe. As chaves sem arquivo continuam como no-op. */
 export const AUDIO_SOURCES: Required<AudioSources> = {
   music: {
-    [BGM.phase1]: new URL("../assets/audio/ambience/amb-sewer.mp3", import.meta.url).href,
-    [BGM.phase2]: new URL("../assets/audio/ambience/amb-industrial.mp3", import.meta.url).href,
-    [BGM.phase3]: new URL("../assets/audio/ambience/amb-urban.mp3", import.meta.url).href,
-    [BGM.phase4]: new URL("../assets/audio/ambience/amb-corporate.mp3", import.meta.url).href,
+    [BGM.phase1]: new URL("../assets/audio/music/bgm-phase-1.ogg", import.meta.url).href,
+    [BGM.phase2]: new URL("../assets/audio/music/bgm-phase-2.ogg", import.meta.url).href,
+    [BGM.phase3]: new URL("../assets/audio/music/bgm-phase-3.ogg", import.meta.url).href,
+    [BGM.phase4]: new URL("../assets/audio/music/bgm-phase-4.ogg", import.meta.url).href,
+    [BGM.phase5]: new URL("../assets/audio/music/bgm-phase-5.ogg", import.meta.url).href,
   },
   sfx: {
     [SFX.attack]: new URL("../assets/audio/sfx/sfx-attack.mp3", import.meta.url).href,

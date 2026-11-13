@@ -17,9 +17,8 @@ import {
   alexTextureForAbilities,
 } from "../utils/AlexSprite";
 
-const FATHER_PORTRAIT_KEY = "ending-father";
 const FAMILY_PORTRAIT_KEY = "ending-family";
-const ALEX_CHROME_KEY = "ending-alex-chrome";
+const CHROME_EPILOGUE_KEY = "ending-chrome-father-son";
 const ALEX_FLESH_KEY = "ending-alex-flesh";
 
 interface EndingPage {
@@ -117,7 +116,8 @@ export class EndingScene extends Phaser.Scene {
   private counter!: Phaser.GameObjects.Text;
   private portrait!: Phaser.GameObjects.Image;
   private portraitCaption!: Phaser.GameObjects.Text;
-  private alex!: Phaser.GameObjects.Sprite;
+  private chromeIllustration!: Phaser.GameObjects.Image;
+  private alex?: Phaser.GameObjects.Sprite;
   private alexCaption!: Phaser.GameObjects.Text;
   private ending: EndingKind = "chrome";
   private pages: EndingPage[] = CHROME_PAGES;
@@ -136,23 +136,16 @@ export class EndingScene extends Phaser.Scene {
   }
 
   preload(): void {
-    if (!this.textures.exists(FATHER_PORTRAIT_KEY)) {
+    if (!this.textures.exists(CHROME_EPILOGUE_KEY)) {
       this.load.image(
-        FATHER_PORTRAIT_KEY,
-        new URL("../assets/narrative/father/pai-portrait.png", import.meta.url).href,
+        CHROME_EPILOGUE_KEY,
+        new URL("../assets/narrative/endings/chrome-father-son.png", import.meta.url).href,
       );
     }
     if (!this.textures.exists(FAMILY_PORTRAIT_KEY)) {
       this.load.image(
         FAMILY_PORTRAIT_KEY,
         new URL("../assets/narrative/prologue/familia.png", import.meta.url).href,
-      );
-    }
-    if (!this.textures.exists(ALEX_CHROME_KEY)) {
-      this.load.spritesheet(
-        ALEX_CHROME_KEY,
-        new URL("../assets/player/alex-chrome/alex-chrome.png", import.meta.url).href,
-        { frameWidth: 64, frameHeight: 64 },
       );
     }
     if (!this.textures.exists(ALEX_FLESH_KEY)) {
@@ -191,22 +184,25 @@ export class EndingScene extends Phaser.Scene {
 
     this.add.rectangle(centerX, height / 2, Math.min(1120, width - 80), panelHeight, 0x0c0d18, 1)
       .setStrokeStyle(2, 0xffd37c, 0.42);
-    this.add.text(centerX, Math.max(28, panelTop - 3), "EPÍLOGO", {
+    this.add.text(centerX, panelTop + 24, "EPÍLOGO", {
       fontFamily: "Courier New, monospace",
       fontSize: "18px",
       color: "#565f80",
       letterSpacing: 5,
     }).setOrigin(0.5);
 
-    const portraitTexture = this.ending === "chrome" ? FATHER_PORTRAIT_KEY : FAMILY_PORTRAIT_KEY;
-    this.portrait = this.add.image(centerX - 170, visualY, portraitTexture);
-    if (this.ending === "chrome") this.portrait.setDisplaySize(192, 192);
-    else this.portrait.setDisplaySize(307, 192);
+    this.chromeIllustration = this.add.image(centerX, visualY, CHROME_EPILOGUE_KEY)
+      .setDisplaySize(480, 270)
+      .setVisible(this.ending === "chrome");
+    this.chromeIllustration.texture.setFilter(Phaser.Textures.FilterMode.LINEAR);
+
+    this.portrait = this.add.image(centerX - 170, visualY, FAMILY_PORTRAIT_KEY);
+    this.portrait.setDisplaySize(307, 192);
     this.portrait.texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
     this.portraitCaption = this.add.text(
       centerX - 170,
       visualY + 110,
-      this.ending === "chrome" ? "PAI DE ALEX // CONVERSÃO CORPORATIVA" : "FAMÍLIA DE ALEX // CASA",
+      "FAMÍLIA DE ALEX // CASA",
       {
         fontFamily: "Courier New, monospace",
         fontSize: "13px",
@@ -219,14 +215,14 @@ export class EndingScene extends Phaser.Scene {
       ? this.previewAbilities ?? createInitialAbilityState()
       : SaveState.load().get().abilities;
     const remainingImplants = abilityStateToBodyStage(abilities);
-    const alexTexture = this.ending === "flesh"
-      ? ALEX_FLESH_KEY
-      : this.ending === "hollow"
-        ? alexTextureForAbilities(abilities)
-        : ALEX_CHROME_KEY;
-    this.alex = this.add.sprite(centerX + 140, visualY + 36, alexTexture, 26)
-      .setScale(3.2);
-    if (this.ending === "hollow") this.alex.setTint(0xc7b8d0);
+    if (this.ending !== "chrome") {
+      const alexTexture = this.ending === "flesh"
+        ? ALEX_FLESH_KEY
+        : alexTextureForAbilities(abilities);
+      this.alex = this.add.sprite(centerX + 140, visualY + 36, alexTexture, 26)
+        .setScale(3.2);
+      if (this.ending === "hollow") this.alex.setTint(0xc7b8d0);
+    }
     this.alexCaption = this.add.text(
       centerX + 140,
       visualY + 120,
@@ -278,16 +274,15 @@ export class EndingScene extends Phaser.Scene {
 
   private renderPage(): void {
     const page = this.pages[this.pageIndex];
+    const isChrome = this.ending === "chrome";
     this.title.setText(page.title);
     this.body.setText(page.body);
-    this.portrait.setVisible(page.portraitVisible);
-    this.portraitCaption.setVisible(page.portraitVisible);
-    this.alex.setVisible(page.alexVisible);
+    this.chromeIllustration.setVisible(isChrome && page.alexVisible);
+    this.portrait.setVisible(!isChrome && page.portraitVisible);
+    this.portraitCaption.setVisible(!isChrome && page.portraitVisible);
+    this.alex?.setVisible(!isChrome && page.alexVisible);
     this.alexCaption.setVisible(this.ending === "hollow" && page.alexVisible);
     this.counter.setText(`${this.pageIndex + 1}/${this.pages.length}`);
-    if (this.pageIndex === this.pages.length - 1 && this.ending === "chrome") {
-      this.tweens.add({ targets: this.alex, x: this.scale.width + 150, duration: 3000, ease: "Sine.easeIn" });
-    }
   }
 
   private advance(): void {

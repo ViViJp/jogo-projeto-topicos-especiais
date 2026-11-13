@@ -103,6 +103,7 @@ const runtimeImages = [
   "src/assets/npcs/enemies/bandido/bandido.png",
   "src/assets/npcs/enemies/drone/drone.png",
   "src/assets/narrative/prologue/familia.png",
+  "src/assets/narrative/endings/chrome-father-son.png",
   "src/assets/narrative/prologue/jornal-pai.png",
   "src/assets/narrative/father/pai-antes.png",
   "src/assets/narrative/father/pai-portrait.png",
@@ -153,6 +154,7 @@ const runtimeImageContracts = new Map([
   ["src/assets/props/obstacles/reforge-security-seal.png", [971, 1619]],
   ["src/assets/props/hazards/urban-electric-floor.png", [640, 68]],
   ["src/assets/props/hazards/rotating-energy-barrier.png", [2172, 724]],
+  ["src/assets/narrative/endings/chrome-father-son.png", [1672, 941]],
   ["src/assets/narrative/prologue/familia.png", [512, 320]],
   ["src/assets/narrative/prologue/jornal-pai.png", [480, 256]],
   ["src/assets/narrative/father/pai-antes.png", [256, 256]],
@@ -204,12 +206,9 @@ const runtimeAudio = [
   "sfx-ui-confirm.mp3",
   "sfx-ui-select.mp3",
   "sfx-warning-beep.mp3",
-].map((filename) => `src/assets/audio/sfx/${filename}`).concat([
-  "src/assets/audio/ambience/amb-sewer.mp3",
-  "src/assets/audio/ambience/amb-industrial.mp3",
-  "src/assets/audio/ambience/amb-urban.mp3",
-  "src/assets/audio/ambience/amb-corporate.mp3",
-]);
+].map((filename) => `src/assets/audio/sfx/${filename}`).concat(
+  [1, 2, 3, 4, 5].map((phase) => `src/assets/audio/music/bgm-phase-${phase}.ogg`),
+);
 
 const readJson = (filename) => JSON.parse(fs.readFileSync(filename, "utf8"));
 const property = (object, name) => object.properties?.find((item) => item.name === name)?.value;
@@ -343,8 +342,10 @@ for (const audio of runtimeAudio) {
   const data = fs.readFileSync(audioPath);
   const hasId3 = data.subarray(0, 3).toString("ascii") === "ID3";
   const hasMpegSync = data[0] === 0xff && (data[1] & 0xe0) === 0xe0;
-  if (data.length < 1024 || (!hasId3 && !hasMpegSync)) {
-    fail(`${audio}: master MP3 inválido ou vazio`);
+  const hasOggContainer = data.subarray(0, 4).toString("ascii") === "OggS";
+  const validContainer = audio.endsWith(".ogg") ? hasOggContainer : hasId3 || hasMpegSync;
+  if (data.length < 1024 || !validContainer) {
+    fail(`${audio}: master de áudio inválido ou vazio`);
   }
 }
 

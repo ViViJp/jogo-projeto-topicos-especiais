@@ -20,12 +20,8 @@ Arquivos fornecidos diretamente pela equipe do projeto:
 - `sfx-ui-confirm.mp3` — confirmação de escolhas e avanço narrativo;
 - `sfx-ui-select.mp3` — mudança de seleção no menu.
 
-## Ambientes e hazards integrados em 12/11/2026
+## Hazards integrados em 12/11/2026
 
-- `../ambience/amb-sewer.mp3` — ambiente contínuo da Fase 1/Esgoto;
-- `../ambience/amb-industrial.mp3` — ambiente contínuo da Fase 2/Industrial;
-- `../ambience/amb-urban.mp3` — ambiente contínuo da Fase 3/Meio Urbano;
-- `../ambience/amb-corporate.mp3` — ambiente contínuo da Fase 4/Corporativo;
 - `sfx-conveyor-belt.mp3` — loop ativo somente enquanto Alex está sobre uma esteira;
 - `sfx-warning-beep.mp3` — entrada na janela de aviso dos hazards industriais;
 - `sfx-mechanical-arm.mp3` — ativação do braço mecânico industrial;
@@ -47,6 +43,7 @@ Arquivos fornecidos diretamente pela equipe do projeto:
 Os efeitos das máquinas só são disparados quando o hazard está dentro da área
 visível da câmera. Os loops de esteira, fio, água, drone e portão elétrico são
 interrompidos ao sair da área correspondente, morrer, reiniciar ou trocar de cena.
+As BGMs das cinco fases são documentadas no `../credits.txt`.
 
 Todos os arquivos desta entrega tiveram evento compatível identificado; não há
 questionamentos de mapeamento pendentes neste momento.

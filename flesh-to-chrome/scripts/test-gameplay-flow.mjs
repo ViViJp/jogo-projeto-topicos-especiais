@@ -172,6 +172,8 @@ const phase5RuntimeSource = fs.readFileSync(path.join(projectDirectory, "src/obj
 assert.match(phase5RuntimeSource, /height \/ 2 - 16/, "fase5: barreira rotativa precisa de janela horizontal segura");
 assert.match(phase5RuntimeSource, /TILED_PHASE5_ROTATING_BARRIER_TEXTURE_KEY/,
   "fase5: barreira rotativa deve usar o sprite final");
+assert.match(phase5RuntimeSource, /setDisplaySize\(length \* 1\.08, Math\.max\(84, length\)\)/,
+  "fase5: sprite da barreira rotativa deve ter presença visual sem alterar a colisão");
 assert.doesNotMatch(phase5RuntimeSource, /\.rectangle\(centerX, centerY, length/,
   "fase5: barreira rotativa não pode voltar ao retângulo provisório");
 assert.ok(fs.existsSync(path.join(
@@ -424,16 +426,12 @@ for (const filename of [
   assert.ok(fs.existsSync(path.join(projectDirectory, `src/assets/audio/sfx/sfx-${filename}.mp3`)),
     `arquivo SFX ausente: ${filename}`);
 }
-for (const [phase, filename] of [
-  ["phase1", "amb-sewer"],
-  ["phase2", "amb-industrial"],
-  ["phase3", "amb-urban"],
-  ["phase4", "amb-corporate"],
-]) {
-  assert.match(audioManagerSource, new RegExp(`\\[BGM\\.${phase}\\]: new URL\\("\\.\\.\/assets\/audio\/ambience\/${filename}\\.mp3"`),
-    `AudioManager: ambiente ausente para ${phase}`);
-  assert.ok(fs.existsSync(path.join(projectDirectory, `src/assets/audio/ambience/${filename}.mp3`)),
-    `arquivo de ambiente ausente: ${filename}`);
+for (const phase of [1, 2, 3, 4, 5]) {
+  const filename = `bgm-phase-${phase}.ogg`;
+  assert.match(audioManagerSource, new RegExp(`\\[BGM\\.phase${phase}\\]: new URL\\("\\.\\.\/assets\/audio\/music\/${filename}"`),
+    `AudioManager: BGM ausente para fase ${phase}`);
+  assert.ok(fs.existsSync(path.join(projectDirectory, `src/assets/audio/music/${filename}`)),
+    `arquivo de BGM ausente: ${filename}`);
 }
 assert.match(audioManagerSource, /\[SFX\.effort\]: new URL\("\.\.\/assets\/audio\/sfx\/sfx-jump\.mp3"/,
   "salto duplo deve reutilizar o master de pulo enquanto não houver esforço dedicado");

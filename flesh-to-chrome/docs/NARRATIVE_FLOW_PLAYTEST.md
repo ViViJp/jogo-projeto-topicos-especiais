@@ -33,8 +33,9 @@ Novo Jogo
 - O seletor de fases permite abrir o Portão diretamente em modo de teste. Abrir
   e sair com ESC/B não cria snapshot; confirmar Flesh inicia a descida de teste
   com os quatro implantes e passa a usar o save da cadeia narrativa.
-- Chrome apresenta o reencontro físico com `pai-portrait.png`: o pai reconhece
-  Alex, mas Alex não o reconhece e continua andando.
+- Chrome apresenta o reencontro físico com a ilustração conjunta
+  `endings/chrome-father-son.png`: o pai reconhece Alex, mas Alex não o
+  reconhece e continua andando.
 - Flesh e Hollow usam `prologue/familia.png`, com avô e tio juntos, para
   representar a casa. O retrato do pai não pode aparecer como família nesses
   dois finais.
