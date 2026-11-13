@@ -1,0 +1,14 @@
+Braço mecânico extensível — Fase 2
+
+Arquivos integrados em 13/11/2026:
+- mech-arm-housing.png — carcaça fixa, 64 x 48 px;
+- mech-arm-shaft.png — módulo repetível do eixo, 64 x 16 px;
+- mech-arm-claw.png — extremidade móvel, 64 x 40 px.
+
+Origem: arquivos fornecidos diretamente pela equipe do projeto. A autoria e a
+licença externas não foram informadas nos PNGs; confirmar esses dados antes de
+uma distribuição pública.
+
+Uso: composição dinâmica do hazard `mech_arm` em TiledPhase2Runtime. As imagens
+`mech-arm-parts-64x64.png` e `mech-arm-animation-4frames.png` foram recebidas
+somente como referência de montagem e não são carregadas pelo jogo.

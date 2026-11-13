@@ -123,6 +123,13 @@ const industrialKinds = new Set(
   phase2Objects.filter((object) => object.type === "hazard").map((object) => objectProperty(object, "kind")),
 );
 assert.deepEqual([...industrialKinds].sort(), ["mech_arm", "press", "steam"]);
+assert.equal(
+  phase2Objects.filter(
+    (object) => object.type === "hazard" && objectProperty(object, "kind") === "mech_arm",
+  ).length,
+  3,
+  "fase2: os três braços mecânicos autorados precisam continuar ativos",
+);
 assert.deepEqual(
   phase2Objects
     .filter((object) => object.type === "hazard" && objectProperty(object, "kind") === "press" && object.x < 6500)
@@ -268,6 +275,22 @@ for (const runtime of ["TiledPhase4Runtime.ts", "TiledPhase5Runtime.ts"]) {
   assert.doesNotMatch(source, /% door\.cycleMs/, `${runtime}: porta não pode depender do relógio`);
 }
 const phase4Runtime = fs.readFileSync(path.join(projectDirectory, "src/objects/TiledPhase4Runtime.ts"), "utf8");
+const phase4Map = JSON.parse(fs.readFileSync(path.join(projectDirectory, maps[3]), "utf8"));
+const phase4Ground = phase4Map.layers.find((layer) => layer.name === "ground");
+for (const column of [58, 59, 60, 61]) {
+  assert.equal(
+    phase4Ground.data[10 * phase4Map.width + column],
+    0,
+    `fase4: plataforma anterior à primeira parede falsa deve estar vazia na coluna ${column}`,
+  );
+}
+for (const column of [62, 63]) {
+  assert.notEqual(
+    phase4Ground.data[10 * phase4Map.width + column],
+    0,
+    `fase4: suporte sob a primeira parede falsa deve permanecer na coluna ${column}`,
+  );
+}
 assert.match(phase4Runtime, /this\.scene\.physics\.add\.collider\(player\.sprite, wall\.zone\)/);
 assert.match(phase4Runtime, /body\.enable = !intangible/);
 assert.match(phase4Runtime, /if \(!active\) return/);
@@ -414,6 +437,11 @@ for (const key of ["phase1", "phase2", "phase3", "phase4", "phase5", "clinic", "
 }
 assert.match(audioManagerSource, /this\.activeMusic\?\.stop\(\);[\s\S]*?this\.activeMusic\?\.destroy\(\);/,
   "troca de BGM precisa encerrar a faixa anterior");
+assert.match(audioManagerSource, /static preloadBgm\(scene: Phaser\.Scene, key: BgmKey\)/,
+  "BGMs completas devem possuir carregamento sob demanda");
+const sharedPreload = audioManagerSource.match(/static preload\(scene: Phaser\.Scene\): void \{([\s\S]*?)\n  \}/)?.[1] ?? "";
+assert.doesNotMatch(sharedPreload, /AUDIO_SOURCES\.music/,
+  "Boot não deve baixar as cinco BGMs antes do menu");
 for (const filename of [
   "attack", "barrier-disable", "breakable-destroy", "checkpoint", "conveyor-belt", "credit",
   "dash", "death", "drone-hum", "electric-gate", "electric-wire", "enemy-hit", "footstep",
@@ -453,6 +481,8 @@ assert.match(playerSource, /private stopContinuousSfx\(\): void/);
 assert.match(playerSource, /grounded && !this\.wasGrounded && this\.landingSoundArmed/,
   "aterrissagem não deve tocar no spawn da fase");
 assert.match(gameScene, /AudioManager\.playBgm\(this, bgmForPhase\(this\.data\$\.phaseId\)/);
+assert.match(gameScene, /AudioManager\.preloadBgm\(this, bgmForPhase\(this\.data\$\.phaseId\)\)/,
+  "GameScene deve carregar somente a BGM da fase atual");
 assert.match(gameScene, /AudioManager\.pauseBgm\(\)/);
 assert.match(gameScene, /AudioManager\.resumeBgm\(\)/);
 assert.match(gameScene, /AudioManager\.startLoop\(this, SFX\.checkpoint/);
@@ -469,6 +499,20 @@ assert.match(phase2Runtime, /state === "warning"[\s\S]*?SFX\.warningBeep/,
   "janela de aviso industrial deve emitir o bip dedicado");
 assert.match(phase2Runtime, /state === "warning" && hazard\.kind === "press"/,
   "alarme industrial deve ficar restrito às prensas");
+for (const filename of ["mech-arm-housing.png", "mech-arm-shaft.png", "mech-arm-claw.png"]) {
+  assert.match(gameScene, new RegExp(filename.replace(".", "\\.")),
+    `GameScene deve carregar ${filename}`);
+  assert.ok(fs.existsSync(path.join(projectDirectory, `src/assets/props/hazards/${filename}`)),
+    `asset do braço mecânico ausente: ${filename}`);
+}
+assert.match(phase2Runtime, /\.tileSprite\([\s\S]*?TILED_PHASE2_MECH_ARM_SHAFT_TEXTURE_KEY/,
+  "eixo do braço deve repetir sem deformar durante a extensão");
+assert.match(phase2Runtime, /mechArmHousing[\s\S]*?mechArmShaft[\s\S]*?mechArmClaw/,
+  "braço mecânico deve usar carcaça, eixo e garra independentes");
+assert.match(phase2Runtime, /hazard\.warningLight[\s\S]*?Math\.floor\(now \/ 120\)/,
+  "prensa e braço mecânico devem piscar a luz laranja durante o aviso");
+assert.match(phase2Runtime, /state === "active" && extension > 0\.2/,
+  "colisão do braço deve permanecer restrita ao curso ativo");
 for (const sfx of ["hydraulicPress", "steamBurst", "mechanicalArm"]) {
   assert.match(phase2Runtime, new RegExp(`SFX\\.${sfx}`),
     `hazard industrial sem efeito dedicado: ${sfx}`);

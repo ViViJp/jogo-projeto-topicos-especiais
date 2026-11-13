@@ -23,7 +23,8 @@ Arquivos fornecidos diretamente pela equipe do projeto:
 ## Hazards integrados em 12/11/2026
 
 - `sfx-conveyor-belt.mp3` — loop ativo somente enquanto Alex está sobre uma esteira;
-- `sfx-warning-beep.mp3` — entrada na janela de aviso dos hazards industriais;
+- `sfx-warning-beep.mp3` — entrada na janela de aviso das prensas; não é usado
+  no vapor nem no braço mecânico para evitar sobreposição excessiva;
 - `sfx-mechanical-arm.mp3` — ativação do braço mecânico industrial;
 - `sfx-steam-burst.mp3` — início do jato de vapor;
 - `sfx-hydraulic-press.mp3` — descida ativa da prensa hidráulica;
@@ -43,6 +44,8 @@ Arquivos fornecidos diretamente pela equipe do projeto:
 Os efeitos das máquinas só são disparados quando o hazard está dentro da área
 visível da câmera. Os loops de esteira, fio, água, drone e portão elétrico são
 interrompidos ao sair da área correspondente, morrer, reiniciar ou trocar de cena.
+Passos, slide e esteira usam ganho reduzido; prensa, vapor e braço disparam
+somente uma vez na transição para `active`, sem reiniciar o master a cada frame.
 As BGMs das cinco fases são documentadas no `../credits.txt`.
 
 Todos os arquivos desta entrega tiveram evento compatível identificado; não há

@@ -14,6 +14,9 @@ import { HazardCycleState, HazardCycleTiming, hazardCycleSample } from "./Hazard
 
 export const TILED_PHASE2_STEAM_TEXTURE_KEY = "hazard-steam-jet";
 export const TILED_PHASE2_PRESS_TEXTURE_KEY = "hazard-hydraulic-press";
+export const TILED_PHASE2_MECH_ARM_HOUSING_TEXTURE_KEY = "hazard-mech-arm-housing";
+export const TILED_PHASE2_MECH_ARM_SHAFT_TEXTURE_KEY = "hazard-mech-arm-shaft";
+export const TILED_PHASE2_MECH_ARM_CLAW_TEXTURE_KEY = "hazard-mech-arm-claw";
 
 interface Phase2Credit {
   id: string;
@@ -52,6 +55,10 @@ interface IndustrialHazard {
   steamPlume?: Phaser.GameObjects.Image;
   steamScaleX?: number;
   steamScaleY?: number;
+  mechArmHousing?: Phaser.GameObjects.Image;
+  mechArmShaft?: Phaser.GameObjects.TileSprite;
+  mechArmClaw?: Phaser.GameObjects.Image;
+  warningLight?: Phaser.GameObjects.Arc;
   timing: HazardCycleTiming;
   x: number;
   y: number;
@@ -335,7 +342,18 @@ export class TiledPhase2Runtime {
     width: number,
     height: number,
     offsetY: number,
-  ): Pick<IndustrialHazard, "visual" | "tileParts" | "steamPlume" | "steamScaleX" | "steamScaleY"> {
+  ): Pick<
+    IndustrialHazard,
+    | "visual"
+    | "tileParts"
+    | "steamPlume"
+    | "steamScaleX"
+    | "steamScaleY"
+    | "mechArmHousing"
+    | "mechArmShaft"
+    | "mechArmClaw"
+    | "warningLight"
+  > {
     const visual = this.scene.add.container(x, mapY + offsetY).setDepth(3);
     const tileParts: IndustrialHazard["tileParts"] = [];
     const firstCol = Math.floor(x / this.map.tileWidth);
@@ -352,7 +370,7 @@ export class TiledPhase2Runtime {
         // Vapor e prensa recebem arte dedicada; os tiles autorados continuam
         // servindo apenas para posição e geometria do objeto no Tiled.
         if (kind === "steam" && row < endRow - 1) continue;
-        if (kind === "press") continue;
+        if (kind === "press" || kind === "mech_arm") continue;
         const frame = this.frameForTileGid(tile.index);
         if (!frame) continue;
         const baseX = (col - firstCol) * this.map.tileWidth + this.map.tileWidth / 2;
@@ -369,8 +387,43 @@ export class TiledPhase2Runtime {
         .setOrigin(0.5, 1)
         .setDisplaySize(Math.max(48, width * 1.5), Math.max(96, height * 1.5));
       visual.add(press);
+      const warningLight = this.scene.add
+        .circle(width / 2 + 14, height - Math.max(96, height * 1.5) + 16, 4, 0xffa42e, 1)
+        .setStrokeStyle(1, 0xffe1a3, 0.9)
+        .setVisible(false);
+      visual.add(warningLight);
       tileParts.push({ image: press, baseX: width / 2, baseY: height });
-      return { visual, tileParts };
+      return { visual, tileParts, warningLight };
+    }
+
+    if (kind === "mech_arm") {
+      const centerX = width / 2;
+      // O eixo fica atrás da carcaça e repete verticalmente sem deformar o
+      // padrão. A garra e a base conservam seus pixels 1:1 em uma composição
+      // de 64 px, centralizada sobre a hitbox autorada de 32 px.
+      const mechArmShaft = this.scene.add
+        .tileSprite(centerX, 32, 64, 1, TILED_PHASE2_MECH_ARM_SHAFT_TEXTURE_KEY)
+        .setOrigin(0.5, 0)
+        .setVisible(false);
+      const mechArmHousing = this.scene.add
+        .image(centerX, 0, TILED_PHASE2_MECH_ARM_HOUSING_TEXTURE_KEY)
+        .setOrigin(0.5, 0);
+      const mechArmClaw = this.scene.add
+        .image(centerX, 24, TILED_PHASE2_MECH_ARM_CLAW_TEXTURE_KEY)
+        .setOrigin(0.5, 0);
+      const warningLight = this.scene.add
+        .circle(centerX + 20, 12, 4, 0xffa42e, 1)
+        .setStrokeStyle(1, 0xffe1a3, 0.95)
+        .setVisible(false);
+      visual.add([mechArmShaft, mechArmHousing, mechArmClaw, warningLight]);
+      return {
+        visual,
+        tileParts,
+        mechArmHousing,
+        mechArmShaft,
+        mechArmClaw,
+        warningLight,
+      };
     }
 
     if (kind !== "steam") return { visual, tileParts };
@@ -419,6 +472,9 @@ export class TiledPhase2Runtime {
         .setVisible(warning)
         .setFillStyle(0xffcf5a, 0.04 + sample.progress * 0.08)
         .setStrokeStyle(2, 0xffcf5a, 0.5 + sample.progress * 0.4);
+      hazard.warningLight
+        ?.setVisible(warning)
+        .setAlpha(Math.floor(now / 120) % 2 === 0 ? 1 : 0.22);
       this.updateHazardMotion(hazard, sample.state, sample.progress, now);
     }
   }
@@ -430,7 +486,7 @@ export class TiledPhase2Runtime {
   ): void {
     if (!this.hazardAudioEnabled || previousState === state || !this.isHazardAudible(hazard)) return;
     if (state === "warning" && hazard.kind === "press") {
-      AudioManager.playSfx(this.scene, SFX.warningBeep, { volume: 0.28 });
+      AudioManager.playSfx(this.scene, SFX.warningBeep, { volume: 0.24 });
       return;
     }
     if (state !== "active") return;
@@ -439,7 +495,8 @@ export class TiledPhase2Runtime {
       : hazard.kind === "steam"
         ? SFX.steamBurst
         : SFX.mechanicalArm;
-    AudioManager.playSfx(this.scene, key, { volume: 0.46 });
+    const volume = hazard.kind === "press" ? 0.4 : hazard.kind === "steam" ? 0.34 : 0.38;
+    AudioManager.playSfx(this.scene, key, { volume });
   }
 
   private isHazardAudible(hazard: IndustrialHazard): boolean {
@@ -487,8 +544,19 @@ export class TiledPhase2Runtime {
           ? 0.12 + warningMotion * 0.12
           : 0.08;
       hazard.visual.setPosition(hazard.x, hazard.y);
-      for (const part of hazard.tileParts) {
-        part.image.setPosition(part.baseX, this.map.tileHeight / 2 + (part.baseY - this.map.tileHeight / 2) * extension);
+      const claw = hazard.mechArmClaw;
+      const shaft = hazard.mechArmShaft;
+      if (claw && shaft) {
+        const shaftStartY = 32;
+        const retractedClawY = 24;
+        const extendedClawY = Math.max(retractedClawY, hazard.height - claw.displayHeight);
+        const clawY = Phaser.Math.Linear(retractedClawY, extendedClawY, extension);
+        const shaftHeight = Math.max(0, clawY - shaftStartY + 4);
+        shaft
+          .setPosition(hazard.width / 2, shaftStartY)
+          .setSize(64, Math.max(1, shaftHeight))
+          .setVisible(shaftHeight > 1);
+        claw.setPosition(hazard.width / 2, clawY);
       }
       const extendedHeight = this.map.tileHeight + (hazard.height - this.map.tileHeight) * extension;
       this.syncHazardBody(
@@ -691,7 +759,7 @@ export class TiledPhase2Runtime {
     if (conveyorAudible !== this.conveyorLoopActive) {
       this.conveyorLoopActive = conveyorAudible;
       if (conveyorAudible) {
-        AudioManager.startLoop(this.scene, SFX.conveyorBelt, { volume: 0.24 });
+        AudioManager.startLoop(this.scene, SFX.conveyorBelt, { volume: 0.18 });
       } else {
         AudioManager.stopLoop(SFX.conveyorBelt);
       }

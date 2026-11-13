@@ -29,6 +29,7 @@ export class EpilogueScene extends Phaser.Scene {
   init(data: EpilogueData): void { this.data$ = data; }
 
   preload(): void {
+    AudioManager.preloadBgm(this, BGM.phase1);
     if (!this.textures.exists("epilogue-alex-flesh")) {
       this.load.spritesheet(
         "epilogue-alex-flesh",

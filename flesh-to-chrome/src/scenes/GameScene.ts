@@ -24,6 +24,9 @@ import {
   TiledLevelRuntime,
 } from "../objects/TiledLevelRuntime";
 import {
+  TILED_PHASE2_MECH_ARM_CLAW_TEXTURE_KEY,
+  TILED_PHASE2_MECH_ARM_HOUSING_TEXTURE_KEY,
+  TILED_PHASE2_MECH_ARM_SHAFT_TEXTURE_KEY,
   TILED_PHASE2_PRESS_TEXTURE_KEY,
   TILED_PHASE2_STEAM_TEXTURE_KEY,
   TiledPhase2Runtime,
@@ -275,6 +278,7 @@ export class GameScene extends Phaser.Scene {
 
   preload(): void {
     AudioManager.preload(this);
+    AudioManager.preloadBgm(this, bgmForPhase(this.data$.phaseId));
     // Alex usa o spritesheet LPC real (v0.2.0) em ambos os formatos de
     // nível (Tiled ou desenhado à mão - v0.2.1 revert não mexeu nisso).
     const alexStages: Array<{ key: string; url: URL }> = [
@@ -440,6 +444,23 @@ export class GameScene extends Phaser.Scene {
         TILED_PHASE2_PRESS_TEXTURE_KEY,
         new URL("../assets/props/hazards/hydraulic-press.png", import.meta.url).href,
       );
+    }
+    const mechArmAssets: Array<{ key: string; url: URL }> = [
+      {
+        key: TILED_PHASE2_MECH_ARM_HOUSING_TEXTURE_KEY,
+        url: new URL("../assets/props/hazards/mech-arm-housing.png", import.meta.url),
+      },
+      {
+        key: TILED_PHASE2_MECH_ARM_SHAFT_TEXTURE_KEY,
+        url: new URL("../assets/props/hazards/mech-arm-shaft.png", import.meta.url),
+      },
+      {
+        key: TILED_PHASE2_MECH_ARM_CLAW_TEXTURE_KEY,
+        url: new URL("../assets/props/hazards/mech-arm-claw.png", import.meta.url),
+      },
+    ];
+    for (const asset of mechArmAssets) {
+      if (!this.textures.exists(asset.key)) this.load.image(asset.key, asset.url.href);
     }
     if (!this.textures.exists(TILED_CHECKPOINT_TEXTURE_KEY)) {
       this.load.image(TILED_CHECKPOINT_TEXTURE_KEY, this.checkpointTvUrl().href);

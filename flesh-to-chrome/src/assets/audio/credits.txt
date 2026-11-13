@@ -21,19 +21,33 @@ Esses cinco masters substituem os ambientes anteriormente associados às chaves
 `bgm-phase-1` a `bgm-phase-4`; a Fase 5 também passa a ter música própria. O
 `AudioManager` mantém uma única faixa em loop, respeitando pausa e troca de cena.
 
-## Proveniência informada pela equipe
+## Proveniência e correspondência dos masters
 
-Referências possíveis fornecidas junto aos arquivos:
+Os arquivos foram fornecidos pela equipe junto às duas páginas de origem. A
+correspondência adotada foi conferida pelo manifesto e tamanho dos masters dos
+pacotes:
+
+| Arquivo do jogo | Faixa original | Pacote |
+| --- | --- | --- |
+| `bgm-phase-1.ogg` | `Caves.ogg` | T & T Free Cyberpunk Pack |
+| `bgm-phase-2.ogg` | `new_factory_129bpm.ogg` | T & T Free Cyberpunk Pack 2 |
+| `bgm-phase-3.ogg` | `jumping_cyborg_110bpm.ogg` | T & T Free Cyberpunk Pack 2 |
+| `bgm-phase-4.ogg` | `Currents.ogg` | T & T Free Cyberpunk Pack |
+| `bgm-phase-5.ogg` | `system_overload_154bpm.ogg` | T & T Free Cyberpunk Pack 2 |
+
+Origem e licença:
 
 - T & T Free Cyberpunk Pack — tricksntraps / Alexander Ehlers — CC0:
   https://opengameart.org/content/t-t-free-cyberpunk-pack
 - T & T Free Cyberpunk Pack 2 — tricksntraps / Alexander Ehlers — CC0:
   https://opengameart.org/content/t-t-free-cyberpunk-pack-2
 
-Os arquivos OGG não contêm metadados suficientes para relacionar cada master a
-um título original específico dentro dos packs. Antes de distribuição pública,
-confirmar com a equipe essa correspondência e manter a atribuição acima mesmo
-com a licença CC0.
+Autor indicado nas páginas: tricksntraps / Alexander Ehlers. Licença indicada:
+CC0. As URLs e os nomes originais acima devem permanecer no pacote de créditos,
+mesmo que a atribuição não seja exigida pela licença.
+
+Para reduzir o carregamento inicial do jogo web, o Boot não solicita esses
+masters. Cada cena de gameplay carrega apenas a faixa que vai reproduzir.
 
 ## SFX — seleção integrada em 12/11/2026
 

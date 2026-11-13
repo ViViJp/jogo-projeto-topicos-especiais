@@ -1518,11 +1518,13 @@ Flesh to Chrome é um jogo 2D. Nenhum asset 3D é necessário para o escopo atua
 - stingers/cues dos finais;
 - trilha ou loops por fase.
 
-**Estado de implementação — Branch 4:** as chaves de oito trilhas e os pontos
-de disparo dos efeitos principais estão integrados pelo `AudioManager`. A troca
-de cena encerra a BGM anterior antes de iniciar a próxima, e a pausa congela e
-retoma a música junto com o gameplay. A seleção e o registro dos masters
-definitivos permanecem pendentes.
+**Estado de implementação — Branch 4:** as oito chaves de trilha e os pontos de
+disparo dos efeitos principais estão integrados pelo `AudioManager`. As cinco
+fases já usam masters musicais registrados em `src/assets/audio/credits.txt`;
+menu, clínica e Portão permanecem silenciosos até receberem faixas aprovadas.
+O Boot carrega somente os SFX compartilhados e cada cena solicita sua BGM sob
+demanda. A troca de cena encerra a música anterior, e a pausa congela e retoma
+a faixa junto com o gameplay.
 
 ## 23.4 Code
 

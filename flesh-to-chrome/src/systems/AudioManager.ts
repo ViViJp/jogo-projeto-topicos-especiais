@@ -115,13 +115,20 @@ export class AudioManager {
     Object.assign(AUDIO_SOURCES.sfx, sources.sfx);
   }
 
+  /**
+   * Efeitos pequenos compartilhados entre cenas. As BGMs completas não são
+   * carregadas aqui para o Boot não baixar as cinco faixas antes do menu.
+   */
   static preload(scene: Phaser.Scene): void {
-    for (const [key, url] of Object.entries(AUDIO_SOURCES.music)) {
-      if (url && !scene.cache.audio.exists(key)) scene.load.audio(key, url);
-    }
     for (const [key, url] of Object.entries(AUDIO_SOURCES.sfx)) {
       if (url && !scene.cache.audio.exists(key)) scene.load.audio(key, url);
     }
+  }
+
+  /** Carrega somente a música exigida pela cena que está entrando. */
+  static preloadBgm(scene: Phaser.Scene, key: BgmKey): void {
+    const url = AUDIO_SOURCES.music[key];
+    if (url && !scene.cache.audio.exists(key)) scene.load.audio(key, url);
   }
 
   static playBgm(scene: Phaser.Scene, key: BgmKey, volume = 0.3): void {

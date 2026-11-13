@@ -1,10 +1,9 @@
-# Registro de assets autorais da descida
+# Registro de assets visuais integrados
 
-Este registro cobre as artes acrescentadas para a cadeia Flesh/Hollow. Todas
-foram geradas com assistência do OpenAI Imagegen em novembro de 2026, sob
-direção visual específica deste projeto. Não incorporam arquivos de terceiros;
-quando há referência, ela se limita à paleta e à linguagem visual dos tilesets
-já creditados nas respectivas pastas.
+Este registro cobre as artes acrescentadas durante a descida e o polimento.
+Assets gerados com assistência do OpenAI Imagegen e arquivos fornecidos pela
+equipe são identificados individualmente; materiais com licença externa ainda
+não confirmada não devem ser distribuídos publicamente antes dessa validação.
 
 | Asset | Origem e referência visual | Uso autorizado no jogo | Estado |
 | --- | --- | --- | --- |
@@ -22,6 +21,7 @@ já creditados nas respectivas pastas.
 | `src/assets/narrative/reforge-door/reforge-door-open.png` | Variante autoral da mesma porta | Estado aberto depois de validar o fragmento de memória | Integrado ao MVP; arte definitiva para esta branch |
 | `src/assets/props/hazards/urban-electric-floor.png` | Geração autoral alinhada à paleta do Meio Urbano | Piso elétrico animado e letal, exclusivo da terceira fase da descida | Integrado ao MVP; arte definitiva para esta branch |
 | `src/assets/props/hazards/rotating-energy-barrier.png` | Gerado com a ferramenta integrada de imagem da OpenAI em 12/11/2026 | Braço mecânico simétrico com energia magenta e núcleo central, usado nas barreiras giratórias da Fase 5 | Arte final em PNG RGBA transparente; rotação e colisão controladas pelo runtime |
+| `src/assets/props/hazards/mech-arm-{housing,shaft,claw}.png` | Três componentes PNG fornecidos pela equipe em 13/11/2026; autoria/licença externa não informada | Composição do braço extensível da Fase 2: base fixa, eixo repetível e garra móvel | Integrado em 64 px; confirmar licença antes de distribuição pública; detalhes em `mech-arm-credits.txt` |
 | `src/assets/props/obstacles/reforge-security-seal.png` | Geração autoral de lacre mecânico ReForge | Barreira atacável do setor Corporativo; fragmentada pela animação de quebra | Integrado ao MVP; arte definitiva para esta branch |
 | `src/assets/player/alex-checkpoint/alex-checkpoint-*.png` | Geração assistida baseada nas cinco variantes oficiais de Alex; TV usada apenas como referência de orientação | Sequências dedicadas de sentar, sincronizar e levantar nos checkpoints | Arte final em cinco folhas de 320×64 |
 | `src/assets/props/collectibles/credit-cyberpunk.png` | Spritesheet de quatro frames fornecido pela equipe | Substitui o círculo provisório dos créditos em todas as fases | Arte final em 128×32 |

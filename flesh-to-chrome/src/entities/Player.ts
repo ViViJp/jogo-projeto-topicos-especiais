@@ -273,7 +273,7 @@ export class Player {
       }
     }
     if (grounded && this.state === "running") {
-      AudioManager.startLoop(this.scene, SFX.footstep, { volume: 0.16 });
+      AudioManager.startLoop(this.scene, SFX.footstep, { volume: 0.14 });
     } else {
       AudioManager.stopLoop(SFX.footstep);
     }
@@ -357,7 +357,7 @@ export class Player {
     this.slideTimer = PHYSICS.slide.durationMs;
     this.slideElapsed = 0;
     this.slideFxTimer = 0;
-    AudioManager.startLoop(this.scene, SFX.slide, { volume: 0.5 });
+    AudioManager.startLoop(this.scene, SFX.slide, { volume: 0.3 });
     this.applySlidingPose();
   }
 

@@ -364,17 +364,24 @@ No runtime atual, a velocidade é aplicada somente enquanto o corpo de Alex est�
 | --- | --- | --- |
 | **press** | prensa hidráulica dedicada | desce na janela ativa; hitbox acompanha o cabeçote |
 | **steam** | jato de vapor sobre bocal fixo | pluma nasce no topo do cano; hitbox acompanha a altura emitida |
-| **mech_arm** | braço mecânico | segmentos se estendem e recolhem; hitbox acompanha a ponta |
+| **mech_arm** | braço mecânico composto | carcaça fixa no teto, eixo repetível e garra móvel; hitbox preserva o curso autorado |
 
 Os três valores usam o ciclo determinístico **inativo → aviso → ativo** do
 `TiledPhase2Runtime`. O aviso mantém um contorno amarelo, enquanto a janela
-ativa executa movimento contínuo com entrada, sustentação e retração. A zona
+ativa executa movimento contínuo com entrada, sustentação e retração. Prensa e
+braço também piscam uma luz laranja na própria base durante o aviso; o bip fica
+restrito à prensa para evitar poluição sonora. A zona
 física é reposicionada e redimensionada a cada frame pela mesma amostra de
 tempo que move a arte. A prensa permanece letal em qualquer estado quando há
 contato físico com o cabeçote; vapor e braço mecânico só são letais durante a
 janela ativa. Os valores padrão ficam em
 `GAMEPLAY_TIMING.industrialHazards`; cada objeto pode sobrescrever
 `cycle_ms`, `active_ms`, `warning_ms` e `phase_ms` no Tiled.
+
+O braço mecânico usa `mech-arm-housing.png` fixo, repete
+`mech-arm-shaft.png` verticalmente com `TileSprite` e desloca
+`mech-arm-claw.png` pelo mesmo valor contínuo que redimensiona a hitbox. Assim,
+nenhuma das extremidades é escalada ou deformada durante o ciclo.
 
 A prensa oculta os antigos GIDs estruturais e instancia
 `props/hazards/hydraulic-press.png` com placa de impacto legível. No vapor, o

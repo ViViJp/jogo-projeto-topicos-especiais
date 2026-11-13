@@ -11,6 +11,10 @@ Documento da branch `fix/gameplay-hazards-and-flow`.
 - Fase 2: a prensa usa uma silhueta hidráulica própria, em vez dos blocos do
   chão. A pluma termina exatamente no topo do bocal e sua hitbox usa a mesma
   origem, sem desenhar vapor por cima do cano.
+- Fase 2: os três braços extensíveis usam carcaça fixa, eixo repetível e garra
+  móvel dedicados. O eixo cresce sem deformar o padrão; garra e hitbox seguem o
+  mesmo curso. Braço e prensa piscam uma luz laranja durante o aviso, mas o bip
+  sonoro continua exclusivo da prensa.
 - Fase 2: obstáculos baixos usam dutos industriais visualmente distintos do
   chão; podem ser vencidos saltando por cima ou deslizando por baixo.
 - Fase 5: o braço desenhado e os corpos físicos das barreiras rotativas usam
