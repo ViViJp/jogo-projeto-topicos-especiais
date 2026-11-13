@@ -49,6 +49,24 @@ const HURT = { row: 20, frames: 6 };
 // somente um arco gráfico provisório.
 const ATTACK_RIGHT = { row: 15, frames: 6 };
 
+/**
+ * Os quadros 1–3 da folha de slide foram desenhados com o tronco cada vez
+ * mais à esquerda dentro da célula de 64 px. Como a câmera acompanha o
+ * corpo físico (que continua avançando), essa diferença parecia um recuo e
+ * um avanço bruscos de Alex a cada slide. O trim desloca apenas o desenho;
+ * origem, hitbox e posição física permanecem inalteradas.
+ */
+const SLIDE_FRAME_X_OFFSETS = [0, 10, 8, 6] as const;
+
+function alignSlideFrames(scene: Phaser.Scene, textureKey: string): void {
+  const texture = scene.textures.get(textureKey);
+  SLIDE_FRAME_X_OFFSETS.forEach((offsetX, frameIndex) => {
+    texture
+      .get(frameIndex)
+      .setTrim(PLAYER_FRAME, PLAYER_FRAME, offsetX, 0, PLAYER_FRAME, PLAYER_FRAME);
+  });
+}
+
 export function alexTextureForAbilities(abilities: AbilityState): string {
   if (abilities.thrusters) return ALEX_DASH_TEXTURE_KEY;
   if (abilities.eyes) return ALEX_EYES_TEXTURE_KEY;
@@ -135,6 +153,7 @@ export function ensureAlexAnimations(scene: Phaser.Scene, textureKey = ALEX_TEXT
   }
 
   const slideAnimationKey = alexSlideAnimationKey(textureKey);
+  alignSlideFrames(scene, alexSlideTextureKey(textureKey));
   if (!scene.anims.exists(slideAnimationKey)) {
     scene.anims.create({
       key: slideAnimationKey,

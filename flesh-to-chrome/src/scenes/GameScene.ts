@@ -34,6 +34,7 @@ import { TILED_FATHER_AD_TEXTURE_KEY, TiledPhase4Runtime } from "../objects/Tile
 import {
   TILED_PHASE5_BARRICADE_TEXTURE_KEY,
   TILED_PHASE5_GATE_TEXTURE_KEY,
+  TILED_PHASE5_ROTATING_BARRIER_TEXTURE_KEY,
   TiledPhase5Runtime,
 } from "../objects/TiledPhase5Runtime";
 import { LEVELS, getNextPhaseId } from "../levels";
@@ -552,6 +553,12 @@ export class GameScene extends Phaser.Scene {
       this.load.image(
         TILED_PHASE5_GATE_TEXTURE_KEY,
         new URL("../assets/narrative/gate/portao.png", import.meta.url).href,
+      );
+    }
+    if (!this.textures.exists(TILED_PHASE5_ROTATING_BARRIER_TEXTURE_KEY)) {
+      this.load.image(
+        TILED_PHASE5_ROTATING_BARRIER_TEXTURE_KEY,
+        new URL("../assets/props/hazards/rotating-energy-barrier.png", import.meta.url).href,
       );
     }
     if (!this.textures.exists(TILED_CHECKPOINT_TEXTURE_KEY)) {

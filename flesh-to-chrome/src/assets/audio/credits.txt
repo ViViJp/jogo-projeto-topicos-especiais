@@ -12,9 +12,11 @@ flesh-to-chrome/src/assets/audio/
 ## Ambientes integrados
 
 - `ambience/amb-sewer.mp3` — Fase 1/Esgoto;
-- `ambience/amb-industrial.mp3` — Fase 2/Industrial.
+- `ambience/amb-industrial.mp3` — Fase 2/Industrial;
+- `ambience/amb-urban.mp3` — Fase 3/Meio Urbano;
+- `ambience/amb-corporate.mp3` — Fase 4/Corporativo.
 
-Esses arquivos ocupam temporariamente as chaves `bgm-phase-1` e `bgm-phase-2`
+Esses arquivos ocupam temporariamente as chaves `bgm-phase-1` a `bgm-phase-4`
 para aproveitar o controle de loop, pausa e troca de cena do `AudioManager`.
 As demais chaves musicais continuam silenciosas.
 
@@ -22,7 +24,7 @@ As demais chaves musicais continuam silenciosas.
 
 Os masters provisórios foram removidos em 11/11/2026. As chaves e o
 roteamento permanecem definidos em `src/systems/AudioManager.ts`. Nenhuma
-música foi restaurada; somente os dois ambientes fornecidos pela equipe foram
+música foi restaurada; somente os quatro ambientes fornecidos pela equipe foram
 associados às fases correspondentes.
 
 Nomes de uso planejados:

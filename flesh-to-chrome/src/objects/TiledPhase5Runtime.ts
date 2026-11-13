@@ -7,8 +7,10 @@ import {
   TILED_FASE5_TILESETS,
 } from "../levels/TiledFase5";
 import { CREDIT_ANIMATION_KEY, TEX } from "../utils/PlaceholderTextures";
+import { AudioManager, SFX } from "../systems/AudioManager";
 import { CheckpointMarker } from "./CheckpointMarker";
 import { nearestScanObstacleIndex, rotatingBarrierPoints } from "./HazardMotion";
+import { ScanBarrierVisual } from "./ScanBarrierVisual";
 
 interface Phase5Credit {
   id: string;
@@ -52,6 +54,7 @@ interface AutomaticDoor {
   zone: Phaser.GameObjects.Zone;
   col: number;
   prompt: Phaser.GameObjects.Text;
+  visual: ScanBarrierVisual;
   disabled: boolean;
 }
 
@@ -62,8 +65,7 @@ interface RotatingBarrier {
   collisionSpan: number;
   cycleMs: number;
   phaseMs: number;
-  arm: Phaser.GameObjects.Rectangle;
-  hub: Phaser.GameObjects.Arc;
+  arm: Phaser.GameObjects.Image;
   collisionNodes: Phaser.GameObjects.Zone[];
 }
 
@@ -103,6 +105,7 @@ const BARRICADE_VISUAL_HEIGHT = 44;
 const ASSET_BASELINE_PADDING = 2;
 export const TILED_PHASE5_BARRICADE_TEXTURE_KEY = "phase5-barricade";
 export const TILED_PHASE5_GATE_TEXTURE_KEY = "narrative-gate";
+export const TILED_PHASE5_ROTATING_BARRIER_TEXTURE_KEY = "phase5-rotating-energy-barrier";
 
 /** Runtime de playtest do blockout Tiled da Fase 5. */
 export class TiledPhase5Runtime {
@@ -394,12 +397,8 @@ export class TiledPhase5Runtime {
       length / Math.max(1, nodeCount - 1) + 2,
     );
     const arm = this.scene.add
-      .rectangle(centerX, centerY, length, GAMEPLAY_TIMING.rotatingBarrier.nodeSize, 0xff4fe1, 0.88)
-      .setStrokeStyle(2, 0xffd8fa, 0.95)
-      .setDepth(6);
-    const hub = this.scene.add
-      .circle(centerX, centerY, 10, 0x2b1740, 1)
-      .setStrokeStyle(3, 0x7cfcea, 0.95)
+      .image(centerX, centerY, TILED_PHASE5_ROTATING_BARRIER_TEXTURE_KEY)
+      .setDisplaySize(length, Math.max(42, length * 0.5))
       .setDepth(7);
     const collisionNodes = Array.from({ length: nodeCount }, () => {
       const node = this.scene.add.zone(centerX, centerY, nodeSize, nodeSize);
@@ -414,7 +413,6 @@ export class TiledPhase5Runtime {
       cycleMs: Math.max(1, this.readNumber(object, "cycle_ms") ?? GAMEPLAY_TIMING.rotatingBarrier.cycleMs),
       phaseMs: this.readNumber(object, "phase_ms") ?? index * 271,
       arm,
-      hub,
       collisionNodes,
     });
 
@@ -455,16 +453,15 @@ export class TiledPhase5Runtime {
   private buildAutomaticDoors(objects: Phaser.Types.Tilemaps.TiledObject[]): void {
     for (const object of objects) {
       const width = object.width ?? 32;
-      const height = object.height ?? 256;
       const x = object.x ?? 0;
       const y = object.y ?? 128;
       const doorCol = Math.floor(x / this.map.tileWidth);
       let firstDoorTileRow: number | undefined;
       for (let row = 0; row < this.map.height; row += 1) {
-        if (this.hazardsLayer?.getTileAt(doorCol, row)?.index === DOOR_FIRST_GID) {
-          firstDoorTileRow = row;
-          break;
-        }
+        const tile = this.hazardsLayer?.getTileAt(doorCol, row);
+        if (tile?.index !== DOOR_FIRST_GID) continue;
+        firstDoorTileRow ??= row;
+        tile.visible = false;
       }
       const collisionTop = (firstDoorTileRow ?? Math.floor(y / this.map.tileHeight))
         * this.map.tileHeight + this.offsetY;
@@ -477,12 +474,6 @@ export class TiledPhase5Runtime {
         collisionHeight,
       );
       this.scene.physics.add.existing(zone, true);
-      const bottomTileRow = Math.ceil((y + height) / this.map.tileHeight) - 1;
-      const bottomTile = this.hazardsLayer?.getTileAt(doorCol, bottomTileRow);
-      if (bottomTile?.index === DOOR_FIRST_GID) {
-        this.hazardsLayer?.putTileAt(DOOR_FIRST_GID, doorCol, bottomTileRow - 1);
-        bottomTile.visible = false;
-      }
       this.doors.push({
         id: this.readString(object, "id") ?? object.name ?? `door-${object.id}`,
         x,
@@ -499,6 +490,13 @@ export class TiledPhase5Runtime {
           })
           .setOrigin(0.5, 1)
           .setDepth(7),
+        visual: new ScanBarrierVisual(
+          this.scene,
+          TILED_FASE5_TILESETS[2].key,
+          x + width / 2,
+          collisionTop,
+          collisionHeight,
+        ),
         disabled: false,
       });
     }
@@ -707,6 +705,7 @@ export class TiledPhase5Runtime {
   private destroyBreakable(target: RuntimeBreakable): void {
     const index = this.breakables.indexOf(target);
     if (index === -1) return;
+    AudioManager.playSfx(this.scene, SFX.breakableDestroy, { volume: 0.58 });
     this.breakables.splice(index, 1);
     const physicsBody = target.body.body as Phaser.Physics.Arcade.StaticBody | null;
     if (physicsBody) physicsBody.enable = false;
@@ -802,6 +801,8 @@ export class TiledPhase5Runtime {
   private setDoorDisabled(door: AutomaticDoor, disabled: boolean): void {
     if (door.disabled === disabled) return;
     door.disabled = disabled;
+    if (disabled) AudioManager.playSfx(this.scene, SFX.securityDoorUnlock, { volume: 0.56 });
+    door.visual.setEnabled(!disabled);
     const physicsBody = door.zone.body as Phaser.Physics.Arcade.StaticBody | null;
     if (physicsBody) physicsBody.enable = !disabled;
     door.prompt
@@ -861,8 +862,8 @@ export class TiledPhase5Runtime {
     }
   }
 
-  private revealGroup(group: string): void {
-    if (this.revealedGroups.has(group)) return;
+  private revealGroup(group: string): boolean {
+    if (this.revealedGroups.has(group)) return false;
     this.revealedGroups.add(group);
     for (const region of this.revealRegions.filter((item) => item.group === group)) {
       region.outline.setVisible(true);
@@ -871,6 +872,7 @@ export class TiledPhase5Runtime {
     for (const hidden of this.hiddenVisualRegions.filter((item) => item.group === group)) {
       this.setHiddenVisual(hidden, true);
     }
+    return true;
   }
 
   private clearPassedRevealGroups(playerX: number): void {
@@ -898,7 +900,11 @@ export class TiledPhase5Runtime {
         .filter((region) => this.distanceToRegion(playerX, region) <= SCAN_RANGE)
         .map((region) => region.group),
     );
-    groups.forEach((group) => this.revealGroup(group));
+    let revealedSomething = false;
+    groups.forEach((group) => {
+      revealedSomething = this.revealGroup(group) || revealedSomething;
+    });
+    if (revealedSomething) AudioManager.playSfx(this.scene, SFX.scanReveal, { volume: 0.48 });
   }
 
   /** Restaura o trecho após uma morte sem recriar créditos, checkpoint ou cronômetro. */
@@ -1003,12 +1009,12 @@ export class TiledPhase5Runtime {
     this.hazardZones.forEach((zone) => zone.destroy());
     this.rotatingBarriers.forEach((barrier) => {
       barrier.arm.destroy();
-      barrier.hub.destroy();
       barrier.collisionNodes.forEach((node) => node.destroy());
     });
     this.doors.forEach((door) => {
       door.zone.destroy();
       door.prompt.destroy();
+      door.visual.destroy();
     });
     this.breakables.forEach((breakable) => {
       breakable.collider?.destroy();

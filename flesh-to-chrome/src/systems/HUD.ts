@@ -23,11 +23,11 @@ export class HUD {
     this.scene = scene;
     this.hudChrome = scene.add.graphics().setScrollFactor(0).setDepth(999);
     this.hudChrome.fillStyle(0x050a12, 0.82);
-    this.hudChrome.fillRoundedRect(14, 12, 360, 98, 8);
+    this.hudChrome.fillRoundedRect(14, 12, 360, 70, 8);
     this.hudChrome.lineStyle(2, 0x36e2ff, 0.5);
-    this.hudChrome.strokeRoundedRect(14, 12, 360, 98, 8);
+    this.hudChrome.strokeRoundedRect(14, 12, 360, 70, 8);
     this.hudChrome.fillStyle(0x36e2ff, 0.8);
-    this.hudChrome.fillRect(14, 12, 5, 98);
+    this.hudChrome.fillRect(14, 12, 5, 70);
     const style: Phaser.Types.GameObjects.Text.TextStyle = {
       fontFamily: "Courier New, monospace",
       fontSize: "20px",
@@ -47,7 +47,13 @@ export class HUD {
       .setDepth(1000);
 
     this.abilityIcons = scene.add
-      .text(30, 79, "", { ...style, fontSize: "14px", color: "#B8C1FF" })
+      .text(22, 91, "", {
+        ...style,
+        fontSize: "13px",
+        color: "#B8C1FF",
+        backgroundColor: "#050a12cc",
+        padding: { x: 8, y: 4 },
+      })
       .setScrollFactor(0)
       .setDepth(1000);
 

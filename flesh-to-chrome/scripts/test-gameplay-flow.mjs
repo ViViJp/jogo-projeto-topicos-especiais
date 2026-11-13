@@ -123,6 +123,18 @@ const industrialKinds = new Set(
   phase2Objects.filter((object) => object.type === "hazard").map((object) => objectProperty(object, "kind")),
 );
 assert.deepEqual([...industrialKinds].sort(), ["mech_arm", "press", "steam"]);
+assert.deepEqual(
+  phase2Objects
+    .filter((object) => object.type === "hazard" && objectProperty(object, "kind") === "press" && object.x < 6500)
+    .map((object) => object.name),
+  ["press_01", "press_03"],
+  "fase2: o conjunto inicial deve manter somente as prensas das extremidades",
+);
+const phase2Hazards = phase2.layers.find((layer) => layer.name === "hazards");
+for (const row of [10, 11]) {
+  assert.equal(phase2Hazards.data[row * phase2.width + 185], 0,
+    `fase2: bloco residual da prensa central deve ser removido na linha ${row}`);
+}
 const lowCeilingLayer = phase2.layers.find((layer) => layer.name === "deco-low-ceilings");
 const lowCeilingTiles = lowCeilingLayer.data.filter((gid) => gid !== 0);
 assert.equal(lowCeilingTiles.length, 42, "fase2: sete obstáculos baixos com seis tiles cada");
@@ -139,6 +151,10 @@ const rotatingBarriers = phase5Objects.filter(
 );
 assert.equal(rotatingBarriers.length, 5);
 assert.ok(rotatingBarriers.every((barrier) => Math.max(barrier.width, barrier.height) >= 96));
+const firstScanFloor = phase5Objects.find((object) => object.name === "false_floor_01");
+const firstHiddenHazards = phase5Objects.find((object) => object.name === "hidden_hazards_01");
+assert.equal(firstScanFloor.x + firstScanFloor.width, firstHiddenHazards.x,
+  "fase5: áreas iniciais de scan devem ser adjacentes, sem sobrepor o laser oculto");
 const phase5Breakables = phase5Objects.filter((object) => object.type === "breakable");
 const phase5Credits = phase5Objects.filter((object) => object.type === "credit");
 for (const credit of phase5Credits) {
@@ -154,6 +170,14 @@ for (const credit of phase5Credits) {
 }
 const phase5RuntimeSource = fs.readFileSync(path.join(projectDirectory, "src/objects/TiledPhase5Runtime.ts"), "utf8");
 assert.match(phase5RuntimeSource, /height \/ 2 - 16/, "fase5: barreira rotativa precisa de janela horizontal segura");
+assert.match(phase5RuntimeSource, /TILED_PHASE5_ROTATING_BARRIER_TEXTURE_KEY/,
+  "fase5: barreira rotativa deve usar o sprite final");
+assert.doesNotMatch(phase5RuntimeSource, /\.rectangle\(centerX, centerY, length/,
+  "fase5: barreira rotativa não pode voltar ao retângulo provisório");
+assert.ok(fs.existsSync(path.join(
+  projectDirectory,
+  "src/assets/props/hazards/rotating-energy-barrier.png",
+)));
 assert.match(phase5RuntimeSource, /TILED_PHASE5_BARRICADE_TEXTURE_KEY/);
 assert.match(phase5RuntimeSource, /this\.spawnBarricadeFragments\(target\.visual\)/,
   "barricadas da Fase 5 devem executar a animação antes de desaparecer");
@@ -235,6 +259,9 @@ for (const runtime of ["TiledPhase4Runtime.ts", "TiledPhase5Runtime.ts"]) {
   assert.match(source, /const collisionTop =/);
   assert.match(source, /const collisionBottom = this\.groundSurfaceYAt\(x\)/);
   assert.match(source, /tile\.alpha = disabled \? 0 : 1/);
+  assert.match(source, /new ScanBarrierVisual\(/,
+    `${runtime}: porta de scan deve montar uma única barreira contínua`);
+  assert.match(source, /door\.visual\.setEnabled\(!disabled\)/);
   assert.match(source, /\.setVisible\(!disabled\)/);
   assert.doesNotMatch(source, /% door\.cycleMs/, `${runtime}: porta não pode depender do relógio`);
 }
@@ -251,8 +278,8 @@ assert.doesNotMatch(
 );
 assert.match(phase4Runtime, /BACKGROUND_TOWER_GID/);
 assert.match(phase4Runtime, /FLOATING_TERMINAL_GID/);
-assert.match(phase4Runtime, /putTileAt\(DOOR_FIRST_GID, doorCol, bottomTileRow - 1\)/);
-assert.match(phase4Runtime, /bottomTile\.visible = false/);
+assert.match(phase4Runtime, /firstDoorTileRow \?\?= row/);
+assert.match(phase4Runtime, /tile\.visible = false/);
 assert.match(phase4Runtime, /\.setVisible\(true\)/);
 const phase5Runtime = fs.readFileSync(path.join(projectDirectory, "src/objects/TiledPhase5Runtime.ts"), "utf8");
 assert.match(phase5Runtime, /disabledDoors !== 0/);
@@ -386,17 +413,23 @@ for (const key of ["phase1", "phase2", "phase3", "phase4", "phase5", "clinic", "
 assert.match(audioManagerSource, /this\.activeMusic\?\.stop\(\);[\s\S]*?this\.activeMusic\?\.destroy\(\);/,
   "troca de BGM precisa encerrar a faixa anterior");
 for (const filename of [
-  "attack", "checkpoint", "conveyor-belt", "credit", "dash", "death", "electric-wire",
-  "enemy-hit", "footstep", "glitch", "hazard-water", "hurt", "hydraulic-press", "implant",
-  "jump", "land", "mechanical-arm", "phase-clear", "scan", "slide", "steam-burst",
-  "ui-confirm", "ui-select", "warning-beep",
+  "attack", "barrier-disable", "breakable-destroy", "checkpoint", "conveyor-belt", "credit",
+  "dash", "death", "drone-hum", "electric-gate", "electric-wire", "enemy-hit", "footstep",
+  "gate-opening", "glitch", "hazard-water", "hurt", "hydraulic-press", "implant", "jump",
+  "land", "mechanical-arm", "phase-clear", "scan", "scan-reveal", "security-door-unlock",
+  "slide", "steam-burst", "ui-confirm", "ui-select", "warning-beep",
 ]) {
   assert.match(audioManagerSource, new RegExp(`sfx-${filename}\\.mp3`),
     `AudioManager: master ausente para ${filename}`);
   assert.ok(fs.existsSync(path.join(projectDirectory, `src/assets/audio/sfx/sfx-${filename}.mp3`)),
     `arquivo SFX ausente: ${filename}`);
 }
-for (const [phase, filename] of [["phase1", "amb-sewer"], ["phase2", "amb-industrial"]]) {
+for (const [phase, filename] of [
+  ["phase1", "amb-sewer"],
+  ["phase2", "amb-industrial"],
+  ["phase3", "amb-urban"],
+  ["phase4", "amb-corporate"],
+]) {
   assert.match(audioManagerSource, new RegExp(`\\[BGM\\.${phase}\\]: new URL\\("\\.\\.\/assets\/audio\/ambience\/${filename}\\.mp3"`),
     `AudioManager: ambiente ausente para ${phase}`);
   assert.ok(fs.existsSync(path.join(projectDirectory, `src/assets/audio/ambience/${filename}.mp3`)),
@@ -436,6 +469,8 @@ assert.match(phase2Runtime, /AudioManager\.startLoop\(this\.scene, SFX\.conveyor
   "esteira deve tocar somente durante contato");
 assert.match(phase2Runtime, /state === "warning"[\s\S]*?SFX\.warningBeep/,
   "janela de aviso industrial deve emitir o bip dedicado");
+assert.match(phase2Runtime, /state === "warning" && hazard\.kind === "press"/,
+  "alarme industrial deve ficar restrito às prensas");
 for (const sfx of ["hydraulicPress", "steamBurst", "mechanicalArm"]) {
   assert.match(phase2Runtime, new RegExp(`SFX\\.${sfx}`),
     `hazard industrial sem efeito dedicado: ${sfx}`);
@@ -450,6 +485,10 @@ assert.match(alexSpriteSource, /alexSlideTextureKey\(textureKey\), \{ start: 0, 
   "slide deve utilizar os quatro frames da folha dedicada");
 assert.match(alexSpriteSource, /frameRate: 10,[\s\S]*?repeat: 0/,
   "entrada do slide deve tocar uma vez e manter o quarto frame");
+assert.match(alexSpriteSource, /SLIDE_FRAME_X_OFFSETS = \[0, 10, 8, 6\]/,
+  "quadros do slide devem compensar o recuo do desenho dentro da célula");
+assert.match(alexSpriteSource, /\.setTrim\(PLAYER_FRAME, PLAYER_FRAME, offsetX, 0, PLAYER_FRAME, PLAYER_FRAME\)/,
+  "alinhamento do slide deve mover somente o desenho, sem deslocar a hitbox");
 for (const stage of ["flesh", "legs", "arms", "eyes", "dash"]) {
   assert.match(gameScene, new RegExp(`alex-slide-${stage}\\.png`), `GameScene: slide ${stage}`);
   assert.ok(
@@ -492,6 +531,26 @@ for (const sfx of ["jump", "land", "slide", "attack", "dash", "scan", "death", "
 }
 assert.match(enemyRuntime, /spawnDefeatFx/);
 assert.match(enemyRuntime, /SFX\.enemyHit/);
+assert.match(enemyRuntime, /AudioManager\.startLoop\(this\.scene, SFX\.droneHum/);
+assert.match(enemyRuntime, /AudioManager\.stopLoop\(SFX\.droneHum\)/,
+  "hum do drone deve parar quando ele sai da câmera ou o runtime é destruído");
+assert.match(phase3Runtime, /SFX\.breakableDestroy/);
+assert.match(phase3Runtime, /AudioManager\.startLoop\(this\.scene, SFX\.electricGate/);
+assert.match(phase3Runtime, /AudioManager\.stopLoop\(SFX\.electricGate\)/,
+  "portão elétrico deve ficar restrito à área visível");
+for (const source of [phase4Runtime, phase5Runtime]) {
+  assert.match(source, /SFX\.scanReveal/);
+  assert.match(source, /SFX\.securityDoorUnlock/);
+}
+assert.match(phase5Runtime, /SFX\.breakableDestroy/);
+const descentRouteRuntime = fs.readFileSync(
+  path.join(projectDirectory, "src/objects/DescentRouteRuntime.ts"),
+  "utf8",
+);
+assert.match(descentRouteRuntime, /SFX\.barrierDisable/);
+assert.match(descentRouteRuntime, /SFX\.gateOpening/);
+const gateSceneSource = fs.readFileSync(path.join(projectDirectory, "src/scenes/GateScene.ts"), "utf8");
+assert.match(gateSceneSource, /SFX\.gateOpening/);
 const descentGlitchRuntime = fs.readFileSync(
   path.join(projectDirectory, "src/objects/DescentGlitchRuntime.ts"),
   "utf8",
@@ -499,8 +558,10 @@ const descentGlitchRuntime = fs.readFileSync(
 assert.match(descentGlitchRuntime, /AudioManager\.playSfx\(this\.scene, SFX\.glitch/,
   "fragmentos de memória devem ter feedback sonoro próprio");
 
-assert.match(hudSource, /fillRoundedRect\(14, 12, 360, 98, 8\)/,
-  "HUD deve manter painel próprio para legibilidade sobre os mapas");
+assert.match(hudSource, /fillRoundedRect\(14, 12, 360, 70, 8\)/,
+  "painel principal do HUD deve conter apenas os créditos");
+assert.match(hudSource, /\.text\(22, 91,[\s\S]*?backgroundColor: "#050a12cc"/,
+  "implantes devem ocupar uma faixa separada do painel de créditos");
 // Fundo com parallax (image layers do Tiled) e clima das Fases 1-5.
 const backdrop = loadTypeScriptModule("src/levels/BackdropLayers.ts");
 const backdropPhases = [

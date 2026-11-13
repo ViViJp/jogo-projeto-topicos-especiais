@@ -97,6 +97,7 @@ const runtimeImages = [
   "src/assets/props/obstacles/phase5-barricade.png",
   "src/assets/props/obstacles/reforge-security-seal.png",
   "src/assets/props/hazards/urban-electric-floor.png",
+  "src/assets/props/hazards/rotating-energy-barrier.png",
   "src/assets/props/checkpoint/tv-checkpoint.png",
   "src/assets/props/collectibles/credit-cyberpunk.png",
   "src/assets/npcs/enemies/bandido/bandido.png",
@@ -151,6 +152,7 @@ const runtimeImageContracts = new Map([
   ["src/assets/props/obstacles/phase5-barricade.png", [96, 44]],
   ["src/assets/props/obstacles/reforge-security-seal.png", [971, 1619]],
   ["src/assets/props/hazards/urban-electric-floor.png", [640, 68]],
+  ["src/assets/props/hazards/rotating-energy-barrier.png", [2172, 724]],
   ["src/assets/narrative/prologue/familia.png", [512, 320]],
   ["src/assets/narrative/prologue/jornal-pai.png", [480, 256]],
   ["src/assets/narrative/father/pai-antes.png", [256, 256]],
@@ -172,13 +174,18 @@ const runtimeImageContracts = new Map([
 
 const runtimeAudio = [
   "sfx-attack.mp3",
+  "sfx-barrier-disable.mp3",
+  "sfx-breakable-destroy.mp3",
   "sfx-checkpoint.mp3",
   "sfx-conveyor-belt.mp3",
   "sfx-credit.mp3",
   "sfx-dash.mp3",
   "sfx-death.mp3",
+  "sfx-drone-hum.mp3",
+  "sfx-electric-gate.mp3",
   "sfx-enemy-hit.mp3",
   "sfx-footstep.mp3",
+  "sfx-gate-opening.mp3",
   "sfx-glitch.mp3",
   "sfx-hydraulic-press.mp3",
   "sfx-hazard-water.mp3",
@@ -190,6 +197,8 @@ const runtimeAudio = [
   "sfx-mechanical-arm.mp3",
   "sfx-phase-clear.mp3",
   "sfx-scan.mp3",
+  "sfx-scan-reveal.mp3",
+  "sfx-security-door-unlock.mp3",
   "sfx-slide.mp3",
   "sfx-steam-burst.mp3",
   "sfx-ui-confirm.mp3",
@@ -198,6 +207,8 @@ const runtimeAudio = [
 ].map((filename) => `src/assets/audio/sfx/${filename}`).concat([
   "src/assets/audio/ambience/amb-sewer.mp3",
   "src/assets/audio/ambience/amb-industrial.mp3",
+  "src/assets/audio/ambience/amb-urban.mp3",
+  "src/assets/audio/ambience/amb-corporate.mp3",
 ]);
 
 const readJson = (filename) => JSON.parse(fs.readFileSync(filename, "utf8"));

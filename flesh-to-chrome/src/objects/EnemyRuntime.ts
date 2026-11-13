@@ -42,6 +42,7 @@ export class EnemyRuntime {
   private readonly group: Phaser.Physics.Arcade.Group;
   private attackListener: (x: number, y: number) => void;
   private scanActive = false;
+  private droneLoopActive = false;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -212,6 +213,24 @@ export class EnemyRuntime {
         enemy.sprite.setAlpha(1);
       }
     }
+
+    const view = this.scene.cameras.main.worldView;
+    const droneAudible = this.enemies.some((enemy) => (
+      enemy.kind === "drone"
+      && enemy.sprite.active
+      && enemy.sprite.x >= view.left - 96
+      && enemy.sprite.x <= view.right + 96
+      && enemy.sprite.y >= view.top - 96
+      && enemy.sprite.y <= view.bottom + 96
+    ));
+    if (droneAudible !== this.droneLoopActive) {
+      this.droneLoopActive = droneAudible;
+      if (droneAudible) {
+        AudioManager.startLoop(this.scene, SFX.droneHum, { volume: 0.22 });
+      } else {
+        AudioManager.stopLoop(SFX.droneHum);
+      }
+    }
   }
 
   registerPlayerCollision(onFatalCollision: () => void): void {
@@ -221,6 +240,8 @@ export class EnemyRuntime {
   }
 
   destroy(): void {
+    AudioManager.stopLoop(SFX.droneHum);
+    this.droneLoopActive = false;
     this.scene.events.off("player-attack", this.attackListener);
     this.enemies.forEach((enemy) => enemy.sprite.destroy());
     this.enemies.length = 0;

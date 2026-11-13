@@ -115691,7 +115691,7 @@
           "rotation": 0,
           "type": "scan_reveal",
           "visible": true,
-          "width": 1024,
+          "width": 768,
           "x": 17408,
           "y": 288
         },

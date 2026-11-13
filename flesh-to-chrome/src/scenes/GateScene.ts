@@ -148,6 +148,7 @@ export class GateScene extends Phaser.Scene {
   private confirmChoice(): void {
     if (this.choosing) return;
     AudioManager.playSfx(this, SFX.uiConfirm, { volume: 0.42 });
+    AudioManager.playSfx(this, SFX.gateOpening, { volume: 0.5 });
     if (this.selected === "flesh") {
       if (this.testMode) {
         this.choosing = true;

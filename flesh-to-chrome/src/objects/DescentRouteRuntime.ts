@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { PHYSICS } from "../config/GameConfig";
 import type { Player } from "../entities/Player";
+import { AudioManager, SFX } from "../systems/AudioManager";
 import type { DescentRoute } from "../systems/DescentProgression";
 
 export const DESCENT_REFORGE_DOOR_CLOSED_KEY = "descent-reforge-door-closed";
@@ -120,6 +121,7 @@ export class DescentRouteRuntime {
 
   private destroyBarrier(): void {
     if (!this.barrier?.active) return;
+    AudioManager.playSfx(this.scene, SFX.barrierDisable, { volume: 0.6 });
     const x = this.barrier.x;
     const y = this.barrier.y - this.barrier.displayHeight / 2;
     const body = this.barrier.body as Phaser.Physics.Arcade.StaticBody | null;
@@ -307,6 +309,7 @@ export class DescentRouteRuntime {
         : "MEMÓRIA AUSENTE — AVANÇAR COMPROMETE A DESCIDA")
       .setColor(this.memoryRecovered ? "#7CFCEA" : "#ff9a4d");
     if (!animate || !this.memoryRecovered) return;
+    AudioManager.playSfx(this.scene, SFX.gateOpening, { volume: 0.5 });
     const targetScaleX = this.doorOpen.scaleX;
     const targetScaleY = this.doorOpen.scaleY;
     this.doorOpen

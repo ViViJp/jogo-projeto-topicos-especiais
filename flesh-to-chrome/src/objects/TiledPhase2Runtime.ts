@@ -429,7 +429,7 @@ export class TiledPhase2Runtime {
     state: HazardCycleState,
   ): void {
     if (!this.hazardAudioEnabled || previousState === state || !this.isHazardAudible(hazard)) return;
-    if (state === "warning") {
+    if (state === "warning" && hazard.kind === "press") {
       AudioManager.playSfx(this.scene, SFX.warningBeep, { volume: 0.28 });
       return;
     }

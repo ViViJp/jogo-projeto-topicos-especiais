@@ -24,6 +24,8 @@ Arquivos fornecidos diretamente pela equipe do projeto:
 
 - `../ambience/amb-sewer.mp3` — ambiente contínuo da Fase 1/Esgoto;
 - `../ambience/amb-industrial.mp3` — ambiente contínuo da Fase 2/Industrial;
+- `../ambience/amb-urban.mp3` — ambiente contínuo da Fase 3/Meio Urbano;
+- `../ambience/amb-corporate.mp3` — ambiente contínuo da Fase 4/Corporativo;
 - `sfx-conveyor-belt.mp3` — loop ativo somente enquanto Alex está sobre uma esteira;
 - `sfx-warning-beep.mp3` — entrada na janela de aviso dos hazards industriais;
 - `sfx-mechanical-arm.mp3` — ativação do braço mecânico industrial;
@@ -32,9 +34,19 @@ Arquivos fornecidos diretamente pela equipe do projeto:
 - `sfx-electric-wire.mp3` — descarga contínua por proximidade dos fios da Fase 1;
 - `sfx-hazard-water.mp3` — água tóxica por proximidade na Fase 1.
 
+## Portões, scan e cenário integrados em 12/11/2026
+
+- `sfx-gate-opening.mp3` — abertura do Portão narrativo e das portas ReForge validadas;
+- `sfx-barrier-disable.mp3` — destruição/desativação do lacre de segurança ReForge;
+- `sfx-scan-reveal.mp3` — primeira revelação de rota, piso ou hazard oculto pelo visor;
+- `sfx-security-door-unlock.mp3` — desativação de porta automática pelo visor;
+- `sfx-drone-hum.mp3` — loop de drone, ativo somente enquanto um drone está na câmera;
+- `sfx-breakable-destroy.mp3` — destruição das barricadas das Fases 3 e 5;
+- `sfx-electric-gate.mp3` — loop dos portões elétricos da Fase 3, limitado à câmera.
+
 Os efeitos das máquinas só são disparados quando o hazard está dentro da área
-visível da câmera. Os loops de esteira, fio e água são interrompidos ao sair da
-área correspondente, morrer, reiniciar ou trocar de cena.
+visível da câmera. Os loops de esteira, fio, água, drone e portão elétrico são
+interrompidos ao sair da área correspondente, morrer, reiniciar ou trocar de cena.
 
 Todos os arquivos desta entrega tiveram evento compatível identificado; não há
 questionamentos de mapeamento pendentes neste momento.
