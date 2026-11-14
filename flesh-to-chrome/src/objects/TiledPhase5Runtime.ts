@@ -690,12 +690,14 @@ export class TiledPhase5Runtime {
   private buildEndMarker(object: Phaser.Types.Tilemaps.TiledObject, label: string): void {
     const x = (object.x ?? this.lengthPx - 128) + (object.width ?? 0) / 2;
     const groundY = this.groundSurfaceYAt(x);
+    // Mesmo portão da campanha, sem a legenda de escolha de final.
     const marker = this.scene.add
-      .rectangle(x, groundY - 96, 10, 192, 0x7cfcea, 0.72)
-      .setStrokeStyle(2, 0xe8ecff, 0.9)
-      .setDepth(5);
+      .image(x, groundY + ASSET_BASELINE_PADDING, TILED_PHASE5_GATE_TEXTURE_KEY)
+      .setOrigin(0.5, 1)
+      .setDisplaySize(192, 224)
+      .setDepth(4);
     const text = this.scene.add
-      .text(x, groundY - 215, label, {
+      .text(x, groundY - 240, label, {
         fontFamily: "Courier New, monospace",
         fontSize: "20px",
         color: "#7CFCEA",
