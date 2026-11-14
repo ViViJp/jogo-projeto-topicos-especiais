@@ -4,6 +4,7 @@ import { AudioManager, BGM, SFX } from "../systems/AudioManager";
 import { SaveState } from "../systems/SaveState";
 import { DescentPreviewSession } from "../systems/DescentPreviewSession";
 import type { GameSceneData } from "./GameScene";
+import { startLoadingTransition } from "../systems/SceneTransition";
 
 const BACKGROUND_KEY = "george-refusal-background";
 const GEORGE_ANGRY_KEY = "george-angry";
@@ -186,7 +187,7 @@ export class GeorgeRefusalScene extends Phaser.Scene {
       const data = this.testMode && this.descentPreview
         ? this.descentPreview.get()
         : SaveState.load().get();
-      this.scene.start("GameScene", {
+      startLoadingTransition(this, "GameScene", {
         phaseId: "fase5",
         testMode: this.testMode,
         checkpointX: 0,

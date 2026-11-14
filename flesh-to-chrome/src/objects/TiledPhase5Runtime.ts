@@ -353,6 +353,7 @@ export class TiledPhase5Runtime {
       const height = object.height ?? 32;
       const x = object.x ?? 0;
       const y = object.y ?? 0;
+      if (kind === "laser_grid") this.relocateLaserVisual(object, x, y, width, height);
       if (kind === "rotating_barrier") {
         this.buildRotatingBarrier(object, index, x, y, width, height);
         return;
@@ -376,6 +377,35 @@ export class TiledPhase5Runtime {
       }
     });
     this.updateRotatingBarriers(this.timeSource());
+  }
+
+  /**
+   * Permite reposicionar o gameplay de um laser sem deixar a arte da camada
+   * Tiled na coordenada antiga. A propriedade só é necessária em mapas
+   * existentes cujo objeto foi deslocado após a composição visual.
+   */
+  private relocateLaserVisual(
+    object: Phaser.Types.Tilemaps.TiledObject,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+  ): void {
+    const sourceX = this.readNumber(object, "visual_source_x");
+    if (sourceX === undefined || sourceX === x || !this.hazardsLayer) return;
+    const sourceCol = Math.floor(sourceX / this.map.tileWidth);
+    const targetCol = Math.floor(x / this.map.tileWidth);
+    const startRow = Math.floor(y / this.map.tileHeight);
+    const endRow = Math.ceil((y + height) / this.map.tileHeight);
+    const columnWidth = Math.max(1, Math.ceil(width / this.map.tileWidth));
+    for (let row = startRow; row < endRow; row += 1) {
+      for (let offset = 0; offset < columnWidth; offset += 1) {
+        const sourceTile = this.hazardsLayer.getTileAt(sourceCol + offset, row);
+        if (!sourceTile || sourceTile.index === -1) continue;
+        this.hazardsLayer.putTileAt(sourceTile.index, targetCol + offset, row);
+        this.hazardsLayer.removeTileAt(sourceCol + offset, row);
+      }
+    }
   }
 
   private buildRotatingBarrier(

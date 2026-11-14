@@ -5,6 +5,7 @@ import { descentStepAt } from "../systems/DescentProgression";
 import { AudioManager, BGM, SFX } from "../systems/AudioManager";
 import { DescentPreviewSession } from "../systems/DescentPreviewSession";
 import type { GameSceneData } from "./GameScene";
+import { startLoadingTransition } from "../systems/SceneTransition";
 
 interface DescentRetrySceneData {
   testMode?: boolean;
@@ -103,7 +104,7 @@ export class DescentRetryScene extends Phaser.Scene {
     const progression = this.descentPreview ?? SaveState.load();
     if (this.retrySelected) {
       const data = progression.get();
-      this.scene.start("GameScene", {
+      startLoadingTransition(this, "GameScene", {
         phaseId: data.currentPhaseId,
         testMode: this.testMode,
         checkpointX: 0,
@@ -116,7 +117,7 @@ export class DescentRetryScene extends Phaser.Scene {
       } as GameSceneData);
     } else {
       progression.declineDescentRetry();
-      this.scene.start("EpilogueScene", {
+      startLoadingTransition(this, "EpilogueScene", {
         ending: "hollow",
         testMode: this.testMode,
         descentPreview: this.descentPreview,

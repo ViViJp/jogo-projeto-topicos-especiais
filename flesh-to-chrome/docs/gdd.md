@@ -1175,6 +1175,19 @@ Depois dos créditos:
 
 Continuar do Portão restaura integralmente o estado anterior à escolha.
 
+## 18.13 Avaliação opcional após os finais
+
+Depois que o jogador confirma o último quadro de Chrome, Flesh ou Hollow, o
+final é registrado e a campanha abre uma tela única de avaliação antes do menu.
+A tela identifica o desfecho alcançado pela cor e pelo texto, preserva sua
+música e apresenta o formulário oficial por QR Code e por um botão que abre uma
+nova aba. A resposta é voluntária.
+
+O jogador também pode voltar diretamente ao menu por botão, `Esc` ou `B`. Essa
+saída não reinicia a campanha nem modifica o save. As prévias acessadas pelo
+seletor exibem a mesma avaliação, mas continuam proibidas de registrar finais
+ou qualquer outro progresso.
+
 ---
 
 # 19. Controles e Interface

@@ -115898,13 +115898,18 @@
               "name": "kind",
               "type": "string",
               "value": "laser_grid"
+            },
+            {
+              "name": "visual_source_x",
+              "type": "int",
+              "value": 23680
             }
           ],
           "rotation": 0,
           "type": "hazard",
           "visible": true,
           "width": 32,
-          "x": 23680,
+          "x": 23744,
           "y": 256
         },
         {

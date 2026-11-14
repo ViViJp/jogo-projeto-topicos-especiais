@@ -316,6 +316,9 @@ const prologue = read("src/scenes/PrologueScene.ts");
 const clinic = read("src/scenes/ClinicScene.ts");
 const gate = read("src/scenes/GateScene.ts");
 const ending = read("src/scenes/EndingScene.ts");
+const feedback = read("src/scenes/FeedbackScene.ts");
+const loading = read("src/scenes/LoadingScene.ts");
+const sceneTransition = read("src/systems/SceneTransition.ts");
 const game = read("src/scenes/GameScene.ts");
 const phase4 = read("src/objects/TiledPhase4Runtime.ts");
 const retry = read("src/scenes/DescentRetryScene.ts");
@@ -357,20 +360,19 @@ assert.match(main, /PrologueScene/);
 assert.match(main, /ControlsScene/);
 assert.match(main, /GateScene/);
 assert.match(main, /GeorgeRefusalScene/);
+assert.match(main, /FeedbackScene/);
+assert.match(main, /LoadingScene/);
 assert.match(menu, /Continuar do Portão/);
 assert.match(menu, /restorePreGateSave\(\)/);
-assert.match(menu, /this\.scene\.start\("ControlsScene", \{ campaignSetup \}\)/);
+assert.match(menu, /startLoadingTransition\(this, "ControlsScene", \{ campaignSetup \}\)/);
 assert.doesNotMatch(menu, /SaveState\.newGame\(\)/,
   "Menu não pode apagar o save antes da confirmação na tela de controles");
 assert.match(menu, /label: "Controles"/,
   "menu principal deve oferecer consulta permanente aos comandos");
-assert.match(menu, /SHOW_TEST_SELECTOR[\s\S]*?process\.env\.FTC_ENABLE_TEST_MENU === "1"/,
-  "seletor de fases deve ficar oculto no build público");
-assert.match(menu, /if \(SHOW_TEST_SELECTOR\) \{[\s\S]*?Selecionar Fase \(teste\)/);
-assert.match(packageJson.scripts.dev, /FTC_ENABLE_TEST_MENU=1/,
-  "servidor de desenvolvimento deve expor o seletor de fases");
-assert.doesNotMatch(packageJson.scripts.build, /FTC_ENABLE_TEST_MENU/,
-  "build público não pode habilitar o seletor de fases");
+assert.doesNotMatch(menu, /Selecionar Fase \(teste\)|SHOW_TEST_SELECTOR|TEST_PHASES/,
+  "o seletor provisório de fases e sua lógica de menu devem ser removidos");
+assert.doesNotMatch(JSON.stringify(packageJson.scripts), /FTC_ENABLE_TEST_MENU/,
+  "nenhum script deve reativar o seletor removido");
 for (const layer of [
   "urbano-ceu.png",
   "urbano-predios-longe.png",
@@ -382,25 +384,21 @@ assert.match(menuBackdrop, /fillGradientStyle/,
   "fundo do menu deve preservar contraste atrás das opções");
 assert.match(menuBackdrop, /tilePositionX \+= layer\.speed/,
   "camadas urbanas devem ter movimento sutil independente");
-assert.match(controls, /SaveState\.newGame\(\)[\s\S]*?this\.scene\.start\("PrologueScene"\)/,
+assert.match(controls, /SaveState\.newGame\(\)[\s\S]*?startLoadingTransition\(this, "PrologueScene"\)/,
   "campanha só deve substituir o save ao confirmar Iniciar campanha");
 assert.match(controls, /GAMEPLAY_CONTROL_ACTIONS/);
 assert.match(controls, /GAMEPAD_BINDING_LABELS/);
 assert.match(controls, /AudioManager\.playBgm\(this, BGM\.menu/,
   "tela de controles deve preservar a música do menu");
-assert.match(controls, /queuePrologueAssets\(this\)[\s\S]*?this\.load\.start\(\)/,
-  "assets do prólogo devem aquecer em segundo plano sem apagar a tela de controles");
-assert.match(controls, /if \(!this\.campaignAssetsReady\)[\s\S]*?PREPARANDO PRÓLOGO[\s\S]*?return/,
-  "campanha deve manter feedback visível enquanto o prólogo carrega");
+assert.doesNotMatch(controls, /campaignAssetsReady|PREPARANDO PRÓLOGO|this\.load\.start\(\)/,
+  "a tela de controles não deve manter um segundo loader concorrente");
 for (const asset of ["familia.png", "pai-antes.png", "jornal-pai.png"]) {
   assert.match(prologueAssets, new RegExp(asset.replaceAll(".", "\\.")),
     `aquecimento do prólogo deve incluir ${asset}`);
 }
 assert.match(controls, /pointerdown/,
   "tela de controles deve aceitar clique nas opções");
-assert.match(menu, /Portão — escolha final \(teste\)/);
-assert.match(menu, /this\.scene\.start\("GateScene", \{ testMode: true \}\)/);
-assert.match(menu, /restorePreGateSave\(\)[\s\S]*?this\.scene\.start\("GateScene", \{ testMode: false \}\)/,
+assert.match(menu, /restorePreGateSave\(\)[\s\S]*?startLoadingTransition\(this, "GateScene", \{ testMode: false \}\)/,
   "prévia → menu → Continuar do Portão deve reabrir a campanha fora do modo de teste");
 assert.match(prologue, /PROLOGUE_FAMILY_KEY/);
 assert.match(prologue, /PROLOGUE_NEWSPAPER_KEY/);
@@ -411,16 +409,19 @@ assert.match(prologue, /PAI DE ALEX — APÓS A CONVERSÃO/);
 assert.match(prologue, /const footerY = panelTop \+ panelHeight - 24/,
   "comando e contador do prólogo devem permanecer dentro da moldura");
 assert.match(prologue, /this\.add\.text\(centerX, footerY, "ENTER \/ A para continuar"/);
-assert.match(prologue, /AudioManager\.preloadBgm\(this, BGM\.phase1\)[\s\S]*?this\.load\.start\(\)/,
-  "trilha da Fase 1 deve aquecer enquanto o prólogo permanece visível");
-assert.match(prologue, /PREPARANDO PRIMEIRO SETOR/,
-  "última página deve informar quando a Fase 1 ainda está carregando");
-assert.match(prologue, /gameScene\.events\.once\(Phaser\.Scenes\.Events\.CREATE[\s\S]*?this\.scene\.launch\("GameScene"/,
-  "GameScene deve carregar atrás do prólogo e só assumir a tela quando estiver pronta");
-assert.match(prologue, /this\.scene\.bringToTop\("PrologueScene"\)/,
-  "prólogo deve cobrir visualmente o loader da primeira fase");
-assert.doesNotMatch(prologue, /fadeOut\([\s\S]{0,250}?this\.scene\.start\("GameScene"/,
-  "prólogo não pode apagar a tela antes de iniciar o carregamento da Fase 1");
+assert.match(prologue, /startLoadingTransition\(this, "GameScene", \{ phaseId: "fase1" \}/,
+  "o fim do prólogo deve entregar a Fase 1 ao loader centralizado");
+assert.doesNotMatch(prologue, /phaseOneAudioReady|this\.load\.start\(\)|scene\.launch\("GameScene"/,
+  "o prólogo não deve manter um loader paralelo sujeito a tela preta");
+assert.match(loading, /FLESH TO CHROME/);
+assert.match(loading, /SINCRONIZANDO SETOR/);
+assert.match(loading, /Phaser\.Loader\.Events\.PROGRESS/);
+assert.match(loading, /Phaser\.Loader\.Events\.FILE_LOAD_ERROR/);
+assert.match(loading, /this\.scene\.launch\(this\.data\$\.nextScene/);
+assert.match(loading, /this\.scene\.bringToTop\("LoadingScene"\)/);
+assert.match(loading, /Phaser\.Scenes\.Events\.CREATE/,
+  "a tela de loading só pode liberar o destino depois de create()");
+assert.match(sceneTransition, /scene\.scene\.start\("LoadingScene"/);
 assert.ok(
   fs.statSync(path.join(projectDirectory, "src/assets/audio/music/bgm-phase-1.ogg")).size < 6 * 1024 * 1024,
   "BGM da Fase 1 deve permanecer otimizada para não bloquear o início da campanha web",
@@ -433,10 +434,10 @@ assert.match(clinic, /george-clinic-02/);
 assert.match(clinic, /george-clinic-03/);
 assert.match(clinic, /george-proud/);
 assert.match(game, /Deseja assistir à cutscene da clínica de George\?/);
-assert.match(game, /this\.scene\.start\("ClinicScene", \{ \.\.\.clinicData, testMode: true \}\)/);
+assert.match(game, /startLoadingTransition\(this, "ClinicScene", \{ \.\.\.clinicData, testMode: true \}\)/);
 assert.match(clinic, /if \(this\.data\$\.testMode\) \{[\s\S]*?this\.scene\.start\("MenuScene"\);[\s\S]*?return;[\s\S]*?\}[\s\S]*?SaveState\.load\(\)/,
   "prévia da clínica deve voltar ao seletor antes de alterar o save");
-assert.match(clinic, /this\.scene\.start\("GateScene", \{ testMode: false \}\)/,
+assert.match(clinic, /startLoadingTransition\(this, "GateScene", \{ testMode: false \}\)/,
   "campanha vinda da clínica deve limpar dados anteriores da prévia do Portão");
 assert.match(game, /this\.data\$\.phaseId === "fase5"[\s\S]*?"GateScene"/);
 assert.match(game, /implant: implantOverride,[\s\S]*?testMode: false/,
@@ -457,7 +458,7 @@ assert.doesNotMatch(gate, /markEndingReached\(/,
   "escolher Chrome ainda não significa concluir o final");
 assert.match(gate, /\{ ending: "chrome", testMode: this\.testMode \}/);
 assert.match(gate, /beginDescent\(\)/);
-assert.match(gate, /this\.scene\.start\("GeorgeRefusalScene"\)/);
+assert.match(gate, /startLoadingTransition\(this, "GeorgeRefusalScene"\)/);
 assert.match(gate, /if \(this\.testMode\) \{[\s\S]*?new DescentPreviewSession\(\)[\s\S]*?return;[\s\S]*?SaveState\.load\(\)/,
   "Flesh em modo de teste deve iniciar uma sessão isolada antes de acessar o save");
 assert.doesNotMatch(gate, /Conteúdo em desenvolvimento/);
@@ -471,6 +472,35 @@ assert.match(ending, /FINAL CHROME/);
 assert.match(ending, /FINAL FLESH/);
 assert.match(ending, /FINAL HOLLOW/);
 assert.match(ending, /ALEX\? FILHO\?/);
+assert.match(ending, /startLoadingTransition\(this, "FeedbackScene", \{[\s\S]*?ending: this\.ending,[\s\S]*?testMode: this\.testMode/,
+  "a última página de qualquer final deve encaminhar para a avaliação");
+assert.match(feedback, /MISSÃO CONCLUÍDA \/\/ FLESH TO CHROME/);
+assert.match(feedback, /SUA OPINIÃO PODE/);
+assert.match(feedback, /MUDAR GLITCH CITY/);
+assert.match(feedback, /FINAL CHROME \/\/ AVALIAÇÃO/);
+assert.match(feedback, /FINAL FLESH \/\/ AVALIAÇÃO/);
+assert.match(feedback, /FINAL HOLLOW \/\/ AVALIAÇÃO/);
+assert.match(feedback, /entry\.52413313=FleshtoChrome/,
+  "URL do formulário deve preservar a identificação do projeto");
+assert.match(feedback, /window\.open\(FEEDBACK_FORM_URL, "_blank", "noopener,noreferrer"\)/,
+  "formulário deve abrir em nova aba sem retirar o jogo da avaliação");
+assert.match(feedback, /qr-avaliacao-flesh-to-chrome\.png/);
+assert.match(feedback, /Phaser\.Textures\.FilterMode\.NEAREST/,
+  "QR Code deve permanecer nítido e sem efeitos que prejudiquem a leitura");
+assert.match(feedback, /bgmForEnding\(this\.ending\)/,
+  "avaliação deve preservar a música correspondente ao final");
+assert.match(feedback, /pointerover[\s\S]*?pointerdown/,
+  "botões da avaliação devem aceitar mouse");
+assert.match(feedback, /isMenuUpJustDown[\s\S]*?isMenuDownJustDown[\s\S]*?isConfirmJustDown/,
+  "avaliação deve aceitar teclado e gamepad pelo InputManager");
+assert.match(feedback, /isCancelJustDown\(\)[\s\S]*?this\.returnToMenu\(\)/,
+  "ESC/B deve retornar diretamente ao menu");
+assert.doesNotMatch(feedback, /SaveState/,
+  "avaliação não pode ler, reiniciar ou modificar o save");
+assert.ok(
+  fs.existsSync(path.join(projectDirectory, "src/assets/ui/qr-avaliacao-flesh-to-chrome.png")),
+  "asset do QR Code deve estar integrado ao build",
+);
 assert.match(retry, /unica segunda oportunidade/);
 assert.match(retry, /isMenuLeftJustDown\(\)[\s\S]*?this\.selectChoice\(true\)/,
   "esquerda deve sempre selecionar repetir setor");
@@ -490,7 +520,7 @@ assert.match(georgeRefusal, /george-angry\/george-angry\.png/);
 assert.match(georgeRefusal, /alex-dialogue\/alex-complete-dialogue\.png/);
 assert.match(georgeRefusal, /Eu não sou sua obra, George/);
 assert.match(georgeRefusal, /recuperar cada motivo que deixei para trás/);
-assert.match(georgeRefusal, /this\.scene\.start\("GameScene"/);
+assert.match(georgeRefusal, /startLoadingTransition\(this, "GameScene"/);
 assert.match(gdd, /30 segundos por setor/);
 assert.match(gdd, /operador ciborgue anônimo/);
 assert.match(gdd, /Cena de reprovação de George antes do primeiro setor/);
@@ -519,7 +549,7 @@ assert.match(game, /this\.descentRouteRuntime\?\.setMemoryRecovered\(true\)/,
   "coletar o fragmento deve abrir a porta ReForge");
 assert.match(reforge, /phaseId: "fase1"[\s\S]*?descent: true/,
   "a ultima retirada deve abrir o trecho curto jogavel do Esgoto");
-assert.match(menu, /descentState\.epiloguePending[\s\S]*?this\.scene\.start\("GameScene"[\s\S]*?descent: true/,
+assert.match(menu, /descentState\.epiloguePending[\s\S]*?startLoadingTransition\(this, "GameScene"[\s\S]*?descent: true/,
   "Continuar após a última ReForge deve restaurar o trecho jogável do Esgoto");
 assert.match(game, /descentRouteForPhase\(this\.data\$\.phaseId\)\?\.epilogue[\s\S]*?completeDescentEpilogue\(\)/,
   "a pendência do Esgoto só deve ser limpa na saída do percurso");
@@ -633,10 +663,11 @@ const uiData = {
   scene.confirmChoice();
   assert.equal(save.calls.load, 0, "prévia Flesh não deve sequer carregar o SaveState ao confirmar");
   assert.equal(save.calls.begin, 0, "prévia Flesh não deve iniciar a descida no save real");
-  assert.equal(harness.starts.at(-1)?.key, "GeorgeRefusalScene",
+  assert.equal(harness.starts.at(-1)?.key, "LoadingScene",
     "prévia Flesh deve abrir a cena de George e iniciar a descida");
-  assert.equal(harness.starts.at(-1)?.data?.testMode, true);
-  assert.equal(typeof harness.starts.at(-1)?.data?.descentPreview?.completeDescentPhase, "function",
+  assert.equal(harness.starts.at(-1)?.data?.nextScene, "GeorgeRefusalScene");
+  assert.equal(harness.starts.at(-1)?.data?.nextData?.testMode, true);
+  assert.equal(typeof harness.starts.at(-1)?.data?.nextData?.descentPreview?.completeDescentPhase, "function",
     "prévia Flesh deve carregar uma progressão descartável");
 }
 
@@ -649,16 +680,10 @@ const uiData = {
   const scene = new ControlsScene();
   scene.init({ campaignSetup: true });
   scene.startCampaign();
-  assert.equal(save.calls.newGame, 0,
-    "o save não pode ser substituído enquanto o prólogo ainda está carregando");
-  assert.equal(harness.starts.length, 0,
-    "a tela de controles deve permanecer ativa enquanto o prólogo carrega");
-  scene.campaignAssetsReady = true;
-  scene.campaignStartPending = false;
-  scene.startCampaign();
   assert.equal(save.calls.newGame, 1,
     "Iniciar campanha na tela de controles deve criar o novo save");
-  assert.equal(harness.starts.at(-1)?.key, "PrologueScene");
+  assert.equal(harness.starts.at(-1)?.key, "LoadingScene");
+  assert.equal(harness.starts.at(-1)?.data?.nextScene, "PrologueScene");
 
   const readOnlyScene = new ControlsScene();
   readOnlyScene.init({ campaignSetup: false });
@@ -678,10 +703,11 @@ const uiData = {
   scene.selected = "chrome";
   scene.confirmChoice();
   assert.equal(save.calls.load, 0, "prévia Chrome não deve carregar nem alterar o save local");
-  assert.equal(harness.starts.at(-1)?.key, "EndingScene",
+  assert.equal(harness.starts.at(-1)?.key, "LoadingScene",
     "fade concluído deve abrir o Final Chrome no modo de teste");
-  assert.equal(harness.starts.at(-1)?.data?.ending, "chrome");
-  assert.equal(harness.starts.at(-1)?.data?.testMode, true);
+  assert.equal(harness.starts.at(-1)?.data?.nextScene, "EndingScene");
+  assert.equal(harness.starts.at(-1)?.data?.nextData?.ending, "chrome");
+  assert.equal(harness.starts.at(-1)?.data?.nextData?.testMode, true);
 }
 
 {
@@ -717,12 +743,14 @@ const uiData = {
   scene.retrySelected = true;
   scene.input$ = interactiveInput("confirm");
   scene.update();
-  assert.equal(harness.starts.at(-1)?.key, "GameScene",
+  assert.equal(harness.starts.at(-1)?.key, "LoadingScene",
     "ENTER/A do teclado ou controle deve confirmar Repetir setor");
+  assert.equal(harness.starts.at(-1)?.data?.nextScene, "GameScene");
 
   const mouseChoice = scene.choice(0, 0, "CONTINUAR", false);
   mouseChoice.emit("pointerdown");
-  assert.equal(harness.starts.at(-1)?.key, "EpilogueScene", "clique deve confirmar Aceitar Hollow");
+  assert.equal(harness.starts.at(-1)?.key, "LoadingScene", "clique deve confirmar Aceitar Hollow");
+  assert.equal(harness.starts.at(-1)?.data?.nextScene, "EpilogueScene");
   assert.equal(save.calls.decline, 1);
 }
 
@@ -738,9 +766,10 @@ const uiData = {
   );
   const scene = new MenuScene();
   scene.continueGame();
-  assert.equal(harness.starts.at(-1)?.key, "GameScene");
-  assert.equal(harness.starts.at(-1)?.data?.phaseId, "fase1");
-  assert.equal(harness.starts.at(-1)?.data?.descent, true,
+  assert.equal(harness.starts.at(-1)?.key, "LoadingScene");
+  assert.equal(harness.starts.at(-1)?.data?.nextScene, "GameScene");
+  assert.equal(harness.starts.at(-1)?.data?.nextData?.phaseId, "fase1");
+  assert.equal(harness.starts.at(-1)?.data?.nextData?.descent, true,
     "Continuar após a quarta ReForge deve restaurar o corredor do Esgoto");
 }
 
@@ -774,7 +803,8 @@ const uiData = {
   epilogueScene.input$ = interactiveInput("confirm");
   epilogueScene.update();
   assert.deepEqual(save.calls.mark, [], "concluir o percurso visual ainda não registra Final Flesh");
-  assert.equal(harness.starts.at(-1)?.key, "EndingScene");
+  assert.equal(harness.starts.at(-1)?.key, "LoadingScene");
+  assert.equal(harness.starts.at(-1)?.data?.nextScene, "EndingScene");
 
   const { EndingScene } = loadSceneModule(
     path.join(projectDirectory, "src/scenes/EndingScene.ts"), harness, save.module,
@@ -787,6 +817,40 @@ const uiData = {
   assert.deepEqual(save.calls.mark, [], "Final Flesh não pode ser registrado antes do último quadro");
   endingScene.advance();
   assert.deepEqual(save.calls.mark, ["flesh"], "última confirmação deve registrar Final Flesh");
+  assert.equal(harness.starts.at(-1)?.key, "LoadingScene");
+  assert.equal(harness.starts.at(-1)?.data?.nextScene, "FeedbackScene");
+  assert.equal(harness.starts.at(-1)?.data?.nextData?.ending, "flesh");
+  assert.equal(harness.starts.at(-1)?.data?.nextData?.testMode, false);
+}
+
+{
+  const harness = createUiHarness();
+  const save = fakeSaveModule(uiData);
+  const { EndingScene } = loadSceneModule(
+    path.join(projectDirectory, "src/scenes/EndingScene.ts"), harness, save.module,
+  );
+  const scene = new EndingScene();
+  scene.init({ ending: "chrome", testMode: true });
+  scene.create();
+  for (let page = 0; page < 4; page += 1) scene.advance();
+  assert.deepEqual(save.calls.mark, [], "prévia do Final Chrome não pode modificar o save");
+  assert.equal(harness.starts.at(-1)?.key, "LoadingScene");
+  assert.equal(harness.starts.at(-1)?.data?.nextScene, "FeedbackScene");
+  assert.equal(harness.starts.at(-1)?.data?.nextData?.ending, "chrome");
+  assert.equal(harness.starts.at(-1)?.data?.nextData?.testMode, true);
+}
+
+{
+  const harness = createUiHarness();
+  const save = fakeSaveModule(uiData);
+  const { FeedbackScene } = loadSceneModule(
+    path.join(projectDirectory, "src/scenes/FeedbackScene.ts"), harness, save.module,
+  );
+  const scene = new FeedbackScene();
+  scene.init({ ending: "hollow", testMode: false });
+  scene.returnToMenu();
+  assert.equal(harness.starts.at(-1)?.key, "MenuScene");
+  assert.equal(save.calls.load, 0, "voltar da avaliação não pode carregar nem modificar o save");
 }
 
 for (const [sceneSource, name] of [
@@ -795,6 +859,8 @@ for (const [sceneSource, name] of [
   [epilogue, "EpilogueScene"],
   [menu, "MenuScene"],
   [controls, "ControlsScene"],
+  [feedback, "FeedbackScene"],
+  [loading, "LoadingScene"],
 ]) {
   assert.match(sceneSource, /this\.scale\.width/,
     `${name} deve posicionar o layout pela largura expandida atual`);

@@ -3,7 +3,7 @@ import type { Player } from "../entities/Player";
 import type { DescentStep } from "../systems/DescentProgression";
 import { AudioManager, SFX } from "../systems/AudioManager";
 
-export const DESCENT_GLITCH_TEXTURE_PREFIX = "descent-glitch";
+export const DESCENT_MEMORY_FRAGMENT_TEXTURE_KEY = "memory-fragment";
 
 /**
  * Overlay narrativo dos mapas reutilizados. A posicao vem de um objeto
@@ -13,6 +13,7 @@ export const DESCENT_GLITCH_TEXTURE_PREFIX = "descent-glitch";
 export class DescentGlitchRuntime {
   private readonly sprite: Phaser.Physics.Arcade.Sprite;
   private readonly halo: Phaser.GameObjects.Arc;
+  private readonly particles: Phaser.GameObjects.Rectangle[] = [];
   private collected = false;
 
   constructor(
@@ -37,8 +38,31 @@ export class DescentGlitchRuntime {
     this.sprite = scene.physics.add.sprite(
       x,
       y,
-      `${DESCENT_GLITCH_TEXTURE_PREFIX}-${step.fragmentAsset}`,
-    ).setScale(0.72).setDepth(8).setVisible(!alreadyRecovered);
+      DESCENT_MEMORY_FRAGMENT_TEXTURE_KEY,
+    ).setDepth(8).setVisible(!alreadyRecovered);
+    const particleColors = [0x7cfcea, 0x36e2ff, 0xff71ce];
+    for (let index = 0; index < 8; index += 1) {
+      const angle = (Math.PI * 2 * index) / 8;
+      const radius = 30 + (index % 2) * 8;
+      const particle = scene.add.rectangle(
+        x + Math.cos(angle) * radius,
+        y + Math.sin(angle) * radius,
+        index % 3 === 0 ? 5 : 3,
+        2,
+        particleColors[index % particleColors.length],
+        0.75,
+      ).setDepth(7).setVisible(!alreadyRecovered);
+      this.particles.push(particle);
+      scene.tweens.add({
+        targets: particle,
+        alpha: { from: 0.2, to: 0.9 },
+        scaleX: { from: 0.55, to: 1.2 },
+        duration: 420 + index * 45,
+        yoyo: true,
+        repeat: -1,
+        delay: index * 55,
+      });
+    }
     const body = this.sprite.body as Phaser.Physics.Arcade.Body;
     body.setAllowGravity(false);
     body.enable = !alreadyRecovered;
@@ -56,9 +80,28 @@ export class DescentGlitchRuntime {
       this.collected = true;
       body.enable = false;
       AudioManager.playSfx(this.scene, SFX.glitch, { volume: 0.58 });
-      this.sprite.setVisible(false);
-      this.halo.setVisible(false);
       onRecovered(step.fragmentId);
+      const visualTargets = [this.sprite, this.halo, ...this.particles];
+      this.scene.tweens.killTweensOf(visualTargets);
+      this.scene.tweens.add({
+        targets: visualTargets,
+        alpha: 0,
+        scaleX: 1.45,
+        scaleY: 1.45,
+        duration: 210,
+        ease: "Cubic.easeOut",
+        onComplete: () => visualTargets.forEach((target) => target.setVisible(false)),
+      });
+      this.particles.forEach((particle, index) => {
+        const angle = (Math.PI * 2 * index) / this.particles.length;
+        this.scene.tweens.add({
+          targets: particle,
+          x: particle.x + Math.cos(angle) * 28,
+          y: particle.y + Math.sin(angle) * 28,
+          duration: 210,
+          ease: "Cubic.easeOut",
+        });
+      });
     };
   }
 
@@ -71,5 +114,6 @@ export class DescentGlitchRuntime {
   destroy(): void {
     this.sprite.destroy();
     this.halo.destroy();
+    this.particles.forEach((particle) => particle.destroy());
   }
 }

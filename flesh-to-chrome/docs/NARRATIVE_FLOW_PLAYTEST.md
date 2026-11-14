@@ -12,9 +12,9 @@ Novo Jogo
   → Fase 5
   → Save pré-Portão
   → Escolha Chrome/Flesh
-      Chrome → Final Chrome → Menu → Continuar do Portão
+      Chrome → Final Chrome → Avaliação → Menu → Continuar do Portão
       Flesh  → reprovação de George → descida → glitches → ReForge
-             → Final Flesh ou Hollow
+             → Final Flesh ou Hollow → Avaliação → Menu
 ```
 
 ## Regras narrativas
@@ -48,6 +48,11 @@ Novo Jogo
 - O Final Chrome só é registrado em `endingReached` depois que o jogador
   confirma o último quadro. Selecionar Chrome ou apenas abrir o epílogo não é
   suficiente para marcar o final como concluído.
+- Depois da última confirmação de Chrome, Flesh ou Hollow, a campanha abre a
+  `FeedbackScene`. Ela preserva a música correspondente ao final, identifica o
+  desfecho alcançado e oferece o formulário opcional por QR Code ou nova aba.
+  Voltar ao menu, inclusive com ESC/B, não lê nem modifica o save. As prévias
+  também chegam à avaliação sem registrar o final.
 - Flesh inicia com a cena em que George reprova a decisão de Alex e se recusa a
   desmontar sua obra. Cada glitch recupera uma memória/motivação, e cada
   três primeiros procedimentos ReForge mostram um operador ciborgue anônimo; o
@@ -93,8 +98,8 @@ reproduzíveis.
 7. Complete a Fase 5 na campanha e confirme a abertura normal do Portão.
 8. Selecione Chrome e avance até o quarto quadro do Final Chrome sem confirmá-lo;
    valide que `endingReached` ainda não foi atualizado.
-9. Confirme o último quadro, volte ao menu e valide que o Final Chrome foi
-   registrado somente nesse momento.
+9. Confirme o último quadro e valide que o Final Chrome foi registrado somente
+   nesse momento e que a tela de avaliação é aberta antes do menu.
 10. No menu, selecione **Continuar do Portão**.
 11. Confirme que o Portão foi restaurado com carteira e implantes preservados.
 12. Siga `DESCENT_ENDINGS_PLAYTEST.md` para validar memórias, holograma do pai,
@@ -111,3 +116,7 @@ reproduzíveis.
 16. Falhe a descida depois de quantidades diferentes de retiradas. O Alex do
     Final Hollow deve manter o mesmo estágio corporal do epílogo e informar a
     quantidade correta de implantes restantes.
+17. Nos três finais, valide a identificação Chrome/Flesh/Hollow, a continuidade
+    da música, a leitura do QR Code e a abertura do formulário em nova aba.
+    Navegue pelos dois botões com teclado, mouse e gamepad; ESC/B deve voltar ao
+    menu sem exigir resposta e sem alterar o save. Repita em 16:9 e ultrawide.

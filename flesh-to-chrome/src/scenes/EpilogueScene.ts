@@ -12,6 +12,7 @@ import {
 } from "../utils/AlexSprite";
 import { AudioManager, SFX, bgmForEnding } from "../systems/AudioManager";
 import { DescentPreviewSession } from "../systems/DescentPreviewSession";
+import { startLoadingTransition } from "../systems/SceneTransition";
 
 interface EpilogueData {
   ending: "flesh" | "hollow";
@@ -90,7 +91,7 @@ export class EpilogueScene extends Phaser.Scene {
       AudioManager.playSfx(this, SFX.uiConfirm, { volume: 0.34 });
       this.leaving = true;
       const abilities = this.data$.descentPreview?.get().abilities;
-      this.scene.start("EndingScene", {
+      startLoadingTransition(this, "EndingScene", {
         ending: this.data$.ending,
         testMode: this.data$.testMode ?? false,
         abilities,

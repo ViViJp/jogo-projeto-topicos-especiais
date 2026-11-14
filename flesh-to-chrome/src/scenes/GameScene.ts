@@ -8,7 +8,8 @@ import { SaveState } from "../systems/SaveState";
 import { DescentPreviewSession } from "../systems/DescentPreviewSession";
 import { AudioManager, SFX, bgmForPhase } from "../systems/AudioManager";
 import { descentRouteForPhase, descentStepForPhase } from "../systems/DescentProgression";
-import { DescentGlitchRuntime, DESCENT_GLITCH_TEXTURE_PREFIX } from "../objects/DescentGlitchRuntime";
+import { DescentGlitchRuntime, DESCENT_MEMORY_FRAGMENT_TEXTURE_KEY } from "../objects/DescentGlitchRuntime";
+import { startLoadingTransition } from "../systems/SceneTransition";
 import {
   DESCENT_ATTACK_BARRIER_TEXTURE_KEY,
   DESCENT_REFORGE_DOOR_CLOSED_KEY,
@@ -166,6 +167,7 @@ const PHASE_BACKGROUND: Record<string, number> = {
 };
 
 const PHASES_WITH_CLINIC = new Set(["fase1", "fase2-intro", "fase3", "fase4"]);
+const SHOW_MOVEMENT_DIAGNOSTICS = process.env.FTC_ENABLE_MOVEMENT_DEBUG === "1";
 
 interface TestClinicChoiceData {
   completedPhaseId: string;
@@ -187,6 +189,7 @@ interface TestClinicChoiceData {
 export class GameScene extends Phaser.Scene {
   private input$!: InputManager;
   private player!: Player;
+  private movementDebugText?: Phaser.GameObjects.Text;
   private legacyRuntime?: LevelRuntime;
   private tiledRuntime?: TiledLevelRuntime;
   private tiledPhase2Runtime?: TiledPhase2Runtime;
@@ -342,17 +345,11 @@ export class GameScene extends Phaser.Scene {
           new URL("../assets/narrative/reforge-door/reforge-door-open.png", import.meta.url).href,
         );
       }
-      const fragmentAssets = [
-        { id: "topo", url: new URL("../assets/narrative/fragments/fragmento-topo.png", import.meta.url) },
-        { id: "corporativo", url: new URL("../assets/narrative/fragments/fragmento-corporativo.png", import.meta.url) },
-        { id: "urbano", url: new URL("../assets/narrative/fragments/fragmento-urbano.png", import.meta.url) },
-        { id: "industrial", url: new URL("../assets/narrative/fragments/fragmento-industrial.png", import.meta.url) },
-      ] as const;
-      for (const fragment of fragmentAssets) {
-        const key = `${DESCENT_GLITCH_TEXTURE_PREFIX}-${fragment.id}`;
-        if (!this.textures.exists(key)) {
-          this.load.image(key, fragment.url.href);
-        }
+      if (!this.textures.exists(DESCENT_MEMORY_FRAGMENT_TEXTURE_KEY)) {
+        this.load.image(
+          DESCENT_MEMORY_FRAGMENT_TEXTURE_KEY,
+          new URL("../assets/props/collectibles/memory-fragment-64.png", import.meta.url).href,
+        );
       }
     }
     if (this.data$.phaseId === "fase1") {
@@ -670,6 +667,15 @@ export class GameScene extends Phaser.Scene {
         0,
         Math.max(0, this.levelLengthPx - viewportWidth),
       ));
+    }
+    if (SHOW_MOVEMENT_DIAGNOSTICS) {
+      this.movementDebugText = this.add.text(12, 154, "", {
+        fontFamily: "Courier New, monospace",
+        fontSize: "12px",
+        color: "#7CFCEA",
+        backgroundColor: "#05050acc",
+        padding: { x: 8, y: 6 },
+      }).setScrollFactor(0).setDepth(10_000);
     }
   }
 
@@ -1005,7 +1011,7 @@ export class GameScene extends Phaser.Scene {
         : undefined;
       if (descentRouteForPhase(this.data$.phaseId)?.epilogue) {
         descentProgression.completeDescentEpilogue();
-        this.time.delayedCall(250, () => this.scene.start("EpilogueScene", {
+        this.time.delayedCall(250, () => startLoadingTransition(this, "EpilogueScene", {
           ending: "flesh",
           ...previewData,
         }));
@@ -1020,7 +1026,7 @@ export class GameScene extends Phaser.Scene {
       const destinationData = result === "hollow"
         ? { ending: "hollow", ...previewData }
         : previewData;
-      this.time.delayedCall(250, () => this.scene.start(destination, destinationData));
+      this.time.delayedCall(250, () => startLoadingTransition(this, destination, destinationData));
       return;
     }
     this.credits.consolidate();
@@ -1065,7 +1071,7 @@ export class GameScene extends Phaser.Scene {
     );
 
     this.time.delayedCall(300, () => {
-      this.scene.start(destination, {
+      startLoadingTransition(this, destination, {
         completedPhaseId: this.data$.phaseId,
         nextPhaseId,
         wallet: this.credits.getTotal(),
@@ -1184,7 +1190,7 @@ export class GameScene extends Phaser.Scene {
     this.physics.world.resume();
 
     if (watchClinic && clinicData) {
-      this.scene.start("ClinicScene", { ...clinicData, testMode: true });
+      startLoadingTransition(this, "ClinicScene", { ...clinicData, testMode: true });
     } else {
       this.scene.start("MenuScene");
     }
@@ -1358,6 +1364,16 @@ export class GameScene extends Phaser.Scene {
     );
     this.cameras.main.scrollX = targetScrollX;
     this.backdrop?.update(targetScrollX, delta);
+    if (this.movementDebugText) {
+      const body = this.player.sprite.body as Phaser.Physics.Arcade.Body;
+      const frame = this.player.sprite.anims.currentFrame?.textureFrame
+        ?? this.player.sprite.frame.name;
+      this.movementDebugText.setText([
+        `state: ${this.player.getState()}  frame: ${String(frame)}`,
+        `sprite.x: ${this.player.sprite.x.toFixed(2)}  velocity.x: ${body.velocity.x.toFixed(2)}`,
+        `camera.scrollX: ${this.cameras.main.scrollX.toFixed(2)}`,
+      ]);
+    }
 
     this.input$.postUpdate();
   }

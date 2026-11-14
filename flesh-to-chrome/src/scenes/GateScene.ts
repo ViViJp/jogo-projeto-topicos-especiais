@@ -3,6 +3,7 @@ import { InputManager } from "../systems/InputManager";
 import { SaveState } from "../systems/SaveState";
 import { AudioManager, BGM, SFX } from "../systems/AudioManager";
 import { DescentPreviewSession } from "../systems/DescentPreviewSession";
+import { startLoadingTransition } from "../systems/SceneTransition";
 
 const GATE_TEXTURE_KEY = "narrative-gate";
 
@@ -153,7 +154,7 @@ export class GateScene extends Phaser.Scene {
     if (this.selected === "flesh") {
       if (this.testMode) {
         this.choosing = true;
-        this.scene.start("GeorgeRefusalScene", {
+        startLoadingTransition(this, "GeorgeRefusalScene", {
           testMode: true,
           descentPreview: new DescentPreviewSession(),
         });
@@ -164,13 +165,13 @@ export class GateScene extends Phaser.Scene {
       save.beginDescent();
       const data = save.get();
       if (!data.descentState.active) return;
-      this.scene.start("GeorgeRefusalScene");
+      startLoadingTransition(this, "GeorgeRefusalScene");
       return;
     }
 
     this.choosing = true;
     this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
-      this.scene.start("EndingScene", { ending: "chrome", testMode: this.testMode });
+      startLoadingTransition(this, "EndingScene", { ending: "chrome", testMode: this.testMode });
     });
     this.cameras.main.fadeOut(450, 0, 0, 0);
   }

@@ -13,6 +13,8 @@ import { ReForgeScene } from "./scenes/ReForgeScene";
 import { EpilogueScene } from "./scenes/EpilogueScene";
 import { GeorgeRefusalScene } from "./scenes/GeorgeRefusalScene";
 import { ControlsScene } from "./scenes/ControlsScene";
+import { FeedbackScene } from "./scenes/FeedbackScene";
+import { LoadingScene } from "./scenes/LoadingScene";
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -76,6 +78,7 @@ const config: Phaser.Types.Core.GameConfig = {
   },
   scene: [
     BootScene,
+    LoadingScene,
     MenuScene,
     ControlsScene,
     PrologueScene,
@@ -87,6 +90,7 @@ const config: Phaser.Types.Core.GameConfig = {
     ReForgeScene,
     EpilogueScene,
     EndingScene,
+    FeedbackScene,
     MultiplayerScene,
   ],
 };

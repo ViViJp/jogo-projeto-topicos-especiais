@@ -21,6 +21,7 @@ import {
 } from "../utils/AlexSprite";
 import type { GameSceneData } from "./GameScene";
 import { AudioManager, BGM, SFX } from "../systems/AudioManager";
+import { startLoadingTransition } from "../systems/SceneTransition";
 
 interface ClinicSceneData {
   completedPhaseId: string;
@@ -465,11 +466,11 @@ export class ClinicScene extends Phaser.Scene {
     save.unlockAbility(this.beat.implant);
     const newAbilities: AbilityState = { ...this.data$.abilities, [this.beat.implant]: true };
     if (!this.data$.nextPhaseId) {
-      this.scene.start("GateScene", { testMode: false });
+      startLoadingTransition(this, "GateScene", { testMode: false });
       return;
     }
     save.setPhase(this.data$.nextPhaseId);
-    this.scene.start("GameScene", {
+    startLoadingTransition(this, "GameScene", {
       phaseId: this.data$.nextPhaseId,
       checkpointX: 0,
       checkpointY: 0,

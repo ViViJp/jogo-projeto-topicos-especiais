@@ -16,6 +16,7 @@ import {
   ALEX_TEXTURE_KEY,
   alexTextureForAbilities,
 } from "../utils/AlexSprite";
+import { startLoadingTransition } from "../systems/SceneTransition";
 
 const FAMILY_PORTRAIT_KEY = "ending-family";
 const CHROME_EPILOGUE_KEY = "ending-chrome-father-son";
@@ -299,6 +300,9 @@ export class EndingScene extends Phaser.Scene {
     // confirmou o último quadro. Fechar o jogo antes disso mantém o Portão
     // disponível e a prévia do seletor nunca escreve no save.
     if (!this.testMode) SaveState.load().markEndingReached(this.ending);
-    this.scene.start("MenuScene");
+    startLoadingTransition(this, "FeedbackScene", {
+      ending: this.ending,
+      testMode: this.testMode,
+    });
   }
 }

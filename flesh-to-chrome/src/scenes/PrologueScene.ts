@@ -8,6 +8,7 @@ import {
 import { InputManager } from "../systems/InputManager";
 import { AudioManager, BGM, SFX } from "../systems/AudioManager";
 import type { GameSceneData } from "./GameScene";
+import { startLoadingTransition } from "../systems/SceneTransition";
 
 interface ProloguePage {
   image: string;
@@ -51,10 +52,7 @@ export class PrologueScene extends Phaser.Scene {
   private title!: Phaser.GameObjects.Text;
   private body!: Phaser.GameObjects.Text;
   private pageCounter!: Phaser.GameObjects.Text;
-  private promptText!: Phaser.GameObjects.Text;
   private finished = false;
-  private phaseOneAudioReady = false;
-  private phaseOneStartPending = false;
 
   constructor() {
     super("PrologueScene");
@@ -78,8 +76,6 @@ export class PrologueScene extends Phaser.Scene {
     this.input$ = new InputManager(this);
     this.pageIndex = 0;
     this.finished = false;
-    this.phaseOneAudioReady = false;
-    this.phaseOneStartPending = false;
 
     this.add.rectangle(centerX, height / 2, panelWidth, panelHeight, 0x10101b, 1)
       .setStrokeStyle(2, 0x7cfcea, 0.45);
@@ -117,15 +113,14 @@ export class PrologueScene extends Phaser.Scene {
       fontSize: "14px",
       color: "#565f80",
     }).setOrigin(0.5);
-    this.promptText = this.add.text(centerX, footerY, "ENTER / A para continuar", {
+    const promptText = this.add.text(centerX, footerY, "ENTER / A para continuar", {
       fontFamily: "Courier New, monospace",
       fontSize: "16px",
       color: "#8892b0",
     }).setOrigin(0.5);
-    this.tweens.add({ targets: this.promptText, alpha: 0.35, yoyo: true, repeat: -1, duration: 700 });
+    this.tweens.add({ targets: promptText, alpha: 0.35, yoyo: true, repeat: -1, duration: 700 });
 
     this.renderPage();
-    this.warmPhaseOneAudio();
     this.input.on("pointerdown", () => this.advance());
   }
 
@@ -158,66 +153,6 @@ export class PrologueScene extends Phaser.Scene {
       return;
     }
     this.finished = true;
-    this.phaseOneStartPending = true;
-    this.tweens.killTweensOf(this.promptText);
-    this.promptText.setAlpha(1);
-    if (!this.phaseOneAudioReady) {
-      this.promptText.setText("PREPARANDO PRIMEIRO SETOR...").setColor("#7CFCEA");
-      return;
-    }
-    this.startPhaseOneBehindPrologue();
-  }
-
-  /**
-   * A faixa da Fase 1 e grande. Carrega-la enquanto o jogador le o prologo
-   * evita que o download e a decodificacao comecem sobre uma tela preta.
-   */
-  private warmPhaseOneAudio(): void {
-    if (this.cache.audio.exists(BGM.phase1)) {
-      this.phaseOneAudioReady = true;
-      return;
-    }
-
-    AudioManager.preloadBgm(this, BGM.phase1);
-    const onProgress = (progress: number): void => {
-      if (!this.phaseOneStartPending) return;
-      this.promptText
-        .setText(`PREPARANDO PRIMEIRO SETOR // ${Math.round(progress * 100)}%`)
-        .setColor("#7CFCEA");
-    };
-    this.load.on("progress", onProgress);
-    this.load.once("complete", () => {
-      this.load.off("progress", onProgress);
-      this.phaseOneAudioReady = true;
-      if (this.phaseOneStartPending) this.startPhaseOneBehindPrologue();
-    });
-    // O preload normal terminou antes de create(). O loader pode ser iniciado
-    // novamente para fazer o aquecimento sem retirar o prologo da tela.
-    this.load.start();
-  }
-
-  /**
-   * Mantem o prologo renderizado acima do loader da GameScene. A troca visual
-   * so acontece depois do CREATE, quando mapa, sprites e audio estao prontos.
-   */
-  private startPhaseOneBehindPrologue(): void {
-    if (!this.phaseOneStartPending) return;
-    this.phaseOneStartPending = false;
-    this.promptText.setText("INICIALIZANDO PRIMEIRO SETOR...").setColor("#7CFCEA");
-
-    const gameScene = this.scene.get<Phaser.Scene>("GameScene");
-    gameScene.events.once(Phaser.Scenes.Events.CREATE, () => {
-      this.scene.pause("GameScene");
-      this.cameras.main.fadeOut(220, 0, 0, 0, (
-        _camera: Phaser.Cameras.Scene2D.Camera,
-        progress: number,
-      ) => {
-        if (progress < 1) return;
-        this.scene.stop("PrologueScene");
-        this.scene.resume("GameScene");
-      });
-    });
-    this.scene.launch("GameScene", { phaseId: "fase1" } as GameSceneData);
-    this.scene.bringToTop("PrologueScene");
+    startLoadingTransition(this, "GameScene", { phaseId: "fase1" } as GameSceneData);
   }
 }

@@ -4,22 +4,12 @@ import { AudioManager, BGM, SFX } from "../systems/AudioManager";
 import { InputManager } from "../systems/InputManager";
 import { SaveState } from "../systems/SaveState";
 import { GameSceneData } from "./GameScene";
+import { startLoadingTransition } from "../systems/SceneTransition";
 
 interface MenuOption {
   label: string;
   action: () => void;
 }
-
-const TEST_PHASES = [
-  { id: "fase1", label: "Fase 1 — Esgoto / Periferia" },
-  { id: "fase2-intro", label: "Fase 2 — Distrito Industrial" },
-  { id: "fase3", label: "Fase 3 — Meio Urbano" },
-  { id: "fase4", label: "Fase 4 — Distrito Corporativo" },
-  { id: "fase5", label: "Fase 5 — Topo da Cidade" },
-] as const;
-
-/** Somente os scripts locais de desenvolvimento habilitam as ferramentas de teste. */
-const SHOW_TEST_SELECTOR = process.env.FTC_ENABLE_TEST_MENU === "1";
 
 export class MenuScene extends Phaser.Scene {
   private input$!: InputManager;
@@ -32,7 +22,6 @@ export class MenuScene extends Phaser.Scene {
   private confirmPanel?: Phaser.GameObjects.Graphics;
   private menuHint?: Phaser.GameObjects.Text;
   private hasSave = false;
-  private mode: "main" | "phase-select" = "main";
   private panelX = 48;
   private panelY = 196;
   private panelWidth = 500;
@@ -60,7 +49,6 @@ export class MenuScene extends Phaser.Scene {
     this.confirmVisible = false;
     this.confirmText = undefined;
     this.confirmPanel = undefined;
-    this.mode = "main";
 
     this.cameras.main.setBackgroundColor(0x05050a);
     this.backdrop = new MenuBackdrop(this);
@@ -117,12 +105,6 @@ export class MenuScene extends Phaser.Scene {
       return;
     }
 
-    if (this.mode === "phase-select" && this.input$.isCancelJustDown()) {
-      this.showMainMenu();
-      this.input$.postUpdate();
-      return;
-    }
-
     if (this.input$.isMenuUpJustDown() || this.input$.isMenuLeftJustDown()) {
       this.setSelected((this.selectedIndex - 1 + this.options.length) % this.options.length);
     } else if (this.input$.isMenuDownJustDown() || this.input$.isMenuRightJustDown()) {
@@ -140,11 +122,11 @@ export class MenuScene extends Phaser.Scene {
     this.selectedIndex = 0;
 
     const startY = this.panelY + 74;
-    const spacing = this.mode === "phase-select" ? 43 : 52;
+    const spacing = 52;
     this.options.forEach((option, index) => {
       const text = this.add.text(this.panelX + 28, startY + index * spacing, option.label, {
         fontFamily: "Courier New, monospace",
-        fontSize: this.mode === "phase-select" ? "19px" : "23px",
+        fontSize: "23px",
         color: "#e8ecff",
       }).setOrigin(0, 0.5).setDepth(6).setInteractive({ useHandCursor: true })
         .on("pointerover", () => this.setSelected(index))
@@ -159,7 +141,6 @@ export class MenuScene extends Phaser.Scene {
   }
 
   private showMainMenu(): void {
-    this.mode = "main";
     this.menuHint?.setText("MENU PRINCIPAL");
     this.options = [];
     const saveData = SaveState.load().get();
@@ -172,36 +153,7 @@ export class MenuScene extends Phaser.Scene {
     this.options.push({ label: "Novo Jogo", action: () => this.newGame(this.hasSave) });
     this.options.push({ label: "Controles", action: () => this.openControls(false) });
     this.options.push({ label: "Multiplayer", action: () => this.openMultiplayer() });
-    if (SHOW_TEST_SELECTOR) {
-      this.options.push({ label: "Selecionar Fase (teste)", action: () => this.showPhaseSelect() });
-    }
     this.renderOptions();
-  }
-
-  private showPhaseSelect(): void {
-    this.mode = "phase-select";
-    this.menuHint?.setText("SELEÇÃO TEMPORÁRIA — NÃO ALTERA O SAVE");
-    this.options = TEST_PHASES.map((phase) => ({
-      label: phase.label,
-      action: () => this.startTestPhase(phase.id),
-    }));
-    this.options.push({
-      label: "Portão — escolha final (teste)",
-      action: () => this.scene.start("GateScene", { testMode: true }),
-    });
-    this.options.push({ label: "← Voltar", action: () => this.showMainMenu() });
-    this.renderOptions();
-  }
-
-  private startTestPhase(phaseId: string): void {
-    this.scene.start("GameScene", {
-      phaseId,
-      checkpointX: 0,
-      checkpointY: 0,
-      consolidatedCreditIds: [],
-      wallet: 0,
-      testMode: true,
-    } as GameSceneData);
   }
 
   private setSelected(index: number): void {
@@ -223,22 +175,22 @@ export class MenuScene extends Phaser.Scene {
   }
 
   private openMultiplayer(): void {
-    this.scene.start("MultiplayerScene");
+    startLoadingTransition(this, "MultiplayerScene");
   }
 
   private openControls(campaignSetup: boolean): void {
-    this.scene.start("ControlsScene", { campaignSetup });
+    startLoadingTransition(this, "ControlsScene", { campaignSetup });
   }
 
   private continueGame(): void {
     const save = SaveState.load();
     const data = save.get();
     if (data.descentState.pendingRemoval) {
-      this.scene.start("ReForgeScene");
+      startLoadingTransition(this, "ReForgeScene");
       return;
     }
     if (data.descentState.epiloguePending) {
-      this.scene.start("GameScene", {
+      startLoadingTransition(this, "GameScene", {
         phaseId: data.currentPhaseId,
         checkpointX: data.checkpoint.x,
         checkpointY: data.checkpoint.y,
@@ -250,14 +202,14 @@ export class MenuScene extends Phaser.Scene {
       return;
     }
     if (data.descentState.brokenChain) {
-      this.scene.start("EpilogueScene", { ending: "hollow" });
+      startLoadingTransition(this, "EpilogueScene", { ending: "hollow" });
       return;
     }
     if (!data.descentState.active && data.descentState.currentStep >= 4 && data.endingReached === null) {
-      this.scene.start("EpilogueScene", { ending: "flesh" });
+      startLoadingTransition(this, "EpilogueScene", { ending: "flesh" });
       return;
     }
-    this.scene.start("GameScene", {
+    startLoadingTransition(this, "GameScene", {
       phaseId: data.currentPhaseId,
       checkpointX: data.checkpoint.x,
       checkpointY: data.checkpoint.y,
@@ -271,7 +223,7 @@ export class MenuScene extends Phaser.Scene {
   private continueFromGate(): void {
     const restored = SaveState.load().restorePreGateSave();
     if (!restored) return;
-    this.scene.start("GateScene", { testMode: false });
+    startLoadingTransition(this, "GateScene", { testMode: false });
   }
 
   private newGame(hasSave: boolean): void {

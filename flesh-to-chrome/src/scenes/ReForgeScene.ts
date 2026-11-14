@@ -5,6 +5,7 @@ import { SaveState } from "../systems/SaveState";
 import { AudioManager, BGM, SFX } from "../systems/AudioManager";
 import { DescentPreviewSession } from "../systems/DescentPreviewSession";
 import type { GameSceneData } from "./GameScene";
+import { startLoadingTransition } from "../systems/SceneTransition";
 
 const REFORGE_BG = "reforge-bg";
 const REFORGE_FATHER = "reforge-father";
@@ -134,7 +135,7 @@ export class ReForgeScene extends Phaser.Scene {
         ? { testMode: true, descentPreview: this.descentPreview }
         : {};
       if (result.finished) {
-        this.scene.start("GameScene", {
+        startLoadingTransition(this, "GameScene", {
           phaseId: "fase1",
           checkpointX: 0,
           checkpointY: 0,
@@ -145,7 +146,7 @@ export class ReForgeScene extends Phaser.Scene {
           ...previewData,
         } as GameSceneData);
       } else {
-        this.scene.start("GameScene", {
+        startLoadingTransition(this, "GameScene", {
           phaseId: result.nextPhaseId,
           checkpointX: 0,
           checkpointY: 0,

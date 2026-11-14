@@ -56,7 +56,10 @@ const ATTACK_RIGHT = { row: 15, frames: 6 };
  * um avanço bruscos de Alex a cada slide. O trim desloca apenas o desenho;
  * origem, hitbox e posição física permanecem inalteradas.
  */
-const SLIDE_FRAME_X_OFFSETS = [0, 10, 8, 6] as const;
+// Valores medidos pelo centro visual do tronco/pés nos cinco spritesheets.
+// A compensação anterior (10/8/6 px) ultrapassava o desalinhamento real e
+// criava o próprio recuo que tentava eliminar.
+const SLIDE_FRAME_X_OFFSETS = [0, 4, 3, 3] as const;
 
 function alignSlideFrames(scene: Phaser.Scene, textureKey: string): void {
   const texture = scene.textures.get(textureKey);

@@ -10,7 +10,8 @@
 
 1. Escolha Chrome.
 2. Avance as quatro paginas do final.
-3. Resultado esperado: `FINAL CHROME`; o save registra `endingReached = chrome`.
+3. Resultado esperado: `FINAL CHROME`; o save registra `endingReached = chrome`
+   e a confirmação final abre a avaliação antes do retorno ao menu.
 
 ## Final Flesh
 
@@ -59,8 +60,8 @@
 6. Depois da última retirada, confirme o trecho do Esgoto com cerca de 5
    segundos, sem implantes, tutorial, hazards ou vãos. Alex deve apenas correr
    sobre chão contínuo antes da casa da família e do Final Flesh.
-7. Resultado esperado: epilogo no Esgoto, `FINAL FLESH` e as quatro
-   habilidades em `false`.
+7. Resultado esperado: epilogo no Esgoto, `FINAL FLESH`, as quatro habilidades
+   em `false` e a tela opcional de avaliação antes do retorno ao menu.
 
 ## Final Hollow e retry especial
 
@@ -78,6 +79,8 @@
 6. Repita as cenas de retry, epílogo e finais em uma janela ultrawide. Painéis,
    escolhas, porta, personagem, textos e rodapé devem permanecer centralizados
    na área lógica expandida, sem se prender aos 1280 px da resolução-base.
+7. Depois de `FINAL HOLLOW`, confirme que a avaliação identifica Hollow em
+   roxo, preserva sua música e permite voltar ao menu sem alterar o save.
 
 ## Verificacao automatica
 

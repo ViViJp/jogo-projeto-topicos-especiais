@@ -6,10 +6,10 @@ import {
   type GameplayControlAction,
 } from "../config/Controls";
 import { MenuBackdrop, drawTechPanel, preloadMenuBackdrop } from "../objects/MenuBackdrop";
-import { queuePrologueAssets } from "../objects/PrologueAssets";
 import { AudioManager, BGM, SFX } from "../systems/AudioManager";
 import { InputManager } from "../systems/InputManager";
 import { SaveState } from "../systems/SaveState";
+import { startLoadingTransition } from "../systems/SceneTransition";
 
 interface ControlsSceneData {
   /** Só o fluxo confirmado de Novo Jogo pode substituir o save atual. */
@@ -44,9 +44,6 @@ export class ControlsScene extends Phaser.Scene {
   private options: ControlsOption[] = [];
   private optionTexts: Phaser.GameObjects.Text[] = [];
   private selectedIndex = 0;
-  private campaignAssetsReady = false;
-  private campaignStartPending = false;
-  private campaignStatusText?: Phaser.GameObjects.Text;
 
   constructor() {
     super("ControlsScene");
@@ -82,9 +79,6 @@ export class ControlsScene extends Phaser.Scene {
     this.input$ = new InputManager(this);
     this.selectedIndex = 0;
     this.optionTexts = [];
-    this.campaignAssetsReady = false;
-    this.campaignStartPending = false;
-    this.campaignStatusText = undefined;
 
     drawTechPanel(this, panelX, panelY, panelWidth, panelHeight, 5, 0x7cfcea);
     this.add.text(centerX, panelY + 30, "CONTROLES // PROTOCOLO DE SOBREVIVÊNCIA", {
@@ -128,15 +122,6 @@ export class ControlsScene extends Phaser.Scene {
         ]
       : [{ label: "VOLTAR", action: () => this.returnToMenu() }];
     this.createOptions(centerX, panelY + panelHeight - 70);
-    if (this.campaignSetup) {
-      this.campaignStatusText = this.add.text(centerX, panelY + panelHeight - 118, "", {
-        fontFamily: "Courier New, monospace",
-        fontSize: "13px",
-        color: "#7CFCEA",
-        letterSpacing: 1,
-      }).setOrigin(0.5).setDepth(7).setVisible(false);
-      this.warmPrologueAssets();
-    }
     this.add.text(centerX, panelY + panelHeight - 22, "← → / DIRECIONAL escolher   ENTER / A confirmar   ESC / B voltar", {
       fontFamily: "Courier New, monospace", fontSize: "13px", color: "#8d96ad",
     }).setOrigin(0.5).setDepth(7);
@@ -212,40 +197,9 @@ export class ControlsScene extends Phaser.Scene {
   }
 
   private startCampaign(): void {
-    if (!this.campaignSetup || this.campaignStartPending) return;
-    if (!this.campaignAssetsReady) {
-      this.campaignStartPending = true;
-      this.campaignStatusText?.setText("PREPARANDO PRÓLOGO // AGUARDE...").setVisible(true);
-      return;
-    }
-    this.finishCampaignStart();
-  }
-
-  private warmPrologueAssets(): void {
-    const queuedAssets = queuePrologueAssets(this);
-    if (queuedAssets === 0) {
-      this.campaignAssetsReady = true;
-      return;
-    }
-
-    this.campaignStatusText?.setText("PREPARANDO PRÓLOGO // 0%").setVisible(true);
-    this.load.on("progress", (progress: number) => {
-      const percent = Math.round(progress * 100);
-      this.campaignStatusText?.setText(`PREPARANDO PRÓLOGO // ${percent}%`);
-    });
-    this.load.once("complete", () => {
-      this.campaignAssetsReady = true;
-      this.campaignStatusText?.setText("PRÓLOGO PRONTO");
-      if (this.campaignStartPending) this.finishCampaignStart();
-    });
-    // O loader normal da cena já terminou antes de create(). Reiniciá-lo aqui
-    // mantém o painel renderizado enquanto as imagens chegam em segundo plano.
-    this.load.start();
-  }
-
-  private finishCampaignStart(): void {
+    if (!this.campaignSetup) return;
     SaveState.newGame();
-    this.scene.start("PrologueScene");
+    startLoadingTransition(this, "PrologueScene");
   }
 
   private returnToMenu(): void {
