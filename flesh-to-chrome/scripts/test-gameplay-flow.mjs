@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
 import ts from "typescript";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const projectDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -19,9 +19,66 @@ function loadTypeScriptModule(relativePath) {
   return module.exports;
 }
 
+function loadAudioManagerModule() {
+  const filename = path.join(projectDirectory, "src/systems/AudioManager.ts");
+  const source = fs.readFileSync(filename, "utf8")
+    .replaceAll("import.meta.url", JSON.stringify(pathToFileURL(filename).href));
+  const output = ts.transpileModule(source, {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+    fileName: filename,
+  }).outputText;
+  const module = { exports: {} };
+  const Phaser = { Scenes: { Events: { SHUTDOWN: "shutdown" } } };
+  new vm.Script(output, { filename }).runInNewContext({
+    module,
+    exports: module.exports,
+    require: (specifier) => {
+      if (specifier === "phaser") return { default: Phaser };
+      throw new Error(`Import não suportado no teste de áudio: ${specifier}`);
+    },
+    URL,
+  });
+  return module.exports;
+}
+
 const motion = loadTypeScriptModule("src/objects/HazardMotion.ts");
 const config = loadTypeScriptModule("src/config/GameConfig.ts");
 const { CreditsSystem } = loadTypeScriptModule("src/systems/CreditsSystem.ts");
+const { AudioManager: TestedAudioManager, SFX: TestedSFX } = loadAudioManagerModule();
+
+const shutdownListeners = [];
+const createdLoopSounds = [];
+const audioScene = {
+  cache: { audio: { exists: () => true } },
+  events: { once: (event, listener) => shutdownListeners.push({ event, listener }) },
+  sound: {
+    add: () => {
+      const sound = {
+        isPlaying: false,
+        isPaused: false,
+        destroyed: false,
+        play() { this.isPlaying = true; },
+        stop() { this.isPlaying = false; this.isPaused = false; },
+        destroy() { this.destroyed = true; },
+        pause() { this.isPlaying = false; this.isPaused = true; },
+        resume() { this.isPlaying = true; this.isPaused = false; },
+      };
+      createdLoopSounds.push(sound);
+      return sound;
+    },
+  },
+};
+for (let index = 0; index < 50; index += 1) {
+  TestedAudioManager.startLoop(audioScene, TestedSFX.footstep);
+  TestedAudioManager.stopLoop(TestedSFX.footstep);
+}
+assert.equal(shutdownListeners.length, 1,
+  "iniciar/parar loops repetidamente deve manter somente um listener de SHUTDOWN por cena");
+TestedAudioManager.startLoop(audioScene, TestedSFX.footstep);
+TestedAudioManager.startLoop(audioScene, TestedSFX.droneHum);
+TestedAudioManager.stopAllLoopsForScene(audioScene);
+assert.ok(createdLoopSounds.slice(-2).every((sound) => sound.destroyed),
+  "cleanup central da cena deve destruir inclusive o loop do drone");
 const timing = { cycleMs: 1000, activeMs: 200, warningMs: 100, phaseMs: 0 };
 assert.equal(motion.hazardCycleState(0, timing), "active");
 assert.equal(motion.hazardCycleState(199, timing), "active");
@@ -265,6 +322,7 @@ assert.match(phase5RuntimeSource, /const groundExtension = layer === this\.groun
 
 const gameScene = fs.readFileSync(path.join(projectDirectory, "src/scenes/GameScene.ts"), "utf8");
 const multiplayerScene = fs.readFileSync(path.join(projectDirectory, "src/scenes/MultiplayerScene.ts"), "utf8");
+const parallaxBackdropSource = fs.readFileSync(path.join(projectDirectory, "src/objects/ParallaxBackdrop.ts"), "utf8");
 const mainSource = fs.readFileSync(path.join(projectDirectory, "src/main.ts"), "utf8");
 assert.match(multiplayerScene, /new TiledPhase5Runtime\(/,
   "multiplayer deve permanecer isolado no runtime da Fase 5");
@@ -278,6 +336,18 @@ assert.match(gameScene, /const viewportWidth = this\.cameras\.main\.width/,
   "câmera deve considerar a largura expandida do viewport");
 assert.match(gameScene, /this\.scale\.width \/ 2, this\.scale\.height \/ 2/,
   "overlays devem permanecer centralizados no viewport expandido");
+assert.match(multiplayerScene, /const centerX = this\.scale\.width \/ 2/,
+  "interface multiplayer deve usar a largura lógica expandida");
+assert.match(multiplayerScene, /this\.scale\.on\(Phaser\.Scale\.Events\.RESIZE, this\.handleViewportResize\)/,
+  "interface multiplayer deve recalcular o layout após resize");
+assert.doesNotMatch(multiplayerScene, /\.text\(SCREEN_WIDTH \/ 2|\.text\(SCREEN_WIDTH - 24/,
+  "textos multiplayer não podem permanecer presos à resolução base");
+assert.match(parallaxBackdropSource, /const viewportWidth = this\.scene\.cameras\.main\.width/,
+  "parallax deve calcular cobertura pela largura real da câmera");
+assert.match(parallaxBackdropSource, /Phaser\.Scale\.Events\.RESIZE, this\.handleResize/,
+  "parallax deve recalcular as cópias ao redimensionar a janela");
+assert.doesNotMatch(parallaxBackdropSource, /Math\.ceil\(\(SCREEN_WIDTH \+ SHAKE_MARGIN\)/,
+  "parallax não pode limitar a cobertura à largura base");
 assert.match(gameScene, /this\.time\.paused = true/);
 assert.match(gameScene, /this\.anims\.pauseAll\(\)/);
 assert.match(gameScene, /checkpointX: 0/);
@@ -574,7 +644,21 @@ assert.match(audioManagerSource, /\[SFX\.effort\]: new URL\("\.\.\/assets\/audio
   "salto duplo deve reutilizar o master de pulo enquanto não houver esforço dedicado");
 assert.match(audioManagerSource, /activeLoops = new Map/);
 assert.match(audioManagerSource, /static startLoop\([\s\S]*?loop: true/);
-assert.match(audioManagerSource, /static stopLoop\([\s\S]*?sound\?\.destroy\(\)/);
+assert.match(audioManagerSource, /static stopLoop\([\s\S]*?entry\?\.sound\.destroy\(\)/);
+const audioStartLoopSource = audioManagerSource.slice(
+  audioManagerSource.indexOf("static startLoop("),
+  audioManagerSource.indexOf("static stopLoop("),
+);
+assert.doesNotMatch(audioStartLoopSource, /events\.once/,
+  "iniciar/parar loops repetidamente não pode acumular listeners de SHUTDOWN");
+assert.match(audioManagerSource, /sceneLoopCleanups = new WeakMap/,
+  "AudioManager deve manter somente um cleanup por cena");
+assert.match(audioManagerSource, /private static ensureSceneLoopCleanup[\s\S]*?if \(this\.sceneLoopCleanups\.has\(scene\)\) return;/,
+  "cleanup de loops deve ser idempotente por ciclo de vida da cena");
+assert.match(audioManagerSource, /static stopAllLoopsForScene\(scene: Phaser\.Scene\)/,
+  "AudioManager deve encerrar todos os loops pertencentes a uma cena");
+assert.match(multiplayerScene, /freezePlayer\(\)[\s\S]*?AudioManager\.stopAllLoopsForScene\(this\)/,
+  "fim da corrida deve silenciar também drones e futuros loops multiplayer");
 assert.match(audioManagerSource, /pauseBgm\(\)[\s\S]*?activeLoops[\s\S]*?sound\.pause\(\)/,
   "pausa do jogo também deve suspender loops de ação");
 assert.match(audioManagerSource, /if \(!scene\.cache\?\.audio\?\.exists\(key\)\) \{[\s\S]*?this\.stopBgm\(\)/,

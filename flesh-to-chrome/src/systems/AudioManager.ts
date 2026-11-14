@@ -117,7 +117,12 @@ export const AUDIO_SOURCES: Required<AudioSources> = {
 export class AudioManager {
   private static activeMusic?: Phaser.Sound.BaseSound;
   private static activeKey?: BgmKey;
-  private static activeLoops = new Map<SfxKey, Phaser.Sound.BaseSound>();
+  private static activeLoops = new Map<
+    SfxKey,
+    { sound: Phaser.Sound.BaseSound; scene: Phaser.Scene }
+  >();
+  /** Um único listener de limpeza para todo o ciclo de vida de cada cena. */
+  private static sceneLoopCleanups = new WeakMap<Phaser.Scene, () => void>();
 
   static configure(sources: AudioSources): void {
     Object.assign(AUDIO_SOURCES.music, sources.music);
@@ -172,33 +177,53 @@ export class AudioManager {
   ): void {
     if (!scene.cache?.audio?.exists(key)) return;
     const current = this.activeLoops.get(key);
-    if (current?.isPlaying || current?.isPaused) return;
-    current?.destroy();
+    if (current?.scene === scene && (current.sound.isPlaying || current.sound.isPaused)) return;
+    if (current) this.stopLoop(key);
+
+    this.ensureSceneLoopCleanup(scene);
     const sound = scene.sound.add(key, { volume: 0.55, loop: true, ...config });
-    this.activeLoops.set(key, sound);
+    this.activeLoops.set(key, { sound, scene });
     sound.play();
-    scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-      if (this.activeLoops.get(key) === sound) this.stopLoop(key);
-    });
   }
 
   static stopLoop(key: SfxKey): void {
-    const sound = this.activeLoops.get(key);
-    sound?.stop();
-    sound?.destroy();
+    const entry = this.activeLoops.get(key);
+    entry?.sound.stop();
+    entry?.sound.destroy();
     this.activeLoops.delete(key);
+  }
+
+  /**
+   * Interrompe todos os loops pertencentes à cena sem depender de uma lista
+   * manual de chaves. O único listener de SHUTDOWN permanece registrado para
+   * cobrir loops que possam ser iniciados novamente antes de a cena encerrar.
+   */
+  static stopAllLoopsForScene(scene: Phaser.Scene): void {
+    for (const [key, entry] of this.activeLoops) {
+      if (entry.scene === scene) this.stopLoop(key);
+    }
+  }
+
+  private static ensureSceneLoopCleanup(scene: Phaser.Scene): void {
+    if (this.sceneLoopCleanups.has(scene)) return;
+    const cleanup = (): void => {
+      this.stopAllLoopsForScene(scene);
+      this.sceneLoopCleanups.delete(scene);
+    };
+    this.sceneLoopCleanups.set(scene, cleanup);
+    scene.events.once(Phaser.Scenes.Events.SHUTDOWN, cleanup);
   }
 
   static pauseBgm(): void {
     if (this.activeMusic?.isPlaying) this.activeMusic.pause();
-    this.activeLoops.forEach((sound) => {
+    this.activeLoops.forEach(({ sound }) => {
       if (sound.isPlaying) sound.pause();
     });
   }
 
   static resumeBgm(): void {
     if (this.activeMusic?.isPaused) this.activeMusic.resume();
-    this.activeLoops.forEach((sound) => {
+    this.activeLoops.forEach(({ sound }) => {
       if (sound.isPaused) sound.resume();
     });
   }

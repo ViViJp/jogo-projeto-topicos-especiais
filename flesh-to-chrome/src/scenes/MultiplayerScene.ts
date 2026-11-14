@@ -140,6 +140,7 @@ export class MultiplayerScene extends Phaser.Scene {
   private respawning = false;
   private returning = false;
   private meshStartId = 0;
+  private readonly viewportLayouts: Array<() => void> = [];
 
   private lastHeartbeatAt = 0;
   private lastSnapshotAt = 0;
@@ -273,6 +274,9 @@ export class MultiplayerScene extends Phaser.Scene {
     this.countdownText = undefined;
     this.notificationText = undefined;
     this.dashText = undefined;
+    this.viewportLayouts.length = 0;
+    this.scale.off(Phaser.Scale.Events.RESIZE, this.handleViewportResize);
+    this.scale.on(Phaser.Scale.Events.RESIZE, this.handleViewportResize);
     this.input$ = new InputManager(this);
     this.resetSessionState();
     this.createLobby();
@@ -287,6 +291,8 @@ export class MultiplayerScene extends Phaser.Scene {
       this.events.off("player-dash-start", this.handleDashStart, this);
       this.events.off("player-dash-ready", this.handleDashReady, this);
       this.meshStartId += 1;
+      this.scale.off(Phaser.Scale.Events.RESIZE, this.handleViewportResize);
+      this.viewportLayouts.length = 0;
       this.clearStartHandshakeTimer();
       this.runtime?.destroy();
       this.backdrop?.destroy();
@@ -392,46 +398,59 @@ export class MultiplayerScene extends Phaser.Scene {
   }
 
   private createLobby(): void {
+    const centerX = this.scale.width / 2;
+    const bottomY = this.scale.height - 40;
     // Painel translúcido atrás dos textos: o fundo do Topo (torres e lua)
     // atrapalhava a leitura das linhas pequenas. Some junto com o lobby.
-    this.addLobbyObject(
-      this.add
-        .rectangle(SCREEN_WIDTH / 2, 286, 880, 524, 0x0b1322, 0.78)
-        .setStrokeStyle(1, 0x2a3a5c)
-        .setDepth(-10)
-    );
-    this.addLobbyObject(
-      this.add
-        .rectangle(SCREEN_WIDTH / 2, SCREEN_HEIGHT - 40, 300, 28, 0x0b1322, 0.78)
-        .setDepth(-10)
-    );
-    this.addLobbyObject(
-      this.add
-        .text(SCREEN_WIDTH / 2, 82, "CORRIDA MULTIPLAYER", textStyle("#7CFCEA", "42px"))
-        .setOrigin(0.5)
-    );
-    this.addLobbyObject(
-      this.add
+    const lobbyPanel = this.add
+      .rectangle(centerX, 286, Math.min(880, this.scale.width - 64), 524, 0x0b1322, 0.78)
+      .setStrokeStyle(1, 0x2a3a5c)
+      .setDepth(-10);
+    this.registerViewportLayout(() => {
+      lobbyPanel
+        .setPosition(this.scale.width / 2, 286)
+        .setDisplaySize(Math.min(880, this.scale.width - 64), 524);
+    });
+    this.addLobbyObject(lobbyPanel);
+
+    const footerPanel = this.add
+      .rectangle(centerX, bottomY, 300, 28, 0x0b1322, 0.78)
+      .setDepth(-10);
+    this.registerViewportLayout(() => footerPanel.setPosition(this.scale.width / 2, this.scale.height - 40));
+    this.addLobbyObject(footerPanel);
+
+    const title = this.add
+      .text(centerX, 82, "CORRIDA MULTIPLAYER", textStyle("#7CFCEA", "42px"))
+      .setOrigin(0.5);
+    this.registerViewportLayout(() => title.setX(this.scale.width / 2));
+    this.addLobbyObject(title);
+
+    const roomText = this.add
         .text(
-          SCREEN_WIDTH / 2,
+          centerX,
           145,
           `SALA  ${this.roomId}\nVOCÊ  ${this.localPeerId}`,
           { ...textStyle("#8892b0", "18px"), align: "center" }
         )
-        .setOrigin(0.5)
-    );
+        .setOrigin(0.5);
+    this.registerViewportLayout(() => roomText.setX(this.scale.width / 2));
+    this.addLobbyObject(roomText);
 
     this.statusText = this.add
-      .text(SCREEN_WIDTH / 2, 245, "Conectando ao servidor...", textStyle("#FFD37C", "22px"))
+      .text(centerX, 245, "Conectando ao servidor...", textStyle("#FFD37C", "22px"))
       .setOrigin(0.5);
     this.peersText = this.add
-      .text(SCREEN_WIDTH / 2, 305, "Aguardando oponente", textStyle("#e8ecff", "26px"))
+      .text(centerX, 305, "Aguardando oponente", textStyle("#e8ecff", "26px"))
       .setOrigin(0.5);
+    this.registerViewportLayout(() => {
+      this.statusText?.setX(this.scale.width / 2);
+      this.peersText?.setX(this.scale.width / 2);
+    });
     this.addLobbyObject(this.statusText);
     this.addLobbyObject(this.peersText);
 
     const copyButton = this.add
-      .text(SCREEN_WIDTH / 2, 400, "[ COPIAR CONVITE PARA O OPONENTE ]", {
+      .text(centerX, 400, "[ COPIAR CONVITE PARA O OPONENTE ]", {
         ...textStyle("#7CFCEA", "20px"),
         backgroundColor: "#102824",
         padding: { x: 16, y: 10 },
@@ -439,31 +458,42 @@ export class MultiplayerScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true })
       .on("pointerdown", () => void this.copyInviteLink());
+    this.registerViewportLayout(() => copyButton.setX(this.scale.width / 2));
     copyButton.on("pointerover", () => copyButton.setColor("#FFD37C"));
     copyButton.on("pointerout", () => copyButton.setColor("#7CFCEA"));
     this.addLobbyObject(copyButton);
 
-    this.addLobbyObject(
-      this.add
+    const raceInfo = this.add
         .text(
-          SCREEN_WIDTH / 2,
+          centerX,
           505,
           "2 jogadores • 20 créditos • " + TILED_MULTIPLAYER_CHECKPOINT_COUNT + " checkpoints • limite final de 20 s\n" +
             "Tempo ajustado = tempo bruto - 0,5 s por crédito",
           { ...textStyle("#8892b0", "16px"), align: "center" }
         )
-        .setOrigin(0.5)
-    );
-    this.addLobbyObject(
-      this.add
-        .text(SCREEN_WIDTH / 2, SCREEN_HEIGHT - 40, "ESC / B / SELECT para voltar", textStyle("#565f80", "14px"))
-        .setOrigin(0.5)
-    );
+        .setOrigin(0.5);
+    this.registerViewportLayout(() => raceInfo.setX(this.scale.width / 2));
+    this.addLobbyObject(raceInfo);
+
+    const backHint = this.add
+      .text(centerX, bottomY, "ESC / B / SELECT para voltar", textStyle("#565f80", "14px"))
+      .setOrigin(0.5);
+    this.registerViewportLayout(() => backHint.setPosition(this.scale.width / 2, this.scale.height - 40));
+    this.addLobbyObject(backHint);
   }
 
   private addLobbyObject<T extends { setVisible(value: boolean): unknown }>(object: T): T {
     this.lobbyObjects.push(object);
     return object;
+  }
+
+  private readonly handleViewportResize = (): void => {
+    this.viewportLayouts.forEach((layout) => layout());
+  };
+
+  private registerViewportLayout(layout: () => void): void {
+    this.viewportLayouts.push(layout);
+    layout();
   }
 
   private async startMesh(): Promise<void> {
@@ -786,13 +816,16 @@ export class MultiplayerScene extends Phaser.Scene {
   }
 
   private createRaceHud(): void {
-    this.add
-      .rectangle(0, 0, SCREEN_WIDTH, 82, 0x05050a, 0.88)
+    const centerX = this.scale.width / 2;
+    const centerY = this.scale.height / 2;
+    const hudPanel = this.add
+      .rectangle(0, 0, this.scale.width, 82, 0x05050a, 0.88)
       .setOrigin(0, 0)
       .setScrollFactor(0)
       .setDepth(1000);
+    this.registerViewportLayout(() => hudPanel.setDisplaySize(this.scale.width, 82));
     this.timerText = this.add
-      .text(SCREEN_WIDTH / 2, 18, "00:00.000", textStyle("#FFD37C", "28px"))
+      .text(centerX, 18, "00:00.000", textStyle("#FFD37C", "28px"))
       .setOrigin(0.5, 0)
       .setScrollFactor(0)
       .setDepth(1001);
@@ -805,17 +838,17 @@ export class MultiplayerScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(1001);
     this.opponentText = this.add
-      .text(SCREEN_WIDTH - 24, 18, "OPONENTE 0%", textStyle("#ff67d4", "18px"))
+      .text(this.scale.width - 24, 18, "OPONENTE 0%", textStyle("#ff67d4", "18px"))
       .setOrigin(1, 0)
       .setScrollFactor(0)
       .setDepth(1001);
     this.countdownText = this.add
-      .text(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, "", textStyle("#FFD37C", "72px"))
+      .text(centerX, centerY, "", textStyle("#FFD37C", "72px"))
       .setOrigin(0.5)
       .setScrollFactor(0)
       .setDepth(1200);
     this.notificationText = this.add
-      .text(SCREEN_WIDTH / 2, 105, "", {
+      .text(centerX, 105, "", {
         ...textStyle("#7CFCEA", "20px"),
         backgroundColor: "#05050acc",
         padding: { x: 12, y: 8 },
@@ -824,16 +857,23 @@ export class MultiplayerScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(1100)
       .setVisible(false);
-    this.add
+    const controlsHint = this.add
       .text(
-        SCREEN_WIDTH / 2,
-        SCREEN_HEIGHT - 18,
+        centerX,
+        this.scale.height - 18,
         this.controlsHint(),
         textStyle("#8892b0", "13px")
       )
       .setOrigin(0.5, 1)
       .setScrollFactor(0)
       .setDepth(1001);
+    this.registerViewportLayout(() => {
+      this.timerText?.setX(this.scale.width / 2);
+      this.opponentText?.setX(this.scale.width - 24);
+      this.countdownText?.setPosition(this.scale.width / 2, this.scale.height / 2);
+      this.notificationText?.setX(this.scale.width / 2);
+      controlsHint.setPosition(this.scale.width / 2, this.scale.height - 18);
+    });
   }
 
   private controlsHint(): string {
@@ -872,11 +912,11 @@ export class MultiplayerScene extends Phaser.Scene {
     }
   }
 
-  /** Para Alex e os loops de passo/slide/scan, que só o update do jogador encerraria. */
+  /** Para Alex e todos os loops pertencentes à corrida, inclusive drones. */
   private freezePlayer(): void {
     this.player?.sprite.setVelocity(0, 0);
     if (this.player?.sprite.body) this.player.sprite.body.enable = false;
-    [SFX.footstep, SFX.slide, SFX.scan].forEach((key) => AudioManager.stopLoop(key));
+    AudioManager.stopAllLoopsForScene(this);
   }
 
   private handleDashStart(): void {
@@ -922,10 +962,12 @@ export class MultiplayerScene extends Phaser.Scene {
     if (active) {
       if (!this.scanOverlay) {
         this.scanOverlay = this.add
-          .rectangle(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0x36e2ff, 0.1)
+          .rectangle(0, 0, this.scale.width, this.scale.height, 0x36e2ff, 0.1)
           .setOrigin(0)
           .setScrollFactor(0)
           .setDepth(900);
+        const overlay = this.scanOverlay;
+        this.registerViewportLayout(() => overlay.setDisplaySize(this.scale.width, this.scale.height));
       }
       this.scanOverlay.setVisible(true);
       this.runtime?.setScanActive(true);
@@ -1054,9 +1096,10 @@ export class MultiplayerScene extends Phaser.Scene {
     this.countdownText?.setVisible(false);
     this.rematchAllowedAt = this.time.now + REMATCH_GUARD_MS;
     const color = verdict.startsWith("VITÓRIA") ? "#7CFC9A" : verdict.startsWith("DERROTA") ? "#ff8a8a" : "#FFD37C";
-    const centerY = SCREEN_HEIGHT / 2;
-    this.add
-      .rectangle(SCREEN_WIDTH / 2, centerY, 880, 360, 0x05050a, 0.96)
+    const centerX = this.scale.width / 2;
+    const centerY = this.scale.height / 2;
+    const resultPanel = this.add
+      .rectangle(centerX, centerY, Math.min(880, this.scale.width - 64), 360, 0x05050a, 0.96)
       .setStrokeStyle(3, Phaser.Display.Color.HexStringToColor(color).color)
       .setScrollFactor(0)
       .setDepth(2000);
@@ -1065,11 +1108,21 @@ export class MultiplayerScene extends Phaser.Scene {
       [centerY + 10, details, "#e8ecff", "22px"],
       [centerY + 135, "ENTER / A: revanche  •  ESC / B: menu", "#8892b0", "16px"],
     ];
-    lines.forEach(([y, content, textColor, size]) => {
-      this.add.text(SCREEN_WIDTH / 2, y, content, textStyle(textColor, size))
+    const resultTexts = lines.map(([y, content, textColor, size]) => (
+      this.add.text(centerX, y, content, textStyle(textColor, size))
         .setOrigin(0.5)
         .setScrollFactor(0)
-        .setDepth(2001);
+        .setDepth(2001)
+    ));
+    this.registerViewportLayout(() => {
+      const currentCenterY = this.scale.height / 2;
+      resultPanel
+        .setPosition(this.scale.width / 2, currentCenterY)
+        .setDisplaySize(Math.min(880, this.scale.width - 64), 360);
+      const offsets = [-110, 10, 135];
+      resultTexts.forEach((text, index) => {
+        text.setPosition(this.scale.width / 2, currentCenterY + offsets[index]);
+      });
     });
   }
 

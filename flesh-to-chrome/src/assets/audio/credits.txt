@@ -3,11 +3,14 @@
 ## Estrutura
 ```
 flesh-to-chrome/src/assets/audio/
-  ambience/ # ambientes antigos, não usados como BGM
   music/    # músicas em loop por fase e cena narrativa
   sfx/     # one-shots
   credits.txt
 ```
+
+Os antigos masters de ambiência foram removidos em 14/11/2026 porque não
+eram referenciados pelo runtime; as cinco fases utilizam exclusivamente as
+músicas documentadas abaixo.
 
 ## Músicas integradas
 
