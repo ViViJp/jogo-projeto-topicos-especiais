@@ -1371,7 +1371,7 @@ Corrida competitiva simultânea:
 - sem PvP;
 - quatro implantes;
 - duração-alvo ~120 s;
-- 1 checkpoint central.
+- 3 checkpoints (a cada ~1/4 da pista).
 
 ## 21.2 Créditos
 
@@ -1715,7 +1715,7 @@ Os valores são referência de produção e podem mudar de acordo com a arte dis
 - dois jogadores;
 - sincronização;
 - quatro implantes;
-- checkpoint central;
+- três checkpoints;
 - créditos individuais;
 - tempo ajustado;
 - DNF;
