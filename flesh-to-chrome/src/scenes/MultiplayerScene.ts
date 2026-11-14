@@ -3,6 +3,7 @@ import { CAMERA, GRAVITY_Y, SCREEN_HEIGHT, SCREEN_WIDTH } from "../config/GameCo
 import { Player } from "../entities/Player";
 import {
   TILED_MULTIPLAYER_BACKGROUND,
+  TILED_MULTIPLAYER_CHECKPOINT_COUNT,
   TILED_MULTIPLAYER_CREDIT_COUNT,
   TILED_MULTIPLAYER_END_X,
   TILED_MULTIPLAYER_LENGTH,
@@ -32,18 +33,39 @@ import { TILED_CHECKPOINT_TEXTURE_KEY } from "../objects/TiledLevelRuntime";
 import {
   TILED_PHASE5_BARRICADE_TEXTURE_KEY,
   TILED_PHASE5_GATE_TEXTURE_KEY,
+  TILED_PHASE5_ROTATING_BARRIER_TEXTURE_KEY,
   TiledPhase5Runtime,
 } from "../objects/TiledPhase5Runtime";
+import {
+  GAMEPAD_BINDING_LABELS,
+  GameplayControlAction,
+  keyboardBindingLabel,
+} from "../config/Controls";
 import { InputManager } from "../systems/InputManager";
+import { AudioManager, BGM, SFX } from "../systems/AudioManager";
 import {
   ALEX_ARMS_TEXTURE_KEY,
+  ALEX_CHECKPOINT_ARMS_TEXTURE_KEY,
+  ALEX_CHECKPOINT_DASH_TEXTURE_KEY,
+  ALEX_CHECKPOINT_EYES_TEXTURE_KEY,
+  ALEX_CHECKPOINT_LEGS_TEXTURE_KEY,
+  ALEX_CHECKPOINT_SHEET_CONFIG,
+  ALEX_CHECKPOINT_TEXTURE_KEY,
   ALEX_DASH_TEXTURE_KEY,
   ALEX_EYES_TEXTURE_KEY,
   ALEX_LEGS_TEXTURE_KEY,
   ALEX_SHEET_CONFIG,
-  ALEX_SLIDE_FRAME,
+  ALEX_SLIDE_ARMS_TEXTURE_KEY,
+  ALEX_SLIDE_DASH_TEXTURE_KEY,
+  ALEX_SLIDE_EYES_TEXTURE_KEY,
+  ALEX_SLIDE_LEGS_TEXTURE_KEY,
+  ALEX_SLIDE_SHEET_CONFIG,
+  ALEX_SLIDE_TEXTURE_KEY,
   ALEX_TEXTURE_KEY,
+  alexAttackAnimationKey,
+  alexHurtAnimationKey,
   alexRunAnimationKey,
+  alexSlideAnimationKey,
 } from "../utils/AlexSprite";
 import { generatePlaceholderTextures } from "../utils/PlaceholderTextures";
 
@@ -57,6 +79,10 @@ const START_MIN_LEAD_MS = 2_000;
 const START_MAX_LEAD_MS = 15_000;
 const FINISH_CONSISTENCY_TOLERANCE_MS = 2_500;
 const MIN_PLAUSIBLE_RACE_TIME_MS = 15_000;
+const QUIT_CONFIRM_WINDOW_MS = 1_500;
+const REMATCH_GUARD_MS = 800;
+const OPPONENT_MAX_LEAD_MS = 150;
+const OPPONENT_MAX_LEAD_SPEED = 1_000;
 const ALL_ABILITIES = { legs: true, arms: true, eyes: true, thrusters: true } as const;
 
 type RacePhase = "lobby" | "countdown" | "racing" | "finished";
@@ -75,7 +101,7 @@ export class MultiplayerScene extends Phaser.Scene {
   /** Fundo do Topo (image layers do mapa); visível já no lobby. */
   private backdrop?: ParallaxBackdrop;
   private opponentSprite?: Phaser.GameObjects.Sprite;
-  private scanOverlay?: Phaser.GameObjects.Rectangle;
+  private opponentVisualState?: PlayerSnapshotMessage["state"];
 
   private statusText?: Phaser.GameObjects.Text;
   private peersText?: Phaser.GameObjects.Text;
@@ -84,6 +110,7 @@ export class MultiplayerScene extends Phaser.Scene {
   private opponentText?: Phaser.GameObjects.Text;
   private countdownText?: Phaser.GameObjects.Text;
   private notificationText?: Phaser.GameObjects.Text;
+  private dashText?: Phaser.GameObjects.Text;
   private lobbyObjects: Array<{ setVisible(value: boolean): unknown }> = [];
 
   private localPeerId = "";
@@ -106,9 +133,14 @@ export class MultiplayerScene extends Phaser.Scene {
   private raceLength = TILED_MULTIPLAYER_LENGTH;
   private raceEndX = TILED_MULTIPLAYER_END_X;
   private checkpointReached = false;
+  private checkpointsReached = 0;
+  private quitConfirmUntil = 0;
+  private rematchAllowedAt = Number.POSITIVE_INFINITY;
+  private lastCountdownSecond = 0;
   private respawning = false;
   private returning = false;
   private meshStartId = 0;
+  private readonly viewportLayouts: Array<() => void> = [];
 
   private lastHeartbeatAt = 0;
   private lastSnapshotAt = 0;
@@ -118,13 +150,21 @@ export class MultiplayerScene extends Phaser.Scene {
   private lastRemoteCredits = 0;
   private remoteCheckpointReached = false;
   private remoteClockOffsetMs?: number;
-  private remoteTarget?: { x: number; y: number; state: PlayerSnapshotMessage["state"]; credits: number };
+  private remoteTarget?: {
+    x: number;
+    y: number;
+    velocityX: number;
+    receivedAt: number;
+    state: PlayerSnapshotMessage["state"];
+    credits: number;
+  };
 
   constructor() {
     super("MultiplayerScene");
   }
 
   preload(): void {
+    AudioManager.preloadBgm(this, BGM.phase5);
     const spritesheets = [
       { key: ALEX_TEXTURE_KEY, url: new URL("../assets/player/alex-flesh/alex-flesh.png", import.meta.url) },
       { key: ALEX_LEGS_TEXTURE_KEY, url: new URL("../assets/player/alex-legs/alex-legs.png", import.meta.url) },
@@ -134,6 +174,26 @@ export class MultiplayerScene extends Phaser.Scene {
     ];
     spritesheets.forEach(({ key, url }) => {
       if (!this.textures.exists(key)) this.load.spritesheet(key, url.href, ALEX_SHEET_CONFIG);
+    });
+    const slideSpritesheets = [
+      { key: ALEX_SLIDE_TEXTURE_KEY, url: new URL("../assets/player/alex-slide/alex-slide-flesh.png", import.meta.url) },
+      { key: ALEX_SLIDE_LEGS_TEXTURE_KEY, url: new URL("../assets/player/alex-slide/alex-slide-legs.png", import.meta.url) },
+      { key: ALEX_SLIDE_ARMS_TEXTURE_KEY, url: new URL("../assets/player/alex-slide/alex-slide-arms.png", import.meta.url) },
+      { key: ALEX_SLIDE_EYES_TEXTURE_KEY, url: new URL("../assets/player/alex-slide/alex-slide-eyes.png", import.meta.url) },
+      { key: ALEX_SLIDE_DASH_TEXTURE_KEY, url: new URL("../assets/player/alex-slide/alex-slide-dash.png", import.meta.url) },
+    ];
+    slideSpritesheets.forEach(({ key, url }) => {
+      if (!this.textures.exists(key)) this.load.spritesheet(key, url.href, ALEX_SLIDE_SHEET_CONFIG);
+    });
+    const checkpointSpritesheets = [
+      { key: ALEX_CHECKPOINT_TEXTURE_KEY, url: new URL("../assets/player/alex-checkpoint/alex-checkpoint-flesh.png", import.meta.url) },
+      { key: ALEX_CHECKPOINT_LEGS_TEXTURE_KEY, url: new URL("../assets/player/alex-checkpoint/alex-checkpoint-legs.png", import.meta.url) },
+      { key: ALEX_CHECKPOINT_ARMS_TEXTURE_KEY, url: new URL("../assets/player/alex-checkpoint/alex-checkpoint-arms.png", import.meta.url) },
+      { key: ALEX_CHECKPOINT_EYES_TEXTURE_KEY, url: new URL("../assets/player/alex-checkpoint/alex-checkpoint-eyes.png", import.meta.url) },
+      { key: ALEX_CHECKPOINT_DASH_TEXTURE_KEY, url: new URL("../assets/player/alex-checkpoint/alex-checkpoint-dash.png", import.meta.url) },
+    ];
+    checkpointSpritesheets.forEach(({ key, url }) => {
+      if (!this.textures.exists(key)) this.load.spritesheet(key, url.href, ALEX_CHECKPOINT_SHEET_CONFIG);
     });
 
     const mapAssets = [
@@ -165,10 +225,30 @@ export class MultiplayerScene extends Phaser.Scene {
         new URL("../assets/narrative/gate/portao.png", import.meta.url).href,
       );
     }
+    if (!this.textures.exists(TILED_PHASE5_ROTATING_BARRIER_TEXTURE_KEY)) {
+      this.load.image(
+        TILED_PHASE5_ROTATING_BARRIER_TEXTURE_KEY,
+        new URL("../assets/props/hazards/rotating-energy-barrier.png", import.meta.url).href,
+      );
+    }
     if (!this.textures.exists(TILED_CHECKPOINT_TEXTURE_KEY)) {
       this.load.image(
         TILED_CHECKPOINT_TEXTURE_KEY,
         new URL("../assets/props/checkpoint/tv-checkpoint.png", import.meta.url).href,
+      );
+    }
+    if (!this.textures.exists("enemy-bandido")) {
+      this.load.spritesheet(
+        "enemy-bandido",
+        new URL("../assets/npcs/enemies/bandido/bandido.png", import.meta.url).href,
+        { frameWidth: 48, frameHeight: 48 },
+      );
+    }
+    if (!this.textures.exists("enemy-drone")) {
+      this.load.spritesheet(
+        "enemy-drone",
+        new URL("../assets/npcs/enemies/drone/drone.png", import.meta.url).href,
+        { frameWidth: 32, frameHeight: 32 },
       );
     }
     preloadBackdrop(this, TILED_MULTIPLAYER_MAP_DATA);
@@ -182,6 +262,7 @@ export class MultiplayerScene extends Phaser.Scene {
 
   create(): void {
     generatePlaceholderTextures(this);
+    AudioManager.playBgm(this, BGM.phase5, 0.3);
     this.cameras.main.setBackgroundColor(TILED_MULTIPLAYER_BACKGROUND);
     this.cameras.main.setScroll(0, 0);
     this.backdrop = new ParallaxBackdrop(this, TILED_MULTIPLAYER_MAP_DATA, TILED_MULTIPLAYER_OFFSET_Y);
@@ -189,7 +270,7 @@ export class MultiplayerScene extends Phaser.Scene {
     this.player = undefined;
     this.runtime = undefined;
     this.opponentSprite = undefined;
-    this.scanOverlay = undefined;
+    this.opponentVisualState = undefined;
     this.statusText = undefined;
     this.peersText = undefined;
     this.timerText = undefined;
@@ -197,13 +278,26 @@ export class MultiplayerScene extends Phaser.Scene {
     this.opponentText = undefined;
     this.countdownText = undefined;
     this.notificationText = undefined;
+    this.dashText = undefined;
+    this.viewportLayouts.length = 0;
+    this.scale.off(Phaser.Scale.Events.RESIZE, this.handleViewportResize);
+    this.scale.on(Phaser.Scale.Events.RESIZE, this.handleViewportResize);
     this.input$ = new InputManager(this);
     this.resetSessionState();
     this.createLobby();
     void this.startMesh();
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.events.off(
+        Phaser.Scenes.Events.POST_UPDATE,
+        this.updatePresentation,
+        this,
+      );
+      this.events.off("player-dash-start", this.handleDashStart, this);
+      this.events.off("player-dash-ready", this.handleDashReady, this);
       this.meshStartId += 1;
+      this.scale.off(Phaser.Scale.Events.RESIZE, this.handleViewportResize);
+      this.viewportLayouts.length = 0;
       this.clearStartHandshakeTimer();
       this.runtime?.destroy();
       this.backdrop?.destroy();
@@ -211,12 +305,32 @@ export class MultiplayerScene extends Phaser.Scene {
       this.mesh?.stop();
       this.mesh = undefined;
     });
+    this.events.on(
+      Phaser.Scenes.Events.POST_UPDATE,
+      this.updatePresentation,
+      this,
+    );
+    this.events.on("player-dash-start", this.handleDashStart, this);
+    this.events.on("player-dash-ready", this.handleDashReady, this);
   }
 
   update(time: number, delta: number): void {
-    if (this.input$.isCancelJustDown()) {
-      this.backToMenu();
-      this.input$.postUpdate();
+    // Em corrida só ESC/START saem (o B do controle é o slide) e pedem
+    // confirmação: sair entrega a vitória ao oponente.
+    const inRace = this.phase === "countdown" || this.phase === "racing";
+    if (inRace ? this.input$.isPauseJustDown() : this.input$.isCancelJustDown()) {
+      if (!inRace || time < this.quitConfirmUntil) {
+        this.backToMenu();
+        this.input$.postUpdate();
+        return;
+      }
+      this.quitConfirmUntil = time + QUIT_CONFIRM_WINDOW_MS;
+      this.flashRaceMessage("ESC / START DE NOVO PARA DESISTIR");
+    }
+
+    if (this.phase === "finished" && time >= this.rematchAllowedAt && this.input$.isConfirmJustDown()) {
+      // Revanche: a cena reinicia na mesma sala (o ?room= continua na URL).
+      this.scene.restart();
       return;
     }
 
@@ -234,7 +348,6 @@ export class MultiplayerScene extends Phaser.Scene {
         if (this.player && this.runtime) this.runtime.update(this.player);
       }
       if (this.phase === "racing") {
-        this.updateCamera();
         this.updateRaceHud();
       }
     }
@@ -243,9 +356,14 @@ export class MultiplayerScene extends Phaser.Scene {
       this.sendSnapshot();
       this.lastSnapshotAt = time;
     }
+    this.input$.postUpdate();
+  }
+
+  /** Apresentação local sincronizada após a etapa de física da corrida. */
+  private updatePresentation(_time: number, delta: number): void {
+    if (this.phase === "racing") this.updateCamera();
     this.updateOpponent(delta);
     this.backdrop?.update(this.cameras.main.scrollX, delta);
-    this.input$.postUpdate();
   }
 
   private resetSessionState(): void {
@@ -269,6 +387,9 @@ export class MultiplayerScene extends Phaser.Scene {
     this.raceLength = TILED_MULTIPLAYER_LENGTH;
     this.raceEndX = TILED_MULTIPLAYER_END_X;
     this.checkpointReached = false;
+    this.checkpointsReached = 0;
+    this.quitConfirmUntil = 0;
+    this.rematchAllowedAt = Number.POSITIVE_INFINITY;
     this.respawning = false;
     this.returning = false;
     this.snapshotSequence = 0;
@@ -277,50 +398,64 @@ export class MultiplayerScene extends Phaser.Scene {
     this.lastRemoteCredits = 0;
     this.remoteCheckpointReached = false;
     this.remoteTarget = undefined;
+    this.opponentVisualState = undefined;
     this.remoteClockOffsetMs = undefined;
   }
 
   private createLobby(): void {
+    const centerX = this.scale.width / 2;
+    const bottomY = this.scale.height - 40;
     // Painel translúcido atrás dos textos: o fundo do Topo (torres e lua)
     // atrapalhava a leitura das linhas pequenas. Some junto com o lobby.
-    this.addLobbyObject(
-      this.add
-        .rectangle(SCREEN_WIDTH / 2, 286, 880, 524, 0x0b1322, 0.78)
-        .setStrokeStyle(1, 0x2a3a5c)
-        .setDepth(-10)
-    );
-    this.addLobbyObject(
-      this.add
-        .rectangle(SCREEN_WIDTH / 2, SCREEN_HEIGHT - 40, 300, 28, 0x0b1322, 0.78)
-        .setDepth(-10)
-    );
-    this.addLobbyObject(
-      this.add
-        .text(SCREEN_WIDTH / 2, 82, "CORRIDA WEBRTC", textStyle("#7CFCEA", "42px"))
-        .setOrigin(0.5)
-    );
-    this.addLobbyObject(
-      this.add
+    const lobbyPanel = this.add
+      .rectangle(centerX, 286, Math.min(880, this.scale.width - 64), 524, 0x0b1322, 0.78)
+      .setStrokeStyle(1, 0x2a3a5c)
+      .setDepth(-10);
+    this.registerViewportLayout(() => {
+      lobbyPanel
+        .setPosition(this.scale.width / 2, 286)
+        .setDisplaySize(Math.min(880, this.scale.width - 64), 524);
+    });
+    this.addLobbyObject(lobbyPanel);
+
+    const footerPanel = this.add
+      .rectangle(centerX, bottomY, 300, 28, 0x0b1322, 0.78)
+      .setDepth(-10);
+    this.registerViewportLayout(() => footerPanel.setPosition(this.scale.width / 2, this.scale.height - 40));
+    this.addLobbyObject(footerPanel);
+
+    const title = this.add
+      .text(centerX, 82, "CORRIDA MULTIPLAYER", textStyle("#7CFCEA", "42px"))
+      .setOrigin(0.5);
+    this.registerViewportLayout(() => title.setX(this.scale.width / 2));
+    this.addLobbyObject(title);
+
+    const roomText = this.add
         .text(
-          SCREEN_WIDTH / 2,
+          centerX,
           145,
-          `SALA  ${this.roomId}\nVOCE  ${this.localPeerId}`,
+          `SALA  ${this.roomId}\nVOCÊ  ${this.localPeerId}`,
           { ...textStyle("#8892b0", "18px"), align: "center" }
         )
-        .setOrigin(0.5)
-    );
+        .setOrigin(0.5);
+    this.registerViewportLayout(() => roomText.setX(this.scale.width / 2));
+    this.addLobbyObject(roomText);
 
     this.statusText = this.add
-      .text(SCREEN_WIDTH / 2, 245, "Conectando ao servidor de sinalizacao...", textStyle("#FFD37C", "22px"))
+      .text(centerX, 245, "Conectando ao servidor...", textStyle("#FFD37C", "22px"))
       .setOrigin(0.5);
     this.peersText = this.add
-      .text(SCREEN_WIDTH / 2, 305, "Aguardando oponente", textStyle("#e8ecff", "26px"))
+      .text(centerX, 305, "Aguardando oponente", textStyle("#e8ecff", "26px"))
       .setOrigin(0.5);
+    this.registerViewportLayout(() => {
+      this.statusText?.setX(this.scale.width / 2);
+      this.peersText?.setX(this.scale.width / 2);
+    });
     this.addLobbyObject(this.statusText);
     this.addLobbyObject(this.peersText);
 
     const copyButton = this.add
-      .text(SCREEN_WIDTH / 2, 400, "[ COPIAR CONVITE PARA O OPONENTE ]", {
+      .text(centerX, 400, "[ COPIAR CONVITE PARA O OPONENTE ]", {
         ...textStyle("#7CFCEA", "20px"),
         backgroundColor: "#102824",
         padding: { x: 16, y: 10 },
@@ -328,26 +463,28 @@ export class MultiplayerScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true })
       .on("pointerdown", () => void this.copyInviteLink());
+    this.registerViewportLayout(() => copyButton.setX(this.scale.width / 2));
     copyButton.on("pointerover", () => copyButton.setColor("#FFD37C"));
     copyButton.on("pointerout", () => copyButton.setColor("#7CFCEA"));
     this.addLobbyObject(copyButton);
 
-    this.addLobbyObject(
-      this.add
+    const raceInfo = this.add
         .text(
-          SCREEN_WIDTH / 2,
+          centerX,
           505,
-          "2 jogadores • 20 creditos • 1 checkpoint • limite final de 20 s\n" +
-            "Tempo ajustado = tempo bruto - 0,5 s por credito",
+          "2 jogadores • 20 créditos • " + TILED_MULTIPLAYER_CHECKPOINT_COUNT + " checkpoints • limite final de 20 s\n" +
+            "Tempo ajustado = tempo bruto - 0,5 s por crédito",
           { ...textStyle("#8892b0", "16px"), align: "center" }
         )
-        .setOrigin(0.5)
-    );
-    this.addLobbyObject(
-      this.add
-        .text(SCREEN_WIDTH / 2, SCREEN_HEIGHT - 40, "ESC / B / SELECT para voltar", textStyle("#565f80", "14px"))
-        .setOrigin(0.5)
-    );
+        .setOrigin(0.5);
+    this.registerViewportLayout(() => raceInfo.setX(this.scale.width / 2));
+    this.addLobbyObject(raceInfo);
+
+    const backHint = this.add
+      .text(centerX, bottomY, "ESC / B / SELECT para voltar", textStyle("#565f80", "14px"))
+      .setOrigin(0.5);
+    this.registerViewportLayout(() => backHint.setPosition(this.scale.width / 2, this.scale.height - 40));
+    this.addLobbyObject(backHint);
   }
 
   private addLobbyObject<T extends { setVisible(value: boolean): unknown }>(object: T): T {
@@ -355,10 +492,19 @@ export class MultiplayerScene extends Phaser.Scene {
     return object;
   }
 
+  private readonly handleViewportResize = (): void => {
+    this.viewportLayouts.forEach((layout) => layout());
+  };
+
+  private registerViewportLayout(layout: () => void): void {
+    this.viewportLayouts.push(layout);
+    layout();
+  }
+
   private async startMesh(): Promise<void> {
     const startId = ++this.meshStartId;
     if (!("RTCPeerConnection" in window) || !("WebSocket" in window)) {
-      this.statusText?.setText("Este navegador nao oferece WebRTC.").setColor("#ff8a8a");
+      this.statusText?.setText("Este navegador não tem suporte ao multiplayer.").setColor("#ff8a8a");
       return;
     }
 
@@ -398,7 +544,7 @@ export class MultiplayerScene extends Phaser.Scene {
       this.mesh.addEventListener("mesherror", (event) => {
         console.error("Falha no mesh WebRTC", (event as CustomEvent<unknown>).detail);
         if (this.phase === "lobby") {
-          this.statusText?.setText("Falha ao negociar a conexao WebRTC.").setColor("#ff8a8a");
+          this.statusText?.setText("Falha ao conectar com o oponente.").setColor("#ff8a8a");
         }
       });
       this.mesh.addEventListener("protocolerror", (event) => {
@@ -409,7 +555,7 @@ export class MultiplayerScene extends Phaser.Scene {
     } catch (error) {
       console.error("Falha ao abrir a sinalizacao WebRTC", error);
       this.mesh = undefined;
-      this.statusText?.setText("Nao foi possivel abrir a sinalizacao.").setColor("#ff8a8a");
+      this.statusText?.setText("Não foi possível conectar ao servidor.").setColor("#ff8a8a");
     }
   }
 
@@ -417,7 +563,7 @@ export class MultiplayerScene extends Phaser.Scene {
     if (this.opponentPeerId && this.opponentPeerId !== peerId) return;
     this.opponentPeerId = peerId;
     if (recovered && this.phase !== "lobby") {
-      this.flashRaceMessage("CONEXAO WEBRTC RECUPERADA");
+      this.flashRaceMessage("CONEXÃO RECUPERADA");
       this.resendRaceState();
       return;
     }
@@ -429,9 +575,9 @@ export class MultiplayerScene extends Phaser.Scene {
   private handlePeerReconnecting(peerId: string): void {
     if (peerId !== this.opponentPeerId) return;
     if (this.phase === "lobby") {
-      this.statusText?.setText("Recuperando conexao WebRTC...").setColor("#FFD37C");
+      this.statusText?.setText("Recuperando conexão...").setColor("#FFD37C");
     } else if (this.phase !== "finished") {
-      this.flashRaceMessage("CONEXAO INSTAVEL — RECONECTANDO (10 S)");
+      this.flashRaceMessage("CONEXÃO INSTÁVEL — RECONECTANDO (10 S)");
     }
   }
 
@@ -517,7 +663,7 @@ export class MultiplayerScene extends Phaser.Scene {
     }
     const raceId = randomToken(12);
     this.preparedRaceId = raceId;
-    this.statusText?.setText("Aguardando confirmacao do oponente...").setColor("#FFD37C");
+    this.statusText?.setText("Aguardando confirmação do oponente...").setColor("#FFD37C");
     this.mesh?.broadcast({
       type: "race-prepare",
       protocolVersion: MULTIPLAYER_PROTOCOL_VERSION,
@@ -537,7 +683,7 @@ export class MultiplayerScene extends Phaser.Scene {
       return;
     }
     this.preparedRaceId = raceId;
-    this.statusText?.setText("Pronto. Aguardando confirmacao da largada...").setColor("#7CFCEA");
+    this.statusText?.setText("Pronto. Aguardando confirmação da largada...").setColor("#7CFCEA");
     this.mesh?.broadcast({
       type: "race-ready",
       protocolVersion: MULTIPLAYER_PROTOCOL_VERSION,
@@ -579,7 +725,7 @@ export class MultiplayerScene extends Phaser.Scene {
     const localStartAt = remoteStartAt + (this.remoteClockOffsetMs ?? 0);
     const leadTime = localStartAt - Date.now();
     if (leadTime < START_MIN_LEAD_MS || leadTime > START_MAX_LEAD_MS) {
-      this.failStartHandshake("Largada rejeitada por horario inconsistente.");
+      this.failStartHandshake("Largada rejeitada por horário inconsistente.");
       return;
     }
     this.clearStartHandshakeTimer();
@@ -590,7 +736,7 @@ export class MultiplayerScene extends Phaser.Scene {
     this.clearStartHandshakeTimer();
     this.startHandshakeTimer = this.time.delayedCall(START_HANDSHAKE_TIMEOUT_MS, () => {
       if (this.phase === "lobby" && this.preparedRaceId === raceId) {
-        this.failStartHandshake("Oponente nao confirmou a largada. Tentando novamente...");
+        this.failStartHandshake("Oponente não confirmou a largada. Tentando novamente...");
       }
     });
   }
@@ -664,43 +810,50 @@ export class MultiplayerScene extends Phaser.Scene {
     this.player.sprite.setVelocity(0, 0);
 
     this.opponentSprite = this.add
-      .sprite(this.raceSpawn.x, this.raceSpawn.y, ALEX_DASH_TEXTURE_KEY)
+      .sprite(this.raceSpawn.x - 40, this.raceSpawn.y, ALEX_DASH_TEXTURE_KEY)
       .setOrigin(0.5, 1)
       .setTint(0xff67d4)
       .setAlpha(0.68)
-      .setDepth(20);
+      .setDepth(19); // atrás de Alex: o rival não cobre o jogador na largada
     this.opponentSprite.anims.play(alexRunAnimationKey(ALEX_DASH_TEXTURE_KEY), true);
 
     this.createRaceHud();
   }
 
   private createRaceHud(): void {
-    this.add
-      .rectangle(0, 0, SCREEN_WIDTH, 82, 0x05050a, 0.88)
+    const centerX = this.scale.width / 2;
+    const centerY = this.scale.height / 2;
+    const hudPanel = this.add
+      .rectangle(0, 0, this.scale.width, 82, 0x05050a, 0.88)
       .setOrigin(0, 0)
       .setScrollFactor(0)
       .setDepth(1000);
+    this.registerViewportLayout(() => hudPanel.setDisplaySize(this.scale.width, 82));
     this.timerText = this.add
-      .text(SCREEN_WIDTH / 2, 18, "00:00.000", textStyle("#FFD37C", "28px"))
+      .text(centerX, 18, "00:00.000", textStyle("#FFD37C", "28px"))
       .setOrigin(0.5, 0)
       .setScrollFactor(0)
       .setDepth(1001);
     this.creditsText = this.add
-      .text(24, 18, `CREDITOS 0/${TILED_MULTIPLAYER_CREDIT_COUNT}`, textStyle("#7CFCEA", "18px"))
+      .text(24, 18, `CRÉDITOS 0/${TILED_MULTIPLAYER_CREDIT_COUNT}`, textStyle("#7CFCEA", "18px"))
+      .setScrollFactor(0)
+      .setDepth(1001);
+    this.dashText = this.add
+      .text(24, 46, "DASH PRONTO", textStyle("#8cf7ff", "16px"))
       .setScrollFactor(0)
       .setDepth(1001);
     this.opponentText = this.add
-      .text(SCREEN_WIDTH - 24, 18, "OPONENTE 0%", textStyle("#ff67d4", "18px"))
+      .text(this.scale.width - 24, 18, "OPONENTE 0%", textStyle("#ff67d4", "18px"))
       .setOrigin(1, 0)
       .setScrollFactor(0)
       .setDepth(1001);
     this.countdownText = this.add
-      .text(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, "", textStyle("#FFD37C", "72px"))
+      .text(centerX, centerY, "", textStyle("#FFD37C", "72px"))
       .setOrigin(0.5)
       .setScrollFactor(0)
       .setDepth(1200);
     this.notificationText = this.add
-      .text(SCREEN_WIDTH / 2, 105, "", {
+      .text(centerX, 105, "", {
         ...textStyle("#7CFCEA", "20px"),
         backgroundColor: "#05050acc",
         padding: { x: 12, y: 8 },
@@ -709,26 +862,53 @@ export class MultiplayerScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(1100)
       .setVisible(false);
-    this.add
+    const controlsHint = this.add
       .text(
-        SCREEN_WIDTH / 2,
-        SCREEN_HEIGHT - 18,
-        "PULO W/ESPACO  •  SLIDE S  •  ATAQUE J  •  SCAN E/L  •  DASH K/SHIFT",
+        centerX,
+        this.scale.height - 18,
+        this.controlsHint(),
         textStyle("#8892b0", "13px")
       )
       .setOrigin(0.5, 1)
       .setScrollFactor(0)
       .setDepth(1001);
+    this.registerViewportLayout(() => {
+      this.timerText?.setX(this.scale.width / 2);
+      this.opponentText?.setX(this.scale.width - 24);
+      this.countdownText?.setPosition(this.scale.width / 2, this.scale.height / 2);
+      this.notificationText?.setX(this.scale.width / 2);
+      controlsHint.setPosition(this.scale.width / 2, this.scale.height - 18);
+    });
+  }
+
+  private controlsHint(): string {
+    const gamepad = (this.input.gamepad?.total ?? 0) > 0;
+    const label = (action: GameplayControlAction): string =>
+      gamepad ? GAMEPAD_BINDING_LABELS[action] : keyboardBindingLabel(action);
+    return [
+      `PULO ${label("jump")}`,
+      `SLIDE ${label("slide")}`,
+      `ATAQUE ${label("attack")}`,
+      `SCAN ${label("scan")}`,
+      `DASH ${label("dash")}`,
+    ].join("  •  ");
   }
 
   private updateCountdown(): void {
     const remaining = this.raceStartAt - Date.now();
     if (remaining > 0) {
-      this.countdownText?.setText(String(Math.max(1, Math.ceil(remaining / 1000))));
+      const second = Math.max(1, Math.ceil(remaining / 1000));
+      if (second !== this.lastCountdownSecond) {
+        this.lastCountdownSecond = second;
+        AudioManager.playSfx(this, SFX.uiSelect, { volume: 0.6 });
+      }
+      this.countdownText?.setText(String(second));
       return;
     }
 
     this.phase = "racing";
+    this.lastCountdownSecond = 0;
+    AudioManager.playSfx(this, SFX.uiConfirm, { volume: 0.6 });
     this.countdownText?.setText("CORRA!");
     this.time.delayedCall(650, () => this.countdownText?.setVisible(false));
     if (this.player) {
@@ -737,16 +917,36 @@ export class MultiplayerScene extends Phaser.Scene {
     }
   }
 
+  /** Para Alex e todos os loops pertencentes à corrida, inclusive drones. */
+  private freezePlayer(): void {
+    this.player?.sprite.setVelocity(0, 0);
+    if (this.player?.sprite.body) this.player.sprite.body.enable = false;
+    this.handleScanPulse(false);
+    AudioManager.stopAllLoopsForScene(this);
+  }
+
+  private handleDashStart(): void {
+    this.dashText?.setText("DASH RECARREGANDO").setColor("#7896a8");
+  }
+
+  private handleDashReady(): void {
+    this.dashText?.setText("DASH PRONTO").setColor("#8cf7ff");
+  }
+
   private handleCreditCollected(id: string): void {
     if (this.collectedCredits.has(id)) return;
     this.collectedCredits.add(id);
-    this.creditsText?.setText(`CREDITOS ${this.collectedCredits.size}/${TILED_MULTIPLAYER_CREDIT_COUNT}`);
+    AudioManager.playSfx(this, SFX.credit, { volume: 0.42 });
+    this.creditsText?.setText(`CRÉDITOS ${this.collectedCredits.size}/${TILED_MULTIPLAYER_CREDIT_COUNT}`);
   }
 
   private handleCheckpoint(x: number, y: number): void {
     this.checkpoint = { x, y };
     this.checkpointReached = true;
-    this.flashRaceMessage("CHECKPOINT CENTRAL ATIVADO");
+    this.checkpointsReached += 1;
+    // Toque curto: o sfx-checkpoint da campanha é um loop longo da animação da TV.
+    AudioManager.playSfx(this, SFX.uiConfirm, { volume: 0.5 });
+    this.flashRaceMessage(`CHECKPOINT ${this.checkpointsReached}/${TILED_MULTIPLAYER_CHECKPOINT_COUNT}`);
   }
 
   private handlePlayerDeath(): void {
@@ -754,30 +954,20 @@ export class MultiplayerScene extends Phaser.Scene {
     this.respawning = true;
     this.handleScanPulse(false);
     this.cameras.main.shake(160, 0.01);
-    this.flashRaceMessage("FALHA — CRONOMETRO CONTINUA");
+    this.flashRaceMessage("FALHA — CRONÔMETRO CONTINUA");
     this.time.delayedCall(700, () => {
       if (this.phase !== "racing" || this.localResult || this.localDnf || !this.player) return;
       this.runtime?.resetMutableObstacles();
       this.player.respawn(this.checkpoint.x, this.checkpoint.y);
+      this.handleDashReady(); // o respawn zera a recarga sem emitir o evento
       this.respawning = false;
     });
   }
 
   private handleScanPulse(active: boolean): void {
-    if (active) {
-      if (!this.scanOverlay) {
-        this.scanOverlay = this.add
-          .rectangle(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0x36e2ff, 0.1)
-          .setOrigin(0)
-          .setScrollFactor(0)
-          .setDepth(900);
-      }
-      this.scanOverlay.setVisible(true);
-      this.runtime?.setScanActive(true);
-    } else {
-      this.scanOverlay?.setVisible(false);
-      this.runtime?.setScanActive(false);
-    }
+    // O pulso circular do Player já comunica o scan. Um retângulo ciano
+    // sobre o viewport inteiro tingia cenário e HUD no multiplayer.
+    this.runtime?.setScanActive(active);
   }
 
   private handleLocalFinish(): void {
@@ -790,8 +980,8 @@ export class MultiplayerScene extends Phaser.Scene {
       return;
     }
     this.localResult = { rawTimeMs, credits: this.collectedCredits.size };
-    this.player?.sprite.setVelocity(0, 0);
-    if (this.player?.sprite.body) this.player.sprite.body.enable = false;
+    AudioManager.playSfx(this, SFX.phaseClear, { volume: 0.62 });
+    this.freezePlayer();
 
     this.finishDeadlineAt ??= Date.now() + SECOND_PLAYER_LIMIT_MS;
     this.mesh?.broadcast({
@@ -804,7 +994,7 @@ export class MultiplayerScene extends Phaser.Scene {
     });
 
     if (this.remoteResult || this.remoteDnf) this.showResults();
-    else this.flashRaceMessage("VOCE TERMINOU — 20 S PARA O OPONENTE");
+    else this.flashRaceMessage("VOCÊ TERMINOU — 20 S PARA O OPONENTE");
   }
 
   private handleRemoteFinish(message: RaceFinishMessage): void {
@@ -837,15 +1027,14 @@ export class MultiplayerScene extends Phaser.Scene {
     };
     this.finishDeadlineAt ??= convertedDeadline;
     if (this.localResult || this.localDnf) this.showResults();
-    else this.flashRaceMessage("OPONENTE TERMINOU — VOCE TEM 20 S");
+    else this.flashRaceMessage("OPONENTE TERMINOU — VOCÊ TEM 20 S");
   }
 
   private checkFinishDeadline(): void {
     if (!this.finishDeadlineAt || Date.now() < this.finishDeadlineAt || this.phase !== "racing") return;
     if (!this.localResult && !this.localDnf) {
       this.localDnf = true;
-      this.player?.sprite.setVelocity(0, 0);
-      if (this.player?.sprite.body) this.player.sprite.body.enable = false;
+      this.freezePlayer();
       this.broadcastDnf();
     } else if (this.localResult && !this.remoteResult) {
       if (Date.now() < this.finishDeadlineAt + RESULT_NETWORK_GRACE_MS) return;
@@ -857,60 +1046,77 @@ export class MultiplayerScene extends Phaser.Scene {
   private showResults(): void {
     if (this.phase === "finished") return;
     this.phase = "finished";
-    this.player?.sprite.setVelocity(0, 0);
-    if (this.player?.sprite.body) this.player.sprite.body.enable = false;
+    this.freezePlayer();
 
-    const verdict = this.calculateVerdict();
-    const localLine = this.formatResultLine("VOCE", this.localResult, this.localDnf);
+    const header = `${"".padEnd(8)}  ${"BRUTO".padEnd(9)}  ${"CR".padEnd(5)}  AJUSTADO`;
+    const localLine = this.formatResultLine("VOCÊ", this.localResult, this.localDnf);
     const remoteLine = this.formatResultLine("OPONENTE", this.remoteResult, this.remoteDnf);
-    this.showResultOverlay(`${verdict}\n\n${localLine}\n${remoteLine}`);
+    this.showResultOverlay(this.calculateVerdict(), [header, localLine, remoteLine].join("\n"));
   }
 
   private calculateVerdict(): string {
     if (this.localDnf) return "DERROTA — DNF";
-    if (this.remoteDnf) return "VITORIA — OPONENTE DNF";
+    if (this.remoteDnf) return "VITÓRIA — OPONENTE DNF";
     if (!this.localResult || !this.remoteResult) return "RESULTADO INCOMPLETO";
 
     const localAdjusted = adjustedTime(this.localResult);
     const remoteAdjusted = adjustedTime(this.remoteResult);
-    if (localAdjusted !== remoteAdjusted) return localAdjusted < remoteAdjusted ? "VITORIA" : "DERROTA";
+    if (localAdjusted !== remoteAdjusted) return localAdjusted < remoteAdjusted ? "VITÓRIA" : "DERROTA";
     if (this.localResult.credits !== this.remoteResult.credits) {
-      return this.localResult.credits > this.remoteResult.credits ? "VITORIA" : "DERROTA";
+      return this.localResult.credits > this.remoteResult.credits ? "VITÓRIA" : "DERROTA";
     }
     if (this.localResult.rawTimeMs !== this.remoteResult.rawTimeMs) {
-      return this.localResult.rawTimeMs < this.remoteResult.rawTimeMs ? "VITORIA" : "DERROTA";
+      return this.localResult.rawTimeMs < this.remoteResult.rawTimeMs ? "VITÓRIA" : "DERROTA";
     }
     return "EMPATE";
   }
 
+  /** Colunas de largura fixa: a fonte é monoespaçada e as linhas ficam alinhadas. */
   private formatResultLine(label: string, result: RaceResult | undefined, dnf: boolean): string {
-    if (dnf || !result) return `${label}: DNF`;
-    return `${label}: ${formatTime(result.rawTimeMs)} bruto | ${result.credits} cr | ${formatTime(adjustedTime(result))} ajustado`;
+    if (dnf || !result) return `${label.padEnd(8)}  DNF`;
+    const credits = `${String(result.credits).padStart(2)} cr`;
+    return `${label.padEnd(8)}  ${formatTime(result.rawTimeMs)}  ${credits}  ${formatTime(adjustedTime(result))}`;
   }
 
   private showDisconnectVictory(): void {
     if (this.phase === "finished") return;
     this.phase = "finished";
-    this.player?.sprite.setVelocity(0, 0);
-    if (this.player?.sprite.body) this.player.sprite.body.enable = false;
-    this.showResultOverlay("VITORIA\n\nO oponente desconectou durante a corrida.");
+    this.freezePlayer();
+    this.showResultOverlay("VITÓRIA", "O oponente desconectou durante a corrida.");
   }
 
-  private showResultOverlay(content: string): void {
+  private showResultOverlay(verdict: string, details: string): void {
     this.countdownText?.setVisible(false);
-    this.add
-      .rectangle(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, 880, 360, 0x05050a, 0.96)
-      .setStrokeStyle(3, 0x7cfcea)
+    this.rematchAllowedAt = this.time.now + REMATCH_GUARD_MS;
+    const color = verdict.startsWith("VITÓRIA") ? "#7CFC9A" : verdict.startsWith("DERROTA") ? "#ff8a8a" : "#FFD37C";
+    const centerX = this.scale.width / 2;
+    const centerY = this.scale.height / 2;
+    const resultPanel = this.add
+      .rectangle(centerX, centerY, Math.min(880, this.scale.width - 64), 360, 0x05050a, 0.96)
+      .setStrokeStyle(3, Phaser.Display.Color.HexStringToColor(color).color)
       .setScrollFactor(0)
       .setDepth(2000);
-    this.add
-      .text(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 - 30, `${content}\n\nESC / B para voltar ao menu`, {
-        ...textStyle("#e8ecff", "22px"),
-        align: "center",
-      })
-      .setOrigin(0.5)
-      .setScrollFactor(0)
-      .setDepth(2001);
+    const lines: Array<[number, string, string, string]> = [
+      [centerY - 110, verdict, color, "48px"],
+      [centerY + 10, details, "#e8ecff", "22px"],
+      [centerY + 135, "ENTER / A: revanche  •  ESC / B: menu", "#8892b0", "16px"],
+    ];
+    const resultTexts = lines.map(([y, content, textColor, size]) => (
+      this.add.text(centerX, y, content, textStyle(textColor, size))
+        .setOrigin(0.5)
+        .setScrollFactor(0)
+        .setDepth(2001)
+    ));
+    this.registerViewportLayout(() => {
+      const currentCenterY = this.scale.height / 2;
+      resultPanel
+        .setPosition(this.scale.width / 2, currentCenterY)
+        .setDisplaySize(Math.min(880, this.scale.width - 64), 360);
+      const offsets = [-110, 10, 135];
+      resultTexts.forEach((text, index) => {
+        text.setPosition(this.scale.width / 2, currentCenterY + offsets[index]);
+      });
+    });
   }
 
   private sendSnapshot(): void {
@@ -942,6 +1148,8 @@ export class MultiplayerScene extends Phaser.Scene {
     this.remoteTarget = {
       x: Phaser.Math.Clamp(snapshot.x, 0, this.raceLength),
       y: Phaser.Math.Clamp(snapshot.y, -500, SCREEN_HEIGHT + 500),
+      velocityX: Phaser.Math.Clamp(snapshot.velocityX, -OPPONENT_MAX_LEAD_SPEED, OPPONENT_MAX_LEAD_SPEED),
+      receivedAt: Date.now(),
       state: snapshot.state,
       credits: Phaser.Math.Clamp(Math.floor(snapshot.credits), 0, TILED_MULTIPLAYER_CREDIT_COUNT),
     };
@@ -1013,25 +1221,41 @@ export class MultiplayerScene extends Phaser.Scene {
   private updateOpponent(delta: number): void {
     if (!this.opponentSprite || !this.remoteTarget) return;
     const interpolation = Math.min(1, delta / 80);
-    this.opponentSprite.x = Phaser.Math.Linear(this.opponentSprite.x, this.remoteTarget.x, interpolation);
+    // Projeta o snapshot pela velocidade recebida para compensar o atraso de rede.
+    const leadSeconds = Math.min(OPPONENT_MAX_LEAD_MS, Date.now() - this.remoteTarget.receivedAt) / 1000;
+    const targetX = Phaser.Math.Clamp(
+      this.remoteTarget.x + this.remoteTarget.velocityX * leadSeconds,
+      0,
+      this.raceLength,
+    );
+    this.opponentSprite.x = Phaser.Math.Linear(this.opponentSprite.x, targetX, interpolation);
     this.opponentSprite.y = Phaser.Math.Linear(this.opponentSprite.y, this.remoteTarget.y, interpolation);
     this.opponentSprite.setAlpha(this.remoteTarget.state === "dead" ? 0.25 : 0.68);
-    if (this.remoteTarget.state === "sliding") {
-      this.opponentSprite.anims.stop();
-      this.opponentSprite.setFrame(ALEX_SLIDE_FRAME);
-    } else {
+    const state = this.remoteTarget.state;
+    const oneShot = state === "sliding" || state === "dead";
+    if (state !== this.opponentVisualState) {
+      const key =
+        state === "sliding" ? alexSlideAnimationKey(ALEX_DASH_TEXTURE_KEY)
+        : state === "attacking" ? alexAttackAnimationKey(ALEX_DASH_TEXTURE_KEY)
+        : state === "dead" ? alexHurtAnimationKey(ALEX_DASH_TEXTURE_KEY)
+        : alexRunAnimationKey(ALEX_DASH_TEXTURE_KEY);
+      this.opponentSprite.anims.play(key, true);
+    } else if (!oneShot && !this.opponentSprite.anims.isPlaying) {
+      // O golpe terminou e o estado ainda não mudou: volta à corrida.
       this.opponentSprite.anims.play(alexRunAnimationKey(ALEX_DASH_TEXTURE_KEY), true);
     }
+    this.opponentVisualState = this.remoteTarget.state;
   }
 
   private updateCamera(): void {
     if (!this.player) return;
+    const viewportWidth = this.cameras.main.width;
     this.cameras.main.scrollX = Math.floor(
       Phaser.Math.Clamp(
-        this.player.sprite.x - SCREEN_WIDTH * CAMERA.playerScreenRatioX,
+        this.player.sprite.x - viewportWidth * CAMERA.playerScreenRatioX,
         0,
-        Math.max(0, this.raceLength - SCREEN_WIDTH)
-      )
+        Math.max(0, this.raceLength - viewportWidth),
+      ),
     );
   }
 
@@ -1066,16 +1290,16 @@ export class MultiplayerScene extends Phaser.Scene {
     if (this.phase !== "lobby" || this.opponentPeerId) return;
     switch (state) {
       case "connecting":
-        this.statusText?.setText("Conectando ao servidor de sinalizacao...").setColor("#FFD37C");
+        this.statusText?.setText("Conectando ao servidor...").setColor("#FFD37C");
         break;
       case "open":
         this.statusText?.setText("Servidor conectado. Aguardando oponente...").setColor("#7CFCEA");
         break;
       case "closed":
-        this.statusText?.setText("Sinalizacao desconectada. Reconectando...").setColor("#FFD37C");
+        this.statusText?.setText("Servidor desconectado. Reconectando...").setColor("#FFD37C");
         break;
       case "error":
-        this.statusText?.setText("Servidor indisponivel. Use npm run dev:multiplayer.").setColor("#ff8a8a");
+        this.statusText?.setText("Servidor indisponível. Tente novamente em instantes.").setColor("#ff8a8a");
         break;
     }
   }
@@ -1098,6 +1322,7 @@ export class MultiplayerScene extends Phaser.Scene {
     this.meshStartId += 1;
     this.mesh?.stop();
     this.mesh = undefined;
+    removeRoomFromUrl();
     this.scene.start("MenuScene");
   }
 }
@@ -1170,6 +1395,14 @@ function roomFromUrl(): string {
     window.history.replaceState(null, "", url);
   }
   return roomId;
+}
+
+/** Ao abandonar a corrida, F5 deve permanecer no menu em vez de reabrir o convite. */
+function removeRoomFromUrl(): void {
+  const url = new URL(window.location.href);
+  if (!url.searchParams.has("room")) return;
+  url.searchParams.delete("room");
+  window.history.replaceState(null, "", url);
 }
 
 function createPeerId(): string {

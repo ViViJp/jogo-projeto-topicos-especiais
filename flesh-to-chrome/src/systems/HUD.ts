@@ -17,9 +17,18 @@ export class HUD {
   private dashBatteryStatus: Phaser.GameObjects.Text;
   private dashRechargeTween?: Phaser.Tweens.Tween;
   private dashReady = true;
+  private hudChrome: Phaser.GameObjects.Graphics;
+  private destroyed = false;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
+    this.hudChrome = scene.add.graphics().setScrollFactor(0).setDepth(999);
+    this.hudChrome.fillStyle(0x050a12, 0.82);
+    this.hudChrome.fillRoundedRect(14, 12, 360, 70, 8);
+    this.hudChrome.lineStyle(2, 0x36e2ff, 0.5);
+    this.hudChrome.strokeRoundedRect(14, 12, 360, 70, 8);
+    this.hudChrome.fillStyle(0x36e2ff, 0.8);
+    this.hudChrome.fillRect(14, 12, 5, 70);
     const style: Phaser.Types.GameObjects.Text.TextStyle = {
       fontFamily: "Courier New, monospace",
       fontSize: "20px",
@@ -29,17 +38,23 @@ export class HUD {
     };
 
     this.phaseText = scene.add
-      .text(24, 20, "Créditos da fase: 0/0", style)
+      .text(30, 22, "SETOR // CRÉDITOS 0/0", style)
       .setScrollFactor(0)
       .setDepth(1000);
 
     this.totalText = scene.add
-      .text(24, 48, "Total: 0", style)
+      .text(30, 50, "CARTEIRA // 0 CR", style)
       .setScrollFactor(0)
       .setDepth(1000);
 
     this.abilityIcons = scene.add
-      .text(24, 76, "", { ...style, fontSize: "16px", color: "#B8C1FF" })
+      .text(22, 91, "", {
+        ...style,
+        fontSize: "13px",
+        color: "#B8C1FF",
+        backgroundColor: "#050a12cc",
+        padding: { x: 8, y: 4 },
+      })
       .setScrollFactor(0)
       .setDepth(1000);
 
@@ -100,11 +115,24 @@ export class HUD {
       .setScrollFactor(0)
       .setDepth(1000)
       .setVisible(false);
+
+    scene.scale.on(Phaser.Scale.Events.RESIZE, this.handleResize);
+    scene.events.once(Phaser.Scenes.Events.SHUTDOWN, this.handleSceneShutdown);
+    this.handleResize();
   }
 
+  private readonly handleResize = (): void => {
+    this.promptText.setX(this.scene.scale.width / 2);
+    this.dashBattery.setX(this.scene.scale.width - 170);
+  };
+
+  private readonly handleSceneShutdown = (): void => {
+    this.destroy();
+  };
+
   setCredits(phaseValue: number, phaseTotal: number, total: number): void {
-    this.phaseText.setText(`Créditos da fase: ${phaseValue}/${phaseTotal}`);
-    this.totalText.setText(`Total: ${total}`);
+    this.phaseText.setText(`SETOR // CRÉDITOS ${phaseValue}/${phaseTotal}`);
+    this.totalText.setText(`CARTEIRA // ${total} CR`);
   }
 
   setAbilities(labels: string[]): void {
@@ -187,7 +215,12 @@ export class HUD {
   }
 
   destroy(): void {
+    if (this.destroyed) return;
+    this.destroyed = true;
+    this.scene.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize);
+    this.scene.events.off(Phaser.Scenes.Events.SHUTDOWN, this.handleSceneShutdown);
     this.dashRechargeTween?.stop();
+    this.hudChrome.destroy();
     this.phaseText.destroy();
     this.totalText.destroy();
     this.abilityIcons.destroy();

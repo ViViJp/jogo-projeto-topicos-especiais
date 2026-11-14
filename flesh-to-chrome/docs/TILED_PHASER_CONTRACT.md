@@ -41,7 +41,7 @@ Para a Fase 3:
 - Arquivo autoral: **src/assets/maps/meio-urbano/fase-3.tmj**
 - Arquivo exportado: **src/assets/maps/meio-urbano/fase-3.json**
 - Tileset: **warped-city-environment**
-- Status: **blockout autoral integrado ao Phaser e disponível no seletor temporário de fases**
+- Status: **blockout autoral integrado ao Phaser**
 
 > **Exportação da Fase 3:** o arquivo `.tmj` pode permanecer comprimido para
 > edição no Tiled, mas o `.json` consumido pelo jogo deve usar dados de layer
@@ -63,7 +63,7 @@ Para a Fase 5:
 - Arquivo autoral: **src/assets/maps/topo/fase-5.tmj**
 - Arquivo exportado: **src/assets/maps/topo/fase-5.json**
 - Tileset principal: **cyber-purp**
-- Status: **blockout integrado ao Phaser e disponível no seletor temporário**
+- Status: **blockout integrado ao Phaser**
 
 ## 3. Camadas oficiais
 
@@ -156,6 +156,7 @@ hazard
 spawn
 phase_end
 broken_pipe
+low_pipe
 risk
 normal
 ~~~
@@ -178,7 +179,7 @@ A integração trata esses valores como case-sensitive.
 - IDs lógicos devem ser únicos dentro da fase.
 - Padrão de ID recomendado: **f<fase>-<tipo>-<nn>**.
 - Exemplos: **f1-risk-01**, **f1-safe-01**, **f1-cp1**.
-- Objetos de hazard devem usar nomes sequenciais, como **toxic_water_01**, **electric_wire_01** e **broken_pipe_01**.
+- Objetos de hazard devem usar nomes sequenciais, como **toxic_water_01**, **electric_wire_01**, **broken_pipe_01** e **low_pipe_01**.
 
 ### Coordenadas
 
@@ -239,7 +240,7 @@ kind = toxic_water
 
 | Propriedade | Tipo | Valores atuais | Obrigatória |
 |---|---|---|---|
-| **kind** | string | **toxic_water**, **electric_wire**, **broken_pipe** | sim |
+| **kind** | string | **toxic_water**, **electric_wire**, **broken_pipe**, **low_pipe** | sim |
 
 #### Comportamento por **kind**
 
@@ -247,7 +248,8 @@ kind = toxic_water
 |---|---|---|
 | **toxic_water** | água tóxica/poço contaminado | morte ao contato, em qualquer estado |
 | **electric_wire** | fio/cabo energizado na altura do corpo | morte ao contato, exceto quando Alex passa corretamente em estado de slide |
-| **broken_pipe** | cano ou tubulação rompida | morte imediata ao contato, em qualquer estado, inclusive corrida, pulo ou slide |
+| **broken_pipe** | cano ou tubulação rompida | morte ao contato, em qualquer estado |
+| **low_pipe** | cano baixo suspenso | morte quando a hitbox física toca o retângulo; o vão de 48 px permite passar por baixo sem contato somente durante o slide |
 
 #### Regra específica para canos rompidos
 
@@ -258,10 +260,25 @@ Todo cano rompido que possa ser tocado pelo jogador deve ser tratado como hazard
 3. usar **Classe = hazard**;
 4. adicionar a propriedade string **kind = broken_pipe**;
 5. usar nome sequencial **broken_pipe_01**, **broken_pipe_02**, etc.;
-6. ajustar o retângulo ao trecho visual letal;
-7. testar contato correndo, pulando e deslizando — os três devem resultar em morte.
+6. alinhar o retângulo ao trecho visual letal;
+7. testar contato em todos os estados — qualquer sobreposição deve resultar em morte.
 
 Não colocar o cano rompido apenas em **ground**, pois colisão sólida e hazard letal são responsabilidades diferentes. Tiles estruturais não letais que sustentem o cano podem continuar em **ground**, mas a parte rompida/letal deve ficar visualmente em **hazards** e logicamente em **objects**.
+
+#### Regra específica para canos baixos suspensos
+
+Os 12 canos baixos da Fase 1 usam visual de **128 × 32 px** na layer
+**hazards** e um Rectangle Object correspondente em **objects**, com
+**Classe = hazard** e **kind = low_pipe**. Nenhum tile desses canos pode
+permanecer em **ground**, pois isso recriaria uma superfície sólida onde Alex
+conseguiria pousar.
+
+O retângulo lógico deve acompanhar somente a arte, sem extensão invisível. A
+base do cano fica 48 px acima do piso: a hitbox normal de Alex, com 50 px,
+encosta e morre; a hitbox de slide, com 30 px, atravessa o vão sem contato.
+Pular contra a lateral, atingir a parte inferior ou aterrissar sobre o cano
+também causa morte. Encerrar o slide antes de sair do volume volta a expor a
+hitbox normal e deve matar Alex.
 
 **Comportamento esperado no Phaser:** criar uma zona física invisível para cada objeto. O comportamento deve ser despachado pelo valor de **kind**, sem depender de fallback para tipos desconhecidos.
 
@@ -364,17 +381,24 @@ No runtime atual, a velocidade é aplicada somente enquanto o corpo de Alex est�
 | --- | --- | --- |
 | **press** | prensa hidráulica dedicada | desce na janela ativa; hitbox acompanha o cabeçote |
 | **steam** | jato de vapor sobre bocal fixo | pluma nasce no topo do cano; hitbox acompanha a altura emitida |
-| **mech_arm** | braço mecânico | segmentos se estendem e recolhem; hitbox acompanha a ponta |
+| **mech_arm** | braço mecânico composto | carcaça fixa no teto, eixo repetível e garra móvel; hitbox preserva o curso autorado |
 
 Os três valores usam o ciclo determinístico **inativo → aviso → ativo** do
 `TiledPhase2Runtime`. O aviso mantém um contorno amarelo, enquanto a janela
-ativa executa movimento contínuo com entrada, sustentação e retração. A zona
+ativa executa movimento contínuo com entrada, sustentação e retração. Prensa e
+braço também piscam uma luz laranja na própria base durante o aviso; o bip fica
+restrito à prensa para evitar poluição sonora. A zona
 física é reposicionada e redimensionada a cada frame pela mesma amostra de
 tempo que move a arte. A prensa permanece letal em qualquer estado quando há
 contato físico com o cabeçote; vapor e braço mecânico só são letais durante a
 janela ativa. Os valores padrão ficam em
 `GAMEPLAY_TIMING.industrialHazards`; cada objeto pode sobrescrever
 `cycle_ms`, `active_ms`, `warning_ms` e `phase_ms` no Tiled.
+
+O braço mecânico usa `mech-arm-housing.png` fixo, repete
+`mech-arm-shaft.png` verticalmente com `TileSprite` e desloca
+`mech-arm-claw.png` pelo mesmo valor contínuo que redimensiona a hitbox. Assim,
+nenhuma das extremidades é escalada ou deformada durante o ciclo.
 
 A prensa oculta os antigos GIDs estruturais e instancia
 `props/hazards/hydraulic-press.png` com placa de impacto legível. No vapor, o
@@ -544,9 +568,7 @@ propriedade string `ending`, com valor `chrome` ou `flesh`.
 Esses objetos não são hazards. Ao concluir a Fase 5, a campanha consolida os
 créditos, cria o save narrativo pré-Portão e abre `GateScene`. A cena apresenta
 as opções Chrome e Flesh com teclado, controle ou ponteiro. Chrome encaminha ao
-Final Chrome; Flesh abre a reprovação de George e inicia a descida no Topo. Em
-modo de teste, alcançar `phase_end` continua retornando ao seletor sem alterar o
-save enquanto a descida não tiver sido confirmada.
+Final Chrome; Flesh abre a reprovação de George e inicia a descida no Topo.
 
 ### 6.17 **memory_glitch**
 
@@ -614,7 +636,7 @@ checkpoint
 #### Valores usados
 
 ~~~text
-hazard.kind = toxic_water | electric_wire | broken_pipe
+hazard.kind = toxic_water | electric_wire | broken_pipe | low_pipe
 credit.route = normal | risk
 phase_end.fase = 1
 clinic.implant = legs
@@ -925,6 +947,18 @@ Dependendo da versão/exportação do Tiled, a informação exibida na interface
 12. Somente depois bloquear **ground**, **hazards** e **objects** e iniciar **background → deco-back → deco**.
 
 ## 12. Histórico de alterações
+
+### v0.24 — 2026-11-14
+
+- reforçado que a layer `hazards` da Fase 1 é somente visual e nunca oferece
+  apoio sólido ao jogador;
+- movidos os 12 canos baixos de 128 × 32 px de `ground` para `hazards`,
+  preservando posição e arte no TMJ e no JSON exportado;
+- adicionados os objetos `low_pipe_01` a `low_pipe_12`, todos com retângulos
+  alinhados à arte e comportamento letal ao contato;
+- preservado o vão de 48 px: Alex em pé toca o cano, enquanto a hitbox de
+  slide passa por baixo sem sobreposição;
+- `broken_pipe` permanece um hazard distinto e letal em qualquer estado.
 
 ### v0.23 — 2026-11-10
 

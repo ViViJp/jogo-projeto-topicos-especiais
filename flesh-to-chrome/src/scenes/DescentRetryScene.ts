@@ -2,6 +2,9 @@ import Phaser from "phaser";
 import { InputManager } from "../systems/InputManager";
 import { SaveState } from "../systems/SaveState";
 import { descentStepAt } from "../systems/DescentProgression";
+import { AudioManager, BGM, SFX } from "../systems/AudioManager";
+import type { GameSceneData } from "./GameScene";
+import { startLoadingTransition } from "../systems/SceneTransition";
 
 export class DescentRetryScene extends Phaser.Scene {
   private input$!: InputManager;
@@ -13,14 +16,20 @@ export class DescentRetryScene extends Phaser.Scene {
     super("DescentRetryScene");
   }
 
+  preload(): void {
+    AudioManager.preloadBgm(this, BGM.gate);
+  }
+
   create(): void {
     const width = this.scale.width;
     const height = this.scale.height;
     const centerX = width / 2;
     const choiceOffsetX = Math.min(210, width * 0.2);
-    const step = descentStepAt(SaveState.load().get().descentState.currentStep);
+    const progression = SaveState.load();
+    const step = descentStepAt(progression.get().descentState.currentStep);
     const lostMemory = step?.memoryTitle ?? "FRAGMENTO DESCONHECIDO";
     this.input$ = new InputManager(this);
+    AudioManager.playBgm(this, BGM.gate, 0.24);
     this.retrySelected = true;
     this.cameras.main.setBackgroundColor(0x08050d);
     this.add.text(centerX, height * 0.215, `MEMORIA PERDIDA // ${lostMemory}`, {
@@ -74,10 +83,11 @@ export class DescentRetryScene extends Phaser.Scene {
   }
 
   private confirmChoice(): void {
-    const save = SaveState.load();
+    AudioManager.playSfx(this, SFX.uiConfirm, { volume: 0.4 });
+    const progression = SaveState.load();
     if (this.retrySelected) {
-      const data = save.get();
-      this.scene.start("GameScene", {
+      const data = progression.get();
+      startLoadingTransition(this, "GameScene", {
         phaseId: data.currentPhaseId,
         checkpointX: 0,
         checkpointY: 0,
@@ -85,10 +95,12 @@ export class DescentRetryScene extends Phaser.Scene {
         wallet: 0,
         abilities: data.abilities,
         descent: true,
-      });
+      } as GameSceneData);
     } else {
-      save.declineDescentRetry();
-      this.scene.start("EpilogueScene", { ending: "hollow" });
+      progression.declineDescentRetry();
+      startLoadingTransition(this, "EpilogueScene", {
+        ending: "hollow",
+      });
     }
   }
 

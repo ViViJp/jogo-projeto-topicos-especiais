@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { SCREEN_HEIGHT, SCREEN_WIDTH } from "../config/GameConfig";
+import { SCREEN_HEIGHT } from "../config/GameConfig";
 import { BACKDROP_IMAGE_URLS, backdropTextureKey } from "../levels/BackdropAssets";
 import {
   appearAlpha,
@@ -61,6 +61,7 @@ interface BackdropLayerObject {
   images: Phaser.GameObjects.Image[];
   textureWidth: number;
   driftPx: number;
+  createRepeatedImage?: () => Phaser.GameObjects.Image;
 }
 
 /**
@@ -100,8 +101,13 @@ export class ParallaxBackdrop {
   private readonly createdAt = performance.now();
   private sampleStart = 0;
   private sampleFrames = 0;
+  private coveredViewportWidth = 0;
 
-  constructor(scene: Phaser.Scene, mapData: unknown, mapOffsetY: number) {
+  constructor(
+    private readonly scene: Phaser.Scene,
+    mapData: unknown,
+    mapOffsetY: number,
+  ) {
     let economy = economyByGame.get(scene.game);
     if (!economy) {
       economy = { level: 0, lowSamples: 0 };
@@ -117,10 +123,13 @@ export class ParallaxBackdrop {
       const makeImage = (x: number) =>
         scene.add.image(x, spec.y, key).setOrigin(0, 0).setDepth(depth).setAlpha(spec.alpha);
       if (spec.repeatX) {
-        // uma cópia extra antes da tela (margem do shake) e cobertura até a borda direita
-        const copies = Math.ceil((SCREEN_WIDTH + SHAKE_MARGIN) / textureWidth) + 2;
-        const images = Array.from({ length: copies }, () => makeImage(0).setScrollFactor(0));
-        this.layers.push({ spec, images, textureWidth, driftPx: 0 });
+        this.layers.push({
+          spec,
+          images: [],
+          textureWidth,
+          driftPx: 0,
+          createRepeatedImage: () => makeImage(0).setScrollFactor(0),
+        });
       } else {
         this.layers.push({ spec, images: [makeImage(spec.offsetX).setScrollFactor(spec.parallaxX, 0)], textureWidth, driftPx: 0 });
       }
@@ -129,12 +138,41 @@ export class ParallaxBackdrop {
     const ambient = readAmbient(mapData as TiledMapLike);
     if (ambient) this.ambient = new AmbientParticles(scene, ambient);
 
+    scene.scale.on(Phaser.Scale.Events.RESIZE, this.handleResize);
+    this.resizeToViewport();
     this.applyEconomyLevel();
     this.update(scene.cameras.main.scrollX, 0);
   }
 
+  private readonly handleResize = (): void => {
+    this.resizeToViewport();
+  };
+
+  /** Garante cobertura do viewport atual, inclusive após EXPAND/resize. */
+  private resizeToViewport(): void {
+    const viewportWidth = this.scene.cameras.main.width;
+    this.coveredViewportWidth = viewportWidth;
+    for (const layer of this.layers) {
+      if (!layer.spec.repeatX || !layer.createRepeatedImage) continue;
+      // Uma cópia antes da tela, uma depois e a margem usada pelo camera shake.
+      const desiredCopies = Math.ceil((viewportWidth + SHAKE_MARGIN) / layer.textureWidth) + 2;
+      while (layer.images.length < desiredCopies) {
+        layer.images.push(layer.createRepeatedImage());
+      }
+      while (layer.images.length > desiredCopies) {
+        layer.images.pop()?.destroy();
+      }
+    }
+    this.ambient?.resize(viewportWidth);
+    this.applyEconomyLevel();
+    // O resize também ocorre com a cena pausada. Posiciona imediatamente as
+    // novas cópias, sem depender do próximo update do gameplay.
+    this.positionRepeatedLayers(this.scene.cameras.main.scrollX);
+  }
+
   /** Chamar a cada frame, depois de posicionar a câmera. */
   update(cameraScrollX: number, deltaMs: number): void {
+    if (this.scene.cameras.main.width !== this.coveredViewportWidth) this.resizeToViewport();
     this.watchFrameRate();
     for (const layer of this.layers) {
       if (layer.spec.appearX !== undefined) {
@@ -145,14 +183,19 @@ export class ParallaxBackdrop {
       if (layer.spec.driftX !== 0) {
         layer.driftPx = (layer.driftPx + (layer.spec.driftX * deltaMs) / 1000) % layer.textureWidth;
       }
-      // ponto da imagem que cai no x=0 da tela, em pixels inteiros
+    }
+    this.positionRepeatedLayers(cameraScrollX);
+    this.ambient?.update(cameraScrollX, deltaMs);
+  }
+
+  /** Recalcula apenas a apresentação; seguro para resize durante a pausa. */
+  private positionRepeatedLayers(cameraScrollX: number): void {
+    for (const layer of this.layers) {
+      if (!layer.spec.repeatX) continue;
       const scroll = repeatedLayerScroll(cameraScrollX, layer.spec, layer.driftPx, layer.textureWidth);
       const firstX = -scroll - layer.textureWidth;
-      layer.images.forEach((image, k) => {
-        image.x = firstX + k * layer.textureWidth;
-      });
+      layer.images.forEach((image, index) => image.setX(firstX + index * layer.textureWidth));
     }
-    this.ambient?.update(cameraScrollX, deltaMs);
   }
 
   private watchFrameRate(): void {
@@ -191,6 +234,7 @@ export class ParallaxBackdrop {
   }
 
   destroy(): void {
+    this.scene.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize);
     this.layers.forEach((layer) => layer.images.forEach((image) => image.destroy()));
     this.layers.length = 0;
     this.ambient?.destroy();
@@ -214,7 +258,7 @@ interface AmbientPreset {
   /** quão "presas ao cenário" as partículas ficam ao rolar a câmera */
   parallaxX: number;
   depth: number;
-  spawn: (particle: Particle, initial: boolean) => void;
+  spawn: (particle: Particle, initial: boolean, viewportWidth: number) => void;
   /** true quando a partícula saiu da área visível e deve renascer */
   done: (particle: Particle) => boolean;
 }
@@ -229,15 +273,17 @@ class AmbientParticles {
   private readonly particles: Particle[] = [];
   private readonly preset: AmbientPreset;
   private readonly kind: AmbientKind;
+  private viewportWidth: number;
 
   constructor(scene: Phaser.Scene, spec: AmbientSpec) {
     this.kind = spec.kind;
     this.preset = AMBIENT_PRESETS[spec.kind];
+    this.viewportWidth = scene.cameras.main.width;
     this.graphics = scene.add.graphics().setScrollFactor(0).setDepth(this.preset.depth);
     const count = Math.round(this.preset.count * spec.density);
     for (let i = 0; i < count; i++) {
       const particle: Particle = { x: 0, y: 0, vx: 0, vy: 0, size: 2, length: 2, alpha: 1, color: 0xffffff, phase: 0 };
-      this.preset.spawn(particle, true);
+      this.preset.spawn(particle, true, this.viewportWidth);
       this.particles.push(particle);
     }
   }
@@ -251,9 +297,9 @@ class AmbientParticles {
       p.x += p.vx * dt;
       p.y += p.vy * dt;
       if (this.kind === "embers" || this.kind === "motes") p.x += Math.sin(p.phase * 2.3) * 12 * dt;
-      if (this.preset.done(p)) this.preset.spawn(p, false);
+      if (this.preset.done(p)) this.preset.spawn(p, false, this.viewportWidth);
 
-      const sx = Math.round(wrapScreenX(p.x, cameraScrollX, this.preset.parallaxX, SCREEN_WIDTH));
+      const sx = Math.round(wrapScreenX(p.x, cameraScrollX, this.preset.parallaxX, this.viewportWidth));
       const sy = Math.round(p.y);
       if (this.kind === "rain") {
         // traço inclinado: 3 segmentos em escada, legível em pixel art
@@ -272,6 +318,16 @@ class AmbientParticles {
     }
   }
 
+  resize(viewportWidth: number): void {
+    if (viewportWidth === this.viewportWidth) return;
+    this.viewportWidth = viewportWidth;
+    // Redistribui somente o eixo horizontal para preencher imediatamente a
+    // nova faixa visível; ritmo, altura e fase das partículas são preservados.
+    this.particles.forEach((particle) => {
+      particle.x = rand(0, viewportWidth);
+    });
+  }
+
   destroy(): void {
     this.graphics.destroy();
     this.particles.length = 0;
@@ -286,8 +342,8 @@ const AMBIENT_PRESETS: Record<AmbientKind, AmbientPreset> = {
     count: 26,
     parallaxX: 0.3,
     depth: AMBIENT_BACK_DEPTH,
-    spawn: (p, initial) => {
-      p.x = rand(0, SCREEN_WIDTH);
+    spawn: (p, initial, viewportWidth) => {
+      p.x = rand(0, viewportWidth);
       p.y = initial ? rand(80, 640) : rand(70, 140);
       p.vx = 0;
       p.vy = rand(320, 460);
@@ -303,8 +359,8 @@ const AMBIENT_PRESETS: Record<AmbientKind, AmbientPreset> = {
     count: 28,
     parallaxX: 0.5,
     depth: AMBIENT_BACK_DEPTH,
-    spawn: (p, initial) => {
-      p.x = rand(0, SCREEN_WIDTH);
+    spawn: (p, initial, viewportWidth) => {
+      p.x = rand(0, viewportWidth);
       p.y = initial ? rand(80, SCREEN_HEIGHT) : rand(SCREEN_HEIGHT - 40, SCREEN_HEIGHT + 20);
       p.vx = rand(-8, 8);
       p.vy = -rand(10, 26);
@@ -320,8 +376,8 @@ const AMBIENT_PRESETS: Record<AmbientKind, AmbientPreset> = {
     count: 34,
     parallaxX: 0.6,
     depth: AMBIENT_BACK_DEPTH,
-    spawn: (p, initial) => {
-      p.x = rand(0, SCREEN_WIDTH);
+    spawn: (p, initial, viewportWidth) => {
+      p.x = rand(0, viewportWidth);
       p.y = initial ? rand(140, SCREEN_HEIGHT) : rand(SCREEN_HEIGHT - 60, SCREEN_HEIGHT + 20);
       p.vx = rand(6, 26);
       p.vy = -rand(28, 70);
@@ -338,8 +394,8 @@ const AMBIENT_PRESETS: Record<AmbientKind, AmbientPreset> = {
     count: 90,
     parallaxX: 1.1,
     depth: AMBIENT_FRONT_DEPTH,
-    spawn: (p, initial) => {
-      p.x = rand(0, SCREEN_WIDTH);
+    spawn: (p, initial, viewportWidth) => {
+      p.x = rand(0, viewportWidth);
       p.y = initial ? rand(-20, SCREEN_HEIGHT) : rand(-40, -10);
       p.vx = -70;
       p.vy = rand(760, 980);

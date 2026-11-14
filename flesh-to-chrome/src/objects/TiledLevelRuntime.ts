@@ -3,7 +3,8 @@ import { CheckpointMarker } from "./CheckpointMarker";
 import { Player } from "../entities/Player";
 import { EnemyRuntime } from "./EnemyRuntime";
 import { AbilityState } from "../systems/AbilityState";
-import { TEX } from "../utils/PlaceholderTextures";
+import { AudioManager, SFX } from "../systems/AudioManager";
+import { CREDIT_ANIMATION_KEY, TEX } from "../utils/PlaceholderTextures";
 import {
   TILED_FASE1_MAP_KEY,
   TILED_FASE1_TILESET_KEY,
@@ -39,6 +40,7 @@ const HAZARD_KIND_BEHAVIOR: Record<string, HazardBehavior> = {
   toxic_water: "floor",
   electric_wire: "overhead",
   broken_pipe: "floor",
+  low_pipe: "floor",
 };
 
 // GIDs do fio provisório de 32 x 16 px que ainda está desenhado na layer
@@ -85,13 +87,14 @@ const LEGACY_ELECTRIC_WIRE_GIDS = new Set([733, 734]);
  *  2. **Hazards por objeto de verdade**, finalmente batendo com o
  *     contrato §5.3 ("hazards: só o visual; a lógica fica em objects") -
  *     o mapa antigo não tinha nenhum objeto `hazard` real (só um
- *     `hazard=true` no tileset, mecanismo velho da v0.2.0, mantido aqui
- *     como fallback morto - `classifyHazardTiles`/`setCollisionByProperty`
- *     - caso algum mapa futuro ainda dependa dele). O mapa atual usa
- *     objetos `hazard` reais. `toxic_water` e `broken_pipe` usam o
- *     comportamento "floor" (morte em qualquer estado); `electric_wire`
- *     usa "overhead" (mata a não ser que Alex esteja deslizando). Todos
- *     estão formalizados no contrato v0.4.
+ *     `hazard=true` no tileset, mecanismo velho da v0.2.0). A classificação
+ *     legada ainda pode separar esses tiles do chão, mas a layer visual nunca
+ *     recebe colisão: a lógica letal fica sempre nos Rectangle Objects. O mapa atual usa
+ *     objetos `hazard` reais. `toxic_water`, `broken_pipe` e `low_pipe`
+ *     usam o comportamento "floor" (morte em qualquer contato físico);
+ *     `electric_wire` usa "overhead" e permite atravessar durante o slide.
+ *     O `low_pipe` fica suspenso 48 px acima do piso: a hitbox de corrida
+ *     toca o retângulo, enquanto a hitbox de slide passa por baixo dele.
  */
 export class TiledLevelRuntime {
   readonly map: Phaser.Tilemaps.Tilemap;
@@ -114,6 +117,8 @@ export class TiledLevelRuntime {
   private enemyRuntime?: EnemyRuntime;
   private playerRef?: Player;
   private epilogueCorridor = false;
+  private electricWireLoopActive = false;
+  private hazardWaterLoopActive = false;
 
   private endGateTriggered = false;
 
@@ -168,7 +173,10 @@ export class TiledLevelRuntime {
       // não tem nenhum tile com a propriedade `hazard`, então isto vira um
       // no-op inofensivo (ver nota da classe acima).
       this.classifyHazardTiles(hazards, ground);
-      hazards.setCollisionByProperty({ hazard: true });
+      // Esta layer é estritamente visual. Limpar toda colisão impede que os
+      // canos virem plataformas onde Alex consegue pousar; a letalidade fica
+      // exclusivamente nos Rectangle Objects de `hazard`.
+      hazards.setCollisionByExclusion([], false);
     }
     this.hazardsLayer = hazards;
 
@@ -356,6 +364,7 @@ export class TiledLevelRuntime {
     for (const c of this.credits) {
       if (this.consolidatedThisPhase.has(c.id)) continue;
       const sprite = this.scene.physics.add.sprite(c.x, c.y, TEX.credit);
+      sprite.anims.play(CREDIT_ANIMATION_KEY);
       sprite.body!.setAllowGravity(false);
       sprite.setData("creditId", c.id);
       sprite.setData("creditValue", c.value);
@@ -480,17 +489,12 @@ export class TiledLevelRuntime {
   /** Colisão/overlap do jogador com o chão e os perigos reais do tilemap. */
   registerPhysics(player: Player): void {
     this.playerRef = player;
-    this.scene.physics.add.collider(player.sprite, this.groundLayer, () => {
-      const body = player.sprite.body as Phaser.Physics.Arcade.Body | null;
-      if (!body) return;
-      // Pisar no topo é a colisão normal do runner. Colisão lateral ou
-      // contra a parte inferior de um tile sólido representa parede/teto e
-      // é fatal: a regra do jogo é 1 hit = morte para qualquer elemento
-      // que realmente gere colisão.
-      if (body.blocked.left || body.blocked.right || body.blocked.up) {
-        player.kill();
-      }
-    });
+    // `ground` representa somente terreno e plataformas. Contatos no topo,
+    // nas laterais, por baixo ou nos cantos devem resolver a separação física
+    // sem causar dano. Perigos letais possuem zonas próprias abaixo; usar os
+    // flags `blocked.left/right/up` aqui transformava qualquer plataforma em
+    // hazard e matava Alex até em colisões normais de borda.
+    this.scene.physics.add.collider(player.sprite, this.groundLayer);
     if (this.hazardsLayer) {
       this.scene.physics.add.overlap(player.sprite, this.hazardsLayer, (_obj, tileObj) => {
         const tile = tileObj as unknown as Phaser.Tilemaps.Tile;
@@ -548,6 +552,7 @@ export class TiledLevelRuntime {
     this.enemyRuntime?.update();
     const px = player.sprite.x;
     const py = player.sprite.y;
+    this.updateEnvironmentalAudio(player, px);
 
     this.creditSprites.forEach((sprite, id) => {
       if (!sprite.active) return;
@@ -564,7 +569,7 @@ export class TiledLevelRuntime {
       if (this.checkpointTriggered.has(cp.id)) continue;
       if (Math.abs(px - cp.x) < 26) {
         this.checkpointTriggered.add(cp.id);
-        const withFeedback = this.callbacks.onCheckpoint(cp.id, cp.x, cp.y) !== false;
+        const withFeedback = this.callbacks.onCheckpoint(cp.id, cp.x + cp.width / 2, cp.y) !== false;
         this.checkpointMarkers.get(cp.id)?.activate(withFeedback);
       }
     }
@@ -582,7 +587,50 @@ export class TiledLevelRuntime {
     }
   }
 
+  private updateEnvironmentalAudio(player: Player, playerX: number): void {
+    const audibleRange = Math.max(420, this.scene.cameras.main.width * 0.55);
+    const canHearHazards = !this.epilogueCorridor && player.getState() !== "dead";
+    const nearKind = (kind: string): boolean => canHearHazards && this.hazardZones.some((hazard) => (
+      hazard.kind === kind && Math.abs(hazard.zone.x - playerX) <= audibleRange
+    ));
+    const cameraView = this.scene.cameras.main.worldView;
+    const visibleKind = (kind: string): boolean => canHearHazards && this.hazardZones.some((hazard) => {
+      if (hazard.kind !== kind) return false;
+      const halfWidth = hazard.zone.displayWidth / 2;
+      const visualMargin = 32;
+      return hazard.zone.x + halfWidth + visualMargin >= cameraView.left
+        && hazard.zone.x - halfWidth - visualMargin <= cameraView.right;
+    });
+
+    // O estalo acompanha o fio na tela. A regra anterior usava um raio de
+    // centenas de pixels em torno de Alex e mantinha o loop mesmo depois de
+    // o sprite desaparecer pela esquerda da câmera.
+    const electricWireAudible = visibleKind("electric_wire");
+    if (electricWireAudible !== this.electricWireLoopActive) {
+      this.electricWireLoopActive = electricWireAudible;
+      if (electricWireAudible) {
+        AudioManager.startLoop(this.scene, SFX.electricWire, { volume: 0.22 });
+      } else {
+        AudioManager.stopLoop(SFX.electricWire);
+      }
+    }
+
+    const hazardWaterAudible = nearKind("toxic_water");
+    if (hazardWaterAudible !== this.hazardWaterLoopActive) {
+      this.hazardWaterLoopActive = hazardWaterAudible;
+      if (hazardWaterAudible) {
+        AudioManager.startLoop(this.scene, SFX.hazardWater, { volume: 0.2 });
+      } else {
+        AudioManager.stopLoop(SFX.hazardWater);
+      }
+    }
+  }
+
   destroy(): void {
+    AudioManager.stopLoop(SFX.electricWire);
+    AudioManager.stopLoop(SFX.hazardWater);
+    this.electricWireLoopActive = false;
+    this.hazardWaterLoopActive = false;
     this.enemyRuntime?.destroy();
     this.electricWireTweens.forEach((tween) => tween.remove());
     this.electricWireVisuals.forEach((visual) => visual.destroy());

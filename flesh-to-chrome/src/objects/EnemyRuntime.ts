@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { PHYSICS } from "../config/GameConfig";
 import { Player } from "../entities/Player";
+import { AudioManager, SFX } from "../systems/AudioManager";
 
 export type EnemyKind = "bandido" | "drone";
 
@@ -41,6 +42,7 @@ export class EnemyRuntime {
   private readonly group: Phaser.Physics.Arcade.Group;
   private attackListener: (x: number, y: number) => void;
   private scanActive = false;
+  private droneLoopActive = false;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -127,14 +129,39 @@ export class EnemyRuntime {
       enemy.sprite.setData("hp", 0);
       enemy.sprite.body!.enable = false;
       enemy.sprite.setTint(0xffffff);
+      AudioManager.playSfx(this.scene, SFX.enemyHit, { volume: 0.62 });
+      this.spawnDefeatFx(enemy.sprite.x, enemy.sprite.y - enemy.sprite.displayHeight / 2);
       this.scene.tweens.add({
         targets: enemy.sprite,
         alpha: 0,
-        duration: 100,
+        scaleX: enemy.sprite.scaleX * 1.18,
+        scaleY: enemy.sprite.scaleY * 0.72,
+        angle: 18,
+        duration: 220,
         onComplete: () => enemy.sprite.setActive(false).setVisible(false),
       });
       this.scene.events.emit("enemy-defeated", enemy.id);
     }
+  }
+
+  private spawnDefeatFx(x: number, y: number): void {
+    for (let index = 0; index < 7; index += 1) {
+      const angle = (Math.PI * 2 * index) / 7;
+      const fragment = this.scene.add.rectangle(x, y, 5, 3, index % 2 ? 0xff71ce : 0x7cfcea, 0.95)
+        .setDepth(8)
+        .setRotation(angle);
+      this.scene.tweens.add({
+        targets: fragment,
+        x: x + Math.cos(angle) * 46,
+        y: y + Math.sin(angle) * 34 + 18,
+        rotation: angle + 2.2,
+        alpha: 0,
+        duration: 360,
+        ease: "Cubic.easeOut",
+        onComplete: () => fragment.destroy(),
+      });
+    }
+    this.scene.cameras.main.flash(80, 124, 252, 234, false);
   }
 
   /** Ativa o pulso do visor e revela inimigos próximos. */
@@ -186,6 +213,43 @@ export class EnemyRuntime {
         enemy.sprite.setAlpha(1);
       }
     }
+
+    const view = this.scene.cameras.main.worldView;
+    const droneAudible = this.enemies.some((enemy) => (
+      enemy.kind === "drone"
+      && enemy.sprite.active
+      && enemy.sprite.x >= view.left - 96
+      && enemy.sprite.x <= view.right + 96
+      && enemy.sprite.y >= view.top - 96
+      && enemy.sprite.y <= view.bottom + 96
+    ));
+    if (droneAudible !== this.droneLoopActive) {
+      this.droneLoopActive = droneAudible;
+      if (droneAudible) {
+        AudioManager.startLoop(this.scene, SFX.droneHum, { volume: 0.22 });
+      } else {
+        AudioManager.stopLoop(SFX.droneHum);
+      }
+    }
+  }
+
+  /** Devolve todos os inimigos ao estado inicial num respawn sem reinício de cena. */
+  reset(): void {
+    for (const enemy of this.enemies) {
+      this.scene.tweens.killTweensOf(enemy.sprite);
+      enemy.sprite
+        .setActive(true)
+        .setVisible(true)
+        .setAlpha(1)
+        .setAngle(0)
+        .setScale(ENEMY_SCALE[enemy.kind])
+        .clearTint();
+      enemy.sprite.setData("hp", undefined);
+      enemy.sprite.body!.enable = true;
+      enemy.sprite.body!.reset(enemy.homeX, enemy.sprite.y);
+      enemy.revealed = false;
+      enemy.patrolDirection = 1;
+    }
   }
 
   registerPlayerCollision(onFatalCollision: () => void): void {
@@ -195,6 +259,8 @@ export class EnemyRuntime {
   }
 
   destroy(): void {
+    AudioManager.stopLoop(SFX.droneHum);
+    this.droneLoopActive = false;
     this.scene.events.off("player-attack", this.attackListener);
     this.enemies.forEach((enemy) => enemy.sprite.destroy());
     this.enemies.length = 0;

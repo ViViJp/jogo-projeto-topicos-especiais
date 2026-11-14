@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
 import ts from "typescript";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const projectDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -19,9 +19,66 @@ function loadTypeScriptModule(relativePath) {
   return module.exports;
 }
 
+function loadAudioManagerModule() {
+  const filename = path.join(projectDirectory, "src/systems/AudioManager.ts");
+  const source = fs.readFileSync(filename, "utf8")
+    .replaceAll("import.meta.url", JSON.stringify(pathToFileURL(filename).href));
+  const output = ts.transpileModule(source, {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+    fileName: filename,
+  }).outputText;
+  const module = { exports: {} };
+  const Phaser = { Scenes: { Events: { SHUTDOWN: "shutdown" } } };
+  new vm.Script(output, { filename }).runInNewContext({
+    module,
+    exports: module.exports,
+    require: (specifier) => {
+      if (specifier === "phaser") return { default: Phaser };
+      throw new Error(`Import não suportado no teste de áudio: ${specifier}`);
+    },
+    URL,
+  });
+  return module.exports;
+}
+
 const motion = loadTypeScriptModule("src/objects/HazardMotion.ts");
 const config = loadTypeScriptModule("src/config/GameConfig.ts");
 const { CreditsSystem } = loadTypeScriptModule("src/systems/CreditsSystem.ts");
+const { AudioManager: TestedAudioManager, SFX: TestedSFX } = loadAudioManagerModule();
+
+const shutdownListeners = [];
+const createdLoopSounds = [];
+const audioScene = {
+  cache: { audio: { exists: () => true } },
+  events: { once: (event, listener) => shutdownListeners.push({ event, listener }) },
+  sound: {
+    add: () => {
+      const sound = {
+        isPlaying: false,
+        isPaused: false,
+        destroyed: false,
+        play() { this.isPlaying = true; },
+        stop() { this.isPlaying = false; this.isPaused = false; },
+        destroy() { this.destroyed = true; },
+        pause() { this.isPlaying = false; this.isPaused = true; },
+        resume() { this.isPlaying = true; this.isPaused = false; },
+      };
+      createdLoopSounds.push(sound);
+      return sound;
+    },
+  },
+};
+for (let index = 0; index < 50; index += 1) {
+  TestedAudioManager.startLoop(audioScene, TestedSFX.footstep);
+  TestedAudioManager.stopLoop(TestedSFX.footstep);
+}
+assert.equal(shutdownListeners.length, 1,
+  "iniciar/parar loops repetidamente deve manter somente um listener de SHUTDOWN por cena");
+TestedAudioManager.startLoop(audioScene, TestedSFX.footstep);
+TestedAudioManager.startLoop(audioScene, TestedSFX.droneHum);
+TestedAudioManager.stopAllLoopsForScene(audioScene);
+assert.ok(createdLoopSounds.slice(-2).every((sound) => sound.destroyed),
+  "cleanup central da cena deve destruir inclusive o loop do drone");
 const timing = { cycleMs: 1000, activeMs: 200, warningMs: 100, phaseMs: 0 };
 assert.equal(motion.hazardCycleState(0, timing), "active");
 assert.equal(motion.hazardCycleState(199, timing), "active");
@@ -52,6 +109,14 @@ assert.ok(config.PHYSICS.attack.animDurationMs >= 350, "ataque precisa permanece
 assert.ok(config.PHYSICS.attack.activeMs >= 250, "ataque precisa de janela ativa útil");
 assert.ok(config.PHYSICS.attack.range >= 80, "ataque precisa alcançar o inimigo à frente");
 assert.ok(config.PHYSICS.attack.activeMs < config.PHYSICS.attack.animDurationMs);
+assert.equal(config.GAMEPLAY_TIMING.checkpointInteractionMs, 1500);
+assert.ok(
+  config.GAMEPLAY_TIMING.checkpointSitMs + config.GAMEPLAY_TIMING.checkpointStandMs
+    < config.GAMEPLAY_TIMING.checkpointInteractionMs,
+  "checkpoint deve reservar tempo para a sincronização entre sentar e levantar",
+);
+assert.ok(config.GAMEPLAY_TIMING.checkpointPlayerOffsetX >= 48,
+  "Alex deve permanecer ao lado da TV, sem atravessar o gabinete");
 
 const credits = new CreditsSystem(30, ["old-phase-credit"]);
 credits.collect("current-phase-credit", 10);
@@ -61,6 +126,20 @@ credits.consolidate();
 assert.equal(credits.getTotal(), 40);
 assert.equal(credits.getPhaseDisplayValue(10), 10, "HUD preserva consolidado da fase após respawn");
 assert.deepEqual([...credits.getConsolidatedIds()].sort(), ["current-phase-credit", "old-phase-credit"]);
+
+const restartCredits = new CreditsSystem(130, ["previous-phase-credit", "phase-a", "phase-b"]);
+restartCredits.collect("phase-c", 10);
+restartCredits.resetPhase([
+  { id: "phase-a", value: 10 },
+  { id: "phase-b", value: 20 },
+  { id: "phase-c", value: 10 },
+]);
+assert.equal(restartCredits.getTotal(), 100,
+  "reinício manual deve devolver a carteira ao valor de entrada da fase");
+assert.deepEqual([...restartCredits.getConsolidatedIds()], ["previous-phase-credit"],
+  "reinício manual deve preservar somente créditos de fases anteriores");
+assert.equal(restartCredits.getPhaseDisplayValue(0), 0,
+  "créditos ainda não consolidados também devem ser apagados no reinício");
 
 const horizontal = motion.rotatingBarrierPoints(100, 200, 96, 7, 0);
 assert.equal(horizontal.length, 7);
@@ -91,6 +170,55 @@ for (const relativePath of maps) {
   assert.equal(objects.filter((object) => object.type === "phase_end").length, 1, `${relativePath}: phase_end`);
 }
 
+const phase1Map = JSON.parse(fs.readFileSync(
+  path.join(projectDirectory, "src/assets/maps/esgoto/fase-1.json"),
+  "utf8",
+));
+const phase1Ground = phase1Map.layers.find((layer) => layer.name === "ground");
+const phase1Hazards = phase1Map.layers.find((layer) => layer.name === "hazards");
+const phase1Objects = phase1Map.layers.find((layer) => layer.name === "objects")?.objects ?? [];
+const lowPipeCoordinates = [
+  [1264, 256], [2736, 256], [5152, 256], [8544, 256],
+  [10480, 256], [12720, 256], [14944, 224], [16272, 256],
+  [19456, 256], [20736, 256], [25008, 256], [27040, 256],
+];
+const lowPipeObjects = phase1Objects.filter((object) => (
+  object.type === "hazard"
+  && object.properties?.some((property) => property.name === "kind" && property.value === "low_pipe")
+));
+assert.equal(lowPipeObjects.length, 12, "fase1: os 12 canos baixos devem possuir hitbox low_pipe");
+for (const [index, [x, y]] of lowPipeCoordinates.entries()) {
+  const object = lowPipeObjects.find((candidate) => candidate.name === `low_pipe_${String(index + 1).padStart(2, "0")}`);
+  assert.deepEqual(
+    object && { x: object.x, y: object.y, width: object.width, height: object.height },
+    { x, y, width: 128, height: 32 },
+    `fase1: geometria de low_pipe_${String(index + 1).padStart(2, "0")}`,
+  );
+  const startColumn = x / phase1Map.tilewidth;
+  const startRow = y / phase1Map.tileheight;
+  for (let rowOffset = 0; rowOffset < 2; rowOffset += 1) {
+    for (let columnOffset = 0; columnOffset < 8; columnOffset += 1) {
+      const tileIndex = (startRow + rowOffset) * phase1Map.width + startColumn + columnOffset;
+      assert.equal(phase1Ground.data[tileIndex], 0,
+        `fase1: low_pipe_${index + 1} não pode permanecer sólido em ground`);
+      assert.notEqual(phase1Hazards.data[tileIndex], 0,
+        `fase1: low_pipe_${index + 1} deve preservar sua arte em hazards`);
+    }
+  }
+  const centerColumn = startColumn + 4;
+  let groundRow = startRow + 2;
+  while (groundRow < phase1Map.height && phase1Ground.data[groundRow * phase1Map.width + centerColumn] === 0) {
+    groundRow += 1;
+  }
+  const clearance = groundRow * phase1Map.tileheight - (y + 32);
+  assert.equal(clearance, 48, `fase1: low_pipe_${index + 1} deve manter 48 px livres para o slide`);
+}
+const gameConfigSource = fs.readFileSync(path.join(projectDirectory, "src/config/GameConfig.ts"), "utf8");
+assert.match(gameConfigSource, /PLAYER_SIZE = \{ width: 26, height: 50 \}/,
+  "fase1: hitbox em pé deve tocar os canos com vão de 48 px");
+assert.match(gameConfigSource, /PLAYER_SLIDE_SIZE = \{ width: 28, height: 30 \}/,
+  "fase1: hitbox do slide deve passar sob os canos com vão de 48 px");
+
 function objectProperty(object, name) {
   return object.properties?.find((property) => property.name === name)?.value;
 }
@@ -101,6 +229,37 @@ const industrialKinds = new Set(
   phase2Objects.filter((object) => object.type === "hazard").map((object) => objectProperty(object, "kind")),
 );
 assert.deepEqual([...industrialKinds].sort(), ["mech_arm", "press", "steam"]);
+assert.equal(
+  phase2Objects.filter(
+    (object) => object.type === "hazard" && objectProperty(object, "kind") === "mech_arm",
+  ).length,
+  3,
+  "fase2: os três braços mecânicos autorados precisam continuar ativos",
+);
+assert.deepEqual(
+  phase2Objects
+    .filter((object) => object.type === "hazard" && objectProperty(object, "kind") === "press" && object.x < 6500)
+    .map((object) => object.name),
+  ["press_01", "press_03"],
+  "fase2: o conjunto inicial deve manter somente as prensas das extremidades",
+);
+assert.deepEqual(
+  phase2Objects
+    .filter((object) => object.type === "hazard" && objectProperty(object, "kind") === "steam")
+    .filter((object) => object.x >= 7500 && object.x <= 8000)
+    .map((object) => object.name),
+  ["steam_01", "steam_03"],
+  "fase2: o trecho deve manter somente as máquinas a vapor das extremidades",
+);
+const phase2Hazards = phase2.layers.find((layer) => layer.name === "hazards");
+for (const row of [10, 11]) {
+  assert.equal(phase2Hazards.data[row * phase2.width + 242], 0,
+    `fase2: visual residual da máquina a vapor central deve ser removido na linha ${row}`);
+}
+for (const row of [10, 11]) {
+  assert.equal(phase2Hazards.data[row * phase2.width + 185], 0,
+    `fase2: bloco residual da prensa central deve ser removido na linha ${row}`);
+}
 const lowCeilingLayer = phase2.layers.find((layer) => layer.name === "deco-low-ceilings");
 const lowCeilingTiles = lowCeilingLayer.data.filter((gid) => gid !== 0);
 assert.equal(lowCeilingTiles.length, 42, "fase2: sete obstáculos baixos com seis tiles cada");
@@ -117,6 +276,10 @@ const rotatingBarriers = phase5Objects.filter(
 );
 assert.equal(rotatingBarriers.length, 5);
 assert.ok(rotatingBarriers.every((barrier) => Math.max(barrier.width, barrier.height) >= 96));
+const firstScanFloor = phase5Objects.find((object) => object.name === "false_floor_01");
+const firstHiddenHazards = phase5Objects.find((object) => object.name === "hidden_hazards_01");
+assert.equal(firstScanFloor.x + firstScanFloor.width, firstHiddenHazards.x,
+  "fase5: áreas iniciais de scan devem ser adjacentes, sem sobrepor o laser oculto");
 const phase5Breakables = phase5Objects.filter((object) => object.type === "breakable");
 const phase5Credits = phase5Objects.filter((object) => object.type === "credit");
 for (const credit of phase5Credits) {
@@ -132,6 +295,16 @@ for (const credit of phase5Credits) {
 }
 const phase5RuntimeSource = fs.readFileSync(path.join(projectDirectory, "src/objects/TiledPhase5Runtime.ts"), "utf8");
 assert.match(phase5RuntimeSource, /height \/ 2 - 16/, "fase5: barreira rotativa precisa de janela horizontal segura");
+assert.match(phase5RuntimeSource, /TILED_PHASE5_ROTATING_BARRIER_TEXTURE_KEY/,
+  "fase5: barreira rotativa deve usar o sprite final");
+assert.match(phase5RuntimeSource, /setDisplaySize\(length \* 1\.08, Math\.max\(84, length\)\)/,
+  "fase5: sprite da barreira rotativa deve ter presença visual sem alterar a colisão");
+assert.doesNotMatch(phase5RuntimeSource, /\.rectangle\(centerX, centerY, length/,
+  "fase5: barreira rotativa não pode voltar ao retângulo provisório");
+assert.ok(fs.existsSync(path.join(
+  projectDirectory,
+  "src/assets/props/hazards/rotating-energy-barrier.png",
+)));
 assert.match(phase5RuntimeSource, /TILED_PHASE5_BARRICADE_TEXTURE_KEY/);
 assert.match(phase5RuntimeSource, /this\.spawnBarricadeFragments\(target\.visual\)/,
   "barricadas da Fase 5 devem executar a animação antes de desaparecer");
@@ -148,13 +321,54 @@ assert.match(phase5RuntimeSource, /const groundExtension = layer === this\.groun
   "a soleira do Topo deve sustentar toda a largura da porta ReForge");
 
 const gameScene = fs.readFileSync(path.join(projectDirectory, "src/scenes/GameScene.ts"), "utf8");
+const multiplayerScene = fs.readFileSync(path.join(projectDirectory, "src/scenes/MultiplayerScene.ts"), "utf8");
+const bootScene = fs.readFileSync(path.join(projectDirectory, "src/scenes/BootScene.ts"), "utf8");
+const parallaxBackdropSource = fs.readFileSync(path.join(projectDirectory, "src/objects/ParallaxBackdrop.ts"), "utf8");
 const mainSource = fs.readFileSync(path.join(projectDirectory, "src/main.ts"), "utf8");
+assert.match(multiplayerScene, /new TiledPhase5Runtime\(/,
+  "multiplayer deve permanecer isolado no runtime da Fase 5");
+assert.match(multiplayerScene, /mapKey: TILED_MULTIPLAYER_MAP_KEY/,
+  "multiplayer deve continuar usando seu mapa competitivo próprio");
+assert.match(multiplayerScene, /this\.load\.image\([\s\S]*?TILED_PHASE5_ROTATING_BARRIER_TEXTURE_KEY[\s\S]*?rotating-energy-barrier\.png/,
+  "multiplayer deve carregar a arte final da barreira giratória");
+assert.match(multiplayerScene, /backToMenu\(\): void[\s\S]*?removeRoomFromUrl\(\)[\s\S]*?this\.scene\.start\("MenuScene"\)/,
+  "sair do multiplayer deve retirar a sala da URL antes de abrir o menu");
+assert.match(multiplayerScene, /function removeRoomFromUrl[\s\S]*?searchParams\.delete\("room"\)[\s\S]*?history\.replaceState/,
+  "F5 no menu não pode reabrir a última sala multiplayer");
+const multiplayerScanPulse = multiplayerScene.slice(
+  multiplayerScene.indexOf("private handleScanPulse"),
+  multiplayerScene.indexOf("private handleLocalFinish"),
+);
+assert.match(multiplayerScanPulse, /this\.runtime\?\.setScanActive\(active\)/,
+  "scan multiplayer deve continuar revelando os elementos do mapa");
+assert.doesNotMatch(multiplayerScanPulse, /\.rectangle\(/,
+  "scan multiplayer não deve aplicar uma camada azul sobre a tela inteira");
+assert.match(bootScene, /hasMultiplayerInvite\(\)[\s\S]*?createInviteLoadingView\(\)/,
+  "convite multiplayer deve exibir feedback já durante o preload do Boot");
+assert.match(bootScene, /startLoadingTransition\(this, "MultiplayerScene"/,
+  "convite multiplayer deve usar a LoadingScene antes de abrir a corrida");
+assert.doesNotMatch(multiplayerScene, /new TiledLevelRuntime\(/,
+  "multiplayer não pode herdar as colisões low_pipe exclusivas da Fase 1");
 assert.match(mainSource, /mode: Phaser\.Scale\.EXPAND/,
   "canvas deve preencher todo o viewport sem barras laterais");
 assert.match(gameScene, /const viewportWidth = this\.cameras\.main\.width/,
   "câmera deve considerar a largura expandida do viewport");
 assert.match(gameScene, /this\.scale\.width \/ 2, this\.scale\.height \/ 2/,
   "overlays devem permanecer centralizados no viewport expandido");
+assert.match(multiplayerScene, /const centerX = this\.scale\.width \/ 2/,
+  "interface multiplayer deve usar a largura lógica expandida");
+assert.match(multiplayerScene, /this\.scale\.on\(Phaser\.Scale\.Events\.RESIZE, this\.handleViewportResize\)/,
+  "interface multiplayer deve recalcular o layout após resize");
+assert.doesNotMatch(multiplayerScene, /\.text\(SCREEN_WIDTH \/ 2|\.text\(SCREEN_WIDTH - 24/,
+  "textos multiplayer não podem permanecer presos à resolução base");
+assert.match(parallaxBackdropSource, /const viewportWidth = this\.scene\.cameras\.main\.width/,
+  "parallax deve calcular cobertura pela largura real da câmera");
+assert.match(parallaxBackdropSource, /Phaser\.Scale\.Events\.RESIZE, this\.handleResize/,
+  "parallax deve recalcular as cópias ao redimensionar a janela");
+assert.match(parallaxBackdropSource, /resizeToViewport\(\)[\s\S]*?this\.positionRepeatedLayers\(this\.scene\.cameras\.main\.scrollX\)/,
+  "resize deve posicionar novas cópias mesmo quando o gameplay está pausado");
+assert.doesNotMatch(parallaxBackdropSource, /Math\.ceil\(\(SCREEN_WIDTH \+ SHAKE_MARGIN\)/,
+  "parallax não pode limitar a cobertura à largura base");
 assert.match(gameScene, /this\.time\.paused = true/);
 assert.match(gameScene, /this\.anims\.pauseAll\(\)/);
 assert.match(gameScene, /checkpointX: 0/);
@@ -213,10 +427,29 @@ for (const runtime of ["TiledPhase4Runtime.ts", "TiledPhase5Runtime.ts"]) {
   assert.match(source, /const collisionTop =/);
   assert.match(source, /const collisionBottom = this\.groundSurfaceYAt\(x\)/);
   assert.match(source, /tile\.alpha = disabled \? 0 : 1/);
+  assert.match(source, /new ScanBarrierVisual\(/,
+    `${runtime}: porta de scan deve montar uma única barreira contínua`);
+  assert.match(source, /door\.visual\.setEnabled\(!disabled\)/);
   assert.match(source, /\.setVisible\(!disabled\)/);
   assert.doesNotMatch(source, /% door\.cycleMs/, `${runtime}: porta não pode depender do relógio`);
 }
 const phase4Runtime = fs.readFileSync(path.join(projectDirectory, "src/objects/TiledPhase4Runtime.ts"), "utf8");
+const phase4Map = JSON.parse(fs.readFileSync(path.join(projectDirectory, maps[3]), "utf8"));
+const phase4Ground = phase4Map.layers.find((layer) => layer.name === "ground");
+for (const column of [58, 59, 60, 61]) {
+  assert.equal(
+    phase4Ground.data[10 * phase4Map.width + column],
+    0,
+    `fase4: plataforma anterior à primeira parede falsa deve estar vazia na coluna ${column}`,
+  );
+}
+for (const column of [62, 63]) {
+  assert.notEqual(
+    phase4Ground.data[10 * phase4Map.width + column],
+    0,
+    `fase4: suporte sob a primeira parede falsa deve permanecer na coluna ${column}`,
+  );
+}
 assert.match(phase4Runtime, /this\.scene\.physics\.add\.collider\(player\.sprite, wall\.zone\)/);
 assert.match(phase4Runtime, /body\.enable = !intangible/);
 assert.match(phase4Runtime, /if \(!active\) return/);
@@ -229,8 +462,8 @@ assert.doesNotMatch(
 );
 assert.match(phase4Runtime, /BACKGROUND_TOWER_GID/);
 assert.match(phase4Runtime, /FLOATING_TERMINAL_GID/);
-assert.match(phase4Runtime, /putTileAt\(DOOR_FIRST_GID, doorCol, bottomTileRow - 1\)/);
-assert.match(phase4Runtime, /bottomTile\.visible = false/);
+assert.match(phase4Runtime, /firstDoorTileRow \?\?= row/);
+assert.match(phase4Runtime, /tile\.visible = false/);
 assert.match(phase4Runtime, /\.setVisible\(true\)/);
 const phase5Runtime = fs.readFileSync(path.join(projectDirectory, "src/objects/TiledPhase5Runtime.ts"), "utf8");
 assert.match(phase5Runtime, /disabledDoors !== 0/);
@@ -238,13 +471,19 @@ assert.match(phase5Runtime, /gateObjects\[0\]\?\.x \?\? endObject\?\.x/);
 const playerSource = fs.readFileSync(path.join(projectDirectory, "src/entities/Player.ts"), "utf8");
 assert.match(playerSource, /this\.sprite\.setDepth\(10\)/);
 assert.match(playerSource, /this\.sprite\.setDepth\(this\.depthBeforeCheckpoint\)/);
-assert.match(playerSource, /this\.sprite\.anims\.play\(this\.checkpointAnimationKey, true\)/);
+assert.match(playerSource, /this\.sprite\.anims\.play\(this\.checkpointSitAnimationKey, true\)/);
+assert.match(playerSource, /this\.sprite\.anims\.play\(this\.checkpointInteractAnimationKey, true\)/);
+assert.match(playerSource, /this\.sprite\.anims\.play\(this\.checkpointStandAnimationKey, true\)/);
+assert.match(playerSource, /GAMEPLAY_TIMING\.checkpointStandMs[\s\S]*?this\.state = "running"/,
+  "corrida só pode voltar depois que Alex terminar de levantar");
 assert.match(playerSource, /this\.sprite\.anims\.play\(this\.attackAnimationKey, true\)/);
 assert.match(playerSource, /delay <= PHYSICS\.attack\.activeMs/);
 assert.match(playerSource, /this\.emitAttackPulse\(false\)/);
 assert.match(playerSource, /const attackSequence = \+\+this\.attackSequence/);
 assert.match(playerSource, /this\.attackSequence === attackSequence/);
 assert.doesNotMatch(playerSource, /showAttackFeedback/, "ataque deve usar o spritesheet, não o arco provisório");
+assert.doesNotMatch(playerSource, /spawnAttackFx/,
+  "ataque não deve recriar o arco visual removido no polimento");
 const jumpMethod = playerSource.slice(playerSource.indexOf("private handleJump"), playerSource.indexOf("private handleSlide"));
 assert.match(jumpMethod, /this\.transitionState\("jumping", true\)/,
   "ataque → pulo deve invalidar o golpe e restaurar a pose");
@@ -261,7 +500,10 @@ const checkpointMethod = playerSource.slice(
 );
 assert.doesNotMatch(checkpointMethod, /ALEX_SLIDE_FRAME/, "checkpoint não pode reutilizar a pose de slide");
 const alexSpriteSource = fs.readFileSync(path.join(projectDirectory, "src/utils/AlexSprite.ts"), "utf8");
-assert.match(alexSpriteSource, /CHECKPOINT_PLAY_RIGHT = \{ row: 33, frames: 2 \}/);
+assert.match(alexSpriteSource, /alexCheckpointTextureKey\(textureKey\)/);
+assert.match(alexSpriteSource, /generateFrameNumbers\(checkpointTextureKey, \{ start: 0, end: 2 \}\)/);
+assert.match(alexSpriteSource, /generateFrameNumbers\(checkpointTextureKey, \{ start: 2, end: 3 \}\)/);
+assert.match(alexSpriteSource, /generateFrameNumbers\(checkpointTextureKey, \{ start: 3, end: 4 \}\)/);
 assert.match(alexSpriteSource, /ATTACK_RIGHT = \{ row: 15, frames: 6 \}/);
 assert.match(alexSpriteSource, /frameRate: 16/);
 const enemyRuntime = fs.readFileSync(path.join(projectDirectory, "src/objects/EnemyRuntime.ts"), "utf8");
@@ -282,7 +524,24 @@ const hudSource = fs.readFileSync(path.join(projectDirectory, "src/systems/HUD.t
 assert.match(hudSource, /setFillStyle\(0x21d7ff, 1\)/, "dash pronto deve usar azul elétrico");
 assert.match(hudSource, /batteryBack,[\s\S]*this\.dashBatteryFill,[\s\S]*frame,/,
   "preenchimento da bateria precisa ficar sobre o fundo e sob a moldura");
-assert.match(gameScene, /beginCheckpointInteraction\(x - 24, y\)/);
+assert.match(hudSource, /Phaser\.Scale\.Events\.RESIZE, this\.handleResize/,
+  "HUD da campanha deve acompanhar o redimensionamento da janela");
+assert.match(hudSource, /handleResize[\s\S]*?promptText\.setX\(this\.scene\.scale\.width \/ 2\)[\s\S]*?dashBattery\.setX\(this\.scene\.scale\.width - 170\)/,
+  "prompt e bateria de dash devem manter suas âncoras responsivas");
+assert.match(gameScene, /handleViewportResize[\s\S]*?scanOverlay\?\.setDisplaySize\(this\.scale\.width, this\.scale\.height\)/,
+  "overlay de scan da campanha deve preencher o viewport após resize");
+assert.match(gameScene, /handleSceneShutdown[\s\S]*?events\.off\("player-attack", this\.handlePlayerAttack\)[\s\S]*?events\.off\("player-dash-ready", this\.handlePlayerDashReady\)/,
+  "GameScene deve remover listeners identificáveis de ataque e dash no shutdown");
+assert.match(gameScene, /beginCheckpointInteraction\(x - GAMEPLAY_TIMING\.checkpointPlayerOffsetX, y\)/);
+assert.match(gameScene, /checkpointInteractionMs - GAMEPLAY_TIMING\.checkpointStandMs/);
+const manualRestartMethod = gameScene.slice(
+  gameScene.indexOf("private restartFromPhaseStart"),
+  gameScene.indexOf("private handleScanPulse"),
+);
+assert.match(manualRestartMethod, /this\.credits\.resetPhase\(this\.phaseCredits\(\)\)/,
+  "reinício manual deve zerar créditos da fase nas cinco implementações");
+assert.match(manualRestartMethod, /checkpointX: 0/);
+assert.match(manualRestartMethod, /checkpointY: 0/);
 assert.match(gameScene, /showFeedback = true[\s\S]*?if \(showFeedback\) this\.hud\.flashPrompt\("ATAQUE", 300\)/,
   "somente o primeiro pulso do golpe deve atualizar o HUD");
 assert.match(gameScene, /const alreadyActive = this\.data\$\.checkpointX > 0/);
@@ -307,13 +566,36 @@ assert.match(
 );
 assert.doesNotMatch(
   pausedBranch,
-  /this\.data\$\.testMode\s*&&\s*this\.input\$\.isMenuDownJustDown/,
-  "retorno ao menu não pode ficar restrito ao seletor de fases",
+  /testMode|DescentPreviewSession|descentPreview/,
+  "retorno ao menu não pode depender de lógica do seletor removido",
 );
 const checkpointMarker = fs.readFileSync(path.join(projectDirectory, "src/objects/CheckpointMarker.ts"), "utf8");
 assert.match(checkpointMarker, /activate\(withFeedback = true\)/);
 assert.match(checkpointMarker, /if \(!withFeedback\) return/);
+assert.match(checkpointMarker, /0x36e2ff/, "sincronização da TV deve pulsar em ciano");
+assert.match(checkpointMarker, /0x68ff9c/, "sincronização da TV deve pulsar em verde");
+assert.match(checkpointMarker, /targets: scanLine/, "TV deve executar uma varredura luminosa");
 const tiledLevelRuntime = fs.readFileSync(path.join(projectDirectory, "src/objects/TiledLevelRuntime.ts"), "utf8");
+const phase1GroundCollider = tiledLevelRuntime.slice(
+  tiledLevelRuntime.indexOf("registerPhysics(player: Player): void"),
+  tiledLevelRuntime.indexOf("if (this.hazardsLayer)", tiledLevelRuntime.indexOf("registerPhysics(player: Player): void")),
+);
+assert.match(phase1GroundCollider, /physics\.add\.collider\(player\.sprite, this\.groundLayer\);/,
+  "fase1: plataformas devem resolver somente colisão sólida");
+assert.doesNotMatch(phase1GroundCollider, /player\.kill\(\)/,
+  "fase1: contato lateral, inferior ou de canto com plataforma não pode matar Alex");
+assert.match(tiledLevelRuntime, /broken_pipe: "floor"/,
+  "fase1: canos rompidos devem continuar letais em qualquer contato");
+assert.match(tiledLevelRuntime, /low_pipe: "floor"/,
+  "fase1: canos baixos devem matar apenas quando a hitbox física de Alex os toca");
+assert.match(tiledLevelRuntime, /hazards\.setCollisionByExclusion\(\[\], false\)/,
+  "fase1: a arte dos hazards não pode oferecer uma superfície onde Alex pise");
+assert.match(tiledLevelRuntime, /add\.zone\(x \+ w \/ 2, y \+ h \/ 2, w, h\)/,
+  "fase1: hazards devem respeitar exatamente os retângulos autorados no Tiled");
+assert.match(tiledLevelRuntime, /hz\.behavior === "overhead"[\s\S]*?player\.getState\(\) !== "sliding"[\s\S]*?player\.kill\(\)/,
+  "fase1: obstáculo overhead deve matar Alex sempre que ele não estiver deslizando");
+assert.match(tiledLevelRuntime, /for \(const hz of this\.hazardZones\)[\s\S]*?player\.kill\(\)/,
+  "fase1: hazards reais devem continuar letais após separar o terreno");
 assert.match(tiledLevelRuntime, /prepareDescentEpilogue\(startX: number, endX: number\)/,
   "epílogo deve preparar um corredor próprio no mapa do Esgoto");
 assert.match(tiledLevelRuntime, /this\.groundLayer\.removeTileAt\(col, row\)/);
@@ -332,8 +614,306 @@ for (const runtime of [
 ]) {
   const source = fs.readFileSync(path.join(projectDirectory, "src/objects", runtime), "utf8");
   assert.match(source, /activate\(withFeedback\)/, `${runtime}: respawn deve restaurar TV sem feedback`);
+  assert.match(source, /onCheckpoint\([\s\S]*?\.x \+ [a-z]+\.width \/ 2/,
+    `${runtime}: interação deve usar o centro visual da TV`);
 }
 
+const audioManagerSource = fs.readFileSync(path.join(projectDirectory, "src/systems/AudioManager.ts"), "utf8");
+for (const key of [
+  "phase1", "phase2", "phase3", "phase4", "phase5", "clinic", "gate", "menu",
+  "endingChrome", "endingFlesh", "endingHollow",
+]) {
+  assert.match(audioManagerSource, new RegExp(`${key}: "bgm-`), `AudioManager: BGM ${key}`);
+}
+assert.match(audioManagerSource, /this\.activeMusic\?\.stop\(\);[\s\S]*?this\.activeMusic\?\.destroy\(\);/,
+  "troca de BGM precisa encerrar a faixa anterior");
+assert.match(audioManagerSource, /static preloadBgm\(scene: Phaser\.Scene, key: BgmKey\)/,
+  "BGMs completas devem possuir carregamento sob demanda");
+const sharedPreload = audioManagerSource.match(/static preload\(scene: Phaser\.Scene\): void \{([\s\S]*?)\n  \}/)?.[1] ?? "";
+assert.doesNotMatch(sharedPreload, /AUDIO_SOURCES\.music/,
+  "Boot não deve baixar o catálogo de BGMs antes do menu");
+for (const filename of [
+  "attack", "barrier-disable", "breakable-destroy", "checkpoint", "conveyor-belt", "credit",
+  "dash", "death", "drone-hum", "electric-gate", "electric-wire", "enemy-hit", "footstep",
+  "gate-opening", "glitch", "hazard-water", "hurt", "hydraulic-press", "implant", "jump",
+  "land", "mechanical-arm", "phase-clear", "scan", "scan-reveal", "security-door-unlock",
+  "slide", "steam-burst", "ui-confirm", "ui-select", "warning-beep",
+]) {
+  assert.match(audioManagerSource, new RegExp(`sfx-${filename}\\.mp3`),
+    `AudioManager: master ausente para ${filename}`);
+  assert.ok(fs.existsSync(path.join(projectDirectory, `src/assets/audio/sfx/sfx-${filename}.mp3`)),
+    `arquivo SFX ausente: ${filename}`);
+}
+for (const phase of [1, 2, 3, 4, 5]) {
+  const filename = `bgm-phase-${phase}.ogg`;
+  assert.match(audioManagerSource, new RegExp(`\\[BGM\\.phase${phase}\\]: new URL\\("\\.\\.\/assets\/audio\/music\/${filename}"`),
+    `AudioManager: BGM ausente para fase ${phase}`);
+  assert.ok(fs.existsSync(path.join(projectDirectory, `src/assets/audio/music/${filename}`)),
+    `arquivo de BGM ausente: ${filename}`);
+}
+for (const [key, filename] of [
+  ["menu", "bgm-menu.mp3"],
+  ["clinic", "bgm-clinic.ogg"],
+  ["gate", "bgm-gate.mp3"],
+  ["endingChrome", "bgm-ending-chrome.mp3"],
+  ["endingFlesh", "bgm-ending-flesh.mp3"],
+  ["endingHollow", "bgm-ending-hollow.ogg"],
+]) {
+  assert.match(
+    audioManagerSource,
+    new RegExp(`\\[BGM\\.${key}\\]: new URL\\("\\.\\.\\/assets\\/audio\\/music\\/${filename.replace(".", "\\.")}"`),
+    `AudioManager: BGM narrativa ausente para ${key}`,
+  );
+  assert.ok(fs.existsSync(path.join(projectDirectory, `src/assets/audio/music/${filename}`)),
+    `arquivo de BGM narrativa ausente: ${filename}`);
+}
+assert.match(audioManagerSource, /export function bgmForEnding\(ending: "chrome" \| "flesh" \| "hollow"\)/,
+  "cada final precisa selecionar sua própria música");
+assert.match(audioManagerSource, /\[SFX\.effort\]: new URL\("\.\.\/assets\/audio\/sfx\/sfx-jump\.mp3"/,
+  "salto duplo deve reutilizar o master de pulo enquanto não houver esforço dedicado");
+assert.match(audioManagerSource, /activeLoops = new Map/);
+assert.match(audioManagerSource, /static startLoop\([\s\S]*?loop: true/);
+assert.match(audioManagerSource, /static stopLoop\([\s\S]*?entry\?\.sound\.destroy\(\)/);
+const audioStartLoopSource = audioManagerSource.slice(
+  audioManagerSource.indexOf("static startLoop("),
+  audioManagerSource.indexOf("static stopLoop("),
+);
+assert.doesNotMatch(audioStartLoopSource, /events\.once/,
+  "iniciar/parar loops repetidamente não pode acumular listeners de SHUTDOWN");
+assert.match(audioManagerSource, /sceneLoopCleanups = new WeakMap/,
+  "AudioManager deve manter somente um cleanup por cena");
+assert.match(audioManagerSource, /private static ensureSceneLoopCleanup[\s\S]*?if \(this\.sceneLoopCleanups\.has\(scene\)\) return;/,
+  "cleanup de loops deve ser idempotente por ciclo de vida da cena");
+assert.match(audioManagerSource, /static stopAllLoopsForScene\(scene: Phaser\.Scene\)/,
+  "AudioManager deve encerrar todos os loops pertencentes a uma cena");
+assert.match(multiplayerScene, /freezePlayer\(\)[\s\S]*?AudioManager\.stopAllLoopsForScene\(this\)/,
+  "fim da corrida deve silenciar também drones e futuros loops multiplayer");
+assert.match(multiplayerScene, /freezePlayer\(\)[\s\S]*?this\.handleScanPulse\(false\)[\s\S]*?AudioManager\.stopAllLoopsForScene\(this\)/,
+  "fim da corrida deve encerrar também o efeito visual do scan");
+assert.match(audioManagerSource, /pauseBgm\(\)[\s\S]*?activeLoops[\s\S]*?sound\.pause\(\)/,
+  "pausa do jogo também deve suspender loops de ação");
+assert.match(audioManagerSource, /if \(!scene\.cache\?\.audio\?\.exists\(key\)\) \{[\s\S]*?this\.stopBgm\(\)/,
+  "cena sem master registrado não pode manter a BGM anterior");
+for (const sfx of ["jump", "land", "slide", "attack", "dash", "scan", "death", "enemyHit", "uiConfirm"]) {
+  assert.match(audioManagerSource, new RegExp(`${sfx}: "sfx-`), `AudioManager: SFX ${sfx}`);
+}
+assert.match(playerSource, /AudioManager\.startLoop\(this\.scene, SFX\.footstep/);
+assert.match(playerSource, /AudioManager\.startLoop\(this\.scene, SFX\.slide/);
+assert.match(playerSource, /AudioManager\.startLoop\(this\.scene, SFX\.scan/);
+assert.match(playerSource, /AudioManager\.playSfx\(this\.scene, SFX\.hurt/);
+assert.match(playerSource, /private stopContinuousSfx\(\): void/);
+assert.match(playerSource, /grounded && !this\.wasGrounded && this\.landingSoundArmed/,
+  "aterrissagem não deve tocar no spawn da fase");
+assert.match(gameScene, /AudioManager\.playBgm\(this, bgmForPhase\(this\.data\$\.phaseId\)/);
+assert.match(gameScene, /AudioManager\.preloadBgm\(this, bgmForPhase\(this\.data\$\.phaseId\)\)/,
+  "GameScene deve carregar somente a BGM da fase atual");
+const narrativeBgmScenes = [
+  ["MenuScene.ts", /preloadBgm\(this, BGM\.menu\)/],
+  ["ControlsScene.ts", /preloadBgm\(this, BGM\.menu\)/],
+  ["PrologueScene.ts", /preloadBgm\(this, BGM\.menu\)/],
+  ["ClinicScene.ts", /preloadBgm\(this, BGM\.clinic\)/],
+  ["ReForgeScene.ts", /preloadBgm\(this, BGM\.clinic\)/],
+  ["GeorgeRefusalScene.ts", /preloadBgm\(this, BGM\.clinic\)/],
+  ["GateScene.ts", /preloadBgm\(this, BGM\.gate\)/],
+  ["DescentRetryScene.ts", /preloadBgm\(this, BGM\.gate\)/],
+  ["EpilogueScene.ts", /preloadBgm\(this, bgmForEnding\(this\.data\$\.ending\)\)/],
+  ["EndingScene.ts", /preloadBgm\(this, bgmForEnding\(this\.ending\)\)/],
+];
+for (const [sceneFile, preloadPattern] of narrativeBgmScenes) {
+  const source = fs.readFileSync(path.join(projectDirectory, "src/scenes", sceneFile), "utf8");
+  assert.match(source, preloadPattern, `${sceneFile}: BGM deve ser carregada sob demanda`);
+}
+assert.match(gameScene, /AudioManager\.pauseBgm\(\)/);
+assert.match(gameScene, /AudioManager\.resumeBgm\(\)/);
+assert.match(gameScene, /AudioManager\.startLoop\(this, SFX\.checkpoint/);
+assert.match(gameScene, /AudioManager\.stopLoop\(SFX\.checkpoint\)/);
+assert.match(tiledLevelRuntime, /AudioManager\.startLoop\(this\.scene, SFX\.electricWire/,
+  "fio elétrico deve tocar somente por proximidade");
+assert.match(tiledLevelRuntime, /const electricWireAudible = visibleKind\("electric_wire"\)/,
+  "fio elétrico deve silenciar assim que seu visual sair da câmera");
+assert.match(tiledLevelRuntime, /AudioManager\.startLoop\(this\.scene, SFX\.hazardWater/,
+  "água tóxica deve tocar somente por proximidade");
+assert.match(phase2Runtime, /AudioManager\.startLoop\(this\.scene, SFX\.conveyorBelt/,
+  "esteira deve tocar somente durante contato");
+assert.match(phase2Runtime, /state === "warning"[\s\S]*?SFX\.warningBeep/,
+  "janela de aviso industrial deve emitir o bip dedicado");
+assert.match(phase2Runtime, /state === "warning" && hazard\.kind === "press"/,
+  "alarme industrial deve ficar restrito às prensas");
+for (const filename of ["mech-arm-housing.png", "mech-arm-shaft.png", "mech-arm-claw.png"]) {
+  assert.match(gameScene, new RegExp(filename.replace(".", "\\.")),
+    `GameScene deve carregar ${filename}`);
+  assert.ok(fs.existsSync(path.join(projectDirectory, `src/assets/props/hazards/${filename}`)),
+    `asset do braço mecânico ausente: ${filename}`);
+}
+assert.match(phase2Runtime, /\.tileSprite\([\s\S]*?TILED_PHASE2_MECH_ARM_SHAFT_TEXTURE_KEY/,
+  "eixo do braço deve repetir sem deformar durante a extensão");
+assert.match(phase2Runtime, /mechArmHousing[\s\S]*?mechArmShaft[\s\S]*?mechArmClaw/,
+  "braço mecânico deve usar carcaça, eixo e garra independentes");
+assert.match(phase2Runtime, /hazard\.warningLight[\s\S]*?Math\.floor\(now \/ 120\)/,
+  "prensa e braço mecânico devem piscar a luz laranja durante o aviso");
+assert.match(phase2Runtime, /state === "active" && extension > 0\.2/,
+  "colisão do braço deve permanecer restrita ao curso ativo");
+for (const sfx of ["hydraulicPress", "steamBurst", "mechanicalArm"]) {
+  assert.match(phase2Runtime, new RegExp(`SFX\\.${sfx}`),
+    `hazard industrial sem efeito dedicado: ${sfx}`);
+}
+assert.match(playerSource, /this\.sprite\.anims\.play\(this\.slideAnimationKey, true\)/,
+  "slide deve usar animação dedicada");
+assert.doesNotMatch(playerSource, /setFrame\(ALEX_SLIDE_FRAME\)/,
+  "slide não pode voltar ao frame estático provisório");
+assert.match(playerSource, /this\.slideTimer <= 0 && holdingSlide[\s\S]*?this\.slideTimer = PHYSICS\.slide\.durationMs/,
+  "segurar slide deve renovar a janela sem reiniciar animação ou SFX");
+assert.match(alexSpriteSource, /alexSlideTextureKey\(textureKey\), \{ start: 0, end: 3 \}/,
+  "slide deve utilizar os quatro frames da folha dedicada");
+assert.match(alexSpriteSource, /frameRate: 10,[\s\S]*?repeat: 0/,
+  "entrada do slide deve tocar uma vez e manter o quarto frame");
+assert.match(alexSpriteSource, /SLIDE_FRAME_X_OFFSETS = \[0, 4, 3, 3\]/,
+  "quadros do slide devem usar a compensação visual medida, sem sobrecorreção");
+assert.match(alexSpriteSource, /\.setTrim\(PLAYER_FRAME, PLAYER_FRAME, offsetX, 0, PLAYER_FRAME, PLAYER_FRAME\)/,
+  "alinhamento do slide deve mover somente o desenho, sem deslocar a hitbox");
+assert.match(gameScene, /FTC_ENABLE_MOVEMENT_DEBUG === "1"/,
+  "diagnóstico de sprite, física e câmera deve permanecer opt-in");
+const gameUpdate = gameScene.slice(
+  gameScene.indexOf("  update(_time: number, delta: number): void"),
+  gameScene.indexOf("  private updatePresentation(time: number, delta: number): void"),
+);
+const gamePresentation = gameScene.slice(
+  gameScene.indexOf("  private updatePresentation(time: number, delta: number): void"),
+  gameScene.indexOf("  private updateMovementDiagnostics(time: number): void"),
+);
+assert.match(gameScene, /Phaser\.Scenes\.Events\.POST_UPDATE,[\s\S]*?this\.updatePresentation/,
+  "campanha deve atualizar câmera e parallax no POST_UPDATE");
+assert.match(gameScene, /this\.events\.off\([\s\S]*?POST_UPDATE,[\s\S]*?this\.updatePresentation/,
+  "campanha deve remover o listener visual ao encerrar a cena");
+assert.doesNotMatch(gameUpdate, /cameras\.main\.scrollX|backdrop\?\.update/,
+  "update de gameplay não deve calcular a apresentação antes do pós-física");
+assert.match(gamePresentation, /this\.cameras\.main\.scrollX = targetScrollX;[\s\S]*?this\.backdrop\?\.update\(targetScrollX, delta\)/,
+  "câmera e parallax devem compartilhar o scroll pós-física");
+for (const diagnostic of [
+  "spriteX", "bodyX", "velocityX", "cameraX", "screenX",
+  "blockedLeft", "blockedRight", "fps",
+]) {
+  assert.match(gameScene, new RegExp(`${diagnostic}:`),
+    `diagnóstico de movimento deve registrar ${diagnostic}`);
+}
+assert.match(gameScene, /MOVEMENT_DEBUG_HISTORY_LIMIT = 180/,
+  "diagnóstico deve manter uma fila curta de quadros recentes");
+
+const multiplayerUpdate = multiplayerScene.slice(
+  multiplayerScene.indexOf("  update(time: number, delta: number): void"),
+  multiplayerScene.indexOf("  private updatePresentation(_time: number, delta: number): void"),
+);
+const multiplayerPresentation = multiplayerScene.slice(
+  multiplayerScene.indexOf("  private updatePresentation(_time: number, delta: number): void"),
+  multiplayerScene.indexOf("  private resetSessionState(): void"),
+);
+assert.match(multiplayerScene, /Phaser\.Scenes\.Events\.POST_UPDATE,[\s\S]*?this\.updatePresentation/,
+  "multiplayer deve atualizar sua apresentação no POST_UPDATE");
+assert.match(multiplayerScene, /this\.events\.off\([\s\S]*?POST_UPDATE,[\s\S]*?this\.updatePresentation/,
+  "multiplayer deve remover o listener visual no shutdown");
+assert.doesNotMatch(multiplayerUpdate, /updateCamera\(\)|updateOpponent\(delta\)|backdrop\?\.update/,
+  "multiplayer não deve atualizar câmera, rival ou fundo antes do pós-física");
+assert.match(multiplayerPresentation, /updateCamera\(\)[\s\S]*?updateOpponent\(delta\)[\s\S]*?backdrop\?\.update/,
+  "multiplayer deve sincronizar câmera, rival e fundo na etapa visual");
+assert.match(gameScene, /memory-fragment-64\.png/,
+  "a descida deve carregar o fragmento físico unificado");
+assert.ok(fs.existsSync(path.join(projectDirectory, "src/assets/props/collectibles/memory-fragment-64.png")),
+  "asset físico do fragmento de memória ausente");
+const descentGlitchSource = fs.readFileSync(
+  path.join(projectDirectory, "src/objects/DescentGlitchRuntime.ts"), "utf8",
+);
+assert.match(descentGlitchSource, /DESCENT_MEMORY_FRAGMENT_TEXTURE_KEY = "memory-fragment"/);
+assert.match(descentGlitchSource, /this\.particles\.push\(particle\)/,
+  "fragmento deve manter partículas digitais ao redor");
+assert.match(descentGlitchSource, /AudioManager\.playSfx\(this\.scene, SFX\.glitch/,
+  "novo visual não pode remover o som de coleta");
+const phase5MapForLaser = JSON.parse(fs.readFileSync(
+  path.join(projectDirectory, "src/assets/maps/topo/fase-5.tmj"), "utf8",
+));
+const movedLaser = phase5MapForLaser.layers
+  .find((layer) => layer.name === "objects")?.objects
+  .find((object) => object.name === "laser_grid_04");
+assert.equal(movedLaser?.x, 23_744, "laser da rota inferior deve avançar exatamente dois tiles");
+assert.equal(
+  movedLaser?.properties?.find((property) => property.name === "visual_source_x")?.value,
+  23_680,
+  "runtime deve saber de qual coluna transferir a arte do laser",
+);
+assert.match(phase5RuntimeSource, /relocateLaserVisual\(object, x, y, width, height\)/,
+  "visual e colisão do laser movido devem permanecer alinhados");
+for (const stage of ["flesh", "legs", "arms", "eyes", "dash"]) {
+  assert.match(gameScene, new RegExp(`alex-slide-${stage}\\.png`), `GameScene: slide ${stage}`);
+  assert.ok(
+    fs.existsSync(path.join(projectDirectory, `src/assets/player/alex-slide/alex-slide-${stage}.png`)),
+    `asset de slide ausente: ${stage}`,
+  );
+}
+for (const stage of ["flesh", "legs", "arms", "eyes", "dash"]) {
+  assert.match(gameScene, new RegExp(`alex-checkpoint-${stage}\\.png`), `GameScene: checkpoint ${stage}`);
+  assert.ok(
+    fs.existsSync(path.join(projectDirectory, `src/assets/player/alex-checkpoint/alex-checkpoint-${stage}.png`)),
+    `asset de checkpoint ausente: ${stage}`,
+  );
+}
+const bootSceneSource = fs.readFileSync(path.join(projectDirectory, "src/scenes/BootScene.ts"), "utf8");
+const placeholderTextureSource = fs.readFileSync(
+  path.join(projectDirectory, "src/utils/PlaceholderTextures.ts"),
+  "utf8",
+);
+assert.match(bootSceneSource, /credit-cyberpunk\.png/,
+  "BootScene deve carregar o spritesheet final do crédito");
+assert.match(placeholderTextureSource, /CREDIT_ANIMATION_KEY = "credit-cyberpunk-spin"/);
+assert.match(placeholderTextureSource, /generateFrameNumbers\(TEX\.credit, \{ start: 0, end: 3 \}\)/);
+assert.doesNotMatch(placeholderTextureSource, /circle\(scene, TEX\.credit/,
+  "crédito não pode voltar ao círculo provisório");
+for (const runtime of [
+  "LevelRuntime.ts",
+  "TiledLevelRuntime.ts",
+  "TiledPhase2Runtime.ts",
+  "TiledPhase3Runtime.ts",
+  "TiledPhase4Runtime.ts",
+  "TiledPhase5Runtime.ts",
+]) {
+  const source = fs.readFileSync(path.join(projectDirectory, "src/objects", runtime), "utf8");
+  assert.match(source, /sprite\.anims\.play\(CREDIT_ANIMATION_KEY\)/,
+    `${runtime}: crédito deve executar os quatro frames finais`);
+}
+for (const sfx of ["jump", "land", "slide", "attack", "dash", "scan", "death", "footstep"]) {
+  assert.match(playerSource, new RegExp(`SFX\\.${sfx}`), `Player: feedback ${sfx}`);
+}
+assert.match(enemyRuntime, /spawnDefeatFx/);
+assert.match(enemyRuntime, /SFX\.enemyHit/);
+assert.match(enemyRuntime, /AudioManager\.startLoop\(this\.scene, SFX\.droneHum/);
+assert.match(enemyRuntime, /AudioManager\.stopLoop\(SFX\.droneHum\)/,
+  "hum do drone deve parar quando ele sai da câmera ou o runtime é destruído");
+assert.match(phase3Runtime, /SFX\.breakableDestroy/);
+assert.match(phase3Runtime, /AudioManager\.startLoop\(this\.scene, SFX\.electricGate/);
+assert.match(phase3Runtime, /AudioManager\.stopLoop\(SFX\.electricGate\)/,
+  "portão elétrico deve ficar restrito à área visível");
+for (const source of [phase4Runtime, phase5Runtime]) {
+  assert.match(source, /SFX\.scanReveal/);
+  assert.match(source, /SFX\.securityDoorUnlock/);
+}
+assert.match(phase5Runtime, /SFX\.breakableDestroy/);
+const descentRouteRuntime = fs.readFileSync(
+  path.join(projectDirectory, "src/objects/DescentRouteRuntime.ts"),
+  "utf8",
+);
+assert.match(descentRouteRuntime, /SFX\.barrierDisable/);
+assert.match(descentRouteRuntime, /SFX\.gateOpening/);
+const gateSceneSource = fs.readFileSync(path.join(projectDirectory, "src/scenes/GateScene.ts"), "utf8");
+assert.match(gateSceneSource, /SFX\.gateOpening/);
+const descentGlitchRuntime = fs.readFileSync(
+  path.join(projectDirectory, "src/objects/DescentGlitchRuntime.ts"),
+  "utf8",
+);
+assert.match(descentGlitchRuntime, /AudioManager\.playSfx\(this\.scene, SFX\.glitch/,
+  "fragmentos de memória devem ter feedback sonoro próprio");
+
+assert.match(hudSource, /fillRoundedRect\(14, 12, 360, 70, 8\)/,
+  "painel principal do HUD deve conter apenas os créditos");
+assert.match(hudSource, /\.text\(22, 91,[\s\S]*?backgroundColor: "#050a12cc"/,
+  "implantes devem ocupar uma faixa separada do painel de créditos");
 // Fundo com parallax (image layers do Tiled) e clima das Fases 1-5.
 const backdrop = loadTypeScriptModule("src/levels/BackdropLayers.ts");
 const backdropPhases = [
@@ -383,6 +963,5 @@ assert.deepEqual([28000, 28800, 29280, 40000].map((x) => backdrop.appearAlpha(x,
 const fase5Final = backdrop.readBackdropLayers(JSON.parse(fs.readFileSync(path.join(projectDirectory, maps[4]), "utf8")), 176).filter((layer) => layer.appearX !== undefined);
 assert.equal(fase5Final.length, 2, "Fase 5: aurora e cidade alta só no trecho contemplativo");
 assert.ok(fase5Final.every((layer) => layer.appearX === 28800), "Fase 5: fundo final surge no início do trecho contemplativo");
-
 console.log("Gameplay flow: movimentos, barreiras por scan e estrutura das cinco fases validados.");
 console.log("Fundo: camadas de parallax e clima das Fases 1-5 e da corrida multiplayer validados.");

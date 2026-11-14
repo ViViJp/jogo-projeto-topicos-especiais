@@ -2,6 +2,10 @@
 
 **Atualizado em:** 2026-11-03
 
+> Registro histórico da validação do PR #25. O seletor temporário citado
+> abaixo foi removido da versão atual; campanha e multiplayer permanecem como
+> os únicos fluxos públicos de jogo.
+
 ## Estado da integração
 
 - `feat/level-design-branch` atualizada com `origin/main`.
@@ -49,7 +53,7 @@ Resultado da rodada de 2026-11-03:
 | 2 | pulo e salto duplo; sete canos baixos; cinco esteiras nos dois sentidos; velocidade volta a `BASE_RUN_SPEED` ao sair; prensas/vapor/braços/trituradoras letais; clínica libera braços |
 | 3 | ataque antecipado quebra barricada; ataque preso também quebra; bandido morre em um golpe; drone permanece blindado; contato com inimigo mata; clínica libera olhos |
 | 4 | scan revela grupos próximos; paredes falsas ficam totalmente invisíveis e intangíveis após um scan válido; pisos falsos ficam translúcidos; spikes ocultos aparecem; grupos antigos são limpos; barreiras visíveis são letais e o scan as oculta/desativa; clínica libera propulsores |
-| 5 | bateria e recarga do dash; lasers/barreiras letais mesmo durante dash; scan oculta/desativa a próxima barreira; quebráveis respondem ao ataque; conclusão retorna ao menu no modo de teste |
+| 5 | bateria e recarga do dash; lasers/barreiras letais mesmo durante dash; scan oculta/desativa a próxima barreira; quebráveis respondem ao ataque; conclusão abre o Portão |
 
 ## Progressão e persistência
 

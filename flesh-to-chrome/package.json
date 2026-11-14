@@ -6,6 +6,7 @@
   "scripts": {
     "start": "parcel src/index.html --open --no-cache",
     "dev": "parcel src/index.html --no-cache",
+    "dev:movement-debug": "FTC_ENABLE_MOVEMENT_DEBUG=1 parcel src/index.html --no-cache",
     "dev:network": "parcel src/index.html --host 0.0.0.0 --no-cache",
     "dev:multiplayer": "node server/start-multiplayer-dev.mjs",
     "signaling": "node server/signaling-server.mjs",
@@ -24,7 +25,6 @@
   },
   "dependencies": {
     "phaser": "^4.2.1",
-    "ws": "^8.22.1",
-    "mqtt": "^5.14.1"
+    "ws": "^8.22.1"
   }
 }

@@ -10,8 +10,12 @@ import {
   ALEX_SHEET_CONFIG,
   alexTextureForAbilities,
 } from "../utils/AlexSprite";
+import { AudioManager, SFX, bgmForEnding } from "../systems/AudioManager";
+import { startLoadingTransition } from "../systems/SceneTransition";
 
-interface EpilogueData { ending: "flesh" | "hollow" }
+interface EpilogueData {
+  ending: "flesh" | "hollow";
+}
 
 export class EpilogueScene extends Phaser.Scene {
   private data$!: EpilogueData;
@@ -23,6 +27,7 @@ export class EpilogueScene extends Phaser.Scene {
   init(data: EpilogueData): void { this.data$ = data; }
 
   preload(): void {
+    AudioManager.preloadBgm(this, bgmForEnding(this.data$.ending));
     if (!this.textures.exists("epilogue-alex-flesh")) {
       this.load.spritesheet(
         "epilogue-alex-flesh",
@@ -49,6 +54,7 @@ export class EpilogueScene extends Phaser.Scene {
     const doorX = centerX + Math.min(400, width * 0.32);
     const alexStartX = centerX - Math.min(510, width * 0.41);
     this.input$ = new InputManager(this);
+    AudioManager.playBgm(this, bgmForEnding(this.data$.ending), 0.24);
     this.leaving = false;
     const data = SaveState.load().get();
     const flesh = this.data$.ending === "flesh";
@@ -75,8 +81,11 @@ export class EpilogueScene extends Phaser.Scene {
 
   update(): void {
     if (!this.leaving && this.input$.isConfirmJustDown()) {
+      AudioManager.playSfx(this, SFX.uiConfirm, { volume: 0.34 });
       this.leaving = true;
-      this.scene.start("EndingScene", { ending: this.data$.ending });
+      startLoadingTransition(this, "EndingScene", {
+        ending: this.data$.ending,
+      });
     }
     this.input$.postUpdate();
   }

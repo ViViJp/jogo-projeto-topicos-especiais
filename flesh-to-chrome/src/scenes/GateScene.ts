@@ -1,45 +1,29 @@
 import Phaser from "phaser";
 import { InputManager } from "../systems/InputManager";
 import { SaveState } from "../systems/SaveState";
+import { AudioManager, BGM, SFX } from "../systems/AudioManager";
+import { startLoadingTransition } from "../systems/SceneTransition";
 
 const GATE_TEXTURE_KEY = "narrative-gate";
-const GATE_MUSIC_KEY = "bgm-gate";
 
 type GateChoice = "chrome" | "flesh";
-
-interface GateSceneData {
-  /** Acesso pelo seletor de fases; não cria snapshot nem altera o save. */
-  testMode?: boolean;
-}
 
 export class GateScene extends Phaser.Scene {
   private input$!: InputManager;
   private selected: GateChoice = "chrome";
   private choiceTexts = new Map<GateChoice, Phaser.GameObjects.Text>();
   private choosing = false;
-  private music?: Phaser.Sound.BaseSound;
-  private testMode = false;
-  private previewNotice!: Phaser.GameObjects.Text;
 
   constructor() {
     super("GateScene");
   }
 
-  init(data: GateSceneData): void {
-    this.testMode = data.testMode ?? false;
-  }
-
   preload(): void {
+    AudioManager.preloadBgm(this, BGM.gate);
     if (!this.textures.exists(GATE_TEXTURE_KEY)) {
       this.load.image(
         GATE_TEXTURE_KEY,
         new URL("../assets/narrative/gate/portao.png", import.meta.url).href,
-      );
-    }
-    if (!this.cache.audio.exists(GATE_MUSIC_KEY)) {
-      this.load.audio(
-        GATE_MUSIC_KEY,
-        new URL("../assets/audio/music/bgm-portao.wav", import.meta.url).href,
       );
     }
   }
@@ -53,13 +37,14 @@ export class GateScene extends Phaser.Scene {
     const choiceOffsetX = Math.min(220, width * 0.24);
 
     this.cameras.main.setBackgroundColor(0x100718);
+    AudioManager.playBgm(this, BGM.gate, 0.35);
     this.input$ = new InputManager(this);
     this.selected = "chrome";
     this.choosing = false;
     this.choiceTexts.clear();
 
     const save = SaveState.load();
-    if (!this.testMode && !save.hasPreGateSave()) save.createPreGateSave();
+    if (!save.hasPreGateSave()) save.createPreGateSave();
 
     this.add.rectangle(centerX, height / 2, width, height, 0x100718, 1);
     this.add.image(centerX, gateY, GATE_TEXTURE_KEY).setDisplaySize(288, gateHeight);
@@ -84,16 +69,7 @@ export class GateScene extends Phaser.Scene {
 
     this.createChoice("chrome", centerX - choiceOffsetX, "CHROME", "Aceitar a conversão completa");
     this.createChoice("flesh", centerX + choiceOffsetX, "FLESH", "Recusar e iniciar a descida");
-    this.previewNotice = this.add.text(centerX, height - 92, "", {
-      fontFamily: "Courier New, monospace",
-      fontSize: "15px",
-      color: "#ff9a4d",
-      align: "center",
-      wordWrap: { width: Math.min(width - 80, 900) },
-    }).setOrigin(0.5);
-    const controlsHelp = this.testMode
-      ? "← → / DIRECIONAL escolher   ENTER / A confirmar   ESC / B voltar ao seletor"
-      : "← → / DIRECIONAL escolher   ENTER / A confirmar";
+    const controlsHelp = "← → / DIRECIONAL escolher   ENTER / A confirmar";
     this.add.text(centerX, height - 42, controlsHelp, {
       fontFamily: "Courier New, monospace",
       fontSize: "15px",
@@ -101,17 +77,9 @@ export class GateScene extends Phaser.Scene {
     }).setOrigin(0.5);
     this.updateSelection();
 
-    this.music = this.sound.add(GATE_MUSIC_KEY, { loop: true, volume: 0.35 });
-    this.music.play();
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.music?.stop());
   }
 
   update(): void {
-    if (this.testMode && this.input$.isCancelJustDown()) {
-      this.scene.start("MenuScene");
-      this.input$.postUpdate();
-      return;
-    }
     if (this.input$.isMenuLeftJustDown()) {
       this.selected = "chrome";
       this.updateSelection();
@@ -161,30 +129,22 @@ export class GateScene extends Phaser.Scene {
 
   private confirmChoice(): void {
     if (this.choosing) return;
+    AudioManager.playSfx(this, SFX.uiConfirm, { volume: 0.42 });
+    AudioManager.playSfx(this, SFX.gateOpening, { volume: 0.5 });
     if (this.selected === "flesh") {
-      if (this.testMode) {
-        this.previewNotice.setText(
-          "A descida Flesh altera a campanha. Inicie este caminho pelo Portão do seu save.",
-        );
-        this.cameras.main.shake(120, 0.002);
-        return;
-      }
       this.choosing = true;
       const save = SaveState.load();
       save.beginDescent();
       const data = save.get();
-      this.music?.stop();
       if (!data.descentState.active) return;
-      this.scene.start("GeorgeRefusalScene");
+      startLoadingTransition(this, "GeorgeRefusalScene");
       return;
     }
 
     this.choosing = true;
-    this.music?.stop();
-    this.cameras.main.fadeOut(450, 0, 0, 0, (_camera: Phaser.Cameras.Scene2D.Camera, progress: number) => {
-      if (progress === 1) {
-        this.scene.start("EndingScene", { ending: "chrome", testMode: this.testMode });
-      }
+    this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
+      startLoadingTransition(this, "EndingScene", { ending: "chrome" });
     });
+    this.cameras.main.fadeOut(450, 0, 0, 0);
   }
 }

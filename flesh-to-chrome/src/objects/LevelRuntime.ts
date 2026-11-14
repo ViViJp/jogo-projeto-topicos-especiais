@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 import { AbilityGateKind, LevelData } from "../levels/LevelTypes";
-import { TEX } from "../utils/PlaceholderTextures";
+import { CREDIT_ANIMATION_KEY, TEX } from "../utils/PlaceholderTextures";
 import { Player } from "../entities/Player";
 import { PLAYER_SLIDE_SIZE } from "../config/GameConfig";
 
@@ -109,6 +109,7 @@ export class LevelRuntime {
     for (const c of this.level.credits) {
       if (this.consolidatedThisPhase.has(c.id)) continue; // já consolidado - não reaparece
       const sprite = this.scene.physics.add.sprite(c.x, c.y, TEX.credit);
+      sprite.anims.play(CREDIT_ANIMATION_KEY);
       sprite.body!.setAllowGravity(false);
       sprite.setData("creditId", c.id);
       sprite.setData("creditValue", c.value);

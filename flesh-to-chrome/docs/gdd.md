@@ -1102,12 +1102,11 @@ Depois segue ao epílogo.
 
 ### Aparência
 
-Hollow usa exatamente o estado corporal em que a cadeia foi quebrada:
-
-- falhou no primeiro → todos os implantes;
-- no segundo → sem propulsores;
-- no terceiro → pernas + braços;
-- no quarto → apenas pernas.
+Nesta versão, todas as combinações corporais que levam ao Hollow usam a mesma
+sequência de três ilustrações: ecos da memória perdida, a casa fechada e Alex
+partindo. A produção de uma variante visual para cada combinação de implantes
+fica adiada para uma etapa posterior; nenhum sprite adicional deve ser
+sobreposto a esses quadros.
 
 ## 18.8 Retirada nas unidades de reciclagem
 
@@ -1156,9 +1155,9 @@ Alex retorna parcialmente mecanizado e não consegue falar com a família.
 Mesmo sem conseguir se reconectar, a imagem do outro lado da porta continua
 mostrando o avô e o tio; o pai não participa desse retorno.
 
-O sprite de Alex preserva o estágio corporal exato da quebra da cadeia. O
-epílogo e os quadros finais usam a mesma variante correspondente aos implantes
-restantes, acompanhada da contagem de cromo remanescente.
+O epílogo jogável ainda reflete o estado corporal da quebra da cadeia. Nos três
+quadros finais, porém, todas as combinações usam a mesma sequência ilustrada
+Hollow desta versão, sem contador ou sprite sobreposto.
 
 A incapacidade é emocional e simbólica.
 
@@ -1174,6 +1173,17 @@ Depois dos créditos:
 - `Menu Principal`
 
 Continuar do Portão restaura integralmente o estado anterior à escolha.
+
+## 18.13 Avaliação opcional após os finais
+
+Depois que o jogador confirma o último quadro de Chrome, Flesh ou Hollow, o
+final é registrado e a campanha abre uma tela única de avaliação antes do menu.
+A tela identifica o desfecho alcançado pela cor e pelo texto, preserva sua
+música e apresenta o formulário oficial por QR Code e por um botão que abre uma
+nova aba. A resposta é voluntária.
+
+O jogador também pode voltar diretamente ao menu por botão, `Esc` ou `B`. Essa
+saída não reinicia a campanha nem modifica o save.
 
 ---
 
@@ -1223,6 +1233,33 @@ O jogo aceita controles no padrão Web Gamepad e controles USB retrô com layout
 - **Navegação de menus:** direcional
 
 Como Flesh to Chrome é um auto-runner, Alex continua correndo automaticamente; esquerda e direita são usadas na navegação dos menus. O jogo detecta automaticamente o perfil USB/SNES e também aceita direcionais expostos pelo navegador como eixos.
+
+## 19.1.2 Tela de controles
+
+O menu principal mantém uma opção permanente **Controles**, disponível sem
+alterar o save. A tela apresenta lado a lado os comandos de teclado/mouse e de
+controle, além da relação entre cada habilidade e o implante que a libera.
+
+Ao escolher **Novo Jogo**, essa mesma tela funciona como confirmação final da
+campanha: o save anterior permanece intacto enquanto ela estiver aberta e só é
+substituído ao confirmar **Iniciar Campanha**. Voltar ao menu cancela a operação.
+
+## 19.1.3 Tutoriais de implante
+
+A última página de cada procedimento da clínica confirma o novo implante em um
+painel próprio antes de liberar a próxima fase. O painel apresenta o nome do
+implante, a habilidade, sua aplicação, os comandos atuais de teclado/mouse e
+gamepad e uma demonstração animada de Alex:
+
+- pernas mecânicas → salto duplo;
+- braços mecânicos → ataque e quebra;
+- olhos mecânicos → scan e revelação;
+- propulsores → dash.
+
+O jogador precisa confirmar **Continuar**. A confirmação mantém o fluxo de
+`SaveState.unlockAbility()`, salva a habilidade e abre a próxima fase. O painel
+pertence somente à aquisição do implante e não reaparece em mortes, checkpoints
+ou reinícios da fase seguinte.
 
 ## 19.2 Pausa
 
@@ -1282,7 +1319,30 @@ Existe um único save de campanha.
 Se já existir save:
 
 1. exibir confirmação;
-2. apagar somente depois de confirmação.
+2. abrir a tela de controles no modo de preparação da campanha;
+3. preservar o save enquanto o jogador consulta os comandos ou volta ao menu;
+4. apagar e criar o novo save somente ao confirmar **Iniciar Campanha**;
+5. iniciar o prólogo.
+
+## 20.2.1 Apresentação do menu
+
+O menu utiliza Glitch City como fundo, com camadas urbanas em movimento leve,
+névoa e luzes discretas. Um degradê escuro e um painel tecnológico à esquerda
+preservam a legibilidade das opções. O título ocupa a região superior esquerda
+e a seleção ativa é marcada por `▶` em amarelo.
+
+O seletor temporário de fases foi removido do jogo e dos scripts de
+desenvolvimento. Os percursos, o Portão e os finais são validados pelo fluxo de
+campanha e pelos testes automatizados, sem uma segunda entrada de progressão.
+
+## 20.2.2 Transição e carregamento
+
+Toda troca de campanha que pode carregar mapas, músicas ou sprites passa pela
+`LoadingScene`. A tela mantém fundo escuro, destino, indicador animado e barra
+de progresso enquanto a próxima cena executa `preload()` e `create()` atrás
+dela. O destino só é revelado após o evento `CREATE`; falhas de arquivo exibem
+uma mensagem com opções de tentar novamente ou voltar ao menu. Nenhuma cena
+deve iniciar um loader concorrente ou deixar um canvas preto durante a espera.
 
 ## 20.3 Continue
 
@@ -1311,7 +1371,7 @@ Corrida competitiva simultânea:
 - sem PvP;
 - quatro implantes;
 - duração-alvo ~120 s;
-- 1 checkpoint central.
+- 3 checkpoints (a cada ~1/4 da pista).
 
 ## 21.2 Créditos
 
@@ -1414,7 +1474,7 @@ Não haverá `HubScene`.
 - HUD
 - Save State
 - Camera
-- Audio
+- Audio Manager (BGM exclusiva por cena e barramento de SFX)
 - Fragment/Memory State
 - Recycling State
 - Multiplayer Sync
@@ -1517,6 +1577,14 @@ Flesh to Chrome é um jogo 2D. Nenhum asset 3D é necessário para o escopo atua
 - máquinas da ReForge Industries;
 - stingers/cues dos finais;
 - trilha ou loops por fase.
+
+**Estado de implementação — Branch 4:** onze chaves de trilha e os pontos de
+disparo dos efeitos principais estão integrados pelo `AudioManager`. As cinco
+fases, menu/prólogo, clínica/ReForge, Portão e os finais Chrome, Flesh e Hollow
+usam masters registrados em `src/assets/audio/credits.txt`. O Boot carrega
+somente os SFX compartilhados e cada cena solicita sua BGM sob demanda. A troca
+de cena encerra a música anterior, e a pausa congela e retoma a faixa junto com
+o gameplay.
 
 ## 23.4 Code
 
@@ -1647,7 +1715,7 @@ Os valores são referência de produção e podem mudar de acordo com a arte dis
 - dois jogadores;
 - sincronização;
 - quatro implantes;
-- checkpoint central;
+- três checkpoints;
 - créditos individuais;
 - tempo ajustado;
 - DNF;
@@ -1677,7 +1745,9 @@ Depois que todos os itens anteriores estiverem estáveis:
 - persistência de cosméticos;
 - vitrine de preço representativo;
 - pagamento simulado;
-- parallax e áudio não essenciais.
+
+- parallax, tratado em uma branch visual separada;
+- seleção e integração dos masters definitivos de áudio.
 
 ## 24.7 Feature Freeze
 
