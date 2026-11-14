@@ -21,10 +21,12 @@ import fase1Map from "../assets/maps/esgoto/fase-1.json";
  * tinha nenhum objeto real da classe `hazard` (só um `hazard=true` nos
  * tiles da layer `hazards`, mecanismo antigo da v0.2.0); este mapa novo
  * segue o contrato à risca (§5.3) com objetos `hazard`/`kind` de verdade
- * na layer `objects` - `toxic_water` (poços sem fundo) e os obstáculos de
- * slide `broken_pipe`/`electric_wire`, que matam em corrida, pulo ou contato
- * por cima e permitem a travessia somente enquanto Alex desliza (ver
- * `TiledLevelRuntime.buildObjectHazards()`).
+ * na layer `objects`: `toxic_water` (poços sem fundo), `broken_pipe`
+ * (tubulação rompida), `electric_wire` (fio atravessável em slide) e os
+ * doze `low_pipe` suspensos. Estes últimos saíram de `ground`, permanecem
+ * visualmente em `hazards` e possuem retângulos letais próprios; os 48 px
+ * livres sob a arte permitem que somente a hitbox baixa do slide passe sem
+ * contato (ver `TiledLevelRuntime.buildObjectHazards()`).
  *
  * O JSON é importado ESTATICAMENTE (`import ... from "*.json"`), não via
  * `new URL(...) + load.tilemapTiledJSON` - ver "Nota técnica sobre o JSON

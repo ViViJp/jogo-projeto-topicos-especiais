@@ -39,15 +39,9 @@ type HazardBehavior = "floor" | "overhead";
 const HAZARD_KIND_BEHAVIOR: Record<string, HazardBehavior> = {
   toxic_water: "floor",
   electric_wire: "overhead",
-  broken_pipe: "overhead",
+  broken_pipe: "floor",
+  low_pipe: "floor",
 };
-
-// Os Rectangle Objects dos canos foram autorados 3 px para dentro nas
-// laterais. A margem restaura a largura inteira da arte. A zona lógica sobe
-// até o teto do mapa (ver `buildObjectHazards`), impedindo que o cano seja
-// vencido com um pulo ou usado como plataforma: a única travessia aceita é
-// por baixo, enquanto Alex está no estado de slide.
-const BROKEN_PIPE_HITBOX_PADDING_X = 3;
 
 // GIDs do fio provisório de 32 x 16 px que ainda está desenhado na layer
 // `hazards` do mapa. O runtime o oculta quando instancia o sprite novo nas
@@ -96,9 +90,11 @@ const LEGACY_ELECTRIC_WIRE_GIDS = new Set([733, 734]);
  *     `hazard=true` no tileset, mecanismo velho da v0.2.0). A classificação
  *     legada ainda pode separar esses tiles do chão, mas a layer visual nunca
  *     recebe colisão: a lógica letal fica sempre nos Rectangle Objects. O mapa atual usa
- *     objetos `hazard` reais. `toxic_water` usa o comportamento "floor"
- *     (morte em qualquer estado); `electric_wire` e `broken_pipe` usam
- *     "overhead" (matam a não ser que Alex esteja deslizando).
+ *     objetos `hazard` reais. `toxic_water`, `broken_pipe` e `low_pipe`
+ *     usam o comportamento "floor" (morte em qualquer contato físico);
+ *     `electric_wire` usa "overhead" e permite atravessar durante o slide.
+ *     O `low_pipe` fica suspenso 48 px acima do piso: a hitbox de corrida
+ *     toca o retângulo, enquanto a hitbox de slide passa por baixo dele.
  */
 export class TiledLevelRuntime {
   readonly map: Phaser.Tilemaps.Tilemap;
@@ -424,18 +420,8 @@ export class TiledLevelRuntime {
       const y = (o.y ?? 0) + offsetY;
       const w = o.width ?? 16;
       const h = o.height ?? 16;
-      const isBrokenPipe = kind === "broken_pipe";
-      const hitboxX = isBrokenPipe ? x - BROKEN_PIPE_HITBOX_PADDING_X : x;
-      const hitboxY = isBrokenPipe ? offsetY : y;
-      const hitboxWidth = isBrokenPipe ? w + BROKEN_PIPE_HITBOX_PADDING_X * 2 : w;
-      const hitboxHeight = isBrokenPipe ? y + h - offsetY : h;
       // Tiled dá x/y do CANTO superior-esquerdo do retângulo; a zone usa centro.
-      const zone = this.scene.add.zone(
-        hitboxX + hitboxWidth / 2,
-        hitboxY + hitboxHeight / 2,
-        hitboxWidth,
-        hitboxHeight,
-      );
+      const zone = this.scene.add.zone(x + w / 2, y + h / 2, w, h);
       this.scene.physics.add.existing(zone, true); // true = corpo estático
       // `kind` desconhecido cai em "floor" por segurança - morte instantânea é
       // o comportamento mais chamativo/óbvio de testar do que deixar um
@@ -528,22 +514,6 @@ export class TiledLevelRuntime {
       });
     }
     for (const hz of this.hazardZones) {
-      if (hz.kind === "broken_pipe") {
-        // O cano baixo precisa detectar também o contato exato de pouso. Um
-        // `overlap` pode não disparar quando o Arcade Physics separa o corpo
-        // na mesma atualização e o deixa apenas encostado no topo. A colisão
-        // condicional fecha essa brecha: em pé/no ar ela mata imediatamente;
-        // durante o slide o process callback devolve false e Alex atravessa
-        // o volume sem ganhar apoio sólido.
-        this.scene.physics.add.collider(
-          player.sprite,
-          hz.zone,
-          () => player.kill(),
-          () => player.getState() !== "sliding",
-        );
-        continue;
-      }
-
       this.scene.physics.add.overlap(player.sprite, hz.zone, () => {
         if (hz.behavior === "overhead") {
           if (player.getState() !== "sliding") player.kill();

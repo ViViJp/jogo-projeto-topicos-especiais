@@ -14,7 +14,7 @@ const phases = [
     tile: 16,
     layers: ["background", "deco-back", "ground", "hazards", "deco", "objects"],
     objects: ["spawn", "checkpoint", "credit", "hazard", "clinic", "phase_end"],
-    hazards: ["toxic_water", "electric_wire", "broken_pipe"],
+    hazards: ["toxic_water", "electric_wire", "broken_pipe", "low_pipe"],
     implant: "legs",
   },
   {

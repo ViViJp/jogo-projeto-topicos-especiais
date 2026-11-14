@@ -113,6 +113,55 @@ for (const relativePath of maps) {
   assert.equal(objects.filter((object) => object.type === "phase_end").length, 1, `${relativePath}: phase_end`);
 }
 
+const phase1Map = JSON.parse(fs.readFileSync(
+  path.join(projectDirectory, "src/assets/maps/esgoto/fase-1.json"),
+  "utf8",
+));
+const phase1Ground = phase1Map.layers.find((layer) => layer.name === "ground");
+const phase1Hazards = phase1Map.layers.find((layer) => layer.name === "hazards");
+const phase1Objects = phase1Map.layers.find((layer) => layer.name === "objects")?.objects ?? [];
+const lowPipeCoordinates = [
+  [1264, 256], [2736, 256], [5152, 256], [8544, 256],
+  [10480, 256], [12720, 256], [14944, 224], [16272, 256],
+  [19456, 256], [20736, 256], [25008, 256], [27040, 256],
+];
+const lowPipeObjects = phase1Objects.filter((object) => (
+  object.type === "hazard"
+  && object.properties?.some((property) => property.name === "kind" && property.value === "low_pipe")
+));
+assert.equal(lowPipeObjects.length, 12, "fase1: os 12 canos baixos devem possuir hitbox low_pipe");
+for (const [index, [x, y]] of lowPipeCoordinates.entries()) {
+  const object = lowPipeObjects.find((candidate) => candidate.name === `low_pipe_${String(index + 1).padStart(2, "0")}`);
+  assert.deepEqual(
+    object && { x: object.x, y: object.y, width: object.width, height: object.height },
+    { x, y, width: 128, height: 32 },
+    `fase1: geometria de low_pipe_${String(index + 1).padStart(2, "0")}`,
+  );
+  const startColumn = x / phase1Map.tilewidth;
+  const startRow = y / phase1Map.tileheight;
+  for (let rowOffset = 0; rowOffset < 2; rowOffset += 1) {
+    for (let columnOffset = 0; columnOffset < 8; columnOffset += 1) {
+      const tileIndex = (startRow + rowOffset) * phase1Map.width + startColumn + columnOffset;
+      assert.equal(phase1Ground.data[tileIndex], 0,
+        `fase1: low_pipe_${index + 1} não pode permanecer sólido em ground`);
+      assert.notEqual(phase1Hazards.data[tileIndex], 0,
+        `fase1: low_pipe_${index + 1} deve preservar sua arte em hazards`);
+    }
+  }
+  const centerColumn = startColumn + 4;
+  let groundRow = startRow + 2;
+  while (groundRow < phase1Map.height && phase1Ground.data[groundRow * phase1Map.width + centerColumn] === 0) {
+    groundRow += 1;
+  }
+  const clearance = groundRow * phase1Map.tileheight - (y + 32);
+  assert.equal(clearance, 48, `fase1: low_pipe_${index + 1} deve manter 48 px livres para o slide`);
+}
+const gameConfigSource = fs.readFileSync(path.join(projectDirectory, "src/config/GameConfig.ts"), "utf8");
+assert.match(gameConfigSource, /PLAYER_SIZE = \{ width: 26, height: 50 \}/,
+  "fase1: hitbox em pé deve tocar os canos com vão de 48 px");
+assert.match(gameConfigSource, /PLAYER_SLIDE_SIZE = \{ width: 28, height: 30 \}/,
+  "fase1: hitbox do slide deve passar sob os canos com vão de 48 px");
+
 function objectProperty(object, name) {
   return object.properties?.find((property) => property.name === name)?.value;
 }
@@ -217,6 +266,12 @@ assert.match(phase5RuntimeSource, /const groundExtension = layer === this\.groun
 const gameScene = fs.readFileSync(path.join(projectDirectory, "src/scenes/GameScene.ts"), "utf8");
 const multiplayerScene = fs.readFileSync(path.join(projectDirectory, "src/scenes/MultiplayerScene.ts"), "utf8");
 const mainSource = fs.readFileSync(path.join(projectDirectory, "src/main.ts"), "utf8");
+assert.match(multiplayerScene, /new TiledPhase5Runtime\(/,
+  "multiplayer deve permanecer isolado no runtime da Fase 5");
+assert.match(multiplayerScene, /mapKey: TILED_MULTIPLAYER_MAP_KEY/,
+  "multiplayer deve continuar usando seu mapa competitivo próprio");
+assert.doesNotMatch(multiplayerScene, /new TiledLevelRuntime\(/,
+  "multiplayer não pode herdar as colisões low_pipe exclusivas da Fase 1");
 assert.match(mainSource, /mode: Phaser\.Scale\.EXPAND/,
   "canvas deve preencher todo o viewport sem barras laterais");
 assert.match(gameScene, /const viewportWidth = this\.cameras\.main\.width/,
@@ -430,18 +485,16 @@ assert.match(phase1GroundCollider, /physics\.add\.collider\(player\.sprite, this
   "fase1: plataformas devem resolver somente colisão sólida");
 assert.doesNotMatch(phase1GroundCollider, /player\.kill\(\)/,
   "fase1: contato lateral, inferior ou de canto com plataforma não pode matar Alex");
-assert.match(tiledLevelRuntime, /broken_pipe: "overhead"/,
-  "fase1: canos rompidos devem ser atravessáveis somente durante o slide");
+assert.match(tiledLevelRuntime, /broken_pipe: "floor"/,
+  "fase1: canos rompidos devem continuar letais em qualquer contato");
+assert.match(tiledLevelRuntime, /low_pipe: "floor"/,
+  "fase1: canos baixos devem matar apenas quando a hitbox física de Alex os toca");
 assert.match(tiledLevelRuntime, /hazards\.setCollisionByExclusion\(\[\], false\)/,
   "fase1: a arte dos hazards não pode oferecer uma superfície onde Alex pise");
-assert.match(tiledLevelRuntime, /BROKEN_PIPE_HITBOX_PADDING_X = 3/);
-assert.match(tiledLevelRuntime, /const hitboxY = isBrokenPipe \? offsetY : y/);
-assert.match(tiledLevelRuntime, /const hitboxHeight = isBrokenPipe \? y \+ h - offsetY : h/,
-  "fase1: hitbox do cano deve subir ao teto para impedir pulo e pouso por cima");
+assert.match(tiledLevelRuntime, /add\.zone\(x \+ w \/ 2, y \+ h \/ 2, w, h\)/,
+  "fase1: hazards devem respeitar exatamente os retângulos autorados no Tiled");
 assert.match(tiledLevelRuntime, /hz\.behavior === "overhead"[\s\S]*?player\.getState\(\) !== "sliding"[\s\S]*?player\.kill\(\)/,
   "fase1: obstáculo overhead deve matar Alex sempre que ele não estiver deslizando");
-assert.match(tiledLevelRuntime, /hz\.kind === "broken_pipe"[\s\S]*?physics\.add\.collider\([\s\S]*?player\.getState\(\) !== "sliding"/,
-  "fase1: cano baixo deve detectar pouso como colisão letal e ignorar somente o slide");
 assert.match(tiledLevelRuntime, /for \(const hz of this\.hazardZones\)[\s\S]*?player\.kill\(\)/,
   "fase1: hazards reais devem continuar letais após separar o terreno");
 assert.match(tiledLevelRuntime, /prepareDescentEpilogue\(startX: number, endX: number\)/,

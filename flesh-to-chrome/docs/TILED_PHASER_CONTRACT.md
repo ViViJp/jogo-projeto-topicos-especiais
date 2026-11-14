@@ -156,6 +156,7 @@ hazard
 spawn
 phase_end
 broken_pipe
+low_pipe
 risk
 normal
 ~~~
@@ -178,7 +179,7 @@ A integração trata esses valores como case-sensitive.
 - IDs lógicos devem ser únicos dentro da fase.
 - Padrão de ID recomendado: **f<fase>-<tipo>-<nn>**.
 - Exemplos: **f1-risk-01**, **f1-safe-01**, **f1-cp1**.
-- Objetos de hazard devem usar nomes sequenciais, como **toxic_water_01**, **electric_wire_01** e **broken_pipe_01**.
+- Objetos de hazard devem usar nomes sequenciais, como **toxic_water_01**, **electric_wire_01**, **broken_pipe_01** e **low_pipe_01**.
 
 ### Coordenadas
 
@@ -239,7 +240,7 @@ kind = toxic_water
 
 | Propriedade | Tipo | Valores atuais | Obrigatória |
 |---|---|---|---|
-| **kind** | string | **toxic_water**, **electric_wire**, **broken_pipe** | sim |
+| **kind** | string | **toxic_water**, **electric_wire**, **broken_pipe**, **low_pipe** | sim |
 
 #### Comportamento por **kind**
 
@@ -247,7 +248,8 @@ kind = toxic_water
 |---|---|---|
 | **toxic_water** | água tóxica/poço contaminado | morte ao contato, em qualquer estado |
 | **electric_wire** | fio/cabo energizado na altura do corpo | morte ao contato, exceto quando Alex passa corretamente em estado de slide |
-| **broken_pipe** | cano ou tubulação rompida | morte em corrida, pulo ou contato por cima; a zona lógica sobe até o teto e a travessia só é permitida por baixo durante o slide |
+| **broken_pipe** | cano ou tubulação rompida | morte ao contato, em qualquer estado |
+| **low_pipe** | cano baixo suspenso | morte quando a hitbox física toca o retângulo; o vão de 48 px permite passar por baixo sem contato somente durante o slide |
 
 #### Regra específica para canos rompidos
 
@@ -258,12 +260,25 @@ Todo cano rompido que possa ser tocado pelo jogador deve ser tratado como hazard
 3. usar **Classe = hazard**;
 4. adicionar a propriedade string **kind = broken_pipe**;
 5. usar nome sequencial **broken_pipe_01**, **broken_pipe_02**, etc.;
-6. alinhar o retângulo ao trecho visual letal; o runtime prolonga sua zona
-   lógica até o teto para impedir que o obstáculo seja vencido por salto;
-7. testar contato correndo, tentando saltar por cima e aterrissando no cano —
-   os três devem resultar em morte; somente o slide deve atravessar o volume.
+6. alinhar o retângulo ao trecho visual letal;
+7. testar contato em todos os estados — qualquer sobreposição deve resultar em morte.
 
 Não colocar o cano rompido apenas em **ground**, pois colisão sólida e hazard letal são responsabilidades diferentes. Tiles estruturais não letais que sustentem o cano podem continuar em **ground**, mas a parte rompida/letal deve ficar visualmente em **hazards** e logicamente em **objects**.
+
+#### Regra específica para canos baixos suspensos
+
+Os 12 canos baixos da Fase 1 usam visual de **128 × 32 px** na layer
+**hazards** e um Rectangle Object correspondente em **objects**, com
+**Classe = hazard** e **kind = low_pipe**. Nenhum tile desses canos pode
+permanecer em **ground**, pois isso recriaria uma superfície sólida onde Alex
+conseguiria pousar.
+
+O retângulo lógico deve acompanhar somente a arte, sem extensão invisível. A
+base do cano fica 48 px acima do piso: a hitbox normal de Alex, com 50 px,
+encosta e morre; a hitbox de slide, com 30 px, atravessa o vão sem contato.
+Pular contra a lateral, atingir a parte inferior ou aterrissar sobre o cano
+também causa morte. Encerrar o slide antes de sair do volume volta a expor a
+hitbox normal e deve matar Alex.
 
 **Comportamento esperado no Phaser:** criar uma zona física invisível para cada objeto. O comportamento deve ser despachado pelo valor de **kind**, sem depender de fallback para tipos desconhecidos.
 
@@ -621,7 +636,7 @@ checkpoint
 #### Valores usados
 
 ~~~text
-hazard.kind = toxic_water | electric_wire | broken_pipe
+hazard.kind = toxic_water | electric_wire | broken_pipe | low_pipe
 credit.route = normal | risk
 phase_end.fase = 1
 clinic.implant = legs
@@ -937,12 +952,13 @@ Dependendo da versão/exportação do Tiled, a informação exibida na interface
 
 - reforçado que a layer `hazards` da Fase 1 é somente visual e nunca oferece
   apoio sólido ao jogador;
-- alinhada a hitbox dos canos rompidos às laterais da arte e prolongada até
-  o teto jogável, removendo a rota de salto por cima;
-- canos rompidos passam a ser obstáculos exclusivos de slide: contato em pé,
-  no pulo ou por cima mata Alex, enquanto o slide permite atravessar;
-- o contato dos canos usa colisão condicional, garantindo que um pouso exato
-  no topo também seja letal sem transformar o cano em plataforma durante o slide.
+- movidos os 12 canos baixos de 128 × 32 px de `ground` para `hazards`,
+  preservando posição e arte no TMJ e no JSON exportado;
+- adicionados os objetos `low_pipe_01` a `low_pipe_12`, todos com retângulos
+  alinhados à arte e comportamento letal ao contato;
+- preservado o vão de 48 px: Alex em pé toca o cano, enquanto a hitbox de
+  slide passa por baixo sem sobreposição;
+- `broken_pipe` permanece um hazard distinto e letal em qualquer estado.
 
 ### v0.23 — 2026-11-10
 
