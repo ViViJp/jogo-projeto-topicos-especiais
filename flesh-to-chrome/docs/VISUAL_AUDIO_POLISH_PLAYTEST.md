@@ -46,17 +46,13 @@ Documento da branch `feat/visual-audio-polish`.
   liberam cada habilidade. Ela reutiliza a música do menu sem reiniciá-la. Ao
   abrir a partir de **Novo Jogo**, o save só é substituído ao confirmar
   **Iniciar Campanha**; a opção permanente **Controles** é somente consultiva.
-  As imagens do prólogo são aquecidas em segundo plano enquanto essa tela
-  permanece visível. Se o jogador confirmar antes do fim da transferência, o
-  painel mostra o progresso e só troca de cena quando o primeiro quadro estiver
-  pronto, evitando a tela preta observada em servidores remotos.
+  Ao confirmar, a `LoadingScene` central assume a transferência, mostra o
+  progresso e só revela o prólogo quando ele estiver criado, evitando a tela
+  preta observada em servidores remotos.
 - O master original de 17 MB da Fase 1 foi convertido de Vorbis 450 kbps para
   128 kbps, mantendo os 5min06s, estéreo e 44,1 kHz em um arquivo de 4,6 MB.
-  Durante o prólogo, essa música é carregada e decodificada em segundo plano.
-  Se a leitura terminar antes da transferência, a última página permanece
-  visível com o progresso; em seguida, a `GameScene` carrega atrás dela e só
-  assume a tela depois de emitir `CREATE`. Assim o jogador nunca fica esperando
-  o primeiro setor sobre um canvas preto.
+  Ao terminar o prólogo, essa música é carregada e decodificada por trás da
+  `LoadingScene`; a `GameScene` só assume a tela depois de emitir `CREATE`.
 - A conclusão de cada clínica apresenta um tutorial do implante adquirido. O
   painel reutiliza a variante atual de Alex e demonstra salto duplo, ataque,
   scan ou dash, deriva os comandos da configuração central e exige confirmação
@@ -100,8 +96,7 @@ No playtest manual, confirme em 16:9 e ultrawide:
    piscam a luz laranja no aviso; as prensas também piscam sem adicionar um
    segundo alarme aos demais hazards.
 7. em 16:9 e ultrawide, o menu preenche toda a área visível, mantém título e
-   opções legíveis sobre Glitch City e não exibe **Selecionar Fase (teste)** no
-   build de produção;
+   opções legíveis sobre Glitch City e não contém o seletor temporário de fases;
 8. a tela de controles mantém os dois painéis, implantes e botões dentro da
    moldura; teclado, mouse e gamepad conseguem iniciar a campanha e voltar;
 9. abrir **Controles** pelo menu e voltar não altera o save; abrir **Novo Jogo**,

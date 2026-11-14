@@ -86,8 +86,7 @@ checkpoint e, pela regra atual, também desfaz carteira e IDs obtidos no setor.
 
 ## Roteiro de playtest manual
 
-Em **Selecionar fase**, percorra as fases 1–5 e registre resultado para cada
-linha:
+Percorra as fases 1–5 pela campanha e registre o resultado para cada linha:
 
 | Fase | Ponto de controle | Resultado esperado |
 | --- | --- | --- |

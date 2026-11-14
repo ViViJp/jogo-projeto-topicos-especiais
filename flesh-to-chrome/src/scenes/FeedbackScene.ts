@@ -7,8 +7,6 @@ type EndingKind = "chrome" | "flesh" | "hollow";
 
 interface FeedbackSceneData {
   ending?: EndingKind;
-  /** Mantido para deixar explícito que a prévia continua sem tocar no save. */
-  testMode?: boolean;
 }
 
 interface FeedbackOption {

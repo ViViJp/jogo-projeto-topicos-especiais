@@ -1184,9 +1184,7 @@ música e apresenta o formulário oficial por QR Code e por um botão que abre u
 nova aba. A resposta é voluntária.
 
 O jogador também pode voltar diretamente ao menu por botão, `Esc` ou `B`. Essa
-saída não reinicia a campanha nem modifica o save. As prévias acessadas pelo
-seletor exibem a mesma avaliação, mas continuam proibidas de registrar finais
-ou qualquer outro progresso.
+saída não reinicia a campanha nem modifica o save.
 
 ---
 
@@ -1334,8 +1332,18 @@ névoa e luzes discretas. Um degradê escuro e um painel tecnológico à esquerd
 preservam a legibilidade das opções. O título ocupa a região superior esquerda
 e a seleção ativa é marcada por `▶` em amarelo.
 
-**Selecionar Fase (teste)** é uma ferramenta exclusiva de desenvolvimento e
-não deve aparecer no build público.
+O seletor temporário de fases foi removido do jogo e dos scripts de
+desenvolvimento. Os percursos, o Portão e os finais são validados pelo fluxo de
+campanha e pelos testes automatizados, sem uma segunda entrada de progressão.
+
+## 20.2.2 Transição e carregamento
+
+Toda troca de campanha que pode carregar mapas, músicas ou sprites passa pela
+`LoadingScene`. A tela mantém fundo escuro, destino, indicador animado e barra
+de progresso enquanto a próxima cena executa `preload()` e `create()` atrás
+dela. O destino só é revelado após o evento `CREATE`; falhas de arquivo exibem
+uma mensagem com opções de tentar novamente ou voltar ao menu. Nenhuma cena
+deve iniciar um loader concorrente ou deixar um canvas preto durante a espera.
 
 ## 20.3 Continue
 

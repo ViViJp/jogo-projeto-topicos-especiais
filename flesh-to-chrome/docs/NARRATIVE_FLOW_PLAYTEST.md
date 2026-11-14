@@ -30,18 +30,12 @@ Novo Jogo
   como parte do programa de ascensão da Glitch Corp e deixa explícito que Alex
   reconhece o rosto do pai.
 - O Portão cria um snapshot independente antes de qualquer escolha.
-- O seletor de fases permite abrir o Portão diretamente em modo de teste. Abrir
-  e sair com ESC/B não cria snapshot; confirmar Flesh inicia a descida de teste
-  com os quatro implantes e passa a usar o save da cadeia narrativa.
 - Chrome apresenta o reencontro físico com a ilustração conjunta
   `endings/chrome-father-son.png`: o pai reconhece Alex, mas Alex não o
   reconhece e continua andando.
 - Flesh e Hollow usam `prologue/familia.png`, com avô e tio juntos, para
   representar a casa. O retrato do pai não pode aparecer como família nesses
   dois finais.
-- Na prévia do Portão, selecionar Flesh exibe uma orientação e não inicia a
-  descida. O caminho completo só começa pelo Portão da campanha, protegendo o
-  save real do seletor de fases.
 - Depois da última ReForge, o save mantém `epiloguePending` até Alex alcançar a
   saída do trecho jogável do Esgoto. Fechar e continuar antes disso restaura o
   corredor, em vez de saltar diretamente para o epílogo.
@@ -51,8 +45,7 @@ Novo Jogo
 - Depois da última confirmação de Chrome, Flesh ou Hollow, a campanha abre a
   `FeedbackScene`. Ela preserva a música correspondente ao final, identifica o
   desfecho alcançado e oferece o formulário opcional por QR Code ou nova aba.
-  Voltar ao menu, inclusive com ESC/B, não lê nem modifica o save. As prévias
-  também chegam à avaliação sem registrar o final.
+  Voltar ao menu, inclusive com ESC/B, não lê nem modifica o save.
 - Flesh inicia com a cena em que George reprova a decisão de Alex e se recusa a
   desmontar sua obra. Cada glitch recupera uma memória/motivação, e cada
   três primeiros procedimentos ReForge mostram um operador ciborgue anônimo; o
@@ -60,6 +53,9 @@ Novo Jogo
   perda do salto duplo.
 - `Continuar do Portão` restaura fase, checkpoint, créditos, carteira e os
   quatro implantes sem consumir o snapshot.
+- Todas as trocas de campanha passam pela `LoadingScene`, que permanece acima
+  da cena de destino até o carregamento e o `create()` terminarem. Isso cobre
+  prólogo, fases, clínicas, Portão, descida, epílogos e avaliação.
 
 ## Validação automatizada
 
@@ -87,8 +83,7 @@ reproduzíveis.
    a família, o pai antes da ascensão e o pai convertido no jornal.
 2. Avance pelas quatro clínicas e observe a mudança visual e textual de George.
 3. Na Fase 4, confirme que a propaganda exibe o asset do pai e o texto narrativo.
-4. No seletor de fases, abra **Portão — escolha final (teste)**, pressione
-   **ESC/B** e confirme o retorno sem criar snapshot.
+4. Complete a Fase 5 e alcance o Portão pelo fluxo normal da campanha.
 5. No Portão, valide que esquerda seleciona Chrome, direita seleciona Flesh e
    que cima/baixo alternam entre as opções. Em viewport largo, o fundo deve
    ocupar toda a tela sem borda preta à direita; o subtítulo deve ficar entre
@@ -107,9 +102,8 @@ reproduzíveis.
 13. Nos quadros finais Flesh e Hollow, confirme que a imagem da casa mostra o
     avô e o tio juntos. O retrato ciborgue do pai deve aparecer somente em
     Chrome.
-14. Com uma campanha salva, abra o Portão pelo seletor de fases, escolha Flesh
-    e confirme que aparece a orientação para usar a campanha. Volte ao menu e
-    valide que fase, carteira, checkpoint, implantes e final continuam iguais.
+14. Durante as transições, simule cache vazio e rede lenta: a tela temática deve
+    permanecer visível, informar o destino e nunca expor um canvas preto.
 15. Feche o jogo imediatamente depois da quarta retirada e use **Continuar**.
     Alex deve retornar ao corredor curto do Esgoto; depois de alcançar a saída,
     um novo **Continuar** deve abrir o epílogo, sem repetir o corredor.

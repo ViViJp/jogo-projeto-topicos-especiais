@@ -2,11 +2,7 @@ import Phaser from "phaser";
 import { InputManager } from "../systems/InputManager";
 import { SaveState } from "../systems/SaveState";
 import { AudioManager, SFX, bgmForEnding } from "../systems/AudioManager";
-import {
-  AbilityState,
-  abilityStateToBodyStage,
-  createInitialAbilityState,
-} from "../systems/AbilityState";
+import { abilityStateToBodyStage } from "../systems/AbilityState";
 import {
   ALEX_ARMS_TEXTURE_KEY,
   ALEX_DASH_TEXTURE_KEY,
@@ -31,10 +27,6 @@ interface EndingPage {
 
 interface EndingSceneData {
   ending?: EndingKind;
-  /** Prévia iniciada pelo seletor; nunca registra o final no save. */
-  testMode?: boolean;
-  /** Estado corporal transitório usado especialmente pelo Final Hollow. */
-  abilities?: AbilityState;
 }
 
 const CHROME_PAGES: EndingPage[] = [
@@ -122,8 +114,6 @@ export class EndingScene extends Phaser.Scene {
   private alexCaption!: Phaser.GameObjects.Text;
   private ending: EndingKind = "chrome";
   private pages: EndingPage[] = CHROME_PAGES;
-  private testMode = false;
-  private previewAbilities?: AbilityState;
 
   constructor() {
     super("EndingScene");
@@ -132,8 +122,6 @@ export class EndingScene extends Phaser.Scene {
   init(data: EndingSceneData): void {
     this.ending = data.ending ?? "chrome";
     this.pages = this.ending === "flesh" ? FLESH_PAGES : this.ending === "hollow" ? HOLLOW_PAGES : CHROME_PAGES;
-    this.testMode = data.testMode ?? false;
-    this.previewAbilities = data.abilities;
   }
 
   preload(): void {
@@ -213,9 +201,7 @@ export class EndingScene extends Phaser.Scene {
         padding: { x: 7, y: 4 },
       },
     ).setOrigin(0.5);
-    const abilities = this.testMode
-      ? this.previewAbilities ?? createInitialAbilityState()
-      : SaveState.load().get().abilities;
+    const abilities = SaveState.load().get().abilities;
     const remainingImplants = abilityStateToBodyStage(abilities);
     if (this.ending !== "chrome") {
       const alexTexture = this.ending === "flesh"
@@ -298,11 +284,10 @@ export class EndingScene extends Phaser.Scene {
     this.returning = true;
     // A escolha só se torna um final concluído depois que o jogador viu e
     // confirmou o último quadro. Fechar o jogo antes disso mantém o Portão
-    // disponível e a prévia do seletor nunca escreve no save.
-    if (!this.testMode) SaveState.load().markEndingReached(this.ending);
+    // disponível.
+    SaveState.load().markEndingReached(this.ending);
     startLoadingTransition(this, "FeedbackScene", {
       ending: this.ending,
-      testMode: this.testMode,
     });
   }
 }

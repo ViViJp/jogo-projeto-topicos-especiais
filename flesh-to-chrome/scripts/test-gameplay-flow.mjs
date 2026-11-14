@@ -399,8 +399,8 @@ assert.match(
 );
 assert.doesNotMatch(
   pausedBranch,
-  /this\.data\$\.testMode\s*&&\s*this\.input\$\.isMenuDownJustDown/,
-  "retorno ao menu não pode ficar restrito ao seletor de fases",
+  /testMode|DescentPreviewSession|descentPreview/,
+  "retorno ao menu não pode depender de lógica do seletor removido",
 );
 const checkpointMarker = fs.readFileSync(path.join(projectDirectory, "src/objects/CheckpointMarker.ts"), "utf8");
 assert.match(checkpointMarker, /activate\(withFeedback = true\)/);
@@ -564,10 +564,40 @@ assert.match(alexSpriteSource, /alexSlideTextureKey\(textureKey\), \{ start: 0, 
   "slide deve utilizar os quatro frames da folha dedicada");
 assert.match(alexSpriteSource, /frameRate: 10,[\s\S]*?repeat: 0/,
   "entrada do slide deve tocar uma vez e manter o quarto frame");
-assert.match(alexSpriteSource, /SLIDE_FRAME_X_OFFSETS = \[0, 10, 8, 6\]/,
-  "quadros do slide devem compensar o recuo do desenho dentro da célula");
+assert.match(alexSpriteSource, /SLIDE_FRAME_X_OFFSETS = \[0, 4, 3, 3\]/,
+  "quadros do slide devem usar a compensação visual medida, sem sobrecorreção");
 assert.match(alexSpriteSource, /\.setTrim\(PLAYER_FRAME, PLAYER_FRAME, offsetX, 0, PLAYER_FRAME, PLAYER_FRAME\)/,
   "alinhamento do slide deve mover somente o desenho, sem deslocar a hitbox");
+assert.match(gameScene, /FTC_ENABLE_MOVEMENT_DEBUG === "1"/,
+  "diagnóstico de sprite, física e câmera deve permanecer opt-in");
+assert.match(gameScene, /sprite\.x:[\s\S]*?velocity\.x:[\s\S]*?camera\.scrollX:/,
+  "overlay de desenvolvimento deve diferenciar recuo visual, físico e de câmera");
+assert.match(gameScene, /memory-fragment-64\.png/,
+  "a descida deve carregar o fragmento físico unificado");
+assert.ok(fs.existsSync(path.join(projectDirectory, "src/assets/props/collectibles/memory-fragment-64.png")),
+  "asset físico do fragmento de memória ausente");
+const descentGlitchSource = fs.readFileSync(
+  path.join(projectDirectory, "src/objects/DescentGlitchRuntime.ts"), "utf8",
+);
+assert.match(descentGlitchSource, /DESCENT_MEMORY_FRAGMENT_TEXTURE_KEY = "memory-fragment"/);
+assert.match(descentGlitchSource, /this\.particles\.push\(particle\)/,
+  "fragmento deve manter partículas digitais ao redor");
+assert.match(descentGlitchSource, /AudioManager\.playSfx\(this\.scene, SFX\.glitch/,
+  "novo visual não pode remover o som de coleta");
+const phase5MapForLaser = JSON.parse(fs.readFileSync(
+  path.join(projectDirectory, "src/assets/maps/topo/fase-5.tmj"), "utf8",
+));
+const movedLaser = phase5MapForLaser.layers
+  .find((layer) => layer.name === "objects")?.objects
+  .find((object) => object.name === "laser_grid_04");
+assert.equal(movedLaser?.x, 23_744, "laser da rota inferior deve avançar exatamente dois tiles");
+assert.equal(
+  movedLaser?.properties?.find((property) => property.name === "visual_source_x")?.value,
+  23_680,
+  "runtime deve saber de qual coluna transferir a arte do laser",
+);
+assert.match(phase5RuntimeSource, /relocateLaserVisual\(object, x, y, width, height\)/,
+  "visual e colisão do laser movido devem permanecer alinhados");
 for (const stage of ["flesh", "legs", "arms", "eyes", "dash"]) {
   assert.match(gameScene, new RegExp(`alex-slide-${stage}\\.png`), `GameScene: slide ${stage}`);
   assert.ok(

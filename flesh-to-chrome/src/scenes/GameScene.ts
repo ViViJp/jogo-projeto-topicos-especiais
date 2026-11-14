@@ -5,7 +5,6 @@ import { InputManager } from "../systems/InputManager";
 import { CreditsSystem } from "../systems/CreditsSystem";
 import { HUD } from "../systems/HUD";
 import { SaveState } from "../systems/SaveState";
-import { DescentPreviewSession } from "../systems/DescentPreviewSession";
 import { AudioManager, SFX, bgmForPhase } from "../systems/AudioManager";
 import { descentRouteForPhase, descentStepForPhase } from "../systems/DescentProgression";
 import { DescentGlitchRuntime, DESCENT_MEMORY_FRAGMENT_TEXTURE_KEY } from "../objects/DescentGlitchRuntime";
@@ -104,8 +103,6 @@ import {
 
 export interface GameSceneData {
   phaseId: string;
-  /** Execução iniciada pelo seletor temporário; não altera o save da campanha. */
-  testMode?: boolean;
   checkpointX?: number;
   /**
    * v0.4.0 bugfix: o mapa novo da Fase 1 tem duas elevações de chão
@@ -124,13 +121,9 @@ export interface GameSceneData {
   abilities?: AbilityState;
   /** Reutiliza o mesmo mapa no caminho inverso narrativo Flesh/Hollow. */
   descent?: boolean;
-  /** Progressão descartável da descida iniciada pelo seletor de testes. */
-  descentPreview?: DescentPreviewSession;
 }
 
-type RuntimeGameSceneData = Required<Omit<GameSceneData, "descentPreview">> & {
-  descentPreview?: DescentPreviewSession;
-};
+type RuntimeGameSceneData = Required<GameSceneData>;
 
 /**
  * Fundo por fase. Ajustado em v0.2.1 (feedback de playtest: "o personagem
@@ -169,14 +162,6 @@ const PHASE_BACKGROUND: Record<string, number> = {
 const PHASES_WITH_CLINIC = new Set(["fase1", "fase2-intro", "fase3", "fase4"]);
 const SHOW_MOVEMENT_DIAGNOSTICS = process.env.FTC_ENABLE_MOVEMENT_DEBUG === "1";
 
-interface TestClinicChoiceData {
-  completedPhaseId: string;
-  nextPhaseId: string | null;
-  wallet: number;
-  abilities: AbilityState;
-  implant?: keyof AbilityState;
-}
-
 /**
  * v0.3.0 - a Fase 1 volta a usar o mapa Tiled real
  * (`src/assets/maps/esgoto/fase-1.json`), desta vez seguindo o contrato
@@ -208,12 +193,6 @@ export class GameScene extends Phaser.Scene {
   private scanOverlay?: Phaser.GameObjects.Rectangle;
   private activeAbilities!: AbilityState;
   private restarting = false;
-  private awaitingTestClinicChoice = false;
-  private testClinicWatchSelected = true;
-  private testClinicPrompt?: Phaser.GameObjects.Container;
-  private testClinicYesText?: Phaser.GameObjects.Text;
-  private testClinicNoText?: Phaser.GameObjects.Text;
-  private pendingTestClinicData?: TestClinicChoiceData;
   private levelLengthPx = 0;
   private checkpointInteraction?: Phaser.Time.TimerEvent;
 
@@ -238,45 +217,20 @@ export class GameScene extends Phaser.Scene {
     this.pauseText = undefined;
     this.scanOverlay = undefined;
     this.checkpointInteraction = undefined;
-    this.awaitingTestClinicChoice = false;
-    this.testClinicWatchSelected = true;
-    this.testClinicPrompt = undefined;
-    this.testClinicYesText = undefined;
-    this.testClinicNoText = undefined;
-    this.pendingTestClinicData = undefined;
     this.data$ = {
       phaseId: data.phaseId,
-      testMode: data.testMode ?? false,
       checkpointX: data.checkpointX ?? 0,
       checkpointY: data.checkpointY ?? 0,
       consolidatedCreditIds: data.consolidatedCreditIds ?? [],
       wallet: data.wallet ?? 0,
       abilities: data.abilities ?? createInitialAbilityState(),
       descent: data.descent ?? false,
-      descentPreview: data.descentPreview,
     };
     this.restarting = false;
-    // Cada prévia ativa apenas as mecânicas já apresentadas na campanha.
-    // Isso também corrige saves antigos que tenham sido gravados com
-    // implantes adiantados ou sem os braços ao entrar na Fase 3.
     const savedAbilities = data.abilities ?? createInitialAbilityState();
-    if (!this.data$.testMode || this.data$.descent) {
-      // Campanha sempre respeita o estado persistido. Isto impede que uma
-      // habilidade removida pela ReForge reapareca por causa da fase.
-      this.activeAbilities = { ...savedAbilities };
-    } else if (data.phaseId === "fase1") {
-      this.activeAbilities = { legs: false, arms: false, eyes: false, thrusters: false };
-    } else if (data.phaseId === "fase2-intro") {
-      this.activeAbilities = { legs: true, arms: false, eyes: false, thrusters: false };
-    } else if (data.phaseId === "fase3") {
-      this.activeAbilities = { legs: true, arms: true, eyes: false, thrusters: false };
-    } else if (data.phaseId === "fase4") {
-      this.activeAbilities = { legs: true, arms: true, eyes: true, thrusters: false };
-    } else if (data.phaseId === "fase5") {
-      this.activeAbilities = { legs: true, arms: true, eyes: true, thrusters: true };
-    } else {
-      this.activeAbilities = savedAbilities;
-    }
+    // Campanha sempre respeita o estado persistido. Isto impede que uma
+    // habilidade removida pela ReForge reapareca por causa da fase.
+    this.activeAbilities = { ...savedAbilities };
   }
 
   preload(): void {
@@ -684,8 +638,7 @@ export class GameScene extends Phaser.Scene {
     if (!route) throw new Error(`Recorte de descida ausente para ${this.data$.phaseId}`);
     const step = descentStepForPhase(this.data$.phaseId);
     const recovered = step
-      ? (this.data$.descentPreview?.get().descentState.recoveredFragmentIds
-        ?? this.save.get().descentState.recoveredFragmentIds).includes(step.fragmentId)
+      ? this.save.get().descentState.recoveredFragmentIds.includes(step.fragmentId)
       : false;
     this.descentRouteRuntime = new DescentRouteRuntime(
       this,
@@ -725,9 +678,7 @@ export class GameScene extends Phaser.Scene {
       step,
       recovered,
       (fragmentId) => {
-        const recoveredFragment = this.data$.descentPreview
-          ? this.data$.descentPreview.recoverDescentFragment(fragmentId)
-          : this.save.recoverDescentFragment(fragmentId);
+        const recoveredFragment = this.save.recoverDescentFragment(fragmentId);
         if (!recoveredFragment) return;
         this.descentRouteRuntime?.setMemoryRecovered(true);
         this.cameras.main.flash(320, 124, 252, 234);
@@ -963,14 +914,12 @@ export class GameScene extends Phaser.Scene {
     if (alreadyActive) return false;
 
     if (!this.data$.descent) this.credits.consolidate();
-    if (!this.data$.testMode) {
-      this.save.updateCheckpoint(
-        x,
-        y,
-        this.data$.descent ? [] : this.credits.getConsolidatedIds(),
-        this.data$.descent ? 0 : this.credits.getTotal(),
-      );
-    }
+    this.save.updateCheckpoint(
+      x,
+      y,
+      this.data$.descent ? [] : this.credits.getConsolidatedIds(),
+      this.data$.descent ? 0 : this.credits.getTotal(),
+    );
     this.data$.checkpointX = x;
     this.data$.checkpointY = y;
     this.updateHud();
@@ -1005,59 +954,34 @@ export class GameScene extends Phaser.Scene {
       if (this.restarting) return;
       this.restarting = true;
       this.player.sprite.setVelocity(0, 0);
-      const descentProgression = this.data$.descentPreview ?? this.save;
-      const previewData = this.data$.descentPreview
-        ? { testMode: true, descentPreview: this.data$.descentPreview }
-        : undefined;
       if (descentRouteForPhase(this.data$.phaseId)?.epilogue) {
-        descentProgression.completeDescentEpilogue();
+        this.save.completeDescentEpilogue();
         this.time.delayedCall(250, () => startLoadingTransition(this, "EpilogueScene", {
           ending: "flesh",
-          ...previewData,
         }));
         return;
       }
-      const result = descentProgression.completeDescentPhase();
+      const result = this.save.completeDescentPhase();
       const destination = result === "reforge"
         ? "ReForgeScene"
         : result === "retry"
           ? "DescentRetryScene"
           : "EpilogueScene";
-      const destinationData = result === "hollow"
-        ? { ending: "hollow", ...previewData }
-        : previewData;
+      const destinationData = result === "hollow" ? { ending: "hollow" } : undefined;
       this.time.delayedCall(250, () => startLoadingTransition(this, destination, destinationData));
       return;
     }
     this.credits.consolidate();
     AudioManager.playSfx(this, SFX.phaseClear, { volume: 0.62 });
-    if (!this.data$.testMode) {
-      this.save.updateCheckpoint(
-        this.player.sprite.x,
-        this.player.sprite.y,
-        this.credits.getConsolidatedIds(),
-        this.credits.getTotal()
-      );
-    }
+    this.save.updateCheckpoint(
+      this.player.sprite.x,
+      this.player.sprite.y,
+      this.credits.getConsolidatedIds(),
+      this.credits.getTotal()
+    );
     this.updateHud();
 
     const nextPhaseId = getNextPhaseId(this.data$.phaseId);
-
-    if (this.data$.testMode) {
-      if (PHASES_WITH_CLINIC.has(this.data$.phaseId)) {
-        this.showTestClinicChoice({
-          completedPhaseId: this.data$.phaseId,
-          nextPhaseId,
-          wallet: this.credits.getTotal(),
-          abilities: this.activeAbilities,
-          implant: implantOverride,
-        });
-        return;
-      }
-      this.hud.flashPrompt("Teste concluído — retornando ao seletor", 900);
-      this.time.delayedCall(700, () => this.scene.start("MenuScene"));
-      return;
-    }
 
     // A clínica de George instala um novo implante ao final de cada uma das
     // quatro primeiras fases (seção 11.1) e continua para o próximo blockout
@@ -1077,123 +1001,8 @@ export class GameScene extends Phaser.Scene {
         wallet: this.credits.getTotal(),
         abilities: this.activeAbilities,
         implant: implantOverride,
-        testMode: false,
       });
     });
-  }
-
-  /**
-   * O seletor de fases não avança nem grava a campanha, mas agora oferece a
-   * cena narrativa correspondente em vez de descartá-la silenciosamente.
-   */
-  private showTestClinicChoice(data: TestClinicChoiceData): void {
-    this.restarting = true;
-    this.awaitingTestClinicChoice = true;
-    this.testClinicWatchSelected = true;
-    this.pendingTestClinicData = data;
-    this.player.sprite.setVelocity(0, 0);
-    this.physics.world.pause();
-
-    const panel = this.add.rectangle(0, 0, 720, 270, 0x070b13, 0.97)
-      .setStrokeStyle(2, 0x7cfcea, 0.9);
-    const title = this.add.text(0, -88, "FASE CONCLUÍDA", {
-      fontFamily: "Courier New, monospace",
-      fontSize: "29px",
-      color: "#7CFCEA",
-    }).setOrigin(0.5);
-    const question = this.add.text(0, -32, "Deseja assistir à cutscene da clínica de George?", {
-      fontFamily: "Courier New, monospace",
-      fontSize: "20px",
-      color: "#e8ecff",
-      align: "center",
-      wordWrap: { width: 640 },
-    }).setOrigin(0.5);
-    this.testClinicYesText = this.add.text(-145, 45, "SIM — ASSISTIR", {
-      fontFamily: "Courier New, monospace",
-      fontSize: "20px",
-      padding: { x: 12, y: 8 },
-    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-    this.testClinicNoText = this.add.text(145, 45, "NÃO — SELETOR", {
-      fontFamily: "Courier New, monospace",
-      fontSize: "20px",
-      padding: { x: 12, y: 8 },
-    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-    const help = this.add.text(0, 102, "← / → para escolher   •   ENTER / A para confirmar", {
-      fontFamily: "Courier New, monospace",
-      fontSize: "14px",
-      color: "#8892b0",
-    }).setOrigin(0.5);
-
-    this.testClinicYesText.on("pointerover", () => this.setTestClinicSelection(true));
-    this.testClinicNoText.on("pointerover", () => this.setTestClinicSelection(false));
-    this.testClinicYesText.on("pointerdown", () => {
-      this.setTestClinicSelection(true);
-      this.confirmTestClinicChoice();
-    });
-    this.testClinicNoText.on("pointerdown", () => {
-      this.setTestClinicSelection(false);
-      this.confirmTestClinicChoice();
-    });
-
-    this.testClinicPrompt = this.add
-      .container(this.scale.width / 2, this.scale.height / 2, [
-        panel,
-        title,
-        question,
-        this.testClinicYesText,
-        this.testClinicNoText,
-        help,
-      ])
-      .setScrollFactor(0)
-      .setDepth(2200);
-    this.renderTestClinicSelection();
-  }
-
-  private setTestClinicSelection(watch: boolean): void {
-    this.testClinicWatchSelected = watch;
-    this.renderTestClinicSelection();
-  }
-
-  private renderTestClinicSelection(): void {
-    this.testClinicYesText
-      ?.setColor(this.testClinicWatchSelected ? "#071017" : "#8892b0")
-      .setBackgroundColor(this.testClinicWatchSelected ? "#7CFCEA" : "#151a27");
-    this.testClinicNoText
-      ?.setColor(!this.testClinicWatchSelected ? "#071017" : "#8892b0")
-      .setBackgroundColor(!this.testClinicWatchSelected ? "#7CFCEA" : "#151a27");
-  }
-
-  private updateTestClinicChoice(): void {
-    if (
-      this.input$.isMenuLeftJustDown()
-      || this.input$.isMenuUpJustDown()
-    ) this.setTestClinicSelection(true);
-    if (
-      this.input$.isMenuRightJustDown()
-      || this.input$.isMenuDownJustDown()
-    ) this.setTestClinicSelection(false);
-    if (this.input$.isCancelJustDown()) {
-      this.setTestClinicSelection(false);
-      this.confirmTestClinicChoice();
-      return;
-    }
-    if (this.input$.isConfirmJustDown()) this.confirmTestClinicChoice();
-  }
-
-  private confirmTestClinicChoice(): void {
-    if (!this.awaitingTestClinicChoice) return;
-    const watchClinic = this.testClinicWatchSelected;
-    const clinicData = this.pendingTestClinicData;
-    this.awaitingTestClinicChoice = false;
-    this.testClinicPrompt?.destroy();
-    this.testClinicPrompt = undefined;
-    this.physics.world.resume();
-
-    if (watchClinic && clinicData) {
-      startLoadingTransition(this, "ClinicScene", { ...clinicData, testMode: true });
-    } else {
-      this.scene.start("MenuScene");
-    }
   }
 
   private handlePlayerDeath(): void {
@@ -1206,14 +1015,12 @@ export class GameScene extends Phaser.Scene {
     this.time.delayedCall(700, () => {
       this.scene.restart({
         phaseId: this.data$.phaseId,
-        testMode: this.data$.testMode,
         checkpointX: this.data$.checkpointX,
         checkpointY: this.data$.checkpointY,
         consolidatedCreditIds: this.credits.getConsolidatedIds(),
         wallet: this.credits.getTotal(),
         abilities: this.data$.abilities,
         descent: this.data$.descent,
-        descentPreview: this.data$.descentPreview,
       } as GameSceneData);
     });
   }
@@ -1228,20 +1035,16 @@ export class GameScene extends Phaser.Scene {
     this.credits.resetPhase(this.phaseCredits());
     const consolidatedIds = this.credits.getConsolidatedIds();
     const wallet = this.credits.getTotal();
-    if (!this.data$.testMode) {
-      this.save.updateCheckpoint(0, 0, consolidatedIds, wallet);
-    }
+    this.save.updateCheckpoint(0, 0, consolidatedIds, wallet);
     if (this.isPaused) this.togglePause();
     this.scene.restart({
       phaseId: this.data$.phaseId,
-      testMode: this.data$.testMode,
       checkpointX: 0,
       checkpointY: 0,
       consolidatedCreditIds: consolidatedIds,
       wallet,
       abilities: this.data$.abilities,
       descent: this.data$.descent,
-      descentPreview: this.data$.descentPreview,
     } as GameSceneData);
   }
 
@@ -1282,9 +1085,7 @@ export class GameScene extends Phaser.Scene {
       this.tweens.pauseAll();
       this.time.paused = true;
       this.anims.pauseAll();
-      const menuHelp = this.data$.testMode
-        ? "\nS / ↓ para voltar ao seletor de fases"
-        : "\nS / ↓ para voltar ao menu principal";
+      const menuHelp = "\nS / ↓ para voltar ao menu principal";
       this.pauseText = this.add
         .text(this.scale.width / 2, this.scale.height / 2, `PAUSADO\nESC / START para voltar | ENTER / A para reiniciar a fase${menuHelp}`, {
           fontFamily: "Courier New, monospace",
@@ -1309,11 +1110,6 @@ export class GameScene extends Phaser.Scene {
   }
 
   update(_time: number, delta: number): void {
-    if (this.awaitingTestClinicChoice) {
-      this.updateTestClinicChoice();
-      this.input$.postUpdate();
-      return;
-    }
     if (this.restarting) return;
 
     if (this.input$.isPauseJustDown()) {

@@ -25,6 +25,7 @@ não confirmada não devem ser distribuídos publicamente antes dessa validaçã
 | `src/assets/props/obstacles/reforge-security-seal.png` | Geração autoral de lacre mecânico ReForge | Barreira atacável do setor Corporativo; fragmentada pela animação de quebra | Integrado ao MVP; arte definitiva para esta branch |
 | `src/assets/player/alex-checkpoint/alex-checkpoint-*.png` | Geração assistida baseada nas cinco variantes oficiais de Alex; TV usada apenas como referência de orientação | Sequências dedicadas de sentar, sincronizar e levantar nos checkpoints | Arte final em cinco folhas de 320×64 |
 | `src/assets/props/collectibles/credit-cyberpunk.png` | Spritesheet de quatro frames fornecido pela equipe | Substitui o círculo provisório dos créditos em todas as fases | Arte final em 128×32 |
+| `src/assets/props/collectibles/memory-fragment-64.png` | PNG de 64×64 fornecido pela equipe em 13/11/2026 | Representação física unificada dos quatro fragmentos da descida; retratos narrativos continuam separados | Arte final RGBA, com flutuação, halo, partículas digitais e dissipação controlados pelo runtime |
 | `src/assets/ui/qr-avaliacao-flesh-to-chrome.png` | QR Code fornecido pela equipe em 13/11/2026; codifica o Google Forms oficial com `entry.52413313=FleshtoChrome` | Tela opcional de avaliação exibida depois dos finais Chrome, Flesh e Hollow | Asset final em 732×732; manter fundo branco, margem e imagem estática |
 
 As portas, o piso e o lacre não devem ser reutilizados fora das condições

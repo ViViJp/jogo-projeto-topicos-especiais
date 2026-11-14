@@ -2,31 +2,20 @@ import Phaser from "phaser";
 import { InputManager } from "../systems/InputManager";
 import { SaveState } from "../systems/SaveState";
 import { AudioManager, BGM, SFX } from "../systems/AudioManager";
-import { DescentPreviewSession } from "../systems/DescentPreviewSession";
 import { startLoadingTransition } from "../systems/SceneTransition";
 
 const GATE_TEXTURE_KEY = "narrative-gate";
 
 type GateChoice = "chrome" | "flesh";
 
-interface GateSceneData {
-  /** Acesso pelo seletor de fases; não cria snapshot nem altera o save. */
-  testMode?: boolean;
-}
-
 export class GateScene extends Phaser.Scene {
   private input$!: InputManager;
   private selected: GateChoice = "chrome";
   private choiceTexts = new Map<GateChoice, Phaser.GameObjects.Text>();
   private choosing = false;
-  private testMode = false;
 
   constructor() {
     super("GateScene");
-  }
-
-  init(data: GateSceneData): void {
-    this.testMode = data.testMode ?? false;
   }
 
   preload(): void {
@@ -54,10 +43,8 @@ export class GateScene extends Phaser.Scene {
     this.choosing = false;
     this.choiceTexts.clear();
 
-    if (!this.testMode) {
-      const save = SaveState.load();
-      if (!save.hasPreGateSave()) save.createPreGateSave();
-    }
+    const save = SaveState.load();
+    if (!save.hasPreGateSave()) save.createPreGateSave();
 
     this.add.rectangle(centerX, height / 2, width, height, 0x100718, 1);
     this.add.image(centerX, gateY, GATE_TEXTURE_KEY).setDisplaySize(288, gateHeight);
@@ -82,9 +69,7 @@ export class GateScene extends Phaser.Scene {
 
     this.createChoice("chrome", centerX - choiceOffsetX, "CHROME", "Aceitar a conversão completa");
     this.createChoice("flesh", centerX + choiceOffsetX, "FLESH", "Recusar e iniciar a descida");
-    const controlsHelp = this.testMode
-      ? "← → / DIRECIONAL escolher   ENTER / A confirmar   ESC / B voltar ao seletor"
-      : "← → / DIRECIONAL escolher   ENTER / A confirmar";
+    const controlsHelp = "← → / DIRECIONAL escolher   ENTER / A confirmar";
     this.add.text(centerX, height - 42, controlsHelp, {
       fontFamily: "Courier New, monospace",
       fontSize: "15px",
@@ -95,11 +80,6 @@ export class GateScene extends Phaser.Scene {
   }
 
   update(): void {
-    if (this.testMode && this.input$.isCancelJustDown()) {
-      this.scene.start("MenuScene");
-      this.input$.postUpdate();
-      return;
-    }
     if (this.input$.isMenuLeftJustDown()) {
       this.selected = "chrome";
       this.updateSelection();
@@ -152,14 +132,6 @@ export class GateScene extends Phaser.Scene {
     AudioManager.playSfx(this, SFX.uiConfirm, { volume: 0.42 });
     AudioManager.playSfx(this, SFX.gateOpening, { volume: 0.5 });
     if (this.selected === "flesh") {
-      if (this.testMode) {
-        this.choosing = true;
-        startLoadingTransition(this, "GeorgeRefusalScene", {
-          testMode: true,
-          descentPreview: new DescentPreviewSession(),
-        });
-        return;
-      }
       this.choosing = true;
       const save = SaveState.load();
       save.beginDescent();
@@ -171,7 +143,7 @@ export class GateScene extends Phaser.Scene {
 
     this.choosing = true;
     this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
-      startLoadingTransition(this, "EndingScene", { ending: "chrome", testMode: this.testMode });
+      startLoadingTransition(this, "EndingScene", { ending: "chrome" });
     });
     this.cameras.main.fadeOut(450, 0, 0, 0);
   }

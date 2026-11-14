@@ -41,7 +41,7 @@ Para a Fase 3:
 - Arquivo autoral: **src/assets/maps/meio-urbano/fase-3.tmj**
 - Arquivo exportado: **src/assets/maps/meio-urbano/fase-3.json**
 - Tileset: **warped-city-environment**
-- Status: **blockout autoral integrado ao Phaser e disponível no seletor temporário de fases**
+- Status: **blockout autoral integrado ao Phaser**
 
 > **Exportação da Fase 3:** o arquivo `.tmj` pode permanecer comprimido para
 > edição no Tiled, mas o `.json` consumido pelo jogo deve usar dados de layer
@@ -63,7 +63,7 @@ Para a Fase 5:
 - Arquivo autoral: **src/assets/maps/topo/fase-5.tmj**
 - Arquivo exportado: **src/assets/maps/topo/fase-5.json**
 - Tileset principal: **cyber-purp**
-- Status: **blockout integrado ao Phaser e disponível no seletor temporário**
+- Status: **blockout integrado ao Phaser**
 
 ## 3. Camadas oficiais
 
@@ -551,9 +551,7 @@ propriedade string `ending`, com valor `chrome` ou `flesh`.
 Esses objetos não são hazards. Ao concluir a Fase 5, a campanha consolida os
 créditos, cria o save narrativo pré-Portão e abre `GateScene`. A cena apresenta
 as opções Chrome e Flesh com teclado, controle ou ponteiro. Chrome encaminha ao
-Final Chrome; Flesh abre a reprovação de George e inicia a descida no Topo. Em
-modo de teste, alcançar `phase_end` continua retornando ao seletor sem alterar o
-save enquanto a descida não tiver sido confirmada.
+Final Chrome; Flesh abre a reprovação de George e inicia a descida no Topo.
 
 ### 6.17 **memory_glitch**
 

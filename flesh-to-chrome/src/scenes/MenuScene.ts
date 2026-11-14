@@ -223,7 +223,7 @@ export class MenuScene extends Phaser.Scene {
   private continueFromGate(): void {
     const restored = SaveState.load().restorePreGateSave();
     if (!restored) return;
-    startLoadingTransition(this, "GateScene", { testMode: false });
+    startLoadingTransition(this, "GateScene");
   }
 
   private newGame(hasSave: boolean): void {

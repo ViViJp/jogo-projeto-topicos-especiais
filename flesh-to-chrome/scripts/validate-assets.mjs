@@ -134,6 +134,7 @@ const runtimeImages = [
   "src/assets/narrative/fragments/fragmento-corporativo.png",
   "src/assets/narrative/fragments/fragmento-urbano.png",
   "src/assets/narrative/fragments/fragmento-industrial.png",
+  "src/assets/props/collectibles/memory-fragment-64.png",
   "src/assets/narrative/recycling/unidade-reciclagem.png",
   "src/assets/narrative/recycling/holograma-frame.png",
 ];

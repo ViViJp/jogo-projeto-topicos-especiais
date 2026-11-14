@@ -29,8 +29,6 @@ interface ClinicSceneData {
   wallet: number;
   abilities: AbilityState;
   implant?: keyof AbilityState;
-  /** Prévia aberta ao concluir uma fase pelo seletor; nunca altera o save. */
-  testMode?: boolean;
 }
 
 interface ClinicBeat {
@@ -458,15 +456,11 @@ export class ClinicScene extends Phaser.Scene {
     }
     this.finished = true;
     AudioManager.stopLoop(SFX.implant);
-    if (this.data$.testMode) {
-      this.scene.start("MenuScene");
-      return;
-    }
     const save = SaveState.load();
     save.unlockAbility(this.beat.implant);
     const newAbilities: AbilityState = { ...this.data$.abilities, [this.beat.implant]: true };
     if (!this.data$.nextPhaseId) {
-      startLoadingTransition(this, "GateScene", { testMode: false });
+      startLoadingTransition(this, "GateScene");
       return;
     }
     save.setPhase(this.data$.nextPhaseId);

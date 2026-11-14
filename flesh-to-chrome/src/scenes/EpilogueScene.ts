@@ -11,13 +11,10 @@ import {
   alexTextureForAbilities,
 } from "../utils/AlexSprite";
 import { AudioManager, SFX, bgmForEnding } from "../systems/AudioManager";
-import { DescentPreviewSession } from "../systems/DescentPreviewSession";
 import { startLoadingTransition } from "../systems/SceneTransition";
 
 interface EpilogueData {
   ending: "flesh" | "hollow";
-  testMode?: boolean;
-  descentPreview?: DescentPreviewSession;
 }
 
 export class EpilogueScene extends Phaser.Scene {
@@ -59,11 +56,7 @@ export class EpilogueScene extends Phaser.Scene {
     this.input$ = new InputManager(this);
     AudioManager.playBgm(this, bgmForEnding(this.data$.ending), 0.24);
     this.leaving = false;
-    if (this.data$.testMode && !this.data$.descentPreview) {
-      this.scene.start("MenuScene");
-      return;
-    }
-    const data = this.data$.descentPreview?.get() ?? SaveState.load().get();
+    const data = SaveState.load().get();
     const flesh = this.data$.ending === "flesh";
     const texture = flesh ? "epilogue-alex-flesh" : alexTextureForAbilities(data.abilities);
     this.cameras.main.setBackgroundColor(flesh ? 0x142119 : 0x111019);
@@ -90,11 +83,8 @@ export class EpilogueScene extends Phaser.Scene {
     if (!this.leaving && this.input$.isConfirmJustDown()) {
       AudioManager.playSfx(this, SFX.uiConfirm, { volume: 0.34 });
       this.leaving = true;
-      const abilities = this.data$.descentPreview?.get().abilities;
       startLoadingTransition(this, "EndingScene", {
         ending: this.data$.ending,
-        testMode: this.data$.testMode ?? false,
-        abilities,
       });
     }
     this.input$.postUpdate();

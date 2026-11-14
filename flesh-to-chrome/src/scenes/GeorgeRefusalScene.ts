@@ -2,18 +2,12 @@ import Phaser from "phaser";
 import { InputManager } from "../systems/InputManager";
 import { AudioManager, BGM, SFX } from "../systems/AudioManager";
 import { SaveState } from "../systems/SaveState";
-import { DescentPreviewSession } from "../systems/DescentPreviewSession";
 import type { GameSceneData } from "./GameScene";
 import { startLoadingTransition } from "../systems/SceneTransition";
 
 const BACKGROUND_KEY = "george-refusal-background";
 const GEORGE_ANGRY_KEY = "george-angry";
 const ALEX_COMPLETE_KEY = "george-refusal-alex";
-
-interface GeorgeRefusalSceneData {
-  testMode?: boolean;
-  descentPreview?: DescentPreviewSession;
-}
 
 const DIALOGUE = [
   {
@@ -63,16 +57,9 @@ export class GeorgeRefusalScene extends Phaser.Scene {
   private counterText!: Phaser.GameObjects.Text;
   private george!: Phaser.GameObjects.Image;
   private alex!: Phaser.GameObjects.Image;
-  private testMode = false;
-  private descentPreview?: DescentPreviewSession;
 
   constructor() {
     super("GeorgeRefusalScene");
-  }
-
-  init(data: GeorgeRefusalSceneData): void {
-    this.testMode = data.testMode ?? false;
-    this.descentPreview = data.descentPreview;
   }
 
   preload(): void {
@@ -184,19 +171,15 @@ export class GeorgeRefusalScene extends Phaser.Scene {
     }
     this.finished = true;
     this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
-      const data = this.testMode && this.descentPreview
-        ? this.descentPreview.get()
-        : SaveState.load().get();
+      const data = SaveState.load().get();
       startLoadingTransition(this, "GameScene", {
         phaseId: "fase5",
-        testMode: this.testMode,
         checkpointX: 0,
         checkpointY: 0,
         consolidatedCreditIds: [],
         wallet: 0,
         abilities: data.abilities,
         descent: true,
-        descentPreview: this.descentPreview,
       } as GameSceneData);
     });
     this.cameras.main.fadeOut(350, 0, 0, 0);

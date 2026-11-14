@@ -271,8 +271,8 @@ carregada de seu blockout Tiled real e interpretada por um runtime próprio:
 
 Também estão ativos o save único em `localStorage`, checkpoints com posição
 X/Y, consolidação e descarte de créditos, progressão de implantes nas quatro
-clínicas, sprites progressivos de Alex, seletor temporário de fases que não
-grava o save e a base de multiplayer MQTT/WebSocket integrada da `main`.
+clínicas, sprites progressivos de Alex, transições temáticas centralizadas e a
+base de multiplayer MQTT/WebSocket integrada da `main`.
 
 ## Como rodar
 

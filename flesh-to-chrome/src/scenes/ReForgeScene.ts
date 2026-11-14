@@ -3,18 +3,12 @@ import { descentStepAt } from "../systems/DescentProgression";
 import { InputManager } from "../systems/InputManager";
 import { SaveState } from "../systems/SaveState";
 import { AudioManager, BGM, SFX } from "../systems/AudioManager";
-import { DescentPreviewSession } from "../systems/DescentPreviewSession";
 import type { GameSceneData } from "./GameScene";
 import { startLoadingTransition } from "../systems/SceneTransition";
 
 const REFORGE_BG = "reforge-bg";
 const REFORGE_FATHER = "reforge-father";
 const REFORGE_CYBORG = "reforge-cyborg";
-
-interface ReForgeSceneData {
-  testMode?: boolean;
-  descentPreview?: DescentPreviewSession;
-}
 
 const IMPLANT_NAMES = {
   legs: "PERNAS MECANICAS",
@@ -28,16 +22,9 @@ export class ReForgeScene extends Phaser.Scene {
   private page = 0;
   private finished = false;
   private advancePage?: () => void;
-  private testMode = false;
-  private descentPreview?: DescentPreviewSession;
 
   constructor() {
     super("ReForgeScene");
-  }
-
-  init(data: ReForgeSceneData): void {
-    this.testMode = data.testMode ?? false;
-    this.descentPreview = data.descentPreview;
   }
 
   preload(): void {
@@ -59,11 +46,7 @@ export class ReForgeScene extends Phaser.Scene {
     this.page = 0;
     this.finished = false;
     this.advancePage = undefined;
-    if (this.testMode && !this.descentPreview) {
-      this.scene.start("MenuScene");
-      return;
-    }
-    const progression = this.descentPreview ?? SaveState.load();
+    const progression = SaveState.load();
     const descentData = progression.get();
     const step = descentStepAt(descentData.descentState.currentStep);
     if (!step || descentData.descentState.pendingRemoval !== step.implant) {
@@ -131,9 +114,6 @@ export class ReForgeScene extends Phaser.Scene {
         return;
       }
       const data = progression.get();
-      const previewData = this.descentPreview
-        ? { testMode: true, descentPreview: this.descentPreview }
-        : {};
       if (result.finished) {
         startLoadingTransition(this, "GameScene", {
           phaseId: "fase1",
@@ -143,7 +123,6 @@ export class ReForgeScene extends Phaser.Scene {
           wallet: 0,
           abilities: data.abilities,
           descent: true,
-          ...previewData,
         } as GameSceneData);
       } else {
         startLoadingTransition(this, "GameScene", {
@@ -154,7 +133,6 @@ export class ReForgeScene extends Phaser.Scene {
           wallet: 0,
           abilities: data.abilities,
           descent: true,
-          ...previewData,
         } as GameSceneData);
       }
     };
