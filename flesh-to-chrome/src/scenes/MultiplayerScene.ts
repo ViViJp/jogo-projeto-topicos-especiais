@@ -3,6 +3,7 @@ import { CAMERA, GRAVITY_Y, SCREEN_HEIGHT, SCREEN_WIDTH } from "../config/GameCo
 import { Player } from "../entities/Player";
 import {
   TILED_MULTIPLAYER_BACKGROUND,
+  TILED_MULTIPLAYER_CHECKPOINT_COUNT,
   TILED_MULTIPLAYER_CREDIT_COUNT,
   TILED_MULTIPLAYER_END_X,
   TILED_MULTIPLAYER_LENGTH,
@@ -70,6 +71,10 @@ const START_MIN_LEAD_MS = 2_000;
 const START_MAX_LEAD_MS = 15_000;
 const FINISH_CONSISTENCY_TOLERANCE_MS = 2_500;
 const MIN_PLAUSIBLE_RACE_TIME_MS = 15_000;
+const QUIT_CONFIRM_WINDOW_MS = 1_500;
+const REMATCH_GUARD_MS = 800;
+const OPPONENT_MAX_LEAD_MS = 150;
+const OPPONENT_MAX_LEAD_SPEED = 1_000;
 const ALL_ABILITIES = { legs: true, arms: true, eyes: true, thrusters: true } as const;
 
 type RacePhase = "lobby" | "countdown" | "racing" | "finished";
@@ -98,6 +103,7 @@ export class MultiplayerScene extends Phaser.Scene {
   private opponentText?: Phaser.GameObjects.Text;
   private countdownText?: Phaser.GameObjects.Text;
   private notificationText?: Phaser.GameObjects.Text;
+  private dashText?: Phaser.GameObjects.Text;
   private lobbyObjects: Array<{ setVisible(value: boolean): unknown }> = [];
 
   private localPeerId = "";
@@ -120,6 +126,9 @@ export class MultiplayerScene extends Phaser.Scene {
   private raceLength = TILED_MULTIPLAYER_LENGTH;
   private raceEndX = TILED_MULTIPLAYER_END_X;
   private checkpointReached = false;
+  private checkpointsReached = 0;
+  private quitConfirmUntil = 0;
+  private rematchAllowedAt = Number.POSITIVE_INFINITY;
   private respawning = false;
   private returning = false;
   private meshStartId = 0;
@@ -132,7 +141,14 @@ export class MultiplayerScene extends Phaser.Scene {
   private lastRemoteCredits = 0;
   private remoteCheckpointReached = false;
   private remoteClockOffsetMs?: number;
-  private remoteTarget?: { x: number; y: number; state: PlayerSnapshotMessage["state"]; credits: number };
+  private remoteTarget?: {
+    x: number;
+    y: number;
+    velocityX: number;
+    receivedAt: number;
+    state: PlayerSnapshotMessage["state"];
+    credits: number;
+  };
 
   constructor() {
     super("MultiplayerScene");
@@ -234,6 +250,7 @@ export class MultiplayerScene extends Phaser.Scene {
     this.opponentText = undefined;
     this.countdownText = undefined;
     this.notificationText = undefined;
+    this.dashText = undefined;
     this.input$ = new InputManager(this);
     this.resetSessionState();
     this.createLobby();
@@ -245,6 +262,8 @@ export class MultiplayerScene extends Phaser.Scene {
         this.updatePresentation,
         this,
       );
+      this.events.off("player-dash-start", this.handleDashStart, this);
+      this.events.off("player-dash-ready", this.handleDashReady, this);
       this.meshStartId += 1;
       this.clearStartHandshakeTimer();
       this.runtime?.destroy();
@@ -258,12 +277,27 @@ export class MultiplayerScene extends Phaser.Scene {
       this.updatePresentation,
       this,
     );
+    this.events.on("player-dash-start", this.handleDashStart, this);
+    this.events.on("player-dash-ready", this.handleDashReady, this);
   }
 
   update(time: number, delta: number): void {
-    if (this.input$.isCancelJustDown()) {
-      this.backToMenu();
-      this.input$.postUpdate();
+    // Em corrida só ESC/START saem (o B do controle é o slide) e pedem
+    // confirmação: sair entrega a vitória ao oponente.
+    const inRace = this.phase === "countdown" || this.phase === "racing";
+    if (inRace ? this.input$.isPauseJustDown() : this.input$.isCancelJustDown()) {
+      if (!inRace || time < this.quitConfirmUntil) {
+        this.backToMenu();
+        this.input$.postUpdate();
+        return;
+      }
+      this.quitConfirmUntil = time + QUIT_CONFIRM_WINDOW_MS;
+      this.flashRaceMessage("ESC / START DE NOVO PARA DESISTIR");
+    }
+
+    if (this.phase === "finished" && time >= this.rematchAllowedAt && this.input$.isConfirmJustDown()) {
+      // Revanche: a cena reinicia na mesma sala (o ?room= continua na URL).
+      this.scene.restart();
       return;
     }
 
@@ -320,6 +354,9 @@ export class MultiplayerScene extends Phaser.Scene {
     this.raceLength = TILED_MULTIPLAYER_LENGTH;
     this.raceEndX = TILED_MULTIPLAYER_END_X;
     this.checkpointReached = false;
+    this.checkpointsReached = 0;
+    this.quitConfirmUntil = 0;
+    this.rematchAllowedAt = Number.POSITIVE_INFINITY;
     this.respawning = false;
     this.returning = false;
     this.snapshotSequence = 0;
@@ -389,7 +426,7 @@ export class MultiplayerScene extends Phaser.Scene {
         .text(
           SCREEN_WIDTH / 2,
           505,
-          "2 jogadores • 20 creditos • 1 checkpoint • limite final de 20 s\n" +
+          "2 jogadores • 20 creditos • " + TILED_MULTIPLAYER_CHECKPOINT_COUNT + " checkpoints • limite final de 20 s\n" +
             "Tempo ajustado = tempo bruto - 0,5 s por credito",
           { ...textStyle("#8892b0", "16px"), align: "center" }
         )
@@ -741,6 +778,10 @@ export class MultiplayerScene extends Phaser.Scene {
       .text(24, 18, `CREDITOS 0/${TILED_MULTIPLAYER_CREDIT_COUNT}`, textStyle("#7CFCEA", "18px"))
       .setScrollFactor(0)
       .setDepth(1001);
+    this.dashText = this.add
+      .text(24, 46, "DASH PRONTO", textStyle("#8cf7ff", "16px"))
+      .setScrollFactor(0)
+      .setDepth(1001);
     this.opponentText = this.add
       .text(SCREEN_WIDTH - 24, 18, "OPONENTE 0%", textStyle("#ff67d4", "18px"))
       .setOrigin(1, 0)
@@ -789,6 +830,14 @@ export class MultiplayerScene extends Phaser.Scene {
     }
   }
 
+  private handleDashStart(): void {
+    this.dashText?.setText("DASH RECARREGANDO").setColor("#7896a8");
+  }
+
+  private handleDashReady(): void {
+    this.dashText?.setText("DASH PRONTO").setColor("#8cf7ff");
+  }
+
   private handleCreditCollected(id: string): void {
     if (this.collectedCredits.has(id)) return;
     this.collectedCredits.add(id);
@@ -798,7 +847,8 @@ export class MultiplayerScene extends Phaser.Scene {
   private handleCheckpoint(x: number, y: number): void {
     this.checkpoint = { x, y };
     this.checkpointReached = true;
-    this.flashRaceMessage("CHECKPOINT CENTRAL ATIVADO");
+    this.checkpointsReached += 1;
+    this.flashRaceMessage(`CHECKPOINT ${this.checkpointsReached}/${TILED_MULTIPLAYER_CHECKPOINT_COUNT}`);
   }
 
   private handlePlayerDeath(): void {
@@ -811,6 +861,7 @@ export class MultiplayerScene extends Phaser.Scene {
       if (this.phase !== "racing" || this.localResult || this.localDnf || !this.player) return;
       this.runtime?.resetMutableObstacles();
       this.player.respawn(this.checkpoint.x, this.checkpoint.y);
+      this.handleDashReady(); // o respawn zera a recarga sem emitir o evento
       this.respawning = false;
     });
   }
@@ -950,13 +1001,14 @@ export class MultiplayerScene extends Phaser.Scene {
 
   private showResultOverlay(content: string): void {
     this.countdownText?.setVisible(false);
+    this.rematchAllowedAt = this.time.now + REMATCH_GUARD_MS;
     this.add
       .rectangle(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, 880, 360, 0x05050a, 0.96)
       .setStrokeStyle(3, 0x7cfcea)
       .setScrollFactor(0)
       .setDepth(2000);
     this.add
-      .text(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 - 30, `${content}\n\nESC / B para voltar ao menu`, {
+      .text(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 - 30, `${content}\n\nENTER / A: revanche  •  ESC / B: menu`, {
         ...textStyle("#e8ecff", "22px"),
         align: "center",
       })
@@ -994,6 +1046,8 @@ export class MultiplayerScene extends Phaser.Scene {
     this.remoteTarget = {
       x: Phaser.Math.Clamp(snapshot.x, 0, this.raceLength),
       y: Phaser.Math.Clamp(snapshot.y, -500, SCREEN_HEIGHT + 500),
+      velocityX: Phaser.Math.Clamp(snapshot.velocityX, -OPPONENT_MAX_LEAD_SPEED, OPPONENT_MAX_LEAD_SPEED),
+      receivedAt: Date.now(),
       state: snapshot.state,
       credits: Phaser.Math.Clamp(Math.floor(snapshot.credits), 0, TILED_MULTIPLAYER_CREDIT_COUNT),
     };
@@ -1065,7 +1119,14 @@ export class MultiplayerScene extends Phaser.Scene {
   private updateOpponent(delta: number): void {
     if (!this.opponentSprite || !this.remoteTarget) return;
     const interpolation = Math.min(1, delta / 80);
-    this.opponentSprite.x = Phaser.Math.Linear(this.opponentSprite.x, this.remoteTarget.x, interpolation);
+    // Projeta o snapshot pela velocidade recebida para compensar o atraso de rede.
+    const leadSeconds = Math.min(OPPONENT_MAX_LEAD_MS, Date.now() - this.remoteTarget.receivedAt) / 1000;
+    const targetX = Phaser.Math.Clamp(
+      this.remoteTarget.x + this.remoteTarget.velocityX * leadSeconds,
+      0,
+      this.raceLength,
+    );
+    this.opponentSprite.x = Phaser.Math.Linear(this.opponentSprite.x, targetX, interpolation);
     this.opponentSprite.y = Phaser.Math.Linear(this.opponentSprite.y, this.remoteTarget.y, interpolation);
     this.opponentSprite.setAlpha(this.remoteTarget.state === "dead" ? 0.25 : 0.68);
     if (this.remoteTarget.state === "sliding") {
