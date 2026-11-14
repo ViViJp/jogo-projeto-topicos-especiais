@@ -322,6 +322,7 @@ assert.match(phase5RuntimeSource, /const groundExtension = layer === this\.groun
 
 const gameScene = fs.readFileSync(path.join(projectDirectory, "src/scenes/GameScene.ts"), "utf8");
 const multiplayerScene = fs.readFileSync(path.join(projectDirectory, "src/scenes/MultiplayerScene.ts"), "utf8");
+const bootScene = fs.readFileSync(path.join(projectDirectory, "src/scenes/BootScene.ts"), "utf8");
 const parallaxBackdropSource = fs.readFileSync(path.join(projectDirectory, "src/objects/ParallaxBackdrop.ts"), "utf8");
 const mainSource = fs.readFileSync(path.join(projectDirectory, "src/main.ts"), "utf8");
 assert.match(multiplayerScene, /new TiledPhase5Runtime\(/,
@@ -334,6 +335,18 @@ assert.match(multiplayerScene, /backToMenu\(\): void[\s\S]*?removeRoomFromUrl\(\
   "sair do multiplayer deve retirar a sala da URL antes de abrir o menu");
 assert.match(multiplayerScene, /function removeRoomFromUrl[\s\S]*?searchParams\.delete\("room"\)[\s\S]*?history\.replaceState/,
   "F5 no menu não pode reabrir a última sala multiplayer");
+const multiplayerScanPulse = multiplayerScene.slice(
+  multiplayerScene.indexOf("private handleScanPulse"),
+  multiplayerScene.indexOf("private handleLocalFinish"),
+);
+assert.match(multiplayerScanPulse, /this\.runtime\?\.setScanActive\(active\)/,
+  "scan multiplayer deve continuar revelando os elementos do mapa");
+assert.doesNotMatch(multiplayerScanPulse, /\.rectangle\(/,
+  "scan multiplayer não deve aplicar uma camada azul sobre a tela inteira");
+assert.match(bootScene, /hasMultiplayerInvite\(\)[\s\S]*?createInviteLoadingView\(\)/,
+  "convite multiplayer deve exibir feedback já durante o preload do Boot");
+assert.match(bootScene, /startLoadingTransition\(this, "MultiplayerScene"/,
+  "convite multiplayer deve usar a LoadingScene antes de abrir a corrida");
 assert.doesNotMatch(multiplayerScene, /new TiledLevelRuntime\(/,
   "multiplayer não pode herdar as colisões low_pipe exclusivas da Fase 1");
 assert.match(mainSource, /mode: Phaser\.Scale\.EXPAND/,

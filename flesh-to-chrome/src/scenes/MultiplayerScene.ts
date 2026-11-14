@@ -102,7 +102,6 @@ export class MultiplayerScene extends Phaser.Scene {
   private backdrop?: ParallaxBackdrop;
   private opponentSprite?: Phaser.GameObjects.Sprite;
   private opponentVisualState?: PlayerSnapshotMessage["state"];
-  private scanOverlay?: Phaser.GameObjects.Rectangle;
 
   private statusText?: Phaser.GameObjects.Text;
   private peersText?: Phaser.GameObjects.Text;
@@ -272,7 +271,6 @@ export class MultiplayerScene extends Phaser.Scene {
     this.runtime = undefined;
     this.opponentSprite = undefined;
     this.opponentVisualState = undefined;
-    this.scanOverlay = undefined;
     this.statusText = undefined;
     this.peersText = undefined;
     this.timerText = undefined;
@@ -967,22 +965,9 @@ export class MultiplayerScene extends Phaser.Scene {
   }
 
   private handleScanPulse(active: boolean): void {
-    if (active) {
-      if (!this.scanOverlay) {
-        this.scanOverlay = this.add
-          .rectangle(0, 0, this.scale.width, this.scale.height, 0x36e2ff, 0.1)
-          .setOrigin(0)
-          .setScrollFactor(0)
-          .setDepth(900);
-        const overlay = this.scanOverlay;
-        this.registerViewportLayout(() => overlay.setDisplaySize(this.scale.width, this.scale.height));
-      }
-      this.scanOverlay.setVisible(true);
-      this.runtime?.setScanActive(true);
-    } else {
-      this.scanOverlay?.setVisible(false);
-      this.runtime?.setScanActive(false);
-    }
+    // O pulso circular do Player já comunica o scan. Um retângulo ciano
+    // sobre o viewport inteiro tingia cenário e HUD no multiplayer.
+    this.runtime?.setScanActive(active);
   }
 
   private handleLocalFinish(): void {
