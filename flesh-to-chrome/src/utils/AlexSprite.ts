@@ -125,7 +125,11 @@ export function alexHurtAnimationKey(textureKey: string): string {
   return textureKey === ALEX_TEXTURE_KEY ? ALEX_HURT_ANIM : `${textureKey}-hurt`;
 }
 
-export function ensureAlexAnimations(scene: Phaser.Scene, textureKey = ALEX_TEXTURE_KEY): void {
+/**
+ * Registra apenas animações contidas no spritesheet LPC principal. Cenas de
+ * interface, como a clínica, não precisam carregar as folhas de slide e TV.
+ */
+export function ensureAlexCoreAnimations(scene: Phaser.Scene, textureKey = ALEX_TEXTURE_KEY): void {
   const runAnimationKey = alexRunAnimationKey(textureKey);
   if (!scene.anims.exists(runAnimationKey)) {
     scene.anims.create({
@@ -152,19 +156,6 @@ export function ensureAlexAnimations(scene: Phaser.Scene, textureKey = ALEX_TEXT
     });
   }
 
-  const slideAnimationKey = alexSlideAnimationKey(textureKey);
-  alignSlideFrames(scene, alexSlideTextureKey(textureKey));
-  if (!scene.anims.exists(slideAnimationKey)) {
-    scene.anims.create({
-      key: slideAnimationKey,
-      frames: scene.anims.generateFrameNumbers(alexSlideTextureKey(textureKey), { start: 0, end: 3 }),
-      // A entrada ocorre uma única vez. Ao prolongar o slide, Phaser mantém o
-      // quarto frame em vez de reiniciar a queda do personagem.
-      frameRate: 10,
-      repeat: 0,
-    });
-  }
-
   const attackAnimationKey = alexAttackAnimationKey(textureKey);
   if (!scene.anims.exists(attackAnimationKey)) {
     scene.anims.create({
@@ -176,6 +167,23 @@ export function ensureAlexAnimations(scene: Phaser.Scene, textureKey = ALEX_TEXT
       // O golpe precisa permanecer legível no runner e acompanhar a janela
       // ativa de colisão, em vez de terminar em apenas 250 ms.
       frameRate: 16,
+      repeat: 0,
+    });
+  }
+}
+
+export function ensureAlexAnimations(scene: Phaser.Scene, textureKey = ALEX_TEXTURE_KEY): void {
+  ensureAlexCoreAnimations(scene, textureKey);
+
+  const slideAnimationKey = alexSlideAnimationKey(textureKey);
+  alignSlideFrames(scene, alexSlideTextureKey(textureKey));
+  if (!scene.anims.exists(slideAnimationKey)) {
+    scene.anims.create({
+      key: slideAnimationKey,
+      frames: scene.anims.generateFrameNumbers(alexSlideTextureKey(textureKey), { start: 0, end: 3 }),
+      // A entrada ocorre uma única vez. Ao prolongar o slide, Phaser mantém o
+      // quarto frame em vez de reiniciar a queda do personagem.
+      frameRate: 10,
       repeat: 0,
     });
   }

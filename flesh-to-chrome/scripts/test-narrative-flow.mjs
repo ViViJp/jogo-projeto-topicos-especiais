@@ -310,6 +310,7 @@ const main = read("src/main.ts");
 const menu = read("src/scenes/MenuScene.ts");
 const controls = read("src/scenes/ControlsScene.ts");
 const menuBackdrop = read("src/objects/MenuBackdrop.ts");
+const prologueAssets = read("src/objects/PrologueAssets.ts");
 const packageJson = JSON.parse(read("package.json"));
 const prologue = read("src/scenes/PrologueScene.ts");
 const clinic = read("src/scenes/ClinicScene.ts");
@@ -322,6 +323,24 @@ const reforge = read("src/scenes/ReForgeScene.ts");
 assert.match(clinic, /AudioManager\.startLoop\(this, SFX\.implant/,
   "clínica deve manter o master longo somente durante a página do procedimento");
 assert.match(clinic, /AudioManager\.stopLoop\(SFX\.implant\)/);
+for (const implant of ["legs", "arms", "eyes", "thrusters"]) {
+  assert.match(clinic, new RegExp(`${implant}: \\{[\\s\\S]*?implantName:[\\s\\S]*?abilityName:`),
+    `ClinicScene: tutorial ausente para ${implant}`);
+}
+for (const action of ["jump", "attack", "scan", "dash"]) {
+  assert.match(clinic, new RegExp(`action === "${action}"|action: "${action}"`),
+    `ClinicScene: demonstração ausente para ${action}`);
+}
+assert.match(clinic, /keyboardBindingLabel\(tutorial\.action\)/,
+  "tutorial deve derivar os comandos do mapeamento real de teclado");
+assert.match(clinic, /GAMEPAD_BINDING_LABELS\[tutorial\.action\]/,
+  "tutorial deve derivar os comandos do mapeamento real de gamepad");
+assert.match(clinic, /ensureAlexCoreAnimations\(this, textureKey\)/,
+  "tutorial deve reutilizar as animações existentes de Alex");
+assert.match(clinic, /CONTINUAR ▶[\s\S]*?pointerdown[\s\S]*?this\.advance\(\)/,
+  "última página deve apresentar um botão Continuar clicável");
+assert.match(clinic, /this\.pageIndex < this\.beat\.pages\.length\) this\.advance\(\)/,
+  "clique fora do botão não deve pular o tutorial do implante");
 assert.match(reforge, /this\.page === 2[\s\S]*?AudioManager\.startLoop\(this, SFX\.implant/,
   "ReForge deve iniciar o master durante o bioprinting");
 assert.match(reforge, /AudioManager\.stopLoop\(SFX\.implant\)/,
@@ -369,6 +388,14 @@ assert.match(controls, /GAMEPLAY_CONTROL_ACTIONS/);
 assert.match(controls, /GAMEPAD_BINDING_LABELS/);
 assert.match(controls, /AudioManager\.playBgm\(this, BGM\.menu/,
   "tela de controles deve preservar a música do menu");
+assert.match(controls, /queuePrologueAssets\(this\)[\s\S]*?this\.load\.start\(\)/,
+  "assets do prólogo devem aquecer em segundo plano sem apagar a tela de controles");
+assert.match(controls, /if \(!this\.campaignAssetsReady\)[\s\S]*?PREPARANDO PRÓLOGO[\s\S]*?return/,
+  "campanha deve manter feedback visível enquanto o prólogo carrega");
+for (const asset of ["familia.png", "pai-antes.png", "jornal-pai.png"]) {
+  assert.match(prologueAssets, new RegExp(asset.replaceAll(".", "\\.")),
+    `aquecimento do prólogo deve incluir ${asset}`);
+}
 assert.match(controls, /pointerdown/,
   "tela de controles deve aceitar clique nas opções");
 assert.match(menu, /Portão — escolha final \(teste\)/);
@@ -377,13 +404,27 @@ assert.match(menu, /restorePreGateSave\(\)[\s\S]*?this\.scene\.start\("GateScene
   "prévia → menu → Continuar do Portão deve reabrir a campanha fora do modo de teste");
 assert.match(prologue, /PROLOGUE_FAMILY_KEY/);
 assert.match(prologue, /PROLOGUE_NEWSPAPER_KEY/);
-assert.match(prologue, /father\/pai-antes\.png/);
-assert.match(prologue, /prologue\/jornal-pai\.png/);
+assert.match(prologueAssets, /father\/pai-antes\.png/);
+assert.match(prologueAssets, /prologue\/jornal-pai\.png/);
 assert.match(prologue, /PAI DE ALEX — ANTES DA ASCENSÃO/);
 assert.match(prologue, /PAI DE ALEX — APÓS A CONVERSÃO/);
 assert.match(prologue, /const footerY = panelTop \+ panelHeight - 24/,
   "comando e contador do prólogo devem permanecer dentro da moldura");
 assert.match(prologue, /this\.add\.text\(centerX, footerY, "ENTER \/ A para continuar"/);
+assert.match(prologue, /AudioManager\.preloadBgm\(this, BGM\.phase1\)[\s\S]*?this\.load\.start\(\)/,
+  "trilha da Fase 1 deve aquecer enquanto o prólogo permanece visível");
+assert.match(prologue, /PREPARANDO PRIMEIRO SETOR/,
+  "última página deve informar quando a Fase 1 ainda está carregando");
+assert.match(prologue, /gameScene\.events\.once\(Phaser\.Scenes\.Events\.CREATE[\s\S]*?this\.scene\.launch\("GameScene"/,
+  "GameScene deve carregar atrás do prólogo e só assumir a tela quando estiver pronta");
+assert.match(prologue, /this\.scene\.bringToTop\("PrologueScene"\)/,
+  "prólogo deve cobrir visualmente o loader da primeira fase");
+assert.doesNotMatch(prologue, /fadeOut\([\s\S]{0,250}?this\.scene\.start\("GameScene"/,
+  "prólogo não pode apagar a tela antes de iniciar o carregamento da Fase 1");
+assert.ok(
+  fs.statSync(path.join(projectDirectory, "src/assets/audio/music/bgm-phase-1.ogg")).size < 6 * 1024 * 1024,
+  "BGM da Fase 1 deve permanecer otimizada para não bloquear o início da campanha web",
+);
 for (const phase of ["fase1", "fase2-intro", "fase3", "fase4"]) {
   assert.match(clinic, new RegExp(`(?:"${phase}"|${phase}):`), `clínica narrativa ausente para ${phase}`);
 }
@@ -607,6 +648,13 @@ const uiData = {
   );
   const scene = new ControlsScene();
   scene.init({ campaignSetup: true });
+  scene.startCampaign();
+  assert.equal(save.calls.newGame, 0,
+    "o save não pode ser substituído enquanto o prólogo ainda está carregando");
+  assert.equal(harness.starts.length, 0,
+    "a tela de controles deve permanecer ativa enquanto o prólogo carrega");
+  scene.campaignAssetsReady = true;
+  scene.campaignStartPending = false;
   scene.startCampaign();
   assert.equal(save.calls.newGame, 1,
     "Iniciar campanha na tela de controles deve criar o novo save");

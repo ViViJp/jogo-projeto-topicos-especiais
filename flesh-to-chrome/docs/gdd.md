@@ -1234,6 +1234,23 @@ Ao escolher **Novo Jogo**, essa mesma tela funciona como confirmação final da
 campanha: o save anterior permanece intacto enquanto ela estiver aberta e só é
 substituído ao confirmar **Iniciar Campanha**. Voltar ao menu cancela a operação.
 
+## 19.1.3 Tutoriais de implante
+
+A última página de cada procedimento da clínica confirma o novo implante em um
+painel próprio antes de liberar a próxima fase. O painel apresenta o nome do
+implante, a habilidade, sua aplicação, os comandos atuais de teclado/mouse e
+gamepad e uma demonstração animada de Alex:
+
+- pernas mecânicas → salto duplo;
+- braços mecânicos → ataque e quebra;
+- olhos mecânicos → scan e revelação;
+- propulsores → dash.
+
+O jogador precisa confirmar **Continuar**. A confirmação mantém o fluxo de
+`SaveState.unlockAbility()`, salva a habilidade e abre a próxima fase. O painel
+pertence somente à aquisição do implante e não reaparece em mortes, checkpoints
+ou reinícios da fase seguinte.
+
 ## 19.2 Pausa
 
 ### Campanha

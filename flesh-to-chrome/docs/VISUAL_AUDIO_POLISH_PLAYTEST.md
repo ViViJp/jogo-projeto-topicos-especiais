@@ -46,6 +46,21 @@ Documento da branch `feat/visual-audio-polish`.
   liberam cada habilidade. Ela reutiliza a música do menu sem reiniciá-la. Ao
   abrir a partir de **Novo Jogo**, o save só é substituído ao confirmar
   **Iniciar Campanha**; a opção permanente **Controles** é somente consultiva.
+  As imagens do prólogo são aquecidas em segundo plano enquanto essa tela
+  permanece visível. Se o jogador confirmar antes do fim da transferência, o
+  painel mostra o progresso e só troca de cena quando o primeiro quadro estiver
+  pronto, evitando a tela preta observada em servidores remotos.
+- O master original de 17 MB da Fase 1 foi convertido de Vorbis 450 kbps para
+  128 kbps, mantendo os 5min06s, estéreo e 44,1 kHz em um arquivo de 4,6 MB.
+  Durante o prólogo, essa música é carregada e decodificada em segundo plano.
+  Se a leitura terminar antes da transferência, a última página permanece
+  visível com o progresso; em seguida, a `GameScene` carrega atrás dela e só
+  assume a tela depois de emitir `CREATE`. Assim o jogador nunca fica esperando
+  o primeiro setor sobre um canvas preto.
+- A conclusão de cada clínica apresenta um tutorial do implante adquirido. O
+  painel reutiliza a variante atual de Alex e demonstra salto duplo, ataque,
+  scan ou dash, deriva os comandos da configuração central e exige confirmação
+  explícita em **Continuar** antes de salvar e avançar.
 
 ## Assets narrativos finalizados
 
@@ -92,3 +107,11 @@ No playtest manual, confirme em 16:9 e ultrawide:
 9. abrir **Controles** pelo menu e voltar não altera o save; abrir **Novo Jogo**,
    voltar e cancelar também preserva o save, enquanto **Iniciar Campanha** o
    substitui e segue para o prólogo.
+   Em rede lenta, a tela de controles deve permanecer visível com o estado
+   **Preparando Prólogo**, sem apagar o save ou exibir um quadro preto;
+   ao confirmar a última página, ela deve permanecer visível com
+   **Preparando/Inicializando Primeiro Setor** até a Fase 1 estar pronta;
+10. as quatro clínicas mostram nome, habilidade, descrição e comandos corretos;
+    a animação corresponde ao implante recém-adquirido, o clique fora de
+    **Continuar** não pula o painel e a confirmação salva uma única vez antes
+    de abrir a próxima fase.
