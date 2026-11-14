@@ -230,6 +230,20 @@ export class MultiplayerScene extends Phaser.Scene {
         new URL("../assets/props/checkpoint/tv-checkpoint.png", import.meta.url).href,
       );
     }
+    if (!this.textures.exists("enemy-bandido")) {
+      this.load.spritesheet(
+        "enemy-bandido",
+        new URL("../assets/npcs/enemies/bandido/bandido.png", import.meta.url).href,
+        { frameWidth: 48, frameHeight: 48 },
+      );
+    }
+    if (!this.textures.exists("enemy-drone")) {
+      this.load.spritesheet(
+        "enemy-drone",
+        new URL("../assets/npcs/enemies/drone/drone.png", import.meta.url).href,
+        { frameWidth: 32, frameHeight: 32 },
+      );
+    }
     preloadBackdrop(this, TILED_MULTIPLAYER_MAP_DATA);
     if (!this.cache.tilemap.exists(TILED_MULTIPLAYER_MAP_KEY)) {
       this.cache.tilemap.add(TILED_MULTIPLAYER_MAP_KEY, {

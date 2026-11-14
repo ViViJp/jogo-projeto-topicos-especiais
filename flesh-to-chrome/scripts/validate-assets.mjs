@@ -57,7 +57,7 @@ const phases = [
     map: "src/assets/maps/multiplayer/multiplayer-race",
     tile: 32,
     layers: ["background", "deco-back", "ground", "scan-visuals", "hazards", "deco", "objects"],
-    objects: ["spawn", "checkpoint", "credit", "hazard", "automatic_door", "breakable", "phase_end"],
+    objects: ["spawn", "checkpoint", "credit", "hazard", "automatic_door", "breakable", "enemy", "phase_end"],
     hazards: ["laser_grid", "rotating_barrier", "hidden_spikes"],
     expectedCredits: 20,
     expectedCheckpoints: 3,

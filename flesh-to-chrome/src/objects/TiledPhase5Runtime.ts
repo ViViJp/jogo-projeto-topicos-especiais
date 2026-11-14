@@ -9,6 +9,7 @@ import {
 import { CREDIT_ANIMATION_KEY, TEX } from "../utils/PlaceholderTextures";
 import { AudioManager, SFX } from "../systems/AudioManager";
 import { CheckpointMarker } from "./CheckpointMarker";
+import { EnemyRuntime } from "./EnemyRuntime";
 import { nearestScanObstacleIndex, rotatingBarrierPoints } from "./HazardMotion";
 import { ScanBarrierVisual } from "./ScanBarrierVisual";
 
@@ -142,6 +143,8 @@ export class TiledPhase5Runtime {
   private elapsedMs = 0;
   private endGateTriggered = false;
   private playerRef?: Player;
+  private readonly enemyObjects: Phaser.Types.Tilemaps.TiledObject[];
+  private enemies?: EnemyRuntime;
   private pressedAttackListener: (breakable: Phaser.GameObjects.GameObject | null) => void = () => undefined;
   private normalAttackListener: (x: number, y: number) => void = () => undefined;
 
@@ -197,6 +200,7 @@ export class TiledPhase5Runtime {
     const gateObjects = byType("gate");
     this.endGateX = gateObjects[0]?.x ?? endObject?.x ?? this.lengthPx - 100;
 
+    this.enemyObjects = byType("enemy");
     this.readCredits(byType("credit"));
     this.readCheckpoints(byType("checkpoint"));
     this.buildRevealRegions(byType("scan_reveal"));
@@ -712,6 +716,11 @@ export class TiledPhase5Runtime {
   registerPhysics(player: Player): void {
     this.playerRef = player;
     this.scene.physics.add.collider(player.sprite, this.groundLayer);
+    // Só a pista multiplayer tem inimigos no Topo; a cena precisa ter carregado os sprites.
+    if (this.enemyObjects.length > 0) {
+      this.enemies = new EnemyRuntime(this.scene, player, this.enemyObjects, this.offsetY);
+      this.enemies.registerPlayerCollision(() => player.kill());
+    }
     for (const hazard of this.hazardZones) {
       this.scene.physics.add.overlap(player.sprite, hazard, () => player.kill());
     }
@@ -926,8 +935,10 @@ export class TiledPhase5Runtime {
   }
 
   setScanActive(active: boolean): void {
+    if (!active) this.enemies?.stopScan();
     if (!active || !this.playerRef) return;
     const playerX = this.playerRef.sprite.x;
+    this.enemies?.scan(playerX);
     this.disableNearestDoor(playerX);
     const groups = new Set(
       this.revealRegions
@@ -943,6 +954,7 @@ export class TiledPhase5Runtime {
 
   /** Restaura o trecho após uma morte sem recriar créditos, checkpoint ou cronômetro. */
   resetMutableObstacles(): void {
+    this.enemies?.reset();
     const activeBreakableIds = new Set(this.breakables.map((breakable) => breakable.id));
     for (const definition of this.breakableDefinitions) {
       if (!activeBreakableIds.has(definition.id)) this.createBreakable(definition);
@@ -993,6 +1005,7 @@ export class TiledPhase5Runtime {
     if (this.usesInternalTime) this.elapsedMs += Math.max(0, deltaMs);
     const now = this.timeSource();
     this.updateRotatingBarriers(now);
+    this.enemies?.update();
     this.clearPassedRevealGroups(player.sprite.x);
 
     this.creditSprites.forEach((sprite, id) => {
@@ -1036,6 +1049,7 @@ export class TiledPhase5Runtime {
   }
 
   destroy(): void {
+    this.enemies?.destroy();
     this.scene.events.off("player-attack-attempt", this.pressedAttackListener);
     this.scene.events.off("player-attack", this.normalAttackListener);
     this.creditSprites.forEach((sprite) => sprite.destroy());

@@ -49721,6 +49721,20 @@
         0,
         0,
         0,
+        9,
+        11,
+        11,
+        11,
+        11,
+        11,
+        11,
+        11,
+        11,
+        11,
+        11,
+        11,
+        11,
+        12,
         0,
         0,
         0,
@@ -49735,32 +49749,18 @@
         0,
         0,
         0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
+        9,
+        11,
+        11,
+        11,
+        11,
+        11,
+        11,
+        11,
+        11,
+        11,
+        11,
+        12,
         0,
         0,
         0,
@@ -115796,8 +115796,62 @@
           "y": 128
         },
         {
+          "height": 48,
+          "name": "bandido_01",
+          "properties": [
+            {
+              "name": "kind",
+              "type": "string",
+              "value": "bandido"
+            }
+          ],
+          "rotation": 0,
+          "type": "enemy",
+          "visible": true,
+          "width": 48,
+          "x": 12936,
+          "y": 336,
+          "id": 20
+        },
+        {
+          "height": 48,
+          "name": "bandido_02",
+          "properties": [
+            {
+              "name": "kind",
+              "type": "string",
+              "value": "bandido"
+            }
+          ],
+          "rotation": 0,
+          "type": "enemy",
+          "visible": true,
+          "width": 48,
+          "x": 13608,
+          "y": 336,
+          "id": 21
+        },
+        {
+          "height": 32,
+          "name": "drone_01",
+          "properties": [
+            {
+              "name": "kind",
+              "type": "string",
+              "value": "drone"
+            }
+          ],
+          "rotation": 0,
+          "type": "enemy",
+          "visible": true,
+          "width": 32,
+          "x": 13968,
+          "y": 218,
+          "id": 22
+        },
+        {
           "height": 0,
-          "id": 20,
+          "id": 23,
           "name": "credit_09",
           "point": true,
           "properties": [
@@ -115817,11 +115871,47 @@
           "visible": true,
           "width": 0,
           "x": 14400,
-          "y": 352
+          "y": 256
+        },
+        {
+          "height": 48,
+          "name": "bandido_03",
+          "properties": [
+            {
+              "name": "kind",
+              "type": "string",
+              "value": "bandido"
+            }
+          ],
+          "rotation": 0,
+          "type": "enemy",
+          "visible": true,
+          "width": 48,
+          "x": 15144,
+          "y": 336,
+          "id": 24
+        },
+        {
+          "height": 48,
+          "name": "bandido_04",
+          "properties": [
+            {
+              "name": "kind",
+              "type": "string",
+              "value": "bandido"
+            }
+          ],
+          "rotation": 0,
+          "type": "enemy",
+          "visible": true,
+          "width": 48,
+          "x": 15528,
+          "y": 336,
+          "id": 25
         },
         {
           "height": 0,
-          "id": 21,
+          "id": 26,
           "name": "credit_10",
           "point": true,
           "properties": [
@@ -115845,7 +115935,7 @@
         },
         {
           "height": 96,
-          "id": 22,
+          "id": 27,
           "name": "false_floor_01",
           "properties": [
             {
@@ -115873,7 +115963,7 @@
         },
         {
           "height": 0,
-          "id": 23,
+          "id": 28,
           "name": "credit_11",
           "point": true,
           "properties": [
@@ -115897,7 +115987,7 @@
         },
         {
           "height": 128,
-          "id": 24,
+          "id": 29,
           "name": "hidden_hazards_01",
           "properties": [
             {
@@ -115925,7 +116015,7 @@
         },
         {
           "height": 128,
-          "id": 25,
+          "id": 30,
           "name": "hidden_spikes_01",
           "properties": [
             {
@@ -115948,7 +116038,7 @@
         },
         {
           "height": 0,
-          "id": 26,
+          "id": 31,
           "name": "credit_12",
           "point": true,
           "properties": [
@@ -115986,11 +116076,11 @@
           "width": 64,
           "x": 19200,
           "y": 288,
-          "id": 27
+          "id": 32
         },
         {
           "height": 64,
-          "id": 28,
+          "id": 33,
           "name": "barricade_01",
           "properties": [
             {
@@ -116013,7 +116103,7 @@
         },
         {
           "height": 0,
-          "id": 29,
+          "id": 34,
           "name": "credit_13",
           "point": true,
           "properties": [
@@ -116037,7 +116127,7 @@
         },
         {
           "height": 64,
-          "id": 30,
+          "id": 35,
           "name": "barricade_02",
           "properties": [
             {
@@ -116060,7 +116150,7 @@
         },
         {
           "height": 192,
-          "id": 31,
+          "id": 36,
           "name": "final_combination_01",
           "properties": [
             {
@@ -116088,7 +116178,7 @@
         },
         {
           "height": 128,
-          "id": 32,
+          "id": 37,
           "name": "hidden_spikes_02",
           "properties": [
             {
@@ -116111,7 +116201,7 @@
         },
         {
           "height": 0,
-          "id": 33,
+          "id": 38,
           "name": "credit_14",
           "point": true,
           "properties": [
@@ -116135,7 +116225,7 @@
         },
         {
           "height": 64,
-          "id": 34,
+          "id": 39,
           "name": "barricade_03",
           "properties": [
             {
@@ -116158,7 +116248,7 @@
         },
         {
           "height": 64,
-          "id": 35,
+          "id": 40,
           "name": "barricade_04",
           "properties": [
             {
@@ -116181,7 +116271,7 @@
         },
         {
           "height": 128,
-          "id": 36,
+          "id": 41,
           "name": "laser_grid_04",
           "properties": [
             {
@@ -116204,7 +116294,7 @@
         },
         {
           "height": 96,
-          "id": 37,
+          "id": 42,
           "name": "rotating_barrier_756",
           "properties": [
             {
@@ -116222,7 +116312,7 @@
         },
         {
           "height": 128,
-          "id": 38,
+          "id": 43,
           "name": "laser_grid_05",
           "properties": [
             {
@@ -116240,7 +116330,7 @@
         },
         {
           "height": 0,
-          "id": 39,
+          "id": 44,
           "name": "credit_15",
           "point": true,
           "properties": [
@@ -116264,7 +116354,7 @@
         },
         {
           "height": 128,
-          "id": 40,
+          "id": 45,
           "name": "laser_grid_06",
           "properties": [
             {
@@ -116282,7 +116372,7 @@
         },
         {
           "height": 256,
-          "id": 41,
+          "id": 46,
           "name": "automatic_door_04",
           "properties": [
             {
@@ -116315,7 +116405,7 @@
         },
         {
           "height": 128,
-          "id": 42,
+          "id": 47,
           "name": "laser_grid_07",
           "properties": [
             {
@@ -116333,7 +116423,7 @@
         },
         {
           "height": 0,
-          "id": 43,
+          "id": 48,
           "name": "credit_16",
           "point": true,
           "properties": [
@@ -116357,7 +116447,7 @@
         },
         {
           "height": 96,
-          "id": 44,
+          "id": 49,
           "name": "rotating_barrier_872",
           "properties": [
             {
@@ -116375,7 +116465,7 @@
         },
         {
           "height": 128,
-          "id": 45,
+          "id": 50,
           "name": "laser_grid_08",
           "properties": [
             {
@@ -116407,11 +116497,11 @@
           "width": 64,
           "x": 28800,
           "y": 288,
-          "id": 46
+          "id": 51
         },
         {
           "height": 64,
-          "id": 47,
+          "id": 52,
           "name": "barricade_01_repeat",
           "properties": [
             {
@@ -116434,7 +116524,7 @@
         },
         {
           "height": 64,
-          "id": 48,
+          "id": 53,
           "name": "barricade_02_repeat",
           "properties": [
             {
@@ -116457,7 +116547,7 @@
         },
         {
           "height": 0,
-          "id": 49,
+          "id": 54,
           "name": "credit_17",
           "point": true,
           "properties": [
@@ -116481,7 +116571,7 @@
         },
         {
           "height": 192,
-          "id": 50,
+          "id": 55,
           "name": "final_combination_01_repeat",
           "properties": [
             {
@@ -116509,7 +116599,7 @@
         },
         {
           "height": 128,
-          "id": 51,
+          "id": 56,
           "name": "hidden_spikes_02_repeat",
           "properties": [
             {
@@ -116532,7 +116622,7 @@
         },
         {
           "height": 64,
-          "id": 52,
+          "id": 57,
           "name": "barricade_03_repeat",
           "properties": [
             {
@@ -116555,7 +116645,7 @@
         },
         {
           "height": 64,
-          "id": 53,
+          "id": 58,
           "name": "barricade_04_repeat",
           "properties": [
             {
@@ -116578,7 +116668,7 @@
         },
         {
           "height": 0,
-          "id": 54,
+          "id": 59,
           "name": "credit_18",
           "point": true,
           "properties": [
@@ -116602,7 +116692,7 @@
         },
         {
           "height": 128,
-          "id": 55,
+          "id": 60,
           "name": "laser_grid_04_repeat",
           "properties": [
             {
@@ -116625,7 +116715,7 @@
         },
         {
           "height": 96,
-          "id": 56,
+          "id": 61,
           "name": "rotating_barrier_756_repeat",
           "properties": [
             {
@@ -116643,7 +116733,7 @@
         },
         {
           "height": 128,
-          "id": 57,
+          "id": 62,
           "name": "laser_grid_05_repeat",
           "properties": [
             {
@@ -116661,7 +116751,7 @@
         },
         {
           "height": 0,
-          "id": 58,
+          "id": 63,
           "name": "credit_19",
           "point": true,
           "properties": [
@@ -116685,7 +116775,7 @@
         },
         {
           "height": 128,
-          "id": 59,
+          "id": 64,
           "name": "laser_grid_06_repeat",
           "properties": [
             {
@@ -116708,7 +116798,7 @@
         },
         {
           "height": 256,
-          "id": 60,
+          "id": 65,
           "name": "automatic_door_04_repeat",
           "properties": [
             {
@@ -116741,7 +116831,7 @@
         },
         {
           "height": 128,
-          "id": 61,
+          "id": 66,
           "name": "laser_grid_07_repeat",
           "properties": [
             {
@@ -116759,7 +116849,7 @@
         },
         {
           "height": 0,
-          "id": 62,
+          "id": 67,
           "name": "credit_20",
           "point": true,
           "properties": [
@@ -116783,7 +116873,7 @@
         },
         {
           "height": 96,
-          "id": 63,
+          "id": 68,
           "name": "rotating_barrier_872_repeat",
           "properties": [
             {
@@ -116801,7 +116891,7 @@
         },
         {
           "height": 128,
-          "id": 64,
+          "id": 69,
           "name": "laser_grid_08_repeat",
           "properties": [
             {
@@ -116838,7 +116928,7 @@
           "width": 64,
           "x": 38272,
           "y": 256,
-          "id": 65
+          "id": 70
         }
       ],
       "opacity": 1,
@@ -116849,7 +116939,7 @@
     }
   ],
   "nextlayerid": 14,
-  "nextobjectid": 66,
+  "nextobjectid": 71,
   "orientation": "orthogonal",
   "properties": [
     {

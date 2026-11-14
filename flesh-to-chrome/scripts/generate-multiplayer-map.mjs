@@ -95,6 +95,49 @@ const repeatedDoor = repeatedObjects.find((object) => object.name === "automatic
 if (!repeatedDoor) throw new Error("Porta repetida ausente: automatic_door_04_repeat.");
 setProperty(repeatedDoor, "phase_ms", "int", 1_300);
 
+// O trecho 12500–16000 era chão plano e vazio na Fase 5 (área do checkpoint da
+// campanha). A corrida ganha ali plataformas e inimigos para exercitar o ataque.
+const GROUND_ROW = 12;
+const PLATFORM_ROW = 9;
+const PLATFORM_TILES = { left: 9, middle: 11, right: 12 }; // mesmas peças das plataformas do Topo
+function addPlatform(startColumn, endColumn) {
+  for (let column = startColumn; column <= endColumn; column += 1) {
+    const occupied = Array.from({ length: GROUND_ROW }, (_, row) => hasGround(column, row)).some(Boolean);
+    if (occupied || !hasGround(column, GROUND_ROW)) {
+      throw new Error(`Plataforma: coluna ${column} não é chão plano e livre.`);
+    }
+    groundData[PLATFORM_ROW * map.width + column] =
+      column === startColumn ? PLATFORM_TILES.left
+      : column === endColumn ? PLATFORM_TILES.right
+      : PLATFORM_TILES.middle;
+  }
+}
+addPlatform(418, 431); // x 13376–13824
+addPlatform(446, 457); // x 14272–14656, com o crédito 9 em cima
+
+const groundTopY = GROUND_ROW * map.tileheight;
+function enemy(kind, index, centerX, bottomY = groundTopY) {
+  const size = kind === "drone" ? 32 : 48;
+  return {
+    height: size,
+    name: `${kind}_${String(index).padStart(2, "0")}`,
+    properties: [{ name: "kind", type: "string", value: kind }],
+    rotation: 0,
+    type: "enemy",
+    visible: true,
+    width: size,
+    x: centerX - size / 2,
+    y: bottomY - size,
+  };
+}
+const enemies = [
+  enemy("bandido", 1, 12_960),
+  enemy("bandido", 2, 13_632), // sob a primeira plataforma: atacar ou passar por cima
+  enemy("drone", 1, 13_984, groundTopY - 134), // paira na altura do pulo, como na Fase 3
+  enemy("bandido", 3, 15_168),
+  enemy("bandido", 4, 15_552),
+];
+
 const sourceCredits = sourceObjectLayer.objects.filter((object) => object.type === "credit");
 const creditPlan = [
   { x: 640 },
@@ -105,7 +148,7 @@ const creditPlan = [
   { x: 9_152 },
   { x: 11_008 },
   { x: 12_288 },
-  { x: 14_400 },
+  { x: 14_400, y: 256 }, // em cima da segunda plataforma
   { x: 16_128 },
   { x: 17_600 },
   { x: 18_560 },
@@ -125,6 +168,7 @@ const credits = creditPlan.map((plan, index) => {
   if (!source) throw new Error(`Crédito-base ausente em x=${sourceX}.`);
   const object = structuredClone(source);
   object.x = plan.x;
+  if (plan.y !== undefined) object.y = plan.y;
   object.name = `credit_${String(index + 1).padStart(2, "0")}`;
   setProperty(object, "id", "string", `mp-credit-${String(index + 1).padStart(2, "0")}`);
   setProperty(object, "route", "string", propertyValue(source, "route") === "risk" ? "risk" : "normal");
@@ -158,7 +202,7 @@ const finish = {
   y: 256,
 };
 
-objectLayer.objects = [...retainedObjects, ...repeatedObjects, ...checkpoints, ...credits, finish]
+objectLayer.objects = [...retainedObjects, ...repeatedObjects, ...enemies, ...checkpoints, ...credits, finish]
   .sort((left, right) => (left.x ?? 0) - (right.x ?? 0));
 objectLayer.objects.forEach((object, index) => {
   object.id = index + 1;

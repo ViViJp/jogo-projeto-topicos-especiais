@@ -233,6 +233,25 @@ export class EnemyRuntime {
     }
   }
 
+  /** Devolve todos os inimigos ao estado inicial num respawn sem reinício de cena. */
+  reset(): void {
+    for (const enemy of this.enemies) {
+      this.scene.tweens.killTweensOf(enemy.sprite);
+      enemy.sprite
+        .setActive(true)
+        .setVisible(true)
+        .setAlpha(1)
+        .setAngle(0)
+        .setScale(ENEMY_SCALE[enemy.kind])
+        .clearTint();
+      enemy.sprite.setData("hp", undefined);
+      enemy.sprite.body!.enable = true;
+      enemy.sprite.body!.reset(enemy.homeX, enemy.sprite.y);
+      enemy.revealed = false;
+      enemy.patrolDirection = 1;
+    }
+  }
+
   registerPlayerCollision(onFatalCollision: () => void): void {
     this.scene.physics.add.overlap(this.player.sprite, this.group, () => {
       if (this.player.getState() !== "dead") onFatalCollision();
