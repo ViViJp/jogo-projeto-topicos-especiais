@@ -39,8 +39,15 @@ type HazardBehavior = "floor" | "overhead";
 const HAZARD_KIND_BEHAVIOR: Record<string, HazardBehavior> = {
   toxic_water: "floor",
   electric_wire: "overhead",
-  broken_pipe: "floor",
+  broken_pipe: "overhead",
 };
+
+// Os Rectangle Objects dos canos foram autorados 3 px para dentro nas
+// laterais. A margem restaura a largura inteira da arte. A zona lógica sobe
+// até o teto do mapa (ver `buildObjectHazards`), impedindo que o cano seja
+// vencido com um pulo ou usado como plataforma: a única travessia aceita é
+// por baixo, enquanto Alex está no estado de slide.
+const BROKEN_PIPE_HITBOX_PADDING_X = 3;
 
 // GIDs do fio provisório de 32 x 16 px que ainda está desenhado na layer
 // `hazards` do mapa. O runtime o oculta quando instancia o sprite novo nas
@@ -86,13 +93,12 @@ const LEGACY_ELECTRIC_WIRE_GIDS = new Set([733, 734]);
  *  2. **Hazards por objeto de verdade**, finalmente batendo com o
  *     contrato §5.3 ("hazards: só o visual; a lógica fica em objects") -
  *     o mapa antigo não tinha nenhum objeto `hazard` real (só um
- *     `hazard=true` no tileset, mecanismo velho da v0.2.0, mantido aqui
- *     como fallback morto - `classifyHazardTiles`/`setCollisionByProperty`
- *     - caso algum mapa futuro ainda dependa dele). O mapa atual usa
- *     objetos `hazard` reais. `toxic_water` e `broken_pipe` usam o
- *     comportamento "floor" (morte em qualquer estado); `electric_wire`
- *     usa "overhead" (mata a não ser que Alex esteja deslizando). Todos
- *     estão formalizados no contrato v0.4.
+ *     `hazard=true` no tileset, mecanismo velho da v0.2.0). A classificação
+ *     legada ainda pode separar esses tiles do chão, mas a layer visual nunca
+ *     recebe colisão: a lógica letal fica sempre nos Rectangle Objects. O mapa atual usa
+ *     objetos `hazard` reais. `toxic_water` usa o comportamento "floor"
+ *     (morte em qualquer estado); `electric_wire` e `broken_pipe` usam
+ *     "overhead" (matam a não ser que Alex esteja deslizando).
  */
 export class TiledLevelRuntime {
   readonly map: Phaser.Tilemaps.Tilemap;
@@ -171,7 +177,10 @@ export class TiledLevelRuntime {
       // não tem nenhum tile com a propriedade `hazard`, então isto vira um
       // no-op inofensivo (ver nota da classe acima).
       this.classifyHazardTiles(hazards, ground);
-      hazards.setCollisionByProperty({ hazard: true });
+      // Esta layer é estritamente visual. Limpar toda colisão impede que os
+      // canos virem plataformas onde Alex consegue pousar; a letalidade fica
+      // exclusivamente nos Rectangle Objects de `hazard`.
+      hazards.setCollisionByExclusion([], false);
     }
     this.hazardsLayer = hazards;
 
@@ -415,8 +424,18 @@ export class TiledLevelRuntime {
       const y = (o.y ?? 0) + offsetY;
       const w = o.width ?? 16;
       const h = o.height ?? 16;
+      const isBrokenPipe = kind === "broken_pipe";
+      const hitboxX = isBrokenPipe ? x - BROKEN_PIPE_HITBOX_PADDING_X : x;
+      const hitboxY = isBrokenPipe ? offsetY : y;
+      const hitboxWidth = isBrokenPipe ? w + BROKEN_PIPE_HITBOX_PADDING_X * 2 : w;
+      const hitboxHeight = isBrokenPipe ? y + h - offsetY : h;
       // Tiled dá x/y do CANTO superior-esquerdo do retângulo; a zone usa centro.
-      const zone = this.scene.add.zone(x + w / 2, y + h / 2, w, h);
+      const zone = this.scene.add.zone(
+        hitboxX + hitboxWidth / 2,
+        hitboxY + hitboxHeight / 2,
+        hitboxWidth,
+        hitboxHeight,
+      );
       this.scene.physics.add.existing(zone, true); // true = corpo estático
       // `kind` desconhecido cai em "floor" por segurança - morte instantânea é
       // o comportamento mais chamativo/óbvio de testar do que deixar um
@@ -484,17 +503,12 @@ export class TiledLevelRuntime {
   /** Colisão/overlap do jogador com o chão e os perigos reais do tilemap. */
   registerPhysics(player: Player): void {
     this.playerRef = player;
-    this.scene.physics.add.collider(player.sprite, this.groundLayer, () => {
-      const body = player.sprite.body as Phaser.Physics.Arcade.Body | null;
-      if (!body) return;
-      // Pisar no topo é a colisão normal do runner. Colisão lateral ou
-      // contra a parte inferior de um tile sólido representa parede/teto e
-      // é fatal: a regra do jogo é 1 hit = morte para qualquer elemento
-      // que realmente gere colisão.
-      if (body.blocked.left || body.blocked.right || body.blocked.up) {
-        player.kill();
-      }
-    });
+    // `ground` representa somente terreno e plataformas. Contatos no topo,
+    // nas laterais, por baixo ou nos cantos devem resolver a separação física
+    // sem causar dano. Perigos letais possuem zonas próprias abaixo; usar os
+    // flags `blocked.left/right/up` aqui transformava qualquer plataforma em
+    // hazard e matava Alex até em colisões normais de borda.
+    this.scene.physics.add.collider(player.sprite, this.groundLayer);
     if (this.hazardsLayer) {
       this.scene.physics.add.overlap(player.sprite, this.hazardsLayer, (_obj, tileObj) => {
         const tile = tileObj as unknown as Phaser.Tilemaps.Tile;
@@ -514,6 +528,22 @@ export class TiledLevelRuntime {
       });
     }
     for (const hz of this.hazardZones) {
+      if (hz.kind === "broken_pipe") {
+        // O cano baixo precisa detectar também o contato exato de pouso. Um
+        // `overlap` pode não disparar quando o Arcade Physics separa o corpo
+        // na mesma atualização e o deixa apenas encostado no topo. A colisão
+        // condicional fecha essa brecha: em pé/no ar ela mata imediatamente;
+        // durante o slide o process callback devolve false e Alex atravessa
+        // o volume sem ganhar apoio sólido.
+        this.scene.physics.add.collider(
+          player.sprite,
+          hz.zone,
+          () => player.kill(),
+          () => player.getState() !== "sliding",
+        );
+        continue;
+      }
+
       this.scene.physics.add.overlap(player.sprite, hz.zone, () => {
         if (hz.behavior === "overhead") {
           if (player.getState() !== "sliding") player.kill();

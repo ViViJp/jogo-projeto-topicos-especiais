@@ -247,7 +247,7 @@ kind = toxic_water
 |---|---|---|
 | **toxic_water** | água tóxica/poço contaminado | morte ao contato, em qualquer estado |
 | **electric_wire** | fio/cabo energizado na altura do corpo | morte ao contato, exceto quando Alex passa corretamente em estado de slide |
-| **broken_pipe** | cano ou tubulação rompida | morte imediata ao contato, em qualquer estado, inclusive corrida, pulo ou slide |
+| **broken_pipe** | cano ou tubulação rompida | morte em corrida, pulo ou contato por cima; a zona lógica sobe até o teto e a travessia só é permitida por baixo durante o slide |
 
 #### Regra específica para canos rompidos
 
@@ -258,8 +258,10 @@ Todo cano rompido que possa ser tocado pelo jogador deve ser tratado como hazard
 3. usar **Classe = hazard**;
 4. adicionar a propriedade string **kind = broken_pipe**;
 5. usar nome sequencial **broken_pipe_01**, **broken_pipe_02**, etc.;
-6. ajustar o retângulo ao trecho visual letal;
-7. testar contato correndo, pulando e deslizando — os três devem resultar em morte.
+6. alinhar o retângulo ao trecho visual letal; o runtime prolonga sua zona
+   lógica até o teto para impedir que o obstáculo seja vencido por salto;
+7. testar contato correndo, tentando saltar por cima e aterrissando no cano —
+   os três devem resultar em morte; somente o slide deve atravessar o volume.
 
 Não colocar o cano rompido apenas em **ground**, pois colisão sólida e hazard letal são responsabilidades diferentes. Tiles estruturais não letais que sustentem o cano podem continuar em **ground**, mas a parte rompida/letal deve ficar visualmente em **hazards** e logicamente em **objects**.
 
@@ -930,6 +932,17 @@ Dependendo da versão/exportação do Tiled, a informação exibida na interface
 12. Somente depois bloquear **ground**, **hazards** e **objects** e iniciar **background → deco-back → deco**.
 
 ## 12. Histórico de alterações
+
+### v0.24 — 2026-11-14
+
+- reforçado que a layer `hazards` da Fase 1 é somente visual e nunca oferece
+  apoio sólido ao jogador;
+- alinhada a hitbox dos canos rompidos às laterais da arte e prolongada até
+  o teto jogável, removendo a rota de salto por cima;
+- canos rompidos passam a ser obstáculos exclusivos de slide: contato em pé,
+  no pulo ou por cima mata Alex, enquanto o slide permite atravessar;
+- o contato dos canos usa colisão condicional, garantindo que um pouso exato
+  no topo também seja letal sem transformar o cano em plataforma durante o slide.
 
 ### v0.23 — 2026-11-10
 

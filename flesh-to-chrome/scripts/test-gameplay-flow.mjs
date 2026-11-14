@@ -422,6 +422,28 @@ assert.match(checkpointMarker, /0x36e2ff/, "sincronização da TV deve pulsar em
 assert.match(checkpointMarker, /0x68ff9c/, "sincronização da TV deve pulsar em verde");
 assert.match(checkpointMarker, /targets: scanLine/, "TV deve executar uma varredura luminosa");
 const tiledLevelRuntime = fs.readFileSync(path.join(projectDirectory, "src/objects/TiledLevelRuntime.ts"), "utf8");
+const phase1GroundCollider = tiledLevelRuntime.slice(
+  tiledLevelRuntime.indexOf("registerPhysics(player: Player): void"),
+  tiledLevelRuntime.indexOf("if (this.hazardsLayer)", tiledLevelRuntime.indexOf("registerPhysics(player: Player): void")),
+);
+assert.match(phase1GroundCollider, /physics\.add\.collider\(player\.sprite, this\.groundLayer\);/,
+  "fase1: plataformas devem resolver somente colisão sólida");
+assert.doesNotMatch(phase1GroundCollider, /player\.kill\(\)/,
+  "fase1: contato lateral, inferior ou de canto com plataforma não pode matar Alex");
+assert.match(tiledLevelRuntime, /broken_pipe: "overhead"/,
+  "fase1: canos rompidos devem ser atravessáveis somente durante o slide");
+assert.match(tiledLevelRuntime, /hazards\.setCollisionByExclusion\(\[\], false\)/,
+  "fase1: a arte dos hazards não pode oferecer uma superfície onde Alex pise");
+assert.match(tiledLevelRuntime, /BROKEN_PIPE_HITBOX_PADDING_X = 3/);
+assert.match(tiledLevelRuntime, /const hitboxY = isBrokenPipe \? offsetY : y/);
+assert.match(tiledLevelRuntime, /const hitboxHeight = isBrokenPipe \? y \+ h - offsetY : h/,
+  "fase1: hitbox do cano deve subir ao teto para impedir pulo e pouso por cima");
+assert.match(tiledLevelRuntime, /hz\.behavior === "overhead"[\s\S]*?player\.getState\(\) !== "sliding"[\s\S]*?player\.kill\(\)/,
+  "fase1: obstáculo overhead deve matar Alex sempre que ele não estiver deslizando");
+assert.match(tiledLevelRuntime, /hz\.kind === "broken_pipe"[\s\S]*?physics\.add\.collider\([\s\S]*?player\.getState\(\) !== "sliding"/,
+  "fase1: cano baixo deve detectar pouso como colisão letal e ignorar somente o slide");
+assert.match(tiledLevelRuntime, /for \(const hz of this\.hazardZones\)[\s\S]*?player\.kill\(\)/,
+  "fase1: hazards reais devem continuar letais após separar o terreno");
 assert.match(tiledLevelRuntime, /prepareDescentEpilogue\(startX: number, endX: number\)/,
   "epílogo deve preparar um corredor próprio no mapa do Esgoto");
 assert.match(tiledLevelRuntime, /this\.groundLayer\.removeTileAt\(col, row\)/);
