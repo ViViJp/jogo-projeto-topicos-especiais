@@ -240,6 +240,11 @@ export class MultiplayerScene extends Phaser.Scene {
     void this.startMesh();
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.events.off(
+        Phaser.Scenes.Events.POST_UPDATE,
+        this.updatePresentation,
+        this,
+      );
       this.meshStartId += 1;
       this.clearStartHandshakeTimer();
       this.runtime?.destroy();
@@ -248,6 +253,11 @@ export class MultiplayerScene extends Phaser.Scene {
       this.mesh?.stop();
       this.mesh = undefined;
     });
+    this.events.on(
+      Phaser.Scenes.Events.POST_UPDATE,
+      this.updatePresentation,
+      this,
+    );
   }
 
   update(time: number, delta: number): void {
@@ -271,7 +281,6 @@ export class MultiplayerScene extends Phaser.Scene {
         if (this.player && this.runtime) this.runtime.update(this.player);
       }
       if (this.phase === "racing") {
-        this.updateCamera();
         this.updateRaceHud();
       }
     }
@@ -280,9 +289,14 @@ export class MultiplayerScene extends Phaser.Scene {
       this.sendSnapshot();
       this.lastSnapshotAt = time;
     }
+    this.input$.postUpdate();
+  }
+
+  /** Apresentação local sincronizada após a etapa de física da corrida. */
+  private updatePresentation(_time: number, delta: number): void {
+    if (this.phase === "racing") this.updateCamera();
     this.updateOpponent(delta);
     this.backdrop?.update(this.cameras.main.scrollX, delta);
-    this.input$.postUpdate();
   }
 
   private resetSessionState(): void {
@@ -1066,12 +1080,13 @@ export class MultiplayerScene extends Phaser.Scene {
 
   private updateCamera(): void {
     if (!this.player) return;
+    const viewportWidth = this.cameras.main.width;
     this.cameras.main.scrollX = Math.floor(
       Phaser.Math.Clamp(
-        this.player.sprite.x - SCREEN_WIDTH * CAMERA.playerScreenRatioX,
+        this.player.sprite.x - viewportWidth * CAMERA.playerScreenRatioX,
         0,
-        Math.max(0, this.raceLength - SCREEN_WIDTH)
-      )
+        Math.max(0, this.raceLength - viewportWidth),
+      ),
     );
   }
 

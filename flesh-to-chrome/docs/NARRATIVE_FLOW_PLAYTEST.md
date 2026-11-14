@@ -33,9 +33,10 @@ Novo Jogo
 - Chrome apresenta o reencontro físico com a ilustração conjunta
   `endings/chrome-father-son.png`: o pai reconhece Alex, mas Alex não o
   reconhece e continua andando.
-- Flesh e Hollow usam `prologue/familia.png`, com avô e tio juntos, para
-  representar a casa. O retrato do pai não pode aparecer como família nesses
-  dois finais.
+- Flesh e Hollow usam três ilustrações 1280×720 próprias para cada desfecho.
+  Flesh mostra a renúncia ao cromo, o retorno e o abraço da família; Hollow
+  mostra os ecos perdidos, a casa fechada e a partida. As mesmas três artes
+  Hollow são usadas independentemente da combinação de implantes restante.
 - Depois da última ReForge, o save mantém `epiloguePending` até Alex alcançar a
   saída do trecho jogável do Esgoto. Fechar e continuar antes disso restaura o
   corredor, em vez de saltar diretamente para o epílogo.
@@ -99,17 +100,16 @@ reproduzíveis.
 11. Confirme que o Portão foi restaurado com carteira e implantes preservados.
 12. Siga `DESCENT_ENDINGS_PLAYTEST.md` para validar memórias, holograma do pai,
     bioprinting, perda de habilidades e finais Flesh/Hollow.
-13. Nos quadros finais Flesh e Hollow, confirme que a imagem da casa mostra o
-    avô e o tio juntos. O retrato ciborgue do pai deve aparecer somente em
-    Chrome.
+13. Nos quadros finais Flesh e Hollow, confirme a sequência das três
+    ilustrações próprias de cada final e que não há sprites sobrepostos à arte.
 14. Durante as transições, simule cache vazio e rede lenta: a tela temática deve
     permanecer visível, informar o destino e nunca expor um canvas preto.
 15. Feche o jogo imediatamente depois da quarta retirada e use **Continuar**.
     Alex deve retornar ao corredor curto do Esgoto; depois de alcançar a saída,
     um novo **Continuar** deve abrir o epílogo, sem repetir o corredor.
-16. Falhe a descida depois de quantidades diferentes de retiradas. O Alex do
-    Final Hollow deve manter o mesmo estágio corporal do epílogo e informar a
-    quantidade correta de implantes restantes.
+16. Falhe a descida depois de quantidades diferentes de retiradas. Todas as
+    combinações devem usar a mesma sequência de três ilustrações Hollow nesta
+    versão, sem voltar aos sprites provisórios por estágio corporal.
 17. Nos três finais, valide a identificação Chrome/Flesh/Hollow, a continuidade
     da música, a leitura do QR Code e a abertura do formulário em nova aba.
     Navegue pelos dois botões com teclado, mouse e gamepad; ESC/B deve voltar ao

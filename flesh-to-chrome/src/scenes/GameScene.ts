@@ -123,7 +123,22 @@ export interface GameSceneData {
   descent?: boolean;
 }
 
+export interface MovementDebugSample {
+  time: number;
+  state: string;
+  frame: string;
+  spriteX: number;
+  bodyX: number;
+  velocityX: number;
+  cameraX: number;
+  screenX: number;
+  blockedLeft: boolean;
+  blockedRight: boolean;
+  fps: number;
+}
+
 type RuntimeGameSceneData = Required<GameSceneData>;
+const MOVEMENT_DEBUG_HISTORY_LIMIT = 180;
 
 /**
  * Fundo por fase. Ajustado em v0.2.1 (feedback de playtest: "o personagem
@@ -175,6 +190,7 @@ export class GameScene extends Phaser.Scene {
   private input$!: InputManager;
   private player!: Player;
   private movementDebugText?: Phaser.GameObjects.Text;
+  private movementDebugSamples: MovementDebugSample[] = [];
   private legacyRuntime?: LevelRuntime;
   private tiledRuntime?: TiledLevelRuntime;
   private tiledPhase2Runtime?: TiledPhase2Runtime;
@@ -213,6 +229,8 @@ export class GameScene extends Phaser.Scene {
     this.descentRuntime = undefined;
     this.descentRouteRuntime = undefined;
     this.backdrop = undefined;
+    this.movementDebugText = undefined;
+    this.movementDebugSamples = [];
     this.isPaused = false;
     this.pauseText = undefined;
     this.scanOverlay = undefined;
@@ -631,6 +649,19 @@ export class GameScene extends Phaser.Scene {
         padding: { x: 8, y: 6 },
       }).setScrollFactor(0).setDepth(10_000);
     }
+
+    this.events.on(
+      Phaser.Scenes.Events.POST_UPDATE,
+      this.updatePresentation,
+      this,
+    );
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.events.off(
+        Phaser.Scenes.Events.POST_UPDATE,
+        this.updatePresentation,
+        this,
+      );
+    });
   }
 
   private createDescentOverlay(): void {
@@ -1146,31 +1177,67 @@ export class GameScene extends Phaser.Scene {
     }
     this.descentRouteRuntime?.update(this.player);
 
-    // Câmera: valores inteiros (Math.floor) para não somar jitter de
-    // sub-pixel ao scroll - correção do "tremor de tela" (v0.2.0), mantida
-    // independente do formato do nível: não tem relação com o mapa, é
-    // sobre a câmera + pixelArt.
+    this.input$.postUpdate();
+  }
+
+  /**
+   * Atualiza somente a apresentação depois que o Arcade Physics terminou o
+   * quadro. Assim câmera, primeiro plano e parallax usam a mesma posição
+   * física já sincronizada de Alex.
+   */
+  private updatePresentation(time: number, delta: number): void {
+    if (this.restarting || this.isPaused || !this.player) return;
+
     const viewportWidth = this.cameras.main.width;
     const targetScrollX = Math.floor(
       Phaser.Math.Clamp(
         this.player.sprite.x - viewportWidth * CAMERA.playerScreenRatioX,
         0,
-        Math.max(0, this.levelLengthPx - viewportWidth)
-      )
+        Math.max(0, this.levelLengthPx - viewportWidth),
+      ),
     );
+
     this.cameras.main.scrollX = targetScrollX;
     this.backdrop?.update(targetScrollX, delta);
-    if (this.movementDebugText) {
-      const body = this.player.sprite.body as Phaser.Physics.Arcade.Body;
-      const frame = this.player.sprite.anims.currentFrame?.textureFrame
-        ?? this.player.sprite.frame.name;
-      this.movementDebugText.setText([
-        `state: ${this.player.getState()}  frame: ${String(frame)}`,
-        `sprite.x: ${this.player.sprite.x.toFixed(2)}  velocity.x: ${body.velocity.x.toFixed(2)}`,
-        `camera.scrollX: ${this.cameras.main.scrollX.toFixed(2)}`,
-      ]);
+    this.updateMovementDiagnostics(time);
+  }
+
+  private updateMovementDiagnostics(time: number): void {
+    if (!this.movementDebugText) return;
+
+    const body = this.player.sprite.body as Phaser.Physics.Arcade.Body;
+    const frame = this.player.sprite.anims.currentFrame?.textureFrame
+      ?? this.player.sprite.frame.name;
+    const cameraX = this.cameras.main.scrollX;
+    const sample: MovementDebugSample = {
+      time,
+      state: this.player.getState(),
+      frame: String(frame),
+      spriteX: this.player.sprite.x,
+      bodyX: body.position.x,
+      velocityX: body.velocity.x,
+      cameraX,
+      screenX: this.player.sprite.x - cameraX,
+      blockedLeft: body.blocked.left,
+      blockedRight: body.blocked.right,
+      fps: this.game.loop.actualFps,
+    };
+    this.movementDebugSamples.push(sample);
+    if (this.movementDebugSamples.length > MOVEMENT_DEBUG_HISTORY_LIMIT) {
+      this.movementDebugSamples.shift();
     }
 
-    this.input$.postUpdate();
+    this.movementDebugText.setText([
+      `state: ${sample.state}  frame: ${sample.frame}  fps: ${sample.fps.toFixed(1)}`,
+      `sprite.x: ${sample.spriteX.toFixed(2)}  body.x: ${sample.bodyX.toFixed(2)}`,
+      `velocity.x: ${sample.velocityX.toFixed(2)}  blocked L/R: ${Number(sample.blockedLeft)}/${Number(sample.blockedRight)}`,
+      `camera.x: ${sample.cameraX.toFixed(2)}  screen.x: ${sample.screenX.toFixed(2)}`,
+      `history: ${this.movementDebugSamples.length}/${MOVEMENT_DEBUG_HISTORY_LIMIT}`,
+    ]);
+  }
+
+  /** Disponível no console de desenvolvimento pela instância de GameScene. */
+  getMovementDebugSamples(): readonly MovementDebugSample[] {
+    return this.movementDebugSamples;
   }
 }

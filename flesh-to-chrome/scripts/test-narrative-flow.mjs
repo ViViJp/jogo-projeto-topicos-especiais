@@ -57,12 +57,14 @@ class FakeDisplayObject {
   setScale() { return this; }
   setStrokeStyle() { return this; }
   setText(value) { this.value = value; return this; }
+  setTexture(value) { this.value = value; return this; }
   setTint() { return this; }
   setVisible() { return this; }
 }
 
 function createUiHarness(width = 1_920, height = 720) {
   const starts = [];
+  const images = [];
   const sprites = [];
   const texts = [];
   const cameraHandlers = new Map();
@@ -79,7 +81,11 @@ function createUiHarness(width = 1_920, height = 720) {
       this.scene = { start: (key, data) => starts.push({ key, data }) };
       this.add = {
         circle: () => new FakeDisplayObject(),
-        image: (_x, _y, texture) => new FakeDisplayObject(texture),
+        image: (_x, _y, texture) => {
+          const image = new FakeDisplayObject(texture);
+          images.push(image);
+          return image;
+        },
         rectangle: () => new FakeDisplayObject(),
         sprite: (_x, _y, texture, frame) => {
           sprites.push({ texture, frame });
@@ -106,6 +112,7 @@ function createUiHarness(width = 1_920, height = 720) {
       Textures: { FilterMode: { NEAREST: "nearest" } },
     },
     starts,
+    images,
     sprites,
     texts,
   };
@@ -587,15 +594,23 @@ assert.equal(industrialRoute?.doubleJumpHazard, undefined,
   "D4 deve usar os gaps industriais do mapa, sem repetir o piso elétrico da D3");
 assert.match(ending, /endings\/chrome-father-son\.png/,
   "Final Chrome deve usar a ilustração conjunta do pai com Alex convertido");
-assert.match(ending, /prologue\/familia\.png/,
-  "Flesh e Hollow devem mostrar avô e tio, não reutilizar o retrato do pai");
-assert.match(ending, /this\.chromeIllustration\.setVisible\(isChrome && page\.alexVisible\)/,
-  "ilustração conjunta deve substituir os sprites pequenos no Final Chrome");
+for (const asset of [
+  "ending-flesh-01-renuncia.png",
+  "ending-flesh-02-retorno.png",
+  "ending-flesh-03-abraco.png",
+  "ending-hollow-01-ecos.png",
+  "ending-hollow-02-casa-fechada.png",
+  "ending-hollow-03-partida.png",
+]) {
+  assert.match(ending, new RegExp(asset.replaceAll(".", "\\.")),
+    `${asset}: ilustração final ausente`);
+}
+assert.match(ending, /this\.chromeIllustration\.setVisible\(isChrome\)/,
+  "ilustração conjunta deve permanecer nas quatro páginas do Final Chrome");
 assert.match(ending, /this\.add\.text\(centerX, panelTop \+ 24, "EPÍLOGO"/,
   "título do epílogo deve ficar dentro da borda superior");
-assert.match(ending, /alexTextureForAbilities\(abilities\)/,
-  "Final Hollow deve preservar o estágio corporal salvo no epílogo");
-assert.match(ending, /CROMO REMANESCENTE/);
+assert.doesNotMatch(ending, /alexTextureForAbilities|CROMO REMANESCENTE/,
+  "Final Hollow deve usar as três ilustrações compartilhadas, sem variantes provisórias por implante");
 assert.match(ending, /SaveState\.load\(\)\.markEndingReached\(this\.ending\)/);
 assert.ok(
   ending.indexOf("markEndingReached(this.ending)") > ending.indexOf("this.pageIndex < this.pages.length - 1"),
@@ -764,8 +779,8 @@ const uiData = {
   const scene = new EndingScene();
   scene.init({ ending: "hollow" });
   scene.create();
-  assert.equal(harness.sprites.at(-1)?.texture, "alex-arms",
-    "Final Hollow deve usar o estágio corporal correspondente aos implantes restantes");
+  assert.ok(harness.images.some((image) => image.value === "ending-hollow-ecos"),
+    "Final Hollow deve iniciar pelo primeiro dos três quadros compartilhados");
 }
 
 {

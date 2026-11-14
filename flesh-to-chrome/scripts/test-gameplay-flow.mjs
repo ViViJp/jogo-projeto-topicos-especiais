@@ -137,6 +137,14 @@ assert.deepEqual(
   ["press_01", "press_03"],
   "fase2: o conjunto inicial deve manter somente as prensas das extremidades",
 );
+assert.deepEqual(
+  phase2Objects
+    .filter((object) => object.type === "hazard" && objectProperty(object, "kind") === "steam")
+    .filter((object) => object.x >= 7500 && object.x <= 8000)
+    .map((object) => object.name),
+  ["steam_01", "steam_03"],
+  "fase2: o trecho deve manter somente as máquinas a vapor das extremidades",
+);
 const phase2Hazards = phase2.layers.find((layer) => layer.name === "hazards");
 for (const row of [10, 11]) {
   assert.equal(phase2Hazards.data[row * phase2.width + 185], 0,
@@ -203,6 +211,7 @@ assert.match(phase5RuntimeSource, /const groundExtension = layer === this\.groun
   "a soleira do Topo deve sustentar toda a largura da porta ReForge");
 
 const gameScene = fs.readFileSync(path.join(projectDirectory, "src/scenes/GameScene.ts"), "utf8");
+const multiplayerScene = fs.readFileSync(path.join(projectDirectory, "src/scenes/MultiplayerScene.ts"), "utf8");
 const mainSource = fs.readFileSync(path.join(projectDirectory, "src/main.ts"), "utf8");
 assert.match(mainSource, /mode: Phaser\.Scale\.EXPAND/,
   "canvas deve preencher todo o viewport sem barras laterais");
@@ -570,8 +579,48 @@ assert.match(alexSpriteSource, /\.setTrim\(PLAYER_FRAME, PLAYER_FRAME, offsetX, 
   "alinhamento do slide deve mover somente o desenho, sem deslocar a hitbox");
 assert.match(gameScene, /FTC_ENABLE_MOVEMENT_DEBUG === "1"/,
   "diagnóstico de sprite, física e câmera deve permanecer opt-in");
-assert.match(gameScene, /sprite\.x:[\s\S]*?velocity\.x:[\s\S]*?camera\.scrollX:/,
-  "overlay de desenvolvimento deve diferenciar recuo visual, físico e de câmera");
+const gameUpdate = gameScene.slice(
+  gameScene.indexOf("  update(_time: number, delta: number): void"),
+  gameScene.indexOf("  private updatePresentation(time: number, delta: number): void"),
+);
+const gamePresentation = gameScene.slice(
+  gameScene.indexOf("  private updatePresentation(time: number, delta: number): void"),
+  gameScene.indexOf("  private updateMovementDiagnostics(time: number): void"),
+);
+assert.match(gameScene, /Phaser\.Scenes\.Events\.POST_UPDATE,[\s\S]*?this\.updatePresentation/,
+  "campanha deve atualizar câmera e parallax no POST_UPDATE");
+assert.match(gameScene, /this\.events\.off\([\s\S]*?POST_UPDATE,[\s\S]*?this\.updatePresentation/,
+  "campanha deve remover o listener visual ao encerrar a cena");
+assert.doesNotMatch(gameUpdate, /cameras\.main\.scrollX|backdrop\?\.update/,
+  "update de gameplay não deve calcular a apresentação antes do pós-física");
+assert.match(gamePresentation, /this\.cameras\.main\.scrollX = targetScrollX;[\s\S]*?this\.backdrop\?\.update\(targetScrollX, delta\)/,
+  "câmera e parallax devem compartilhar o scroll pós-física");
+for (const diagnostic of [
+  "spriteX", "bodyX", "velocityX", "cameraX", "screenX",
+  "blockedLeft", "blockedRight", "fps",
+]) {
+  assert.match(gameScene, new RegExp(`${diagnostic}:`),
+    `diagnóstico de movimento deve registrar ${diagnostic}`);
+}
+assert.match(gameScene, /MOVEMENT_DEBUG_HISTORY_LIMIT = 180/,
+  "diagnóstico deve manter uma fila curta de quadros recentes");
+
+const multiplayerUpdate = multiplayerScene.slice(
+  multiplayerScene.indexOf("  update(time: number, delta: number): void"),
+  multiplayerScene.indexOf("  private updatePresentation(_time: number, delta: number): void"),
+);
+const multiplayerPresentation = multiplayerScene.slice(
+  multiplayerScene.indexOf("  private updatePresentation(_time: number, delta: number): void"),
+  multiplayerScene.indexOf("  private resetSessionState(): void"),
+);
+assert.match(multiplayerScene, /Phaser\.Scenes\.Events\.POST_UPDATE,[\s\S]*?this\.updatePresentation/,
+  "multiplayer deve atualizar sua apresentação no POST_UPDATE");
+assert.match(multiplayerScene, /this\.events\.off\([\s\S]*?POST_UPDATE,[\s\S]*?this\.updatePresentation/,
+  "multiplayer deve remover o listener visual no shutdown");
+assert.doesNotMatch(multiplayerUpdate, /updateCamera\(\)|updateOpponent\(delta\)|backdrop\?\.update/,
+  "multiplayer não deve atualizar câmera, rival ou fundo antes do pós-física");
+assert.match(multiplayerPresentation, /updateCamera\(\)[\s\S]*?updateOpponent\(delta\)[\s\S]*?backdrop\?\.update/,
+  "multiplayer deve sincronizar câmera, rival e fundo na etapa visual");
 assert.match(gameScene, /memory-fragment-64\.png/,
   "a descida deve carregar o fragmento físico unificado");
 assert.ok(fs.existsSync(path.join(projectDirectory, "src/assets/props/collectibles/memory-fragment-64.png")),

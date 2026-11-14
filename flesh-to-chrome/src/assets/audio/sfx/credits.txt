@@ -5,7 +5,7 @@ Arquivos fornecidos diretamente pela equipe do projeto:
 - `sfx-attack.mp3` — ataque de Alex;
 - `sfx-checkpoint.mp3` — sincronização com a TV, limitada à interação;
 - `sfx-credit.mp3` — coleta de crédito;
-- `sfx-dash.mp3` — propulsores/dash;
+- `sfx-dash.mp3` — propulsores/dash; revisão substituída pela equipe em 14/11/2026;
 - `sfx-death.mp3` — morte de Alex;
 - `sfx-enemy-hit.mp3` — inimigo derrotado;
 - `sfx-footstep.mp3` — loop de corrida;

@@ -2,27 +2,23 @@ import Phaser from "phaser";
 import { InputManager } from "../systems/InputManager";
 import { SaveState } from "../systems/SaveState";
 import { AudioManager, SFX, bgmForEnding } from "../systems/AudioManager";
-import { abilityStateToBodyStage } from "../systems/AbilityState";
-import {
-  ALEX_ARMS_TEXTURE_KEY,
-  ALEX_DASH_TEXTURE_KEY,
-  ALEX_EYES_TEXTURE_KEY,
-  ALEX_LEGS_TEXTURE_KEY,
-  ALEX_SHEET_CONFIG,
-  ALEX_TEXTURE_KEY,
-  alexTextureForAbilities,
-} from "../utils/AlexSprite";
 import { startLoadingTransition } from "../systems/SceneTransition";
 
-const FAMILY_PORTRAIT_KEY = "ending-family";
 const CHROME_EPILOGUE_KEY = "ending-chrome-father-son";
-const ALEX_FLESH_KEY = "ending-alex-flesh";
+const FLESH_EPILOGUE_KEYS = [
+  "ending-flesh-renuncia",
+  "ending-flesh-retorno",
+  "ending-flesh-abraco",
+] as const;
+const HOLLOW_EPILOGUE_KEYS = [
+  "ending-hollow-ecos",
+  "ending-hollow-casa-fechada",
+  "ending-hollow-partida",
+] as const;
 
 interface EndingPage {
   title: string;
   body: string;
-  portraitVisible: boolean;
-  alexVisible: boolean;
 }
 
 interface EndingSceneData {
@@ -33,26 +29,18 @@ const CHROME_PAGES: EndingPage[] = [
   {
     title: "CONVERSÃO COMPLETA",
     body: "O Portão substitui o que ainda restava.\nMemórias, reflexos e identidade são comprimidos em um corpo cromado perfeito.",
-    portraitVisible: false,
-    alexVisible: true,
   },
   {
     title: "NO TOPO DE GLITCH CITY",
     body: "Entre as figuras que celebram a nova máquina, um homem para.\nEle reconhece o cabelo, o nome e o filho que deixou nos níveis inferiores.",
-    portraitVisible: true,
-    alexVisible: true,
   },
   {
     title: "— ALEX? FILHO?",
     body: "O pai chama seu nome.\nAlex procura a voz nos registros disponíveis. Nenhuma correspondência é encontrada.",
-    portraitVisible: true,
-    alexVisible: true,
   },
   {
     title: "FINAL CHROME",
     body: "Alex continua andando.\nChegou ao lugar que perseguiu — incapaz de reconhecer aquilo que o fez começar.",
-    portraitVisible: false,
-    alexVisible: true,
   },
 ];
 
@@ -60,20 +48,14 @@ const FLESH_PAGES: EndingPage[] = [
   {
     title: "DE VOLTA A CARNE",
     body: "As partes bioprintadas doem e carregam cicatrizes.\nPela primeira vez, a dor pertence novamente a Alex.",
-    portraitVisible: false,
-    alexVisible: true,
   },
   {
     title: "A LUZ DE CASA",
     body: "A porta se abre. Sua familia nao encontra o homem que partiu,\nmas reconhece a voz que decidiu voltar.",
-    portraitVisible: true,
-    alexVisible: true,
   },
   {
     title: "FINAL FLESH",
     body: "Alex nao recuperou o corpo original. Recuperou a possibilidade de estar presente.\nImperfeito, humano e em casa.",
-    portraitVisible: true,
-    alexVisible: true,
   },
 ];
 
@@ -81,20 +63,14 @@ const HOLLOW_PAGES: EndingPage[] = [
   {
     title: "A CADEIA QUEBRADA",
     body: "Uma memoria ficou para tras. Sem ela, os glitches seguintes silenciaram\ne o cromo restante se tornou impossivel de abandonar.",
-    portraitVisible: false,
-    alexVisible: true,
   },
   {
     title: "DO OUTRO LADO DA PORTA",
     body: "Alex ouve sua familia. Tenta responder, mas nenhuma palavra atravessa\na distancia entre a lembranca e aquilo que ele se tornou.",
-    portraitVisible: true,
-    alexVisible: true,
   },
   {
     title: "FINAL HOLLOW",
     body: "Ele voltou, parcialmente mecanizado, sem conseguir se reconectar.\nA casa esta diante dele. O caminho terminou antes da chegada.",
-    portraitVisible: true,
-    alexVisible: true,
   },
 ];
 
@@ -107,11 +83,8 @@ export class EndingScene extends Phaser.Scene {
   private title!: Phaser.GameObjects.Text;
   private body!: Phaser.GameObjects.Text;
   private counter!: Phaser.GameObjects.Text;
-  private portrait!: Phaser.GameObjects.Image;
-  private portraitCaption!: Phaser.GameObjects.Text;
   private chromeIllustration!: Phaser.GameObjects.Image;
-  private alex?: Phaser.GameObjects.Sprite;
-  private alexCaption!: Phaser.GameObjects.Text;
+  private endingIllustration!: Phaser.GameObjects.Image;
   private ending: EndingKind = "chrome";
   private pages: EndingPage[] = CHROME_PAGES;
 
@@ -132,30 +105,16 @@ export class EndingScene extends Phaser.Scene {
         new URL("../assets/narrative/endings/chrome-father-son.png", import.meta.url).href,
       );
     }
-    if (!this.textures.exists(FAMILY_PORTRAIT_KEY)) {
-      this.load.image(
-        FAMILY_PORTRAIT_KEY,
-        new URL("../assets/narrative/prologue/familia.png", import.meta.url).href,
-      );
-    }
-    if (!this.textures.exists(ALEX_FLESH_KEY)) {
-      this.load.spritesheet(
-        ALEX_FLESH_KEY,
-        new URL("../assets/player/alex-flesh-happy/alex-flesh-happy.png", import.meta.url).href,
-        { frameWidth: 64, frameHeight: 64 },
-      );
-    }
-    const hollowStages = [
-      { key: ALEX_TEXTURE_KEY, url: new URL("../assets/player/alex-flesh/alex-flesh.png", import.meta.url) },
-      { key: ALEX_LEGS_TEXTURE_KEY, url: new URL("../assets/player/alex-legs/alex-legs.png", import.meta.url) },
-      { key: ALEX_ARMS_TEXTURE_KEY, url: new URL("../assets/player/alex-arms/alex-arms.png", import.meta.url) },
-      { key: ALEX_EYES_TEXTURE_KEY, url: new URL("../assets/player/alex-eyes/alex-eyes.png", import.meta.url) },
-      { key: ALEX_DASH_TEXTURE_KEY, url: new URL("../assets/player/alex-dash/alex-dash.png", import.meta.url) },
-    ];
-    for (const stage of hollowStages) {
-      if (!this.textures.exists(stage.key)) {
-        this.load.spritesheet(stage.key, stage.url.href, ALEX_SHEET_CONFIG);
-      }
+    const endingIllustrations = [
+      [FLESH_EPILOGUE_KEYS[0], new URL("../assets/narrative/endings/flesh/ending-flesh-01-renuncia.png", import.meta.url).href],
+      [FLESH_EPILOGUE_KEYS[1], new URL("../assets/narrative/endings/flesh/ending-flesh-02-retorno.png", import.meta.url).href],
+      [FLESH_EPILOGUE_KEYS[2], new URL("../assets/narrative/endings/flesh/ending-flesh-03-abraco.png", import.meta.url).href],
+      [HOLLOW_EPILOGUE_KEYS[0], new URL("../assets/narrative/endings/hollow/ending-hollow-01-ecos.png", import.meta.url).href],
+      [HOLLOW_EPILOGUE_KEYS[1], new URL("../assets/narrative/endings/hollow/ending-hollow-02-casa-fechada.png", import.meta.url).href],
+      [HOLLOW_EPILOGUE_KEYS[2], new URL("../assets/narrative/endings/hollow/ending-hollow-03-partida.png", import.meta.url).href],
+    ] as const;
+    for (const [key, url] of endingIllustrations) {
+      if (!this.textures.exists(key)) this.load.image(key, url);
     }
   }
 
@@ -185,46 +144,13 @@ export class EndingScene extends Phaser.Scene {
       .setDisplaySize(480, 270)
       .setVisible(this.ending === "chrome");
     this.chromeIllustration.texture.setFilter(Phaser.Textures.FilterMode.LINEAR);
-
-    this.portrait = this.add.image(centerX - 170, visualY, FAMILY_PORTRAIT_KEY);
-    this.portrait.setDisplaySize(307, 192);
-    this.portrait.texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
-    this.portraitCaption = this.add.text(
-      centerX - 170,
-      visualY + 110,
-      "FAMÍLIA DE ALEX // CASA",
-      {
-        fontFamily: "Courier New, monospace",
-        fontSize: "13px",
-        color: "#FFD37C",
-        backgroundColor: "#080812dd",
-        padding: { x: 7, y: 4 },
-      },
-    ).setOrigin(0.5);
-    const abilities = SaveState.load().get().abilities;
-    const remainingImplants = abilityStateToBodyStage(abilities);
-    if (this.ending !== "chrome") {
-      const alexTexture = this.ending === "flesh"
-        ? ALEX_FLESH_KEY
-        : alexTextureForAbilities(abilities);
-      this.alex = this.add.sprite(centerX + 140, visualY + 36, alexTexture, 26)
-        .setScale(3.2);
-      if (this.ending === "hollow") this.alex.setTint(0xc7b8d0);
-    }
-    this.alexCaption = this.add.text(
-      centerX + 140,
-      visualY + 120,
-      this.ending === "hollow"
-        ? `CROMO REMANESCENTE // ${remainingImplants} IMPLANTE${remainingImplants === 1 ? "" : "S"}`
-        : "",
-      {
-        fontFamily: "Courier New, monospace",
-        fontSize: "13px",
-        color: "#b7a7c4",
-        backgroundColor: "#080812dd",
-        padding: { x: 7, y: 4 },
-      },
-    ).setOrigin(0.5).setVisible(this.ending === "hollow");
+    const firstEndingKey = this.ending === "flesh"
+      ? FLESH_EPILOGUE_KEYS[0]
+      : HOLLOW_EPILOGUE_KEYS[0];
+    this.endingIllustration = this.add.image(centerX, visualY, firstEndingKey)
+      .setDisplaySize(480, 270)
+      .setVisible(this.ending !== "chrome");
+    this.endingIllustration.texture.setFilter(Phaser.Textures.FilterMode.LINEAR);
     this.title = this.add.text(centerX, panelTop + 355, "", {
       fontFamily: "Courier New, monospace",
       fontSize: "30px",
@@ -265,11 +191,12 @@ export class EndingScene extends Phaser.Scene {
     const isChrome = this.ending === "chrome";
     this.title.setText(page.title);
     this.body.setText(page.body);
-    this.chromeIllustration.setVisible(isChrome && page.alexVisible);
-    this.portrait.setVisible(!isChrome && page.portraitVisible);
-    this.portraitCaption.setVisible(!isChrome && page.portraitVisible);
-    this.alex?.setVisible(!isChrome && page.alexVisible);
-    this.alexCaption.setVisible(this.ending === "hollow" && page.alexVisible);
+    this.chromeIllustration.setVisible(isChrome);
+    this.endingIllustration.setVisible(!isChrome);
+    if (!isChrome) {
+      const keys = this.ending === "flesh" ? FLESH_EPILOGUE_KEYS : HOLLOW_EPILOGUE_KEYS;
+      this.endingIllustration.setTexture(keys[this.pageIndex]);
+    }
     this.counter.setText(`${this.pageIndex + 1}/${this.pages.length}`);
   }
 

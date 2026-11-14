@@ -1102,12 +1102,11 @@ Depois segue ao epílogo.
 
 ### Aparência
 
-Hollow usa exatamente o estado corporal em que a cadeia foi quebrada:
-
-- falhou no primeiro → todos os implantes;
-- no segundo → sem propulsores;
-- no terceiro → pernas + braços;
-- no quarto → apenas pernas.
+Nesta versão, todas as combinações corporais que levam ao Hollow usam a mesma
+sequência de três ilustrações: ecos da memória perdida, a casa fechada e Alex
+partindo. A produção de uma variante visual para cada combinação de implantes
+fica adiada para uma etapa posterior; nenhum sprite adicional deve ser
+sobreposto a esses quadros.
 
 ## 18.8 Retirada nas unidades de reciclagem
 
@@ -1156,9 +1155,9 @@ Alex retorna parcialmente mecanizado e não consegue falar com a família.
 Mesmo sem conseguir se reconectar, a imagem do outro lado da porta continua
 mostrando o avô e o tio; o pai não participa desse retorno.
 
-O sprite de Alex preserva o estágio corporal exato da quebra da cadeia. O
-epílogo e os quadros finais usam a mesma variante correspondente aos implantes
-restantes, acompanhada da contagem de cromo remanescente.
+O epílogo jogável ainda reflete o estado corporal da quebra da cadeia. Nos três
+quadros finais, porém, todas as combinações usam a mesma sequência ilustrada
+Hollow desta versão, sem contador ou sprite sobreposto.
 
 A incapacidade é emocional e simbólica.
 

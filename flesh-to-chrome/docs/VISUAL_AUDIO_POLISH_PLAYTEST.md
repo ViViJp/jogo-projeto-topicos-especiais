@@ -109,4 +109,17 @@ No playtest manual, confirme em 16:9 e ultrawide:
 10. as quatro clínicas mostram nome, habilidade, descrição e comandos corretos;
     a animação corresponde ao implante recém-adquirido, o clique fora de
     **Continuar** não pula o painel e a confirmação salva uma única vez antes
-    de abrir a próxima fase.
+    de abrir a próxima fase;
+11. execute `npm run dev:movement-debug`, deixe Alex correr em um trecho plano
+    da Fase 1 e depois realize slides consecutivos. O painel deve ser atualizado
+    depois da física e manter `sprite.x`, `body.x`, velocidade, câmera, posição
+    aparente, bloqueios laterais, estado, frame e FPS estáveis. A fila dos 180
+    quadros mais recentes pode ser consultada no console com
+    `game.scene.getScene("GameScene").getMovementDebugSamples()`;
+12. repita uma corrida no multiplayer: câmera, oponente e parallax devem seguir
+    a mesma referência visual, sem alterar snapshots, largada ou cronômetro.
+
+Se apenas o desenho do slide oscilar enquanto `sprite.x`, `body.x` e a posição
+aparente permanecem contínuos, o próximo ajuste deve ser feito nos spritesheets.
+Se `body.x` recuar ou `blocked.left/right` mudar, a investigação deve seguir
+para as trocas de hitbox e colisões, sem recalibrar gravidade ou `tileBias`.
