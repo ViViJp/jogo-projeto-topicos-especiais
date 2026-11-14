@@ -36,7 +36,7 @@ import {
   TiledPhase5Runtime,
 } from "../objects/TiledPhase5Runtime";
 import { InputManager } from "../systems/InputManager";
-import { AudioManager, BGM } from "../systems/AudioManager";
+import { AudioManager, BGM, SFX } from "../systems/AudioManager";
 import {
   ALEX_ARMS_TEXTURE_KEY,
   ALEX_CHECKPOINT_ARMS_TEXTURE_KEY,
@@ -129,6 +129,7 @@ export class MultiplayerScene extends Phaser.Scene {
   private checkpointsReached = 0;
   private quitConfirmUntil = 0;
   private rematchAllowedAt = Number.POSITIVE_INFINITY;
+  private lastCountdownSecond = 0;
   private respawning = false;
   private returning = false;
   private meshStartId = 0;
@@ -817,17 +818,31 @@ export class MultiplayerScene extends Phaser.Scene {
   private updateCountdown(): void {
     const remaining = this.raceStartAt - Date.now();
     if (remaining > 0) {
-      this.countdownText?.setText(String(Math.max(1, Math.ceil(remaining / 1000))));
+      const second = Math.max(1, Math.ceil(remaining / 1000));
+      if (second !== this.lastCountdownSecond) {
+        this.lastCountdownSecond = second;
+        AudioManager.playSfx(this, SFX.uiSelect, { volume: 0.6 });
+      }
+      this.countdownText?.setText(String(second));
       return;
     }
 
     this.phase = "racing";
+    this.lastCountdownSecond = 0;
+    AudioManager.playSfx(this, SFX.uiConfirm, { volume: 0.6 });
     this.countdownText?.setText("CORRA!");
     this.time.delayedCall(650, () => this.countdownText?.setVisible(false));
     if (this.player) {
       (this.player.sprite.body as Phaser.Physics.Arcade.Body).setAllowGravity(true);
       this.player.respawn(this.raceSpawn.x, this.raceSpawn.y);
     }
+  }
+
+  /** Para Alex e os loops de passo/slide/scan, que só o update do jogador encerraria. */
+  private freezePlayer(): void {
+    this.player?.sprite.setVelocity(0, 0);
+    if (this.player?.sprite.body) this.player.sprite.body.enable = false;
+    [SFX.footstep, SFX.slide, SFX.scan].forEach((key) => AudioManager.stopLoop(key));
   }
 
   private handleDashStart(): void {
@@ -841,6 +856,7 @@ export class MultiplayerScene extends Phaser.Scene {
   private handleCreditCollected(id: string): void {
     if (this.collectedCredits.has(id)) return;
     this.collectedCredits.add(id);
+    AudioManager.playSfx(this, SFX.credit, { volume: 0.42 });
     this.creditsText?.setText(`CREDITOS ${this.collectedCredits.size}/${TILED_MULTIPLAYER_CREDIT_COUNT}`);
   }
 
@@ -848,6 +864,8 @@ export class MultiplayerScene extends Phaser.Scene {
     this.checkpoint = { x, y };
     this.checkpointReached = true;
     this.checkpointsReached += 1;
+    // Toque curto: o sfx-checkpoint da campanha é um loop longo da animação da TV.
+    AudioManager.playSfx(this, SFX.uiConfirm, { volume: 0.5 });
     this.flashRaceMessage(`CHECKPOINT ${this.checkpointsReached}/${TILED_MULTIPLAYER_CHECKPOINT_COUNT}`);
   }
 
@@ -893,8 +911,8 @@ export class MultiplayerScene extends Phaser.Scene {
       return;
     }
     this.localResult = { rawTimeMs, credits: this.collectedCredits.size };
-    this.player?.sprite.setVelocity(0, 0);
-    if (this.player?.sprite.body) this.player.sprite.body.enable = false;
+    AudioManager.playSfx(this, SFX.phaseClear, { volume: 0.62 });
+    this.freezePlayer();
 
     this.finishDeadlineAt ??= Date.now() + SECOND_PLAYER_LIMIT_MS;
     this.mesh?.broadcast({
@@ -947,8 +965,7 @@ export class MultiplayerScene extends Phaser.Scene {
     if (!this.finishDeadlineAt || Date.now() < this.finishDeadlineAt || this.phase !== "racing") return;
     if (!this.localResult && !this.localDnf) {
       this.localDnf = true;
-      this.player?.sprite.setVelocity(0, 0);
-      if (this.player?.sprite.body) this.player.sprite.body.enable = false;
+      this.freezePlayer();
       this.broadcastDnf();
     } else if (this.localResult && !this.remoteResult) {
       if (Date.now() < this.finishDeadlineAt + RESULT_NETWORK_GRACE_MS) return;
@@ -960,8 +977,7 @@ export class MultiplayerScene extends Phaser.Scene {
   private showResults(): void {
     if (this.phase === "finished") return;
     this.phase = "finished";
-    this.player?.sprite.setVelocity(0, 0);
-    if (this.player?.sprite.body) this.player.sprite.body.enable = false;
+    this.freezePlayer();
 
     const verdict = this.calculateVerdict();
     const localLine = this.formatResultLine("VOCE", this.localResult, this.localDnf);
@@ -994,8 +1010,7 @@ export class MultiplayerScene extends Phaser.Scene {
   private showDisconnectVictory(): void {
     if (this.phase === "finished") return;
     this.phase = "finished";
-    this.player?.sprite.setVelocity(0, 0);
-    if (this.player?.sprite.body) this.player.sprite.body.enable = false;
+    this.freezePlayer();
     this.showResultOverlay("VITORIA\n\nO oponente desconectou durante a corrida.");
   }
 
