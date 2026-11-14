@@ -328,6 +328,12 @@ assert.match(multiplayerScene, /new TiledPhase5Runtime\(/,
   "multiplayer deve permanecer isolado no runtime da Fase 5");
 assert.match(multiplayerScene, /mapKey: TILED_MULTIPLAYER_MAP_KEY/,
   "multiplayer deve continuar usando seu mapa competitivo próprio");
+assert.match(multiplayerScene, /this\.load\.image\([\s\S]*?TILED_PHASE5_ROTATING_BARRIER_TEXTURE_KEY[\s\S]*?rotating-energy-barrier\.png/,
+  "multiplayer deve carregar a arte final da barreira giratória");
+assert.match(multiplayerScene, /backToMenu\(\): void[\s\S]*?removeRoomFromUrl\(\)[\s\S]*?this\.scene\.start\("MenuScene"\)/,
+  "sair do multiplayer deve retirar a sala da URL antes de abrir o menu");
+assert.match(multiplayerScene, /function removeRoomFromUrl[\s\S]*?searchParams\.delete\("room"\)[\s\S]*?history\.replaceState/,
+  "F5 no menu não pode reabrir a última sala multiplayer");
 assert.doesNotMatch(multiplayerScene, /new TiledLevelRuntime\(/,
   "multiplayer não pode herdar as colisões low_pipe exclusivas da Fase 1");
 assert.match(mainSource, /mode: Phaser\.Scale\.EXPAND/,
@@ -346,6 +352,8 @@ assert.match(parallaxBackdropSource, /const viewportWidth = this\.scene\.cameras
   "parallax deve calcular cobertura pela largura real da câmera");
 assert.match(parallaxBackdropSource, /Phaser\.Scale\.Events\.RESIZE, this\.handleResize/,
   "parallax deve recalcular as cópias ao redimensionar a janela");
+assert.match(parallaxBackdropSource, /resizeToViewport\(\)[\s\S]*?this\.positionRepeatedLayers\(this\.scene\.cameras\.main\.scrollX\)/,
+  "resize deve posicionar novas cópias mesmo quando o gameplay está pausado");
 assert.doesNotMatch(parallaxBackdropSource, /Math\.ceil\(\(SCREEN_WIDTH \+ SHAKE_MARGIN\)/,
   "parallax não pode limitar a cobertura à largura base");
 assert.match(gameScene, /this\.time\.paused = true/);
@@ -503,6 +511,14 @@ const hudSource = fs.readFileSync(path.join(projectDirectory, "src/systems/HUD.t
 assert.match(hudSource, /setFillStyle\(0x21d7ff, 1\)/, "dash pronto deve usar azul elétrico");
 assert.match(hudSource, /batteryBack,[\s\S]*this\.dashBatteryFill,[\s\S]*frame,/,
   "preenchimento da bateria precisa ficar sobre o fundo e sob a moldura");
+assert.match(hudSource, /Phaser\.Scale\.Events\.RESIZE, this\.handleResize/,
+  "HUD da campanha deve acompanhar o redimensionamento da janela");
+assert.match(hudSource, /handleResize[\s\S]*?promptText\.setX\(this\.scene\.scale\.width \/ 2\)[\s\S]*?dashBattery\.setX\(this\.scene\.scale\.width - 170\)/,
+  "prompt e bateria de dash devem manter suas âncoras responsivas");
+assert.match(gameScene, /handleViewportResize[\s\S]*?scanOverlay\?\.setDisplaySize\(this\.scale\.width, this\.scale\.height\)/,
+  "overlay de scan da campanha deve preencher o viewport após resize");
+assert.match(gameScene, /handleSceneShutdown[\s\S]*?events\.off\("player-attack", this\.handlePlayerAttack\)[\s\S]*?events\.off\("player-dash-ready", this\.handlePlayerDashReady\)/,
+  "GameScene deve remover listeners identificáveis de ataque e dash no shutdown");
 assert.match(gameScene, /beginCheckpointInteraction\(x - GAMEPLAY_TIMING\.checkpointPlayerOffsetX, y\)/);
 assert.match(gameScene, /checkpointInteractionMs - GAMEPLAY_TIMING\.checkpointStandMs/);
 const manualRestartMethod = gameScene.slice(
@@ -659,6 +675,8 @@ assert.match(audioManagerSource, /static stopAllLoopsForScene\(scene: Phaser\.Sc
   "AudioManager deve encerrar todos os loops pertencentes a uma cena");
 assert.match(multiplayerScene, /freezePlayer\(\)[\s\S]*?AudioManager\.stopAllLoopsForScene\(this\)/,
   "fim da corrida deve silenciar também drones e futuros loops multiplayer");
+assert.match(multiplayerScene, /freezePlayer\(\)[\s\S]*?this\.handleScanPulse\(false\)[\s\S]*?AudioManager\.stopAllLoopsForScene\(this\)/,
+  "fim da corrida deve encerrar também o efeito visual do scan");
 assert.match(audioManagerSource, /pauseBgm\(\)[\s\S]*?activeLoops[\s\S]*?sound\.pause\(\)/,
   "pausa do jogo também deve suspender loops de ação");
 assert.match(audioManagerSource, /if \(!scene\.cache\?\.audio\?\.exists\(key\)\) \{[\s\S]*?this\.stopBgm\(\)/,

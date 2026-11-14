@@ -165,6 +165,9 @@ export class ParallaxBackdrop {
     }
     this.ambient?.resize(viewportWidth);
     this.applyEconomyLevel();
+    // O resize também ocorre com a cena pausada. Posiciona imediatamente as
+    // novas cópias, sem depender do próximo update do gameplay.
+    this.positionRepeatedLayers(this.scene.cameras.main.scrollX);
   }
 
   /** Chamar a cada frame, depois de posicionar a câmera. */
@@ -180,14 +183,19 @@ export class ParallaxBackdrop {
       if (layer.spec.driftX !== 0) {
         layer.driftPx = (layer.driftPx + (layer.spec.driftX * deltaMs) / 1000) % layer.textureWidth;
       }
-      // ponto da imagem que cai no x=0 da tela, em pixels inteiros
+    }
+    this.positionRepeatedLayers(cameraScrollX);
+    this.ambient?.update(cameraScrollX, deltaMs);
+  }
+
+  /** Recalcula apenas a apresentação; seguro para resize durante a pausa. */
+  private positionRepeatedLayers(cameraScrollX: number): void {
+    for (const layer of this.layers) {
+      if (!layer.spec.repeatX) continue;
       const scroll = repeatedLayerScroll(cameraScrollX, layer.spec, layer.driftPx, layer.textureWidth);
       const firstX = -scroll - layer.textureWidth;
-      layer.images.forEach((image, k) => {
-        image.x = firstX + k * layer.textureWidth;
-      });
+      layer.images.forEach((image, index) => image.setX(firstX + index * layer.textureWidth));
     }
-    this.ambient?.update(cameraScrollX, deltaMs);
   }
 
   private watchFrameRate(): void {

@@ -18,6 +18,7 @@ export class HUD {
   private dashRechargeTween?: Phaser.Tweens.Tween;
   private dashReady = true;
   private hudChrome: Phaser.GameObjects.Graphics;
+  private destroyed = false;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -114,7 +115,20 @@ export class HUD {
       .setScrollFactor(0)
       .setDepth(1000)
       .setVisible(false);
+
+    scene.scale.on(Phaser.Scale.Events.RESIZE, this.handleResize);
+    scene.events.once(Phaser.Scenes.Events.SHUTDOWN, this.handleSceneShutdown);
+    this.handleResize();
   }
+
+  private readonly handleResize = (): void => {
+    this.promptText.setX(this.scene.scale.width / 2);
+    this.dashBattery.setX(this.scene.scale.width - 170);
+  };
+
+  private readonly handleSceneShutdown = (): void => {
+    this.destroy();
+  };
 
   setCredits(phaseValue: number, phaseTotal: number, total: number): void {
     this.phaseText.setText(`SETOR // CRÉDITOS ${phaseValue}/${phaseTotal}`);
@@ -201,6 +215,10 @@ export class HUD {
   }
 
   destroy(): void {
+    if (this.destroyed) return;
+    this.destroyed = true;
+    this.scene.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize);
+    this.scene.events.off(Phaser.Scenes.Events.SHUTDOWN, this.handleSceneShutdown);
     this.dashRechargeTween?.stop();
     this.hudChrome.destroy();
     this.phaseText.destroy();

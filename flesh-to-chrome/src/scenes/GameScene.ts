@@ -212,6 +212,31 @@ export class GameScene extends Phaser.Scene {
   private levelLengthPx = 0;
   private checkpointInteraction?: Phaser.Time.TimerEvent;
 
+  private readonly handlePlayerAttack = (_x: number, _y: number, showFeedback = true): void => {
+    if (showFeedback) this.hud.flashPrompt("ATAQUE", 300);
+  };
+
+  private readonly handlePlayerDashStart = (_x: number, _y: number, cooldownMs: number): void => {
+    this.hud.flashPrompt("DASH", 220);
+    this.hud.beginDashCooldown(cooldownMs);
+  };
+
+  private readonly handlePlayerDashReady = (): void => {
+    this.hud.setDashReady(true);
+  };
+
+  private readonly handleViewportResize = (): void => {
+    this.scanOverlay?.setDisplaySize(this.scale.width, this.scale.height);
+    this.pauseText?.setPosition(this.scale.width / 2, this.scale.height / 2);
+  };
+
+  private readonly handleSceneShutdown = (): void => {
+    this.events.off("player-attack", this.handlePlayerAttack);
+    this.events.off("player-dash-start", this.handlePlayerDashStart);
+    this.events.off("player-dash-ready", this.handlePlayerDashReady);
+    this.scale.off(Phaser.Scale.Events.RESIZE, this.handleViewportResize);
+  };
+
   constructor() {
     super("GameScene");
   }
@@ -595,14 +620,17 @@ export class GameScene extends Phaser.Scene {
     this.credits = new CreditsSystem(this.data$.wallet, this.data$.consolidatedCreditIds);
     this.hud = new HUD(this);
     this.hud.setDashUnlocked(this.activeAbilities.thrusters);
-    this.events.on("player-attack", (_x: number, _y: number, showFeedback = true) => {
-      if (showFeedback) this.hud.flashPrompt("ATAQUE", 300);
-    });
-    this.events.on("player-dash-start", (_x: number, _y: number, cooldownMs: number) => {
-      this.hud.flashPrompt("DASH", 220);
-      this.hud.beginDashCooldown(cooldownMs);
-    });
-    this.events.on("player-dash-ready", () => this.hud.setDashReady(true));
+    // A Scene é reutilizada após mortes/restarts: callbacks identificáveis
+    // evitam acumular atualizações do HUD entre ciclos de vida.
+    this.events.off("player-attack", this.handlePlayerAttack);
+    this.events.off("player-dash-start", this.handlePlayerDashStart);
+    this.events.off("player-dash-ready", this.handlePlayerDashReady);
+    this.events.on("player-attack", this.handlePlayerAttack);
+    this.events.on("player-dash-start", this.handlePlayerDashStart);
+    this.events.on("player-dash-ready", this.handlePlayerDashReady);
+    this.scale.off(Phaser.Scale.Events.RESIZE, this.handleViewportResize);
+    this.scale.on(Phaser.Scale.Events.RESIZE, this.handleViewportResize);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.handleSceneShutdown);
 
     if (this.data$.phaseId === "fase1") {
       this.createTiled();

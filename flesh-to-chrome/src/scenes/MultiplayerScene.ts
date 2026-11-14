@@ -33,6 +33,7 @@ import { TILED_CHECKPOINT_TEXTURE_KEY } from "../objects/TiledLevelRuntime";
 import {
   TILED_PHASE5_BARRICADE_TEXTURE_KEY,
   TILED_PHASE5_GATE_TEXTURE_KEY,
+  TILED_PHASE5_ROTATING_BARRIER_TEXTURE_KEY,
   TiledPhase5Runtime,
 } from "../objects/TiledPhase5Runtime";
 import {
@@ -223,6 +224,12 @@ export class MultiplayerScene extends Phaser.Scene {
       this.load.image(
         TILED_PHASE5_GATE_TEXTURE_KEY,
         new URL("../assets/narrative/gate/portao.png", import.meta.url).href,
+      );
+    }
+    if (!this.textures.exists(TILED_PHASE5_ROTATING_BARRIER_TEXTURE_KEY)) {
+      this.load.image(
+        TILED_PHASE5_ROTATING_BARRIER_TEXTURE_KEY,
+        new URL("../assets/props/hazards/rotating-energy-barrier.png", import.meta.url).href,
       );
     }
     if (!this.textures.exists(TILED_CHECKPOINT_TEXTURE_KEY)) {
@@ -916,6 +923,7 @@ export class MultiplayerScene extends Phaser.Scene {
   private freezePlayer(): void {
     this.player?.sprite.setVelocity(0, 0);
     if (this.player?.sprite.body) this.player.sprite.body.enable = false;
+    this.handleScanPulse(false);
     AudioManager.stopAllLoopsForScene(this);
   }
 
@@ -1329,6 +1337,7 @@ export class MultiplayerScene extends Phaser.Scene {
     this.meshStartId += 1;
     this.mesh?.stop();
     this.mesh = undefined;
+    removeRoomFromUrl();
     this.scene.start("MenuScene");
   }
 }
@@ -1401,6 +1410,14 @@ function roomFromUrl(): string {
     window.history.replaceState(null, "", url);
   }
   return roomId;
+}
+
+/** Ao abandonar a corrida, F5 deve permanecer no menu em vez de reabrir o convite. */
+function removeRoomFromUrl(): void {
+  const url = new URL(window.location.href);
+  if (!url.searchParams.has("room")) return;
+  url.searchParams.delete("room");
+  window.history.replaceState(null, "", url);
 }
 
 function createPeerId(): string {
