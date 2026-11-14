@@ -147,6 +147,10 @@ assert.deepEqual(
 );
 const phase2Hazards = phase2.layers.find((layer) => layer.name === "hazards");
 for (const row of [10, 11]) {
+  assert.equal(phase2Hazards.data[row * phase2.width + 242], 0,
+    `fase2: visual residual da máquina a vapor central deve ser removido na linha ${row}`);
+}
+for (const row of [10, 11]) {
   assert.equal(phase2Hazards.data[row * phase2.width + 185], 0,
     `fase2: bloco residual da prensa central deve ser removido na linha ${row}`);
 }
