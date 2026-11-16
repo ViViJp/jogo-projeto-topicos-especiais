@@ -1,4 +1,4 @@
-name: Build and Push Rest API (OCI via Buildpacks)
+name: Build and Push Server (OCI via Buildpacks)
 
 on:
   push:
