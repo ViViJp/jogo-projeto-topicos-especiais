@@ -1361,7 +1361,7 @@ function resolveSignaling(): ResolvedSignaling {
 
 function defaultSignalingUrl(): string {
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-  return `${protocol}//${window.location.hostname}:8080/ws`;
+  return `${protocol}//${window.location.hostname}/ws`;
 }
 
 async function loadIceConfiguration(serverUrl: string): Promise<RTCConfiguration | undefined> {
