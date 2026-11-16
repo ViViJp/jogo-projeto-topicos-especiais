@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "ws": "^8.23.0"
+  },
+  "scripts": {
+    "start": "node signaling-server.mjs"
+  }
+}
