@@ -2,7 +2,7 @@ import http from "node:http";
 import os from "node:os";
 import { WebSocket, WebSocketServer } from "ws";
 
-const host = process.env.SIGNALING_HOST || "0.0.0.0";
+const host = process.env.SIGNALING_HOST || "::";
 const port = readPort(process.env.SIGNALING_PORT, 8080);
 const gamePort = readPort(process.env.GAME_PORT, 1234);
 const maxPeersPerRoom = readPositiveInteger(process.env.MAX_PEERS_PER_ROOM, 2);
@@ -237,14 +237,14 @@ function readPositiveInteger(value, fallback) {
 }
 
 function displayHost(value) {
-  return value === "0.0.0.0" ? "localhost" : value;
+  return value === "::" ? "localhost" : value;
 }
 
 function networkAddresses() {
   const addresses = [];
   Object.values(os.networkInterfaces()).forEach((interfaces) => {
     interfaces?.forEach((networkInterface) => {
-      if (networkInterface.family === "IPv4" && !networkInterface.internal) {
+      if (networkInterface.family === "IPv6" && !networkInterface.internal) {
         addresses.push(networkInterface.address);
       }
     });
