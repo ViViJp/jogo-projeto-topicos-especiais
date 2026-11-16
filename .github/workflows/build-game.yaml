@@ -6,7 +6,7 @@ on:
       - main
     paths:
       - "flesh-to-chrome/**"
-      - ".github/workflows/build-client.yaml"
+      - ".github/workflows/build-game.yaml"
   workflow_dispatch: {}
 
 jobs:
