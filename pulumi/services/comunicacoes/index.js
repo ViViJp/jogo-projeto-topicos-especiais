@@ -116,10 +116,15 @@ async function sendWelcome(event) {
   const userId = event.userId || "";
   const email = event.email || "";
   const name = event.name || email || "jogador";
-  if (!userId) return { skipped: true };
+  if (!userId) return { notified: false, email: "skipped", attempts: 0 };
+  const notified = await ensureNote(userId);
+  const delivery = await deliverEmail(userId, email, name);
+  return { notified, email: delivery.state, attempts: delivery.attempts };
+}
+
+async function ensureNote(userId) {
   const id = `welcome-${userId}`;
   const now = new Date();
-  let created = false;
   try {
     await db.send(
       new PutCommand({
@@ -137,12 +142,29 @@ async function sendWelcome(event) {
         ConditionExpression: "attribute_not_exists(pk)",
       })
     );
-    created = true;
+    return true;
   } catch (err) {
-    if (err.name !== "ConditionalCheckFailedException") console.error(err);
+    if (err.name === "ConditionalCheckFailedException") return true;
+    console.error(err.name || "note");
+    return false;
   }
+}
+
+async function deliverEmail(userId, email, name) {
+  const key = { pk: userId, sk: "EMAIL#welcome" };
+  const current = (await db.send(new GetCommand({ TableName: table, Key: key }))).Item;
+  const attempts = Number(current?.attempts || 0);
+  if (current?.state === "sent" || current?.state === "skipped" || current?.state === "suppressed") {
+    return { state: current.state, attempts };
+  }
+  if (attempts >= 5) return { state: "failed", attempts };
   const from = process.env.SES_FROM || "";
-  if (!created || !from || !email) return { notified: true, emailed: false };
+  if (!email) {
+    await putDelivery(key, "skipped", attempts, "");
+    return { state: "skipped", attempts };
+  }
+  if (!from) return { state: "pending", attempts };
+  const next = attempts + 1;
   try {
     await ses.send(
       new SendEmailCommand({
@@ -159,9 +181,24 @@ async function sendWelcome(event) {
         },
       })
     );
-    return { notified: true, emailed: true };
+    await putDelivery(key, "sent", next, "");
+    return { state: "sent", attempts: next };
   } catch (err) {
-    console.error(err);
-    return { notified: true, emailed: false };
+    const permanent = ["MessageRejected", "MailFromDomainNotVerifiedException", "ConfigurationSetDoesNotExistException"].includes(
+      err.name
+    );
+    const state = permanent ? "suppressed" : "failed";
+    const stored = permanent ? 5 : next;
+    await putDelivery(key, state, stored, err.name || "send");
+    return { state, attempts: stored };
   }
+}
+
+async function putDelivery(key, state, attempts, lastError) {
+  await db.send(
+    new PutCommand({
+      TableName: table,
+      Item: { ...key, state, attempts, lastError, updatedAt: new Date().toISOString() },
+    })
+  );
 }

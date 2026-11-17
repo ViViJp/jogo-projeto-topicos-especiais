@@ -78,11 +78,38 @@ pulumi stack output nameservers
 
 Esse primeiro `up` cria a zona, a US$ 0,50 por mês, e não pede certificado. Copie os nameservers e delegue o domínio no registrador. Quando a delegação responder, mude `publishDomain` para `true` e rode `pulumi up` de novo. Aí entram os certificados, a validação DNS e os aliases. Não ligue `publishDomain` antes da delegação: o `up` fica esperando o certificado e estoura o tempo. A zona `flesh-to-chrome.negoci.online` não entra nesta stack.
 
-As rotas privadas exigem `Authorization` com o JWT do Cognito. As duas rotas de Google continuam públicas. No primeiro cadastro, a Conta pede à Comunicações o aviso de boas-vindas. O e-mail sai pelo SES só quando há remetente configurado; se o envio falhar, o cadastro permanece. Na dev, o remetente opcional é `flesh-to-chrome:sesFromEmail`. Na prod, o remetente `noreply@nihil-legere-possum.lat` e a identidade SES só entram com `publishDomain` em `true`, no mesmo passo dos certificados.
+As rotas privadas exigem o access token do Cognito, com escopo `openid`. ID token não passa. O início e o callback do Google, e a troca do ticket em `POST /auth/session`, continuam públicos. O `state` do login é aleatório, expira, só vale uma vez e precisa coincidir com o cookie da tentativa. O destino de retorno tem de ser a origem da CloudFront ou, na dev, `localhost:1234`.
+
+No primeiro cadastro, a Conta grava um pedido de boas-vindas junto do perfil. A notificação do jogo e o estado do e-mail ficam separados. Falha transitória do SES tenta de novo no próximo acesso, até cinco vezes, sem repetir um e-mail já aceito. Sem remetente, o e-mail fica pendente e o login segue. Na dev, o remetente opcional é `flesh-to-chrome:sesFromEmail`. Na prod, o remetente `noreply@nihil-legere-possum.lat` e a identidade SES só entram com `publishDomain` em `true`, no mesmo passo dos certificados. A permissão de envio aponta só para essa identidade.
+
+O jogo publicado lê `cloud-config.json` e oferece Entrar com Google e Sair. Visitante não grava campanha no `localStorage` e não entra no multiplayer. O progresso de cada conta fica numa chave própria. Se a sessão e a conta divergem, o menu pede escolha e não sobrescreve sozinho.
+
+## Google e remetente
+
+O login Google só sai de `NOT_READY` com os dois valores abaixo. O segredo fica no Pulumi e não entra no Git.
+
+No Google Cloud, crie um cliente OAuth do tipo aplicação web. Em URIs de redirecionamento autorizados, coloque somente:
+
+`https://ftc-dev-legere.auth.sa-east-1.amazoncognito.com/oauth2/idpresponse`
+
+Na pasta `pulumi`, com a stack `dev` selecionada:
+
+```bash
+pulumi config set flesh-to-chrome:googleClientId COLE_O_ID
+pulumi config set --secret flesh-to-chrome:googleClientSecret
+```
+
+O callback da aplicação já é a rota `/auth/google/callback` da HTTP API. Não cole o segredo no chat nem no PR.
+
+Para o e-mail na dev, use um endereço que você possa abrir e confirme o pedido de verificação no SES. O sandbox só entrega para destinatários verificados.
+
+```bash
+pulumi config set flesh-to-chrome:sesFromEmail seu-email@exemplo.com
+```
 
 ## O que esta entrega não publica
 
 - API Gateway WebSocket, ticket de conexão e o transporte da corrida. Continuam condicionados à decisão D04.
 - Loja e rotas `/me/cosmetics`. O cronograma da loja segue pendente.
-- O barramento do documento 12 (DynamoDB Streams, publicador e SQS). A campanha já grava o outbox na mesma transação do save. A Lambda de auditoria deduplica e persiste o evento quando recebe `{ "action": "ingest", "events": [...] }` por invocação direta. Essa invocação não está ligada a uma fila.
+- O barramento do documento 12 (DynamoDB Streams, publicador, SQS e o feedback SNS). A boas-vindas fica gravada na conta e pode ser repetida até cinco vezes. A campanha já grava o outbox na mesma transação do save. A Lambda de auditoria deduplica e persiste o evento quando recebe `{ "action": "ingest", "events": [...] }` por invocação direta. Essa invocação não está ligada a uma fila.
 - Suíte de testes, integração contínua e deploy contínuo. Ficam para a entrega seguinte.

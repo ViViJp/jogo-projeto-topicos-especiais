@@ -45,7 +45,7 @@ def table(name, with_ttl=False):
     )
 
 
-def publish(service, table_resource, variables=None, invoke_function=None):
+def publish(service, table_resource, variables=None, invoke_function=None, ses_identity=None):
     path = services_dir / service
     subprocess.run(["npm", "install", "--omit=dev"], cwd=path, check=True)
 
@@ -96,6 +96,9 @@ def publish(service, table_resource, variables=None, invoke_function=None):
         ),
     )
     if service == "comunicacoes":
+        caller = aws.get_caller_identity()
+        region = pulumi.Config("aws").get("region") or "sa-east-1"
+        identity = ses_identity or domain
         aws.iam.RolePolicy(
             f"{service}-ses",
             role=role.id,
@@ -106,7 +109,7 @@ def publish(service, table_resource, variables=None, invoke_function=None):
                         {
                             "Effect": "Allow",
                             "Action": ["ses:SendEmail", "ses:SendRawEmail"],
-                            "Resource": "*",
+                            "Resource": f"arn:aws:ses:{region}:{caller.account_id}:identity/{identity}",
                         }
                     ],
                 }
@@ -151,6 +154,7 @@ ROUTES = {
     "conta": [
         "GET /auth/google/start",
         "GET /auth/google/callback",
+        "POST /auth/session",
         "GET /me",
         "POST /auth/logout",
     ],
@@ -201,7 +205,7 @@ def http_api(api, functions, authorizer):
         )
         for route_key in route_keys:
             slug = route_key.lower().replace(" ", "-").replace("/", "-").replace("{", "").replace("}", "")
-            public = route_key in ("GET /auth/google/start", "GET /auth/google/callback")
+            public = route_key in ("GET /auth/google/start", "GET /auth/google/callback", "POST /auth/session")
             routes.append(
                 aws.apigatewayv2.Route(
                     f"route-{slug}",
@@ -209,6 +213,7 @@ def http_api(api, functions, authorizer):
                     route_key=route_key,
                     authorization_type="NONE" if public else "JWT",
                     authorizer_id=None if public else authorizer.id,
+                    authorization_scopes=None if public else ["openid"],
                     target=integration.id.apply(lambda integration_id: f"integrations/{integration_id}"),
                 )
             )
@@ -223,7 +228,7 @@ def http_api(api, functions, authorizer):
     return api, stage
 
 
-def frontend_cdn(certificate_arn=None, aliases=None):
+def frontend_cdn(certificate_arn=None, aliases=None, api_endpoint=None):
     bucket = aws.s3.Bucket(
         "frontend",
         bucket=f"{prefix}-frontend",
@@ -238,6 +243,15 @@ def frontend_cdn(certificate_arn=None, aliases=None):
         restrict_public_buckets=True,
     )
     upload_frontend(bucket)
+    if api_endpoint is not None:
+        aws.s3.BucketObjectv2(
+            "frontend-cloud-config",
+            bucket=bucket.id,
+            key="cloud-config.json",
+            content=api_endpoint.apply(lambda endpoint: json.dumps({"api": endpoint})),
+            content_type="application/json; charset=utf-8",
+            cache_control="no-cache",
+        )
     oac = aws.cloudfront.OriginAccessControl(
         "frontend-oac",
         name=f"{prefix}-frontend",
@@ -289,7 +303,16 @@ def frontend_cdn(certificate_arn=None, aliases=None):
                 cached_methods=["GET", "HEAD"],
                 compress=True,
                 cache_policy_id=fresh.id,
-            )
+            ),
+            aws.cloudfront.DistributionOrderedCacheBehaviorArgs(
+                path_pattern="cloud-config.json",
+                target_origin_id="s3",
+                viewer_protocol_policy="redirect-to-https",
+                allowed_methods=["GET", "HEAD", "OPTIONS"],
+                cached_methods=["GET", "HEAD"],
+                compress=True,
+                cache_policy_id=fresh.id,
+            ),
         ],
         restrictions=aws.cloudfront.DistributionRestrictionsArgs(
             geo_restriction=aws.cloudfront.DistributionRestrictionsGeoRestrictionArgs(
@@ -367,6 +390,7 @@ def prod_names(api, stage):
     named = frontend_cdn(
         certificate_arn=frontend_cert.certificate_arn,
         aliases=[domain, f"www.{domain}"],
+        api_endpoint=api.api_endpoint,
     )
     for hostname in (domain, f"www.{domain}"):
         slug = "apex" if hostname == domain else "www"
@@ -551,7 +575,7 @@ def open_api():
 
 
 services = {
-    "conta": table("accounts"),
+    "conta": table("accounts", with_ttl=True),
     "campanha": table("campaigns"),
     "partidas": table("matches", with_ttl=True),
     "comunicacoes": table("communications"),
@@ -565,11 +589,28 @@ elif config.get("sesFromEmail"):
 
 api = open_api()
 pool, client, authorizer, google_enabled = players(api)
+frontend = frontend_cdn(api_endpoint=api.api_endpoint) if not (is_prod and publish_domain) else None
+if frontend is not None:
+    allowed_origins = pulumi.Output.concat(
+        "https://",
+        frontend.domain_name,
+        ",http://localhost:1234,http://127.0.0.1:1234",
+    )
+    frontend_origin = pulumi.Output.concat("https://", frontend.domain_name)
+else:
+    allowed_origins = f"https://{domain},https://www.{domain}"
+    frontend_origin = f"https://{domain}"
 login_host = pulumi.Output.concat("ftc-", stack, "-legere.auth.", pulumi.Config("aws").get("region") or "sa-east-1", ".amazoncognito.com")
 ses_from = f"noreply@{domain}" if is_prod and publish_domain else (config.get("sesFromEmail") or "")
+ses_identity = domain if is_prod and publish_domain else (config.get("sesFromEmail") or domain)
 mail_env = {"SES_FROM": ses_from} if ses_from else {}
 functions = {}
-functions["comunicacoes"] = publish("comunicacoes", services["comunicacoes"], mail_env)
+functions["comunicacoes"] = publish(
+    "comunicacoes",
+    services["comunicacoes"],
+    mail_env,
+    ses_identity=ses_identity,
+)
 functions["campanha"] = publish("campanha", services["campanha"])
 functions["partidas"] = publish("partidas", services["partidas"])
 functions["auditoria"] = publish("auditoria", services["auditoria"])
@@ -580,13 +621,14 @@ functions["conta"] = publish(
         "COGNITO_DOMAIN": login_host,
         "COGNITO_CLIENT_ID": client.id,
         "COGNITO_CLIENT_SECRET": client.client_secret,
+        "COGNITO_POOL_ID": pool.id,
         "GOOGLE_ENABLED": "true" if google_enabled else "false",
         "COMUNICACOES_FUNCTION_NAME": functions["comunicacoes"].name,
+        "ALLOWED_ORIGINS": allowed_origins,
+        "FRONTEND_ORIGIN": frontend_origin,
     },
     invoke_function=functions["comunicacoes"],
 )
 api_resource, stage = http_api(api, functions, authorizer)
 if is_prod and publish_domain:
     prod_names(api_resource, stage)
-else:
-    frontend_cdn()

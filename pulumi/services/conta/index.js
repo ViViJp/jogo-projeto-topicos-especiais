@@ -1,15 +1,27 @@
 const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
-const { DynamoDBDocumentClient, GetCommand, PutCommand } = require("@aws-sdk/lib-dynamodb");
+const {
+  DynamoDBDocumentClient,
+  GetCommand,
+  PutCommand,
+  UpdateCommand,
+  DeleteCommand,
+  TransactWriteCommand,
+} = require("@aws-sdk/lib-dynamodb");
 const { LambdaClient, InvokeCommand } = require("@aws-sdk/client-lambda");
+const { CognitoJwtVerifier } = require("aws-jwt-verify");
+const { assessLogin, pkceChallenge, randomToken, safeReturn, withTicket } = require("./oauth");
 
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const lambda = new LambdaClient({});
 const table = process.env.TABLE_NAME;
+const loginTtlSeconds = 10 * 60;
+const ticketTtlSeconds = 2 * 60;
 
-function response(statusCode, body, headers) {
+function response(statusCode, body, extra) {
   return {
     statusCode,
-    headers: { "content-type": "application/json", ...(headers || {}) },
+    headers: { "content-type": "application/json", ...(extra?.headers || {}) },
+    cookies: extra?.cookies,
     body: body === undefined || body === "" ? "" : JSON.stringify(body),
   };
 }
@@ -24,29 +36,40 @@ function readBody(event) {
   return JSON.parse(raw);
 }
 
-function readJwt(token) {
-  const payload = token.split(".")[1];
-  if (!payload) throw new Error("token sem payload");
-  return JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
+function allowedOrigins() {
+  return (process.env.ALLOWED_ORIGINS || "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
 }
 
-function safeReturn(value) {
-  if (!value) return "/";
-  if (value.startsWith("/") && !value.startsWith("//")) return value;
-  try {
-    const url = new URL(value);
-    if (url.protocol === "https:" || url.protocol === "http:") return url.toString();
-  } catch {
-    // destino inválido cai na raiz
+function frontendOrigin() {
+  return process.env.FRONTEND_ORIGIN || allowedOrigins()[0] || "";
+}
+
+function cookieValue(event, name) {
+  const prefix = `${name}=`;
+  for (const cookie of event.cookies || []) {
+    const found = cookie.split(";").map((part) => part.trim()).find((part) => part.startsWith(prefix));
+    if (found) return decodeURIComponent(found.slice(prefix.length));
   }
-  return "/";
+  return "";
 }
 
-function redirectUri(event) {
-  const configured = process.env.REDIRECT_URI || "";
-  if (configured) return configured;
-  const host = event.requestContext?.domainName || "";
-  return host ? `https://${host}/auth/google/callback` : "";
+function loginCookie(value, maxAge) {
+  return `ftc_oauth=${encodeURIComponent(value)}; HttpOnly; Secure; SameSite=Lax; Path=/auth; Max-Age=${maxAge}`;
+}
+
+let idVerifier;
+let accessVerifier;
+
+function verifiers() {
+  if (!idVerifier) {
+    const options = { userPoolId: process.env.COGNITO_POOL_ID, clientId: process.env.COGNITO_CLIENT_ID };
+    idVerifier = CognitoJwtVerifier.create({ ...options, tokenUse: "id" });
+    accessVerifier = CognitoJwtVerifier.create({ ...options, tokenUse: "access" });
+  }
+  return { idVerifier, accessVerifier };
 }
 
 exports.handler = async (event) => {
@@ -54,29 +77,54 @@ exports.handler = async (event) => {
   const method = event.requestContext?.http?.method || "";
   const path = event.rawPath || "";
 
-  if (method === "GET" && path === "/auth/google/start") return startGoogle(event, requestId);
-  if (method === "GET" && path === "/auth/google/callback") return finishGoogle(event, requestId);
+  try {
+    if (method === "GET" && path === "/auth/google/start") return startGoogle(event, requestId);
+    if (method === "GET" && path === "/auth/google/callback") return finishGoogle(event, requestId);
+    if (method === "POST" && path === "/auth/session") return exchangeTicket(event, requestId);
+  } catch (err) {
+    console.error(err);
+    return fail(503, "UNAVAILABLE", "Falha no login.", requestId);
+  }
 
-  const claims = event.requestContext?.authorizer?.jwt?.claims;
-  const userId = claims?.sub || "";
-  if (!userId) return fail(401, "UNAUTHENTICATED", "Sessão ausente.", requestId);
+  const claims = event.requestContext?.authorizer?.jwt?.claims || {};
+  const userId = claims.sub || "";
+  const scope = typeof claims.scope === "string" ? claims.scope.split(" ") : [];
+  if (!userId || !scope.includes("openid")) {
+    return fail(401, "UNAUTHENTICATED", "Access token ausente.", requestId);
+  }
 
   if (method === "POST" && path === "/auth/logout") return logout(event);
-
   if (method === "GET" && path === "/me") return profile(userId, claims);
 
   return fail(404, "NOT_FOUND", "Rota ausente.", requestId);
 };
 
-function startGoogle(event, requestId) {
+async function startGoogle(event, requestId) {
   if (process.env.GOOGLE_ENABLED !== "true" || !process.env.COGNITO_DOMAIN || !process.env.COGNITO_CLIENT_ID) {
     return fail(503, "NOT_READY", "Google ainda não está configurado nesta stack.", requestId);
   }
   const redirect = redirectUri(event);
-  if (!redirect) return fail(503, "NOT_READY", "Retorno do login ainda não está configurado.", requestId);
-  const state = Buffer.from(
-    JSON.stringify({ returnTo: safeReturn(event.queryStringParameters?.return) })
-  ).toString("base64url");
+  const returnTo = safeReturn(event.queryStringParameters?.return, allowedOrigins(), frontendOrigin());
+  if (!redirect || !returnTo.startsWith("http")) {
+    return fail(503, "NOT_READY", "Retorno do login ainda não está configurado.", requestId);
+  }
+  const state = randomToken();
+  const verifier = randomToken();
+  const expires = new Date(Date.now() + loginTtlSeconds * 1000);
+  await db.send(
+    new PutCommand({
+      TableName: table,
+      Item: {
+        pk: `LOGIN#${state}`,
+        sk: "LOGIN",
+        returnTo,
+        verifier,
+        used: false,
+        expiresAt: expires.toISOString(),
+        ttl: Math.floor(expires.getTime() / 1000),
+      },
+    })
+  );
   const url = new URL(`https://${process.env.COGNITO_DOMAIN}/oauth2/authorize`);
   url.searchParams.set("identity_provider", "Google");
   url.searchParams.set("response_type", "code");
@@ -84,40 +132,104 @@ function startGoogle(event, requestId) {
   url.searchParams.set("redirect_uri", redirect);
   url.searchParams.set("scope", "openid email profile");
   url.searchParams.set("state", state);
-  return response(302, "", { location: url.toString() });
+  url.searchParams.set("code_challenge", pkceChallenge(verifier));
+  url.searchParams.set("code_challenge_method", "S256");
+  return response(302, "", { headers: { location: url.toString() }, cookies: [loginCookie(state, loginTtlSeconds)] });
 }
 
 async function finishGoogle(event, requestId) {
+  const clear = [loginCookie("", 0)];
   if (process.env.GOOGLE_ENABLED !== "true") {
     return fail(503, "NOT_READY", "Google ainda não está configurado nesta stack.", requestId);
   }
-  const code = event.queryStringParameters?.code || "";
-  if (!code) return fail(422, "INVALID", "Código de login ausente.", requestId);
-  const redirect = redirectUri(event);
-  const tokens = await exchangeCode(code, redirect);
-  if (!tokens.id_token) return fail(401, "UNAUTHENTICATED", "Login Google recusado.", requestId);
-  const claims = readJwt(tokens.id_token);
-  if (!claims.sub) return fail(401, "UNAUTHENTICATED", "Identidade ausente.", requestId);
-  const account = await profile(claims.sub, claims, true);
-  let returnTo = "/";
-  try {
-    const state = JSON.parse(Buffer.from(event.queryStringParameters?.state || "", "base64url").toString("utf8"));
-    returnTo = safeReturn(state.returnTo);
-  } catch {
-    returnTo = "/";
+  if (event.queryStringParameters?.error) {
+    return fail(401, "UNAUTHENTICATED", "Login Google recusado.", requestId);
   }
-  const body = JSON.parse(account.body || "{}");
-  return response(200, {
-    idToken: tokens.id_token,
-    accessToken: tokens.access_token,
-    refreshToken: tokens.refresh_token,
-    expiresIn: tokens.expires_in,
-    returnTo,
-    profile: body,
+  const state = event.queryStringParameters?.state || "";
+  const code = event.queryStringParameters?.code || "";
+  const record = state
+    ? (await db.send(new GetCommand({ TableName: table, Key: { pk: `LOGIN#${state}`, sk: "LOGIN" } }))).Item
+    : null;
+  const verdict = assessLogin(record, cookieValue(event, "ftc_oauth"), state, Date.now());
+  if (verdict !== "ok" || !code) {
+    return fail(401, "UNAUTHENTICATED", "Retorno de login inválido.", requestId);
+  }
+  try {
+    await db.send(
+      new UpdateCommand({
+        TableName: table,
+        Key: { pk: `LOGIN#${state}`, sk: "LOGIN" },
+        UpdateExpression: "SET used = :yes",
+        ConditionExpression: "used = :no AND expiresAt > :now",
+        ExpressionAttributeValues: { ":yes": true, ":no": false, ":now": new Date().toISOString() },
+      })
+    );
+  } catch (err) {
+    if (err.name === "ConditionalCheckFailedException") {
+      return fail(401, "UNAUTHENTICATED", "Retorno de login já utilizado.", requestId);
+    }
+    throw err;
+  }
+  const tokens = await exchangeCode(code, redirectUri(event), record.verifier);
+  const identity = await verifiedIdentity(tokens);
+  if (!identity) return fail(401, "UNAUTHENTICATED", "Identidade recusada.", requestId);
+  const account = await ensureAccount(identity.sub, identity);
+  const ticket = randomToken();
+  const expires = new Date(Date.now() + ticketTtlSeconds * 1000);
+  await db.send(
+    new PutCommand({
+      TableName: table,
+      Item: {
+        pk: `TICKET#${ticket}`,
+        sk: "TICKET",
+        accessToken: tokens.access_token,
+        idToken: tokens.id_token,
+        refreshToken: tokens.refresh_token || "",
+        expiresIn: tokens.expires_in || 3600,
+        profile: account,
+        expiresAt: expires.toISOString(),
+        ttl: Math.floor(expires.getTime() / 1000),
+      },
+    })
+  );
+  return response(302, "", {
+    headers: { location: withTicket(record.returnTo, ticket) },
+    cookies: clear,
   });
 }
 
-async function exchangeCode(code, redirect) {
+async function exchangeTicket(event, requestId) {
+  const ticket = readBody(event).ticket || "";
+  if (!ticket) return fail(422, "INVALID", "Ticket ausente.", requestId);
+  let removed;
+  try {
+    removed = await db.send(
+      new DeleteCommand({
+        TableName: table,
+        Key: { pk: `TICKET#${ticket}`, sk: "TICKET" },
+        ConditionExpression: "expiresAt > :now",
+        ExpressionAttributeValues: { ":now": new Date().toISOString() },
+        ReturnValues: "ALL_OLD",
+      })
+    );
+  } catch (err) {
+    if (err.name === "ConditionalCheckFailedException") {
+      return fail(401, "UNAUTHENTICATED", "Ticket inválido.", requestId);
+    }
+    throw err;
+  }
+  const item = removed.Attributes;
+  if (!item?.accessToken) return fail(401, "UNAUTHENTICATED", "Ticket inválido.", requestId);
+  return response(200, {
+    accessToken: item.accessToken,
+    idToken: item.idToken,
+    refreshToken: item.refreshToken,
+    expiresIn: item.expiresIn,
+    profile: item.profile,
+  });
+}
+
+async function exchangeCode(code, redirect, verifier) {
   const basic = Buffer.from(`${process.env.COGNITO_CLIENT_ID}:${process.env.COGNITO_CLIENT_SECRET}`).toString("base64");
   const result = await fetch(`https://${process.env.COGNITO_DOMAIN}/oauth2/token`, {
     method: "POST",
@@ -129,10 +241,32 @@ async function exchangeCode(code, redirect) {
       grant_type: "authorization_code",
       code,
       redirect_uri: redirect,
+      code_verifier: verifier,
     }),
   });
   if (!result.ok) return {};
   return result.json();
+}
+
+async function verifiedIdentity(tokens) {
+  if (!tokens.id_token || !tokens.access_token) return null;
+  try {
+    const { idVerifier: ids, accessVerifier: access } = verifiers();
+    const identity = await ids.verify(tokens.id_token);
+    await access.verify(tokens.access_token);
+    if (!identity.sub) return null;
+    return identity;
+  } catch (err) {
+    console.error(err.name || "jwt");
+    return null;
+  }
+}
+
+function redirectUri(event) {
+  const configured = process.env.REDIRECT_URI || "";
+  if (configured) return configured;
+  const host = event.requestContext?.domainName || "";
+  return host ? `https://${host}/auth/google/callback` : "";
 }
 
 async function logout(event) {
@@ -150,49 +284,107 @@ async function logout(event) {
       });
     }
   } catch (err) {
-    console.error(err);
+    console.error(err.name || "logout");
   }
   return response(204, "");
 }
 
-async function profile(userId, claims, welcomeOnCreate) {
+async function profile(userId, claims) {
+  const account = await ensureAccount(userId, claims);
+  return response(200, account);
+}
+
+async function ensureAccount(userId, claims) {
   const found = await db.send(new GetCommand({ TableName: table, Key: { pk: userId, sk: "PROFILE" } }));
-  if (found.Item) return response(200, { id: found.Item.id, name: found.Item.name, email: found.Item.email });
-  const created = {
-    pk: userId,
-    sk: "PROFILE",
-    id: userId,
-    provider: "cognito",
-    providerSubject: userId,
-    name: claims.name || claims.email || userId,
-    email: claims.email || "",
-    createdAt: new Date().toISOString(),
-  };
-  try {
-    await db.send(
-      new PutCommand({
-        TableName: table,
-        Item: created,
-        ConditionExpression: "attribute_not_exists(pk)",
-      })
-    );
-  } catch (err) {
-    if (err.name !== "ConditionalCheckFailedException") throw err;
-    const again = await db.send(new GetCommand({ TableName: table, Key: { pk: userId, sk: "PROFILE" } }));
-    return response(200, { id: again.Item.id, name: again.Item.name, email: again.Item.email });
+  let account = found.Item
+    ? { id: found.Item.id, name: found.Item.name, email: found.Item.email }
+    : null;
+  if (!account) {
+    account = {
+      id: userId,
+      name: claims.name || claims.email || userId,
+      email: claims.email || "",
+    };
+    try {
+      await db.send(
+        new TransactWriteCommand({
+          TransactItems: [
+            {
+              Put: {
+                TableName: table,
+                Item: {
+                  pk: userId,
+                  sk: "PROFILE",
+                  provider: "cognito",
+                  providerSubject: userId,
+                  createdAt: new Date().toISOString(),
+                  ...account,
+                },
+                ConditionExpression: "attribute_not_exists(pk)",
+              },
+            },
+            {
+              Put: {
+                TableName: table,
+                Item: { pk: userId, sk: "WELCOME", status: "pending", createdAt: new Date().toISOString() },
+                ConditionExpression: "attribute_not_exists(pk)",
+              },
+            },
+          ],
+        })
+      );
+    } catch (err) {
+      if (err.name !== "TransactionCanceledException") throw err;
+      const again = await db.send(new GetCommand({ TableName: table, Key: { pk: userId, sk: "PROFILE" } }));
+      account = { id: again.Item.id, name: again.Item.name, email: again.Item.email };
+    }
   }
-  if (welcomeOnCreate) await requestWelcome(created);
-  return response(200, { id: created.id, name: created.name, email: created.email });
+  await ensureWelcome(account);
+  return account;
+}
+
+async function ensureWelcome(account) {
+  const current = await db.send(new GetCommand({ TableName: table, Key: { pk: account.id, sk: "WELCOME" } }));
+  if (!current.Item) {
+    try {
+      await db.send(
+        new PutCommand({
+          TableName: table,
+          Item: { pk: account.id, sk: "WELCOME", status: "pending", createdAt: new Date().toISOString() },
+          ConditionExpression: "attribute_not_exists(pk)",
+        })
+      );
+    } catch (err) {
+      if (err.name !== "ConditionalCheckFailedException") console.error(err.name || "welcome");
+    }
+  } else if (current.Item.status === "settled") {
+    return;
+  }
+  const result = await requestWelcome(account);
+  if (!result) return;
+  const attempts = Number(result.attempts || 0);
+  const settled =
+    (result.notified && ["sent", "skipped", "suppressed"].includes(result.email)) || attempts >= 5;
+  if (!settled) return;
+  await db.send(
+    new UpdateCommand({
+      TableName: table,
+      Key: { pk: account.id, sk: "WELCOME" },
+      UpdateExpression: "SET #status = :settled",
+      ExpressionAttributeNames: { "#status": "status" },
+      ExpressionAttributeValues: { ":settled": "settled" },
+    })
+  );
 }
 
 async function requestWelcome(account) {
   const functionName = process.env.COMUNICACOES_FUNCTION_NAME || "";
-  if (!functionName) return;
+  if (!functionName) return null;
   try {
-    await lambda.send(
+    const result = await lambda.send(
       new InvokeCommand({
         FunctionName: functionName,
-        InvocationType: "Event",
+        InvocationType: "RequestResponse",
         Payload: Buffer.from(
           JSON.stringify({
             action: "welcome",
@@ -203,7 +395,10 @@ async function requestWelcome(account) {
         ),
       })
     );
+    if (result.FunctionError) return null;
+    return JSON.parse(Buffer.from(result.Payload || "{}").toString("utf8"));
   } catch (err) {
-    console.error(err);
+    console.error(err.name || "welcome-invoke");
+    return null;
   }
 }

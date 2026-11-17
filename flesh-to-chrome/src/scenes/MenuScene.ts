@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { SCREEN_WIDTH, SCREEN_HEIGHT } from "../config/GameConfig";
 import { InputManager } from "../systems/InputManager";
+import { CloudSession } from "../network/CloudSession";
 import { SaveState } from "../systems/SaveState";
 import { GameSceneData } from "./GameScene";
 
@@ -26,7 +27,10 @@ export class MenuScene extends Phaser.Scene {
   private confirmText?: Phaser.GameObjects.Text;
   private menuHint?: Phaser.GameObjects.Text;
   private hasSave = false;
-  private mode: "main" | "phase-select" = "main";
+  private ready = false;
+  private statusText?: Phaser.GameObjects.Text;
+  private choice: "none" | "import" | "conflict" = "none";
+  private mode: "main" | "phase-select" | "choice" = "main";
 
   constructor() {
     super("MenuScene");
@@ -59,16 +63,23 @@ export class MenuScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    this.hasSave = SaveState.hasExistingSave();
     this.menuHint = this.add
-      .text(SCREEN_WIDTH / 2, 270, "MENU PRINCIPAL", {
+      .text(SCREEN_WIDTH / 2, 250, "MENU PRINCIPAL", {
         fontFamily: "Courier New, monospace",
         fontSize: "16px",
         color: "#565f80",
       })
       .setOrigin(0.5);
-
-    this.showMainMenu();
+    this.statusText = this.add
+      .text(SCREEN_WIDTH / 2, 286, "Conectando...", {
+        fontFamily: "Courier New, monospace",
+        fontSize: "16px",
+        color: "#8892b0",
+        align: "center",
+        wordWrap: { width: 900 },
+      })
+      .setOrigin(0.5);
+    void this.prepare();
 
     this.add
       .text(
@@ -85,6 +96,11 @@ export class MenuScene extends Phaser.Scene {
   }
 
   update(): void {
+    if (!this.ready) {
+      this.input$.postUpdate();
+      return;
+    }
+
     if (this.confirmVisible) {
       if (this.input$.isCancelJustDown()) {
         this.hideConfirm();
@@ -117,8 +133,8 @@ export class MenuScene extends Phaser.Scene {
     this.optionTexts = [];
     this.selectedIndex = 0;
 
-    const startY = this.mode === "phase-select" ? 320 : 340;
-    const spacing = this.mode === "phase-select" ? 48 : 56;
+    const startY = this.mode === "main" ? 340 : 330;
+    const spacing = this.mode === "phase-select" ? 44 : 46;
     this.options.forEach((option, index) => {
       const text = this.add
         .text(SCREEN_WIDTH / 2, startY + index * spacing, option.label, {
@@ -153,6 +169,11 @@ export class MenuScene extends Phaser.Scene {
     this.options.push({ label: "Novo Jogo", action: () => this.newGame(this.hasSave) });
     this.options.push({ label: "Selecionar Fase (teste)", action: () => this.showPhaseSelect() });
     this.options.push({ label: "Multiplayer", action: () => this.openMultiplayer() });
+    if (CloudSession.current()) {
+      this.options.push({ label: "Sair", action: () => void this.logout() });
+    } else {
+      this.options.push({ label: "Entrar com Google", action: () => void this.login() });
+    }
     this.renderOptions();
   }
 
@@ -195,7 +216,118 @@ export class MenuScene extends Phaser.Scene {
     this.options[this.selectedIndex]?.action();
   }
 
+  private async prepare(): Promise<void> {
+    SaveState.bootGuest();
+    await CloudSession.completeLoginIfNeeded();
+    await CloudSession.me();
+    const session = CloudSession.current();
+    if (!session) {
+      SaveState.prefer("session");
+      this.statusText?.setText("Visitante: fechar a aba apaga o progresso desta sessão.");
+      this.finishPrepare();
+      return;
+    }
+    const guest = SaveState.readStored("session", SaveState.sessionKey());
+    const account = SaveState.readStored("account", SaveState.accountKey(session.profile.id));
+    const remote = await CloudSession.campaign();
+    const guestProgress = Boolean(guest && SaveState.hasProgress(guest));
+    const accountProgress = Boolean(account && SaveState.hasProgress(account));
+    if (guestProgress && (accountProgress || remote === "present")) {
+      this.choice = "conflict";
+      SaveState.keepSession();
+      this.showChoice();
+      return;
+    }
+    if (guestProgress) {
+      this.choice = "import";
+      SaveState.keepSession();
+      this.showChoice();
+      return;
+    }
+    SaveState.keepAccount();
+    this.statusText?.setText(`Conta: ${session.profile.name}`);
+    this.finishPrepare();
+  }
+
+  private finishPrepare(): void {
+    this.choice = "none";
+    this.mode = "main";
+    this.hasSave = SaveState.hasExistingSave();
+    this.ready = true;
+    this.showMainMenu();
+  }
+
+  private showChoice(): void {
+    this.ready = true;
+    this.mode = "choice";
+    const session = CloudSession.current();
+    this.menuHint?.setText("ESCOLHA O PROGRESSO");
+    this.statusText?.setText(
+      this.choice === "conflict"
+        ? "Há progresso nesta sessão e um save da conta. Nada foi sobrescrito."
+        : "Importar o progresso desta sessão para a conta?"
+    );
+    this.options =
+      this.choice === "conflict"
+        ? [
+            { label: "Trazer o progresso desta sessão", action: () => this.importProgress() },
+            { label: "Manter o save da conta", action: () => this.keepAccountProgress() },
+            { label: "Cancelar", action: () => this.keepGuestProgress() },
+          ]
+        : [
+            { label: "Salvar este progresso na conta", action: () => this.importProgress() },
+            { label: "Continuar sem salvar na conta", action: () => this.keepGuestProgress() },
+          ];
+    if (!session) this.options = [{ label: "Voltar", action: () => this.finishPrepare() }];
+    this.renderOptions();
+  }
+
+  private importProgress(): void {
+    const session = CloudSession.current();
+    if (!session) return;
+    SaveState.importSession(session.profile.id);
+    this.statusText?.setText(`Conta: ${session.profile.name}. A nuvem não foi sobrescrita.`);
+    this.finishPrepare();
+  }
+
+  private keepAccountProgress(): void {
+    const session = CloudSession.current();
+    SaveState.keepAccount();
+    this.statusText?.setText(session ? `Conta: ${session.profile.name}` : "");
+    this.finishPrepare();
+  }
+
+  private keepGuestProgress(): void {
+    SaveState.keepSession();
+    const session = CloudSession.current();
+    this.statusText?.setText(
+      session
+        ? `${session.profile.name}: o progresso desta sessão ainda não foi para a conta.`
+        : "Visitante: fechar a aba apaga o progresso desta sessão."
+    );
+    this.finishPrepare();
+  }
+
+  private async login(): Promise<void> {
+    if (!(await CloudSession.api())) {
+      this.statusText?.setText("Login indisponível neste endereço.");
+      return;
+    }
+    await CloudSession.login();
+  }
+
+  private async logout(): Promise<void> {
+    await CloudSession.logout();
+    SaveState.logoutLocal();
+    this.statusText?.setText("Visitante: fechar a aba apaga o progresso desta sessão.");
+    this.finishPrepare();
+  }
+
   private openMultiplayer(): void {
+    if (!CloudSession.current()) {
+      this.statusText?.setText("Entre com Google antes do multiplayer.");
+      return;
+    }
     this.scene.start("MultiplayerScene");
   }
 
