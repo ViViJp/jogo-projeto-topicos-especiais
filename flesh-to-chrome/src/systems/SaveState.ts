@@ -11,6 +11,12 @@ export interface DescentState {
   recoveredFragmentIds: string[];
   retryUsedPhaseIds: string[];
   pendingRemoval: keyof AbilityState | null;
+  /**
+   * Setor cuja tela de retry ainda aguarda uma decisão do jogador.
+   * Diferente de `retryUsedPhaseIds`, este campo distingue a tela de escolha
+   * da segunda tentativa já iniciada e sobrevive ao fechamento do jogo.
+   */
+  pendingRetryChoicePhaseId: string | null;
 }
 
 /**
@@ -63,6 +69,7 @@ function defaultSave(): SaveData {
       recoveredFragmentIds: [],
       retryUsedPhaseIds: [],
       pendingRemoval: null,
+      pendingRetryChoicePhaseId: null,
     },
     preGateSave: null,
     endingReached: null,
@@ -88,6 +95,7 @@ function cloneSaveData(data: SaveData, includePreGateSave = true): SaveData {
       recoveredFragmentIds: [...data.descentState.recoveredFragmentIds],
       retryUsedPhaseIds: [...data.descentState.retryUsedPhaseIds],
       pendingRemoval: data.descentState.pendingRemoval,
+      pendingRetryChoicePhaseId: data.descentState.pendingRetryChoicePhaseId,
     },
     preGateSave: includePreGateSave && data.preGateSave
       ? cloneSaveData(data.preGateSave, false)
@@ -96,51 +104,219 @@ function cloneSaveData(data: SaveData, includePreGateSave = true): SaveData {
   };
 }
 
-function normalizeSaveData(parsed: Partial<SaveData>): SaveData {
-  const fresh = defaultSave();
-  const checkpoint = parsed.checkpoint ?? fresh.checkpoint;
-  const descentState = parsed.descentState ?? fresh.descentState;
-  const endingReached = ["chrome", "flesh", "hollow"].includes(parsed.endingReached ?? "")
+const CAMPAIGN_PHASE_IDS = ["fase1", "fase2-intro", "fase3", "fase4", "fase5"] as const;
+type CampaignPhaseId = typeof CAMPAIGN_PHASE_IDS[number];
+
+const PHASE_BOUNDS: Record<CampaignPhaseId, { width: number; height: number }> = {
+  fase1: { width: 30_400, height: 720 },
+  "fase2-intro": { width: 30_720, height: 720 },
+  fase3: { width: 30_720, height: 720 },
+  fase4: { width: 30_720, height: 720 },
+  fase5: { width: 38_400, height: 720 },
+};
+
+const ABILITY_KEYS: readonly (keyof AbilityState)[] = ["legs", "arms", "eyes", "thrusters"];
+const MAX_WALLET = 999_999_999;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isCampaignPhaseId(value: unknown): value is CampaignPhaseId {
+  return typeof value === "string" && (CAMPAIGN_PHASE_IDS as readonly string[]).includes(value);
+}
+
+function uniqueStrings(value: unknown, predicate: (entry: string) => boolean): string[] {
+  if (!Array.isArray(value)) return [];
+  return [...new Set(value.filter((entry): entry is string => (
+    typeof entry === "string" && entry.length <= 96 && predicate(entry)
+  )))];
+}
+
+function normalizedWallet(value: unknown): number {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) return 0;
+  return Math.min(MAX_WALLET, Math.trunc(value));
+}
+
+function ascentAbilitiesForPhase(phaseId: CampaignPhaseId): AbilityState {
+  const phaseIndex = CAMPAIGN_PHASE_IDS.indexOf(phaseId);
+  return {
+    legs: phaseIndex >= 1,
+    arms: phaseIndex >= 2,
+    eyes: phaseIndex >= 3,
+    thrusters: phaseIndex >= 4,
+  };
+}
+
+function descentAbilitiesForStep(currentStep: number): AbilityState {
+  const abilities = createCompleteAbilityState();
+  for (let index = 0; index < Math.min(currentStep, DESCENT_STEPS.length); index += 1) {
+    abilities[DESCENT_STEPS[index].implant] = false;
+  }
+  return abilities;
+}
+
+function normalizeSaveData(parsedValue: unknown, includePreGateSave = true): SaveData {
+  const parsed = isRecord(parsedValue) ? parsedValue : {};
+  const rawDescent = isRecord(parsed.descentState) ? parsed.descentState : {};
+  const rawCheckpoint = isRecord(parsed.checkpoint) ? parsed.checkpoint : {};
+  const endingReached = ["chrome", "flesh", "hollow"].includes(String(parsed.endingReached ?? ""))
     ? parsed.endingReached as SaveData["endingReached"]
     : null;
+  let currentStep = typeof rawDescent.currentStep === "number" && Number.isInteger(rawDescent.currentStep)
+    ? Math.max(0, Math.min(DESCENT_STEPS.length, rawDescent.currentStep))
+    : 0;
+  let active = rawDescent.active === true;
+  let brokenChain = rawDescent.brokenChain === true;
+  let epiloguePending = rawDescent.epiloguePending === true;
+
+  if (endingReached === "flesh") {
+    currentStep = DESCENT_STEPS.length;
+    active = false;
+    brokenChain = false;
+    epiloguePending = false;
+  } else if (endingReached === "hollow") {
+    active = false;
+    brokenChain = true;
+    epiloguePending = false;
+  } else if (endingReached === "chrome") {
+    currentStep = 0;
+    active = false;
+    brokenChain = false;
+    epiloguePending = false;
+  } else if (brokenChain) {
+    active = false;
+    epiloguePending = false;
+  } else if (currentStep >= DESCENT_STEPS.length) {
+    active = false;
+  } else if (currentStep > 0) {
+    // Uma etapa intermediária só é alcançada após uma ReForge concluída.
+    // Se um save parcial perdeu o flag, retomar a descida é mais seguro do
+    // que abrir a fase como se ainda fosse a campanha de subida.
+    active = true;
+    epiloguePending = false;
+  }
+
+  const hasDescentProgress = active || brokenChain || epiloguePending || currentStep > 0
+    || endingReached === "flesh" || endingReached === "hollow";
+  const ascentPhaseId: CampaignPhaseId = isCampaignPhaseId(parsed.currentPhaseId)
+    ? parsed.currentPhaseId
+    : "fase1";
+  const currentPhaseId: CampaignPhaseId = hasDescentProgress
+    ? (currentStep < DESCENT_STEPS.length
+      ? DESCENT_STEPS[currentStep].phaseId
+      : "fase1")
+    : ascentPhaseId;
+
+  const knownFragments = new Set(DESCENT_STEPS.map((step) => step.fragmentId));
+  const recoveredFromSave = new Set(uniqueStrings(
+    rawDescent.recoveredFragmentIds,
+    (entry) => knownFragments.has(entry),
+  ));
+  const recoveredFragmentIds: string[] = [];
+  for (let index = 0; index < currentStep; index += 1) {
+    recoveredFragmentIds.push(DESCENT_STEPS[index].fragmentId);
+  }
+
+  const currentDescentStep = descentStepAt(currentStep);
+  const rawPendingRemoval = typeof rawDescent.pendingRemoval === "string"
+    && ABILITY_KEYS.includes(rawDescent.pendingRemoval as keyof AbilityState)
+    ? rawDescent.pendingRemoval as keyof AbilityState
+    : null;
+  const pendingRemoval = active && currentDescentStep && rawPendingRemoval === currentDescentStep.implant
+    ? rawPendingRemoval
+    : null;
+  if (currentDescentStep && (recoveredFromSave.has(currentDescentStep.fragmentId) || pendingRemoval)) {
+    recoveredFragmentIds.push(currentDescentStep.fragmentId);
+  }
+
+  const phaseIndexById = new Map<string, number>(DESCENT_STEPS.map((step, index) => [step.phaseId, index]));
+  const retryUsedPhaseIds = uniqueStrings(
+    rawDescent.retryUsedPhaseIds,
+    (entry) => (phaseIndexById.get(entry) ?? Number.POSITIVE_INFINITY) <= currentStep,
+  );
+  const currentFragmentRecovered = Boolean(
+    currentDescentStep && recoveredFragmentIds.includes(currentDescentStep.fragmentId),
+  );
+  const savedPendingRetry = rawDescent.pendingRetryChoicePhaseId;
+  const pendingFieldExists = Object.prototype.hasOwnProperty.call(rawDescent, "pendingRetryChoicePhaseId");
+  const migrateInterruptedRetry = !pendingFieldExists
+    && currentDescentStep
+    && retryUsedPhaseIds.includes(currentDescentStep.phaseId);
+  const pendingRetryChoicePhaseId = active
+    && currentDescentStep
+    && !pendingRemoval
+    && !currentFragmentRecovered
+    && retryUsedPhaseIds.includes(currentDescentStep.phaseId)
+    && (savedPendingRetry === currentDescentStep.phaseId || migrateInterruptedRetry)
+    ? currentDescentStep.phaseId
+    : null;
+
+  const bounds = PHASE_BOUNDS[currentPhaseId];
+  const checkpointX = typeof rawCheckpoint.x === "number" ? rawCheckpoint.x : Number.NaN;
+  const checkpointY = typeof rawCheckpoint.y === "number" ? rawCheckpoint.y : Number.NaN;
+  const validCoordinates = Number.isFinite(checkpointX)
+    && Number.isFinite(checkpointY)
+    && checkpointX >= 0
+    && checkpointY >= 0
+    && checkpointX <= bounds.width
+    && checkpointY <= bounds.height
+    && ((checkpointX === 0 && checkpointY === 0) || (checkpointX > 0 && checkpointY >= 64));
+  const maxCreditPhase = CAMPAIGN_PHASE_IDS.indexOf(currentPhaseId) + 1;
+  const consolidatedCreditIds = hasDescentProgress
+    ? []
+    : uniqueStrings(rawCheckpoint.consolidatedCreditIds, (entry) => {
+      const match = /^f([1-5])-[a-z0-9-]+$/i.exec(entry);
+      return Boolean(match && Number(match[1]) <= maxCreditPhase);
+    });
+
   const normalized: SaveData = {
-    ...fresh,
-    ...parsed,
     version: 1,
+    currentPhaseId,
     checkpoint: {
-      x: Number.isFinite(checkpoint.x) ? checkpoint.x : 0,
-      y: Number.isFinite(checkpoint.y) ? checkpoint.y : 0,
-      consolidatedCreditIds: Array.isArray(checkpoint.consolidatedCreditIds)
-        ? [...checkpoint.consolidatedCreditIds]
-        : [],
+      x: validCoordinates ? checkpointX : 0,
+      y: validCoordinates ? checkpointY : 0,
+      consolidatedCreditIds,
     },
-    abilities: { ...fresh.abilities, ...(parsed.abilities ?? {}) },
+    wallet: hasDescentProgress ? 0 : normalizedWallet(parsed.wallet),
+    // O progresso da campanha é a fonte de verdade. Isso também elimina
+    // strings/números truthy injetados em campos que deveriam ser booleanos.
+    abilities: hasDescentProgress
+      ? descentAbilitiesForStep(currentStep)
+      : ascentAbilitiesForPhase(currentPhaseId),
     descentState: {
-      ...fresh.descentState,
-      ...descentState,
-      recoveredFragmentIds: Array.isArray(descentState.recoveredFragmentIds)
-        ? [...descentState.recoveredFragmentIds]
-        : [],
-      retryUsedPhaseIds: Array.isArray(descentState.retryUsedPhaseIds)
-        ? [...descentState.retryUsedPhaseIds]
-        : [],
-      currentStep: Number.isInteger(descentState.currentStep)
-        ? Math.max(0, Math.min(DESCENT_STEPS.length, descentState.currentStep ?? 0))
-        : 0,
-      pendingRemoval: ["legs", "arms", "eyes", "thrusters"].includes(descentState.pendingRemoval ?? "")
-        ? descentState.pendingRemoval as keyof AbilityState
-        : null,
+      active,
+      brokenChain,
+      epiloguePending: epiloguePending && currentStep >= DESCENT_STEPS.length,
+      currentStep,
+      recoveredFragmentIds,
+      retryUsedPhaseIds,
+      pendingRemoval,
+      pendingRetryChoicePhaseId,
     },
     preGateSave: null,
     endingReached,
   };
-  if (parsed.preGateSave) {
-    normalized.preGateSave = normalizeSaveData({ ...parsed.preGateSave, preGateSave: null });
+
+  if (pendingRetryChoicePhaseId) {
+    normalized.checkpoint = { x: 0, y: 0, consolidatedCreditIds: [] };
+  }
+  if (includePreGateSave && isRecord(parsed.preGateSave)) {
+    const preGate = normalizeSaveData({ ...parsed.preGateSave, preGateSave: null }, false);
+    // O snapshot narrativo só é seguro se realmente representar o Portão.
+    if (preGate.currentPhaseId === "fase5"
+      && !preGate.descentState.active
+      && !preGate.descentState.brokenChain
+      && preGate.descentState.currentStep === 0) {
+      normalized.preGateSave = preGate;
+    }
   }
   return normalized;
 }
 
 export class SaveState {
+  private static volatileSave: SaveData | null = null;
+  private static storageWarning: string | null = null;
   private data: SaveData;
 
   private constructor(data: SaveData) {
@@ -148,19 +324,53 @@ export class SaveState {
   }
 
   static hasExistingSave(): boolean {
-    return localStorage.getItem(STORAGE_KEY) !== null;
+    if (SaveState.volatileSave && SaveState.storageWarning) return true;
+    try {
+      return localStorage.getItem(STORAGE_KEY) !== null;
+    } catch (err) {
+      SaveState.reportStorageFailure("ler", err);
+      return SaveState.volatileSave !== null;
+    }
   }
 
   static load(): SaveState {
+    if (SaveState.volatileSave && SaveState.storageWarning) {
+      return new SaveState(cloneSaveData(SaveState.volatileSave));
+    }
+    let raw: string | null;
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return new SaveState(defaultSave());
-      const parsed = JSON.parse(raw) as Partial<SaveData>;
-      return new SaveState(normalizeSaveData(parsed));
+      raw = localStorage.getItem(STORAGE_KEY);
+    } catch (err) {
+      SaveState.reportStorageFailure("ler", err);
+      return new SaveState(SaveState.volatileSave
+        ? cloneSaveData(SaveState.volatileSave)
+        : defaultSave());
+    }
+    if (!raw) return new SaveState(defaultSave());
+    try {
+      const normalized = normalizeSaveData(JSON.parse(raw));
+      SaveState.volatileSave = cloneSaveData(normalized);
+      return new SaveState(normalized);
     } catch (err) {
       console.warn("[SaveState] save corrompido, iniciando novo estado", err);
-      return new SaveState(defaultSave());
+      // JSON inválido não significa que o storage inteiro falhou. O estado
+      // volátil anterior ainda é preferível a quebrar a campanha em curso.
+      return new SaveState(SaveState.volatileSave
+        ? cloneSaveData(SaveState.volatileSave)
+        : defaultSave());
     }
+  }
+
+  /** Mensagem pronta para a UI; `null` significa persistência operacional. */
+  static getStorageWarning(): string | null {
+    return SaveState.storageWarning;
+  }
+
+  private static reportStorageFailure(operation: "ler" | "gravar", err: unknown): void {
+    SaveState.storageWarning = operation === "gravar"
+      ? "Não foi possível gravar o save neste navegador. O progresso continuará apenas nesta sessão."
+      : "O armazenamento local está indisponível. O progresso continuará apenas nesta sessão.";
+    console.warn(`[SaveState] falha ao ${operation} localStorage`, err);
   }
 
   /** Seção 20.2 - Novo Jogo: apaga somente depois de confirmação (a confirmação é responsabilidade da MenuScene). */
@@ -175,14 +385,20 @@ export class SaveState {
   }
 
   updateCheckpoint(x: number, y: number, consolidatedCreditIds: string[], wallet: number): void {
-    this.data.checkpoint = { x, y, consolidatedCreditIds };
-    this.data.wallet = wallet;
+    this.data = normalizeSaveData({
+      ...this.data,
+      checkpoint: { x, y, consolidatedCreditIds },
+      wallet,
+    });
     this.persist();
   }
 
   setPhase(phaseId: string): void {
-    this.data.currentPhaseId = phaseId;
-    this.data.checkpoint = { x: 0, y: 0, consolidatedCreditIds: [] };
+    this.data = normalizeSaveData({
+      ...this.data,
+      currentPhaseId: isCampaignPhaseId(phaseId) ? phaseId : "fase1",
+      checkpoint: { x: 0, y: 0, consolidatedCreditIds: [] },
+    });
     this.persist();
   }
 
@@ -205,6 +421,7 @@ export class SaveState {
       recoveredFragmentIds: [],
       retryUsedPhaseIds: [],
       pendingRemoval: null,
+      pendingRetryChoicePhaseId: null,
     };
     this.data.currentPhaseId = DESCENT_STEPS[0].phaseId;
     this.data.checkpoint = { x: 0, y: 0, consolidatedCreditIds: [] };
@@ -242,6 +459,7 @@ export class SaveState {
     }
     if (this.data.descentState.recoveredFragmentIds.includes(step.fragmentId)) {
       this.data.descentState.pendingRemoval = step.implant;
+      this.data.descentState.pendingRetryChoicePhaseId = null;
       this.persist();
       return "reforge";
     }
@@ -251,9 +469,25 @@ export class SaveState {
     }
     // A oportunidade e consumida ao concluir a fase sem o glitch, nao por morte/reinicio manual.
     this.data.descentState.retryUsedPhaseIds.push(step.phaseId);
+    this.data.descentState.pendingRetryChoicePhaseId = step.phaseId;
     this.data.checkpoint = { x: 0, y: 0, consolidatedCreditIds: [] };
     this.persist();
     return "retry";
+  }
+
+  /** Confirma a segunda tentativa e fecha somente a pendência da escolha. */
+  acceptDescentRetry(): boolean {
+    const step = descentStepAt(this.data.descentState.currentStep);
+    if (!this.data.descentState.active
+      || !step
+      || this.data.currentPhaseId !== step.phaseId
+      || this.data.descentState.pendingRetryChoicePhaseId !== step.phaseId) {
+      return false;
+    }
+    this.data.descentState.pendingRetryChoicePhaseId = null;
+    this.data.checkpoint = { x: 0, y: 0, consolidatedCreditIds: [] };
+    this.persist();
+    return true;
   }
 
   declineDescentRetry(): void {
@@ -265,6 +499,7 @@ export class SaveState {
     this.data.descentState.active = false;
     this.data.descentState.epiloguePending = false;
     this.data.descentState.pendingRemoval = null;
+    this.data.descentState.pendingRetryChoicePhaseId = null;
     this.data.checkpoint = { x: 0, y: 0, consolidatedCreditIds: [] };
     this.persist();
   }
@@ -276,6 +511,7 @@ export class SaveState {
     if (!descent.active || !step || descent.pendingRemoval !== step.implant) return null;
     this.data.abilities[step.implant] = false;
     descent.pendingRemoval = null;
+    descent.pendingRetryChoicePhaseId = null;
     descent.currentStep += 1;
     this.data.currentPhaseId = step.nextPhaseId;
     this.data.checkpoint = { x: 0, y: 0, consolidatedCreditIds: [] };
@@ -336,7 +572,17 @@ export class SaveState {
     this.persist();
   }
 
-  persist(): void {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(this.data));
+  persist(): boolean {
+    // O clone em memória vem primeiro: mesmo que cookies/storage estejam
+    // bloqueados, transições entre cenas continuam enxergando o estado novo.
+    SaveState.volatileSave = cloneSaveData(this.data);
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(this.data));
+      SaveState.storageWarning = null;
+      return true;
+    } catch (err) {
+      SaveState.reportStorageFailure("gravar", err);
+      return false;
+    }
   }
 }

@@ -86,6 +86,10 @@ export class DescentRetryScene extends Phaser.Scene {
     AudioManager.playSfx(this, SFX.uiConfirm, { volume: 0.4 });
     const progression = SaveState.load();
     if (this.retrySelected) {
+      if (!progression.acceptDescentRetry()) {
+        startLoadingTransition(this, "MenuScene");
+        return;
+      }
       const data = progression.get();
       startLoadingTransition(this, "GameScene", {
         phaseId: data.currentPhaseId,

@@ -168,6 +168,43 @@ for (const relativePath of maps) {
   assert.equal(objects.filter((object) => object.type === "spawn").length, 1, `${relativePath}: spawn`);
   assert.equal(objects.filter((object) => object.type === "checkpoint").length, 1, `${relativePath}: checkpoint`);
   assert.equal(objects.filter((object) => object.type === "phase_end").length, 1, `${relativePath}: phase_end`);
+
+  const durationSeconds = map.width * map.tilewidth / config.BASE_RUN_SPEED;
+  assert.ok(durationSeconds >= 90 && durationSeconds <= 120,
+    `${relativePath}: duração-base ${durationSeconds}s fora da progressão de 90–120s`);
+
+  const ground = map.layers.find((layer) => layer.name === "ground");
+  assert.ok(ground?.data, `${relativePath}: layer ground necessária para validar respawn`);
+  const firstSolidRowAt = (worldX) => {
+    const column = Math.max(0, Math.min(map.width - 1, Math.floor(worldX / map.tilewidth)));
+    for (let row = 0; row < map.height; row += 1) {
+      if (ground.data[row * map.width + column] !== 0) return row;
+    }
+    return -1;
+  };
+  const checkpoint = objects.find((object) => object.type === "checkpoint");
+  const checkpointX = checkpoint.x + checkpoint.width / 2;
+  const checkpointGroundRow = firstSolidRowAt(checkpointX);
+  assert.ok(checkpointGroundRow >= 0, `${relativePath}: checkpoint sem chão para respawn`);
+  const checkpointSurfaceY = checkpointGroundRow * map.tileheight;
+  const overlappingThreat = objects.find((object) => (
+    ["hazard", "enemy"].includes(object.type)
+    && checkpointX >= object.x
+    && checkpointX <= object.x + (object.width ?? 0)
+    && checkpointSurfaceY >= object.y
+    && checkpointSurfaceY <= object.y + (object.height ?? 0)
+  ));
+  assert.equal(overlappingThreat, undefined,
+    `${relativePath}: checkpoint sobre ameaça letal ${overlappingThreat?.name ?? "desconhecida"}`);
+
+  for (const anchor of objects.filter((object) => ["spawn", "phase_end"].includes(object.type))) {
+    const anchorX = anchor.x + (anchor.width ?? 0) / 2;
+    assert.ok(anchorX >= 0 && anchorX <= map.width * map.tilewidth,
+      `${relativePath}: ${anchor.type} fora dos limites horizontais`);
+    assert.ok(firstSolidRowAt(anchorX) >= 0,
+      `${relativePath}: ${anchor.type} sem superfície alcançável`);
+  }
+
 }
 
 const phase1Map = JSON.parse(fs.readFileSync(

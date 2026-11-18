@@ -1,6 +1,6 @@
 # Validação — hazards e fluxo das cinco fases
 
-Documento da branch `fix/gameplay-hazards-and-flow`.
+Documento consolidado na branch `fix/campaign-gameplay-and-save`.
 
 ## Regras cobertas
 
@@ -39,6 +39,20 @@ Documento da branch `fix/gameplay-hazards-and-flow`.
   preservando o último checkpoint.
 - Pausa: física, tweens, animações, relógio da cena, hazards e cooldowns ficam
   congelados.
+- Save: fase, coordenadas, carteira, IDs, implantes e progresso da descida são
+  normalizados antes de chegar às cenas. Coordenadas fora dos limites do mapa
+  voltam ao spawn; IDs futuros ou desconhecidos são descartados; carteira
+  negativa, infinita ou fracionária é reparada.
+- Save: o progresso narrativo é a fonte de verdade para reconstruir os
+  implantes. Fragmentos anteriores são restaurados quando a etapa prova que já
+  foram usados, e fase, retirada pendente e retry não podem apontar para etapas
+  diferentes.
+- Persistência: exceções de leitura ou escrita do `localStorage` não travam a
+  campanha. Um clone em memória mantém as transições da sessão e o menu avisa
+  claramente que o progresso pode ser perdido ao fechar o navegador.
+- Retry da descida: a decisão entre repetir o setor e aceitar Hollow possui um
+  estado explícito. Fechar o jogo na tela de escolha faz **Continuar** retornar
+  à mesma tela; a pendência só é removida ao confirmar uma opção.
 
 ## Verificações automatizadas
 
@@ -48,6 +62,7 @@ Execute:
 npm run typecheck
 npm run validate:assets
 npm run test:gameplay
+npm run test:narrative
 npm run test:multiplayer
 npm run build
 ```
@@ -58,6 +73,13 @@ dedicado da prensa, os cinco sprites e três animações do checkpoint, seu temp
 profundidade e posicionamento uniforme nas cinco fases, os GIDs exclusivos dos obstáculos baixos,
 continuidade geométrica do braço rotativo, seleção espacial das barreiras por
 scan e a presença de spawn, checkpoint e saída nas cinco fases Tiled.
+
+Além disso, a suíte verifica duração-base de 90–120 s, superfície válida sob
+spawn/checkpoint/saída e ausência de ameaça letal sobre cada respawn. O teste
+de narrativa injeta saves com fase, coordenadas, habilidades, fragmentos,
+carteira e IDs inválidos; simula `QuotaExceededError` e `SecurityError`; e
+reproduz interrupções na clínica, no Portão, na tela de retry e no último
+trecho da descida.
 
 ## Resultado do playtest automatizado em navegador — 07/11/2026
 

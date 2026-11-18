@@ -70,7 +70,9 @@
    de repetir ou aceitar Hollow e o nome da memória correspondente ao setor.
    Esquerda sempre seleciona repetir, direita sempre seleciona Hollow e ambas
    as opções aceitam clique.
-3. Escolha repetir e termine novamente sem o glitch.
+3. Ainda nessa tela, feche o jogo. Ao reabrir e selecionar `Continuar`, a
+   escolha deve reaparecer sem iniciar automaticamente o setor nem aceitar
+   Hollow. Escolha repetir e termine novamente sem o glitch.
 4. Resultado esperado: a cadeia quebra sem uma terceira tentativa; o epilogo
    mostra o corpo correspondente aos implantes ainda presentes e leva a
    `FINAL HOLLOW`.

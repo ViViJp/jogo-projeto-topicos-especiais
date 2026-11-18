@@ -21,6 +21,7 @@ export class MenuScene extends Phaser.Scene {
   private confirmText?: Phaser.GameObjects.Text;
   private confirmPanel?: Phaser.GameObjects.Graphics;
   private menuHint?: Phaser.GameObjects.Text;
+  private storageWarningText?: Phaser.GameObjects.Text;
   private hasSave = false;
   private panelX = 48;
   private panelY = 196;
@@ -80,6 +81,7 @@ export class MenuScene extends Phaser.Scene {
     }).setDepth(6);
 
     this.showMainMenu();
+    this.showStorageWarning();
 
     this.add.text(
       this.panelX + this.panelWidth / 2,
@@ -185,6 +187,10 @@ export class MenuScene extends Phaser.Scene {
   private continueGame(): void {
     const save = SaveState.load();
     const data = save.get();
+    if (data.descentState.pendingRetryChoicePhaseId) {
+      startLoadingTransition(this, "DescentRetryScene");
+      return;
+    }
     if (data.descentState.pendingRemoval) {
       startLoadingTransition(this, "ReForgeScene");
       return;
@@ -264,5 +270,23 @@ export class MenuScene extends Phaser.Scene {
     this.confirmPanel?.destroy();
     this.confirmText = undefined;
     this.confirmPanel = undefined;
+  }
+
+  private showStorageWarning(): void {
+    this.storageWarningText?.destroy();
+    const warning = SaveState.getStorageWarning();
+    if (!warning) return;
+    this.storageWarningText = this.add.text(
+      this.panelX + 28,
+      this.panelY + this.panelHeight - 74,
+      `SAVE SOMENTE EM MEMÓRIA\n${warning}`,
+      {
+        fontFamily: "Courier New, monospace",
+        fontSize: "13px",
+        color: "#ffb36b",
+        lineSpacing: 4,
+        wordWrap: { width: this.panelWidth - 56 },
+      },
+    ).setDepth(6);
   }
 }

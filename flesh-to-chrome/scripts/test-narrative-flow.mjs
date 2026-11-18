@@ -173,12 +173,13 @@ function interactiveInput(active) {
 }
 
 function fakeSaveModule(data) {
-  const calls = { decline: 0, load: 0, mark: [], begin: 0, newGame: 0 };
+  const calls = { accept: 0, decline: 0, load: 0, mark: [], begin: 0, newGame: 0 };
   const instance = {
     beginDescent() {
       calls.begin += 1;
       data.descentState.active = true;
     },
+    acceptDescentRetry() { calls.accept += 1; return true; },
     declineDescentRetry() { calls.decline += 1; },
     get() { return data; },
     markEndingReached(ending) { calls.mark.push(ending); },
@@ -198,6 +199,115 @@ const { SaveState } = loadTypeScriptModule(path.join(projectDirectory, "src/syst
 const { DESCENT_ROUTES } = loadTypeScriptModule(
   path.join(projectDirectory, "src/systems/DescentProgression.ts"),
 );
+const saveStorageKey = "flesh-to-chrome:save:v1";
+
+// Saves externos/corrompidos são reparados antes de qualquer cena receber os
+// dados. Fase, coordenadas, carteira, tipos de habilidade e IDs inválidos não
+// podem escapar para o runtime.
+memoryStorage.set(saveStorageKey, JSON.stringify({
+  version: 99,
+  currentPhaseId: "fase-inexistente",
+  checkpoint: {
+    x: 9_999_999,
+    y: -40,
+    consolidatedCreditIds: ["f1-safe-01", "f9-hack-01", 42, "f1-safe-01"],
+  },
+  wallet: -500,
+  abilities: { legs: "sim", arms: 1, eyes: {}, thrusters: true },
+  descentState: {
+    active: "true",
+    brokenChain: false,
+    currentStep: -8,
+    recoveredFragmentIds: ["fragmento-inexistente", 7],
+    retryUsedPhaseIds: ["fase99"],
+    pendingRemoval: "wings",
+  },
+  endingReached: "admin",
+}));
+const repairedInvalidSave = SaveState.load().get();
+assert.equal(repairedInvalidSave.version, 1);
+assert.equal(repairedInvalidSave.currentPhaseId, "fase1");
+assert.deepEqual(
+  { ...repairedInvalidSave.checkpoint, consolidatedCreditIds: Array.from(repairedInvalidSave.checkpoint.consolidatedCreditIds) },
+  { x: 0, y: 0, consolidatedCreditIds: ["f1-safe-01"] },
+);
+assert.equal(repairedInvalidSave.wallet, 0);
+assert.deepEqual(Object.values(repairedInvalidSave.abilities), [false, false, false, false]);
+assert.equal(repairedInvalidSave.endingReached, null);
+
+memoryStorage.set(saveStorageKey, JSON.stringify({
+  currentPhaseId: "fase1",
+  checkpoint: { x: 12_000, y: 560, consolidatedCreditIds: ["f5-risk-01"] },
+  wallet: 999,
+  abilities: { legs: false, arms: false, eyes: true, thrusters: "yes" },
+  descentState: {
+    active: true,
+    brokenChain: false,
+    epiloguePending: false,
+    currentStep: 2,
+    recoveredFragmentIds: ["glitch-topo-identidade", "glitch-industrial-familia"],
+    retryUsedPhaseIds: ["fase5", "fase3", "fase1"],
+    pendingRemoval: "eyes",
+    pendingRetryChoicePhaseId: "fase3",
+  },
+}));
+const repairedDescent = SaveState.load().get();
+assert.equal(repairedDescent.currentPhaseId, "fase3",
+  "a etapa da descida deve prevalecer sobre uma fase incompatível");
+assert.deepEqual(Object.values(repairedDescent.abilities), [true, true, false, false],
+  "implantes devem refletir somente retiradas já concluídas");
+assert.deepEqual(Array.from(repairedDescent.descentState.recoveredFragmentIds), [
+  "glitch-topo-identidade",
+  "glitch-corporativo-voz",
+]);
+assert.deepEqual(Array.from(repairedDescent.descentState.retryUsedPhaseIds), ["fase5", "fase3"]);
+assert.equal(repairedDescent.descentState.pendingRemoval, null);
+assert.equal(repairedDescent.descentState.pendingRetryChoicePhaseId, "fase3");
+assert.equal(repairedDescent.wallet, 0);
+assert.deepEqual(Array.from(repairedDescent.checkpoint.consolidatedCreditIds), []);
+
+// Migração dos saves antigos criados exatamente na tela de retry: a ausência
+// do campo explícito é reparada sem ignorar a escolha do jogador.
+memoryStorage.set(saveStorageKey, JSON.stringify({
+  currentPhaseId: "fase5",
+  abilities: { legs: true, arms: true, eyes: true, thrusters: true },
+  descentState: {
+    active: true,
+    brokenChain: false,
+    currentStep: 0,
+    recoveredFragmentIds: [],
+    retryUsedPhaseIds: ["fase5"],
+    pendingRemoval: null,
+  },
+}));
+assert.equal(SaveState.load().get().descentState.pendingRetryChoicePhaseId, "fase5");
+
+// localStorage pode lançar SecurityError/QuotaExceededError. O save continua
+// disponível entre cenas na memória e a UI recebe um aviso acionável.
+memoryStorage.clear();
+const originalSetItem = localStorage.setItem;
+const originalConsoleWarn = console.warn;
+console.warn = () => {};
+localStorage.setItem = () => { throw new Error("QuotaExceededError"); };
+const volatileSave = SaveState.newGame();
+volatileSave.setPhase("fase3");
+assert.match(SaveState.getStorageWarning(), /apenas nesta sessão/);
+assert.equal(SaveState.hasExistingSave(), true);
+assert.equal(SaveState.load().get().currentPhaseId, "fase3",
+  "falha de escrita não pode perder progresso durante a sessão");
+localStorage.setItem = originalSetItem;
+assert.equal(volatileSave.persist(), true);
+assert.equal(SaveState.getStorageWarning(), null);
+
+const originalGetItem = localStorage.getItem;
+localStorage.getItem = () => { throw new Error("SecurityError"); };
+assert.equal(SaveState.load().get().currentPhaseId, "fase3");
+assert.match(SaveState.getStorageWarning(), /apenas nesta sessão/);
+localStorage.getItem = originalGetItem;
+assert.equal(volatileSave.persist(), true);
+console.warn = originalConsoleWarn;
+
+memoryStorage.clear();
 assert.deepEqual(
   Array.from(DESCENT_ROUTES, (route) => route.targetSeconds),
   [30, 30, 30, 30, 5],
@@ -289,9 +399,17 @@ save.restorePreGateSave();
 save.beginDescent();
 assert.equal(save.completeDescentPhase(), "retry");
 assert.deepEqual(Array.from(save.get().descentState.retryUsedPhaseIds), ["fase5"]);
-assert.equal(save.completeDescentPhase(), "hollow");
-assert.equal(save.get().descentState.brokenChain, true);
-assert.equal(save.get().abilities.thrusters, true, "falha no primeiro glitch preserva todos os implantes");
+assert.equal(save.get().descentState.pendingRetryChoicePhaseId, "fase5",
+  "a escolha entre retry e Hollow deve ficar explicitamente pendente");
+const interruptedAtRetryChoice = SaveState.load();
+assert.equal(interruptedAtRetryChoice.get().descentState.pendingRetryChoicePhaseId, "fase5",
+  "fechar na tela de retry não pode pular a decisão narrativa");
+assert.equal(interruptedAtRetryChoice.acceptDescentRetry(), true);
+assert.equal(interruptedAtRetryChoice.get().descentState.pendingRetryChoicePhaseId, null);
+assert.equal(interruptedAtRetryChoice.completeDescentPhase(), "hollow");
+assert.equal(interruptedAtRetryChoice.get().descentState.brokenChain, true);
+assert.equal(interruptedAtRetryChoice.get().abilities.thrusters, true,
+  "falha no primeiro glitch preserva todos os implantes");
 
 const read = (relativePath) => fs.readFileSync(path.join(projectDirectory, relativePath), "utf8");
 const main = read("src/main.ts");
@@ -352,6 +470,11 @@ assert.match(main, /FeedbackScene/);
 assert.match(main, /LoadingScene/);
 assert.match(menu, /Continuar do Portão/);
 assert.match(menu, /restorePreGateSave\(\)/);
+assert.match(menu, /pendingRetryChoicePhaseId[\s\S]*?"DescentRetryScene"/,
+  "Continuar deve restaurar a decisão de retry antes de reabrir o setor");
+assert.match(menu, /SaveState\.getStorageWarning\(\)/);
+assert.match(menu, /SAVE SOMENTE EM MEMÓRIA/,
+  "falha do localStorage deve ser comunicada sem interromper o menu");
 assert.match(menu, /startLoadingTransition\(this, "ControlsScene", \{ campaignSetup \}\)/);
 assert.doesNotMatch(menu, /SaveState\.newGame\(\)/,
   "Menu não pode apagar o save antes da confirmação na tela de controles");
@@ -503,6 +626,8 @@ assert.match(retry, /isMenuRightJustDown\(\)[\s\S]*?this\.selectChoice\(false\)/
 assert.match(retry, /setInteractive\(\{ useHandCursor: true \}\)/);
 assert.match(retry, /pointerdown[\s\S]*?this\.confirmChoice\(\)/,
   "as duas opções de retry devem aceitar clique");
+assert.match(retry, /acceptDescentRetry\(\)/,
+  "repetir deve persistir a resolução da escolha pendente");
 assert.match(reforge, /completeBioprinting\(\)/);
 assert.match(reforge, /recycling\/holograma-pai\.png/);
 assert.match(reforge, /recycling\/holograma-ciborgue\.png/);
@@ -743,6 +868,7 @@ const uiData = {
   assert.equal(harness.starts.at(-1)?.key, "LoadingScene",
     "ENTER/A do teclado ou controle deve confirmar Repetir setor");
   assert.equal(harness.starts.at(-1)?.data?.nextScene, "GameScene");
+  assert.equal(save.calls.accept, 1);
 
   const mouseChoice = scene.choice(0, 0, "CONTINUAR", false);
   mouseChoice.emit("pointerdown");
