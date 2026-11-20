@@ -1,7 +1,9 @@
 const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
 const { DynamoDBDocumentClient, GetCommand, PutCommand, QueryCommand, UpdateCommand } = require("@aws-sdk/lib-dynamodb");
+const { SESClient, SendEmailCommand } = require("@aws-sdk/client-ses");
 
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
+const ses = new SESClient({});
 const table = process.env.TABLE_NAME;
 
 function response(statusCode, body) {
@@ -25,6 +27,8 @@ function readBody(event) {
 const defaultPreferences = { categories: { welcome: true, ending: false, match: true }, channels: { game: true, email: false }, revision: 0 };
 
 exports.handler = async (event) => {
+  if (!event.requestContext?.http && event.action === "welcome") return sendWelcome(event);
+
   const requestId = event.requestContext?.requestId || "";
   const userId = event.requestContext?.authorizer?.jwt?.claims?.sub || "";
   if (!userId) return fail(401, "UNAUTHENTICATED", "Sessão ausente.", requestId);
@@ -107,3 +111,188 @@ exports.handler = async (event) => {
     return fail(503, "UNAVAILABLE", "Falha nas comunicações.", requestId);
   }
 };
+
+async function sendWelcome(event) {
+  const userId = event.userId || "";
+  const email = event.email || "";
+  const name = event.name || email || "jogador";
+  if (!userId) return { notified: false, email: "skipped", attempts: 0 };
+  const notified = await ensureNote(userId);
+  const delivery = await deliverEmail(userId, email, name);
+  return { notified, email: delivery.state, attempts: delivery.attempts };
+}
+
+async function ensureNote(userId) {
+  const id = `welcome-${userId}`;
+  const now = new Date();
+  try {
+    await db.send(
+      new PutCommand({
+        TableName: table,
+        Item: {
+          pk: userId,
+          sk: `NOTE#${id}`,
+          id,
+          category: "welcome",
+          target: "game",
+          createdAt: now.toISOString(),
+          readAt: null,
+          expiresAt: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        },
+        ConditionExpression: "attribute_not_exists(pk)",
+      })
+    );
+    return true;
+  } catch (err) {
+    if (err.name === "ConditionalCheckFailedException") return true;
+    console.error(err.name || "note");
+    return false;
+  }
+}
+
+async function deliverEmail(userId, email, name) {
+  const key = { pk: userId, sk: "EMAIL#welcome" };
+  const current = (await db.send(new GetCommand({ TableName: table, Key: key }))).Item;
+  const attempts = Number(current?.attempts || 0);
+  if (["sent", "skipped", "suppressed", "uncertain"].includes(current?.state)) {
+    return { state: current.state, attempts };
+  }
+  if (current?.state === "sending") {
+    const age = Date.now() - Date.parse(current.updatedAt || "");
+    if (Number.isNaN(age) || age < 60 * 1000) return { state: "sending", attempts };
+    await markUncertain(key, attempts);
+    return { state: "uncertain", attempts };
+  }
+  if (attempts >= 5) return { state: "failed", attempts };
+  const from = process.env.SES_FROM || "";
+  if (!email) {
+    await putDelivery(key, "skipped", attempts, "");
+    return { state: "skipped", attempts };
+  }
+  if (!from) return { state: "pending", attempts };
+  const next = attempts + 1;
+  const reserved = await reserveSend(key, current, next);
+  if (!reserved) return { state: "sending", attempts };
+  try {
+    await ses.send(
+      new SendEmailCommand({
+        Source: from,
+        Destination: { ToAddresses: [email] },
+        Message: {
+          Subject: { Data: "Bem-vindo ao Flesh to Chrome", Charset: "UTF-8" },
+          Body: {
+            Text: {
+              Data: `Olá, ${name}. Sua conta foi criada. Se este e-mail falhar, o login continua valendo.`,
+              Charset: "UTF-8",
+            },
+          },
+        },
+      })
+    );
+  } catch (err) {
+    const permanent = ["MessageRejected", "MailFromDomainNotVerifiedException", "ConfigurationSetDoesNotExistException"].includes(
+      err.name
+    );
+    const state = permanent ? "suppressed" : "failed";
+    const stored = permanent ? 5 : next;
+    await finishSend(key, state, stored, err.name || "send");
+    return { state, attempts: stored };
+  }
+  const written = await finishSend(key, "sent", next, "");
+  if (!written) {
+    await markUncertain(key, next);
+    return { state: "uncertain", attempts: next };
+  }
+  return { state: "sent", attempts: next };
+}
+
+async function reserveSend(key, current, attempts) {
+  const now = new Date().toISOString();
+  try {
+    if (!current) {
+      await db.send(
+        new PutCommand({
+          TableName: table,
+          Item: { ...key, state: "sending", attempts, lastError: "", updatedAt: now },
+          ConditionExpression: "attribute_not_exists(pk)",
+        })
+      );
+    } else {
+      await db.send(
+        new UpdateCommand({
+          TableName: table,
+          Key: key,
+          UpdateExpression: "SET #state = :sending, attempts = :attempts, updatedAt = :now",
+          ConditionExpression: "#state = :previous",
+          ExpressionAttributeNames: { "#state": "state" },
+          ExpressionAttributeValues: {
+            ":sending": "sending",
+            ":attempts": attempts,
+            ":previous": current.state || "pending",
+            ":now": now,
+          },
+        })
+      );
+    }
+    return true;
+  } catch (err) {
+    if (err.name === "ConditionalCheckFailedException") return false;
+    throw err;
+  }
+}
+
+async function finishSend(key, state, attempts, lastError) {
+  try {
+    await db.send(
+      new UpdateCommand({
+        TableName: table,
+        Key: key,
+        UpdateExpression: "SET #state = :state, attempts = :attempts, lastError = :error, updatedAt = :now",
+        ConditionExpression: "#state = :sending",
+        ExpressionAttributeNames: { "#state": "state" },
+        ExpressionAttributeValues: {
+          ":state": state,
+          ":attempts": attempts,
+          ":error": lastError,
+          ":sending": "sending",
+          ":now": new Date().toISOString(),
+        },
+      })
+    );
+    return true;
+  } catch (err) {
+    console.error(err.name || "email-finish");
+    return false;
+  }
+}
+
+async function markUncertain(key, attempts) {
+  try {
+    await db.send(
+      new UpdateCommand({
+        TableName: table,
+        Key: key,
+        UpdateExpression: "SET #state = :uncertain, attempts = :attempts, updatedAt = :now",
+        ConditionExpression: "#state = :sending",
+        ExpressionAttributeNames: { "#state": "state" },
+        ExpressionAttributeValues: {
+          ":uncertain": "uncertain",
+          ":attempts": attempts,
+          ":sending": "sending",
+          ":now": new Date().toISOString(),
+        },
+      })
+    );
+  } catch (err) {
+    if (err.name !== "ConditionalCheckFailedException") console.error(err.name || "uncertain");
+  }
+}
+
+async function putDelivery(key, state, attempts, lastError) {
+  await db.send(
+    new PutCommand({
+      TableName: table,
+      Item: { ...key, state, attempts, lastError, updatedAt: new Date().toISOString() },
+    })
+  );
+}

@@ -1,7 +1,8 @@
 import Phaser from "phaser";
 import { SCREEN_WIDTH, SCREEN_HEIGHT } from "../config/GameConfig";
 import { InputManager } from "../systems/InputManager";
-import { SaveState } from "../systems/SaveState";
+import { CloudSession } from "../network/CloudSession";
+import { SaveState, SaveData } from "../systems/SaveState";
 import { GameSceneData } from "./GameScene";
 
 interface MenuOption {
@@ -26,7 +27,11 @@ export class MenuScene extends Phaser.Scene {
   private confirmText?: Phaser.GameObjects.Text;
   private menuHint?: Phaser.GameObjects.Text;
   private hasSave = false;
-  private mode: "main" | "phase-select" = "main";
+  private ready = false;
+  private statusText?: Phaser.GameObjects.Text;
+  private remoteSave: SaveData | null = null;
+  private remoteRevision = 0;
+  private mode: "main" | "phase-select" | "choice" = "main";
 
   constructor() {
     super("MenuScene");
@@ -59,16 +64,23 @@ export class MenuScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    this.hasSave = SaveState.hasExistingSave();
     this.menuHint = this.add
-      .text(SCREEN_WIDTH / 2, 270, "MENU PRINCIPAL", {
+      .text(SCREEN_WIDTH / 2, 250, "MENU PRINCIPAL", {
         fontFamily: "Courier New, monospace",
         fontSize: "16px",
         color: "#565f80",
       })
       .setOrigin(0.5);
-
-    this.showMainMenu();
+    this.statusText = this.add
+      .text(SCREEN_WIDTH / 2, 286, "Conectando...", {
+        fontFamily: "Courier New, monospace",
+        fontSize: "16px",
+        color: "#8892b0",
+        align: "center",
+        wordWrap: { width: 900 },
+      })
+      .setOrigin(0.5);
+    void this.prepare();
 
     this.add
       .text(
@@ -85,6 +97,11 @@ export class MenuScene extends Phaser.Scene {
   }
 
   update(): void {
+    if (!this.ready) {
+      this.input$.postUpdate();
+      return;
+    }
+
     if (this.confirmVisible) {
       if (this.input$.isCancelJustDown()) {
         this.hideConfirm();
@@ -117,8 +134,8 @@ export class MenuScene extends Phaser.Scene {
     this.optionTexts = [];
     this.selectedIndex = 0;
 
-    const startY = this.mode === "phase-select" ? 320 : 340;
-    const spacing = this.mode === "phase-select" ? 48 : 56;
+    const startY = this.mode === "main" ? 340 : 330;
+    const spacing = this.mode === "phase-select" ? 44 : 46;
     this.options.forEach((option, index) => {
       const text = this.add
         .text(SCREEN_WIDTH / 2, startY + index * spacing, option.label, {
@@ -153,6 +170,11 @@ export class MenuScene extends Phaser.Scene {
     this.options.push({ label: "Novo Jogo", action: () => this.newGame(this.hasSave) });
     this.options.push({ label: "Selecionar Fase (teste)", action: () => this.showPhaseSelect() });
     this.options.push({ label: "Multiplayer", action: () => this.openMultiplayer() });
+    if (CloudSession.current()) {
+      this.options.push({ label: "Sair", action: () => void this.logout() });
+    } else {
+      this.options.push({ label: "Entrar com Google", action: () => void this.login() });
+    }
     this.renderOptions();
   }
 
@@ -195,7 +217,165 @@ export class MenuScene extends Phaser.Scene {
     this.options[this.selectedIndex]?.action();
   }
 
+  private async prepare(): Promise<void> {
+    try {
+      SaveState.bootGuest();
+      await CloudSession.completeLoginIfNeeded();
+      await CloudSession.me();
+      const session = CloudSession.current();
+      if (!session) {
+        const remembered = CloudSession.storedOwner();
+        if (remembered) {
+          SaveState.bindAccount(remembered);
+          this.statusText?.setText("A sessão expirou. Entre de novo para sincronizar. O save da conta ficou neste aparelho.");
+        } else {
+          SaveState.bindSession();
+          this.statusText?.setText("Visitante: fechar a aba apaga o progresso desta sessão.");
+        }
+        this.finishPrepare();
+        return;
+      }
+      const guest = SaveState.readStored("session", SaveState.sessionKey());
+      const account = SaveState.readStored("account", SaveState.accountKey(session.profile.id));
+      const remote = await CloudSession.loadCampaign();
+      const guestProgress = Boolean(guest && SaveState.hasProgress(guest));
+      this.remoteRevision = remote.revision;
+      this.remoteSave = remote.save;
+      if (remote.status === "unavailable") {
+        SaveState.keepSession();
+        this.statusText?.setText(
+          "Não foi possível verificar a campanha na nuvem. As cópias locais foram preservadas."
+        );
+        this.finishPrepare();
+        return;
+      }
+      const remoteDiffers = Boolean(
+        remote.save && account && !CloudSession.same(account, remote.save)
+      );
+      if (guestProgress) {
+        SaveState.keepSession();
+        this.showChoice();
+        return;
+      }
+      if (remote.save && (!account || remoteDiffers)) {
+        SaveState.bindAccount(session.profile.id);
+        this.showChoice();
+        return;
+      }
+      if (remote.save) this.writeAccount(session.profile.id, remote.save);
+      SaveState.bindAccount(session.profile.id);
+      this.statusText?.setText(`Conta: ${session.profile.name}`);
+      this.finishPrepare();
+    } catch {
+      SaveState.bindSession();
+      this.statusText?.setText("A nuvem não respondeu. O jogo segue como visitante.");
+      this.finishPrepare();
+    }
+  }
+
+  private finishPrepare(): void {
+    this.mode = "main";
+    this.hasSave = SaveState.hasExistingSave();
+    this.ready = true;
+    this.showMainMenu();
+  }
+
+  private showChoice(): void {
+    this.ready = true;
+    this.mode = "choice";
+    const session = CloudSession.current();
+    this.menuHint?.setText("ESCOLHA O PROGRESSO");
+    this.statusText?.setText("Nada foi sobrescrito. Escolha qual cópia continua.");
+    const guest = session ? SaveState.readStored("session", SaveState.sessionKey()) : null;
+    const guestProgress = Boolean(guest && SaveState.hasProgress(guest));
+    this.options = [];
+    if (guestProgress) {
+      this.options.push({ label: "Trazer o progresso desta sessão", action: () => void this.importProgress() });
+    }
+    this.options.push({ label: "Manter o save da conta", action: () => void this.keepAccountProgress() });
+    if (this.remoteSave) {
+      this.options.push({ label: "Usar a campanha da nuvem", action: () => this.useRemote() });
+    }
+    this.options.push({ label: "Cancelar", action: () => this.keepGuestProgress() });
+    if (!session) this.options = [{ label: "Voltar", action: () => this.finishPrepare() }];
+    this.renderOptions();
+  }
+
+  private async importProgress(): Promise<void> {
+    const session = CloudSession.current();
+    const guest = SaveState.readStored("session", SaveState.sessionKey());
+    if (!session || !guest) return;
+    SaveState.importSession(session.profile.id);
+    const result = await CloudSession.saveCampaign(guest, this.remoteRevision, "guest-import");
+    this.statusText?.setText(this.syncText(session.profile.name, result));
+    this.finishPrepare();
+  }
+
+  private async keepAccountProgress(): Promise<void> {
+    const session = CloudSession.current();
+    if (!session) return;
+    SaveState.keepAccount(session.profile.id);
+    const local = SaveState.readStored("account", SaveState.accountKey(session.profile.id));
+    if (!local) {
+      this.finishPrepare();
+      return;
+    }
+    const result = await CloudSession.saveCampaign(local, this.remoteRevision, "local-sync");
+    this.statusText?.setText(this.syncText(session.profile.name, result));
+    this.finishPrepare();
+  }
+
+  private useRemote(): void {
+    const session = CloudSession.current();
+    if (!session || !this.remoteSave) return;
+    this.writeAccount(session.profile.id, this.remoteSave);
+    SaveState.bindAccount(session.profile.id);
+    this.statusText?.setText(`Conta: ${session.profile.name}. A campanha da nuvem foi carregada.`);
+    this.finishPrepare();
+  }
+
+  private writeAccount(userId: string, save: SaveData): void {
+    localStorage.setItem(SaveState.accountKey(userId), JSON.stringify(save));
+    sessionStorage.removeItem(SaveState.sessionKey());
+  }
+
+  private syncText(name: string, result: "saved" | "conflict" | "unavailable"): string {
+    if (result === "conflict") return "A campanha da nuvem mudou. Nada foi sobrescrito.";
+    if (result === "unavailable") return "A cópia local foi mantida. A nuvem não confirmou a gravação.";
+    return `Conta: ${name}`;
+  }
+
+  private keepGuestProgress(): void {
+    SaveState.keepSession();
+    const session = CloudSession.current();
+    this.statusText?.setText(
+      session
+        ? `${session.profile.name}: o progresso desta sessão ainda não foi para a conta.`
+        : "Visitante: fechar a aba apaga o progresso desta sessão."
+    );
+    this.finishPrepare();
+  }
+
+  private async login(): Promise<void> {
+    if (!(await CloudSession.api())) {
+      this.statusText?.setText("Login indisponível neste endereço.");
+      return;
+    }
+    await CloudSession.login();
+  }
+
+  private async logout(): Promise<void> {
+    await CloudSession.logout();
+    SaveState.logoutLocal();
+    this.statusText?.setText("Visitante: fechar a aba apaga o progresso desta sessão.");
+    this.finishPrepare();
+  }
+
   private openMultiplayer(): void {
+    if (!CloudSession.current()) {
+      this.statusText?.setText("Entre com Google antes do multiplayer.");
+      return;
+    }
     this.scene.start("MultiplayerScene");
   }
 
