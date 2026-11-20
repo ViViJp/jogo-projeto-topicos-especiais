@@ -1,3 +1,7 @@
+import { fromApiState, sameProgress, toApiState } from "./campaign-state";
+import { allowedApiOrigin, takeTicket } from "./api-origin";
+import type { SaveData } from "../systems/SaveState";
+
 const SESSION_KEY = "flesh-to-chrome:session";
 
 export interface PlayerProfile {
@@ -13,6 +17,12 @@ export interface PlayerSession {
   profile: PlayerProfile;
 }
 
+export interface RemoteCampaign {
+  status: "present" | "none" | "unavailable";
+  revision: number;
+  save: SaveData | null;
+}
+
 interface SessionResponse {
   accessToken: string;
   refreshToken?: string;
@@ -21,8 +31,19 @@ interface SessionResponse {
 }
 
 let apiBase: string | null = null;
+let publishedApi = "";
 
 export class CloudSession {
+  static storedOwner(): string | null {
+    try {
+      const raw = sessionStorage.getItem(SESSION_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw) as PlayerSession;
+      return parsed.profile?.id || null;
+    } catch {
+      return null;
+    }
+  }
   static current(): PlayerSession | null {
     try {
       const raw = sessionStorage.getItem(SESSION_KEY);
@@ -38,25 +59,26 @@ export class CloudSession {
 
   static async api(): Promise<string | null> {
     if (apiBase) return apiBase;
+    publishedApi = await readPublishedApi();
+    const pageHost = window.location.hostname;
+    const localPage = pageHost === "localhost" || pageHost === "127.0.0.1";
     const fromQuery = new URLSearchParams(window.location.search).get("api");
-    if (fromQuery) {
-      apiBase = fromQuery.replace(/\/$/, "");
-      return apiBase;
+    if (localPage && fromQuery) {
+      const allowed = allowedApiOrigin(fromQuery, publishedApi, pageHost);
+      if (allowed) {
+        apiBase = allowed;
+        return apiBase;
+      }
     }
-    try {
-      const response = await fetch("/cloud-config.json", { cache: "no-store" });
-      if (!response.ok) return null;
-      const body = (await response.json()) as { api?: string };
-      if (!body.api) return null;
-      apiBase = body.api.replace(/\/$/, "");
-      return apiBase;
-    } catch {
-      return null;
-    }
+    if (!publishedApi) return null;
+    apiBase = allowedApiOrigin(publishedApi, publishedApi, pageHost);
+    return apiBase || null;
   }
 
   static async completeLoginIfNeeded(): Promise<PlayerSession | null> {
-    const ticket = new URLSearchParams(window.location.search).get("ticket");
+    const currentUrl = new URL(window.location.href);
+    const { ticket, href } = takeTicket(currentUrl.href);
+    if (ticket) window.history.replaceState({}, "", href);
     if (!ticket) return CloudSession.current();
     const api = await CloudSession.api();
     if (!api) return null;
@@ -74,9 +96,6 @@ export class CloudSession {
       profile: body.profile,
     };
     sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
-    const url = new URL(window.location.href);
-    url.searchParams.delete("ticket");
-    window.history.replaceState({}, "", url.pathname + url.search + url.hash);
     return session;
   }
 
@@ -117,15 +136,69 @@ export class CloudSession {
     return profile;
   }
 
-  static async campaign(): Promise<"present" | "none" | "unavailable"> {
+  static async loadCampaign(): Promise<RemoteCampaign> {
+    const api = await CloudSession.api();
+    const session = CloudSession.current();
+    if (!api || !session) return { status: "unavailable", revision: 0, save: null };
+    let response: Response;
+    try {
+      response = await fetch(`${api}/me/campaign`, {
+        headers: { authorization: `Bearer ${session.accessToken}` },
+      });
+    } catch {
+      return { status: "unavailable", revision: 0, save: null };
+    }
+    if (response.status === 404) return { status: "none", revision: 0, save: null };
+    if (!response.ok) return { status: "unavailable", revision: 0, save: null };
+    const body = (await response.json()) as { revision?: number; state?: Parameters<typeof fromApiState>[0] };
+    if (!body.state || typeof body.revision !== "number") return { status: "unavailable", revision: 0, save: null };
+    return { status: "present", revision: body.revision, save: fromApiState(body.state) };
+  }
+
+  static async saveCampaign(
+    save: SaveData,
+    revision: number,
+    source: "guest-import" | "local-sync"
+  ): Promise<"saved" | "conflict" | "unavailable"> {
     const api = await CloudSession.api();
     const session = CloudSession.current();
     if (!api || !session) return "unavailable";
-    const response = await fetch(`${api}/me/campaign`, {
-      headers: { authorization: `Bearer ${session.accessToken}` },
-    });
-    if (response.status === 404) return "none";
+    let response: Response;
+    try {
+      response = await fetch(`${api}/me/campaign`, {
+        method: "PUT",
+        headers: {
+          authorization: `Bearer ${session.accessToken}`,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          operationId: crypto.randomUUID(),
+          expectedRevision: revision,
+          schemaVersion: 1,
+          source,
+          state: toApiState(save),
+        }),
+      });
+    } catch {
+      return "unavailable";
+    }
+    if (response.status === 409) return "conflict";
     if (!response.ok) return "unavailable";
-    return "present";
+    return "saved";
+  }
+
+  static same(left: SaveData, right: SaveData): boolean {
+    return sameProgress(left, right);
+  }
+}
+
+async function readPublishedApi(): Promise<string> {
+  try {
+    const response = await fetch("/cloud-config.json", { cache: "no-store" });
+    if (!response.ok) return "";
+    const body = (await response.json()) as { api?: string };
+    return body.api || "";
+  } catch {
+    return "";
   }
 }

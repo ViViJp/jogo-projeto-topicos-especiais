@@ -2,7 +2,7 @@ import Phaser from "phaser";
 import { SCREEN_WIDTH, SCREEN_HEIGHT } from "../config/GameConfig";
 import { InputManager } from "../systems/InputManager";
 import { CloudSession } from "../network/CloudSession";
-import { SaveState } from "../systems/SaveState";
+import { SaveState, SaveData } from "../systems/SaveState";
 import { GameSceneData } from "./GameScene";
 
 interface MenuOption {
@@ -29,7 +29,8 @@ export class MenuScene extends Phaser.Scene {
   private hasSave = false;
   private ready = false;
   private statusText?: Phaser.GameObjects.Text;
-  private choice: "none" | "import" | "conflict" = "none";
+  private remoteSave: SaveData | null = null;
+  private remoteRevision = 0;
   private mode: "main" | "phase-select" | "choice" = "main";
 
   constructor() {
@@ -217,40 +218,62 @@ export class MenuScene extends Phaser.Scene {
   }
 
   private async prepare(): Promise<void> {
-    SaveState.bootGuest();
-    await CloudSession.completeLoginIfNeeded();
-    await CloudSession.me();
-    const session = CloudSession.current();
-    if (!session) {
-      SaveState.prefer("session");
-      this.statusText?.setText("Visitante: fechar a aba apaga o progresso desta sessão.");
+    try {
+      SaveState.bootGuest();
+      await CloudSession.completeLoginIfNeeded();
+      await CloudSession.me();
+      const session = CloudSession.current();
+      if (!session) {
+        const remembered = CloudSession.storedOwner();
+        if (remembered) {
+          SaveState.bindAccount(remembered);
+          this.statusText?.setText("A sessão expirou. Entre de novo para sincronizar. O save da conta ficou neste aparelho.");
+        } else {
+          SaveState.bindSession();
+          this.statusText?.setText("Visitante: fechar a aba apaga o progresso desta sessão.");
+        }
+        this.finishPrepare();
+        return;
+      }
+      const guest = SaveState.readStored("session", SaveState.sessionKey());
+      const account = SaveState.readStored("account", SaveState.accountKey(session.profile.id));
+      const remote = await CloudSession.loadCampaign();
+      const guestProgress = Boolean(guest && SaveState.hasProgress(guest));
+      this.remoteRevision = remote.revision;
+      this.remoteSave = remote.save;
+      if (remote.status === "unavailable") {
+        SaveState.keepSession();
+        this.statusText?.setText(
+          "Não foi possível verificar a campanha na nuvem. As cópias locais foram preservadas."
+        );
+        this.finishPrepare();
+        return;
+      }
+      const remoteDiffers = Boolean(
+        remote.save && account && !CloudSession.same(account, remote.save)
+      );
+      if (guestProgress) {
+        SaveState.keepSession();
+        this.showChoice();
+        return;
+      }
+      if (remote.save && (!account || remoteDiffers)) {
+        SaveState.bindAccount(session.profile.id);
+        this.showChoice();
+        return;
+      }
+      if (remote.save) this.writeAccount(session.profile.id, remote.save);
+      SaveState.bindAccount(session.profile.id);
+      this.statusText?.setText(`Conta: ${session.profile.name}`);
       this.finishPrepare();
-      return;
+    } catch {
+      SaveState.bindSession();
+      this.statusText?.setText("A nuvem não respondeu. O jogo segue como visitante.");
+      this.finishPrepare();
     }
-    const guest = SaveState.readStored("session", SaveState.sessionKey());
-    const account = SaveState.readStored("account", SaveState.accountKey(session.profile.id));
-    const remote = await CloudSession.campaign();
-    const guestProgress = Boolean(guest && SaveState.hasProgress(guest));
-    const accountProgress = Boolean(account && SaveState.hasProgress(account));
-    if (guestProgress && (accountProgress || remote === "present")) {
-      this.choice = "conflict";
-      SaveState.keepSession();
-      this.showChoice();
-      return;
-    }
-    if (guestProgress) {
-      this.choice = "import";
-      SaveState.keepSession();
-      this.showChoice();
-      return;
-    }
-    SaveState.keepAccount();
-    this.statusText?.setText(`Conta: ${session.profile.name}`);
-    this.finishPrepare();
   }
 
   private finishPrepare(): void {
-    this.choice = "none";
     this.mode = "main";
     this.hasSave = SaveState.hasExistingSave();
     this.ready = true;
@@ -262,39 +285,64 @@ export class MenuScene extends Phaser.Scene {
     this.mode = "choice";
     const session = CloudSession.current();
     this.menuHint?.setText("ESCOLHA O PROGRESSO");
-    this.statusText?.setText(
-      this.choice === "conflict"
-        ? "Há progresso nesta sessão e um save da conta. Nada foi sobrescrito."
-        : "Importar o progresso desta sessão para a conta?"
-    );
-    this.options =
-      this.choice === "conflict"
-        ? [
-            { label: "Trazer o progresso desta sessão", action: () => this.importProgress() },
-            { label: "Manter o save da conta", action: () => this.keepAccountProgress() },
-            { label: "Cancelar", action: () => this.keepGuestProgress() },
-          ]
-        : [
-            { label: "Salvar este progresso na conta", action: () => this.importProgress() },
-            { label: "Continuar sem salvar na conta", action: () => this.keepGuestProgress() },
-          ];
+    this.statusText?.setText("Nada foi sobrescrito. Escolha qual cópia continua.");
+    const guest = session ? SaveState.readStored("session", SaveState.sessionKey()) : null;
+    const guestProgress = Boolean(guest && SaveState.hasProgress(guest));
+    this.options = [];
+    if (guestProgress) {
+      this.options.push({ label: "Trazer o progresso desta sessão", action: () => void this.importProgress() });
+    }
+    this.options.push({ label: "Manter o save da conta", action: () => void this.keepAccountProgress() });
+    if (this.remoteSave) {
+      this.options.push({ label: "Usar a campanha da nuvem", action: () => this.useRemote() });
+    }
+    this.options.push({ label: "Cancelar", action: () => this.keepGuestProgress() });
     if (!session) this.options = [{ label: "Voltar", action: () => this.finishPrepare() }];
     this.renderOptions();
   }
 
-  private importProgress(): void {
+  private async importProgress(): Promise<void> {
     const session = CloudSession.current();
-    if (!session) return;
+    const guest = SaveState.readStored("session", SaveState.sessionKey());
+    if (!session || !guest) return;
     SaveState.importSession(session.profile.id);
-    this.statusText?.setText(`Conta: ${session.profile.name}. A nuvem não foi sobrescrita.`);
+    const result = await CloudSession.saveCampaign(guest, this.remoteRevision, "guest-import");
+    this.statusText?.setText(this.syncText(session.profile.name, result));
     this.finishPrepare();
   }
 
-  private keepAccountProgress(): void {
+  private async keepAccountProgress(): Promise<void> {
     const session = CloudSession.current();
-    SaveState.keepAccount();
-    this.statusText?.setText(session ? `Conta: ${session.profile.name}` : "");
+    if (!session) return;
+    SaveState.keepAccount(session.profile.id);
+    const local = SaveState.readStored("account", SaveState.accountKey(session.profile.id));
+    if (!local) {
+      this.finishPrepare();
+      return;
+    }
+    const result = await CloudSession.saveCampaign(local, this.remoteRevision, "local-sync");
+    this.statusText?.setText(this.syncText(session.profile.name, result));
     this.finishPrepare();
+  }
+
+  private useRemote(): void {
+    const session = CloudSession.current();
+    if (!session || !this.remoteSave) return;
+    this.writeAccount(session.profile.id, this.remoteSave);
+    SaveState.bindAccount(session.profile.id);
+    this.statusText?.setText(`Conta: ${session.profile.name}. A campanha da nuvem foi carregada.`);
+    this.finishPrepare();
+  }
+
+  private writeAccount(userId: string, save: SaveData): void {
+    localStorage.setItem(SaveState.accountKey(userId), JSON.stringify(save));
+    sessionStorage.removeItem(SaveState.sessionKey());
+  }
+
+  private syncText(name: string, result: "saved" | "conflict" | "unavailable"): string {
+    if (result === "conflict") return "A campanha da nuvem mudou. Nada foi sobrescrito.";
+    if (result === "unavailable") return "A cópia local foi mantida. A nuvem não confirmou a gravação.";
+    return `Conta: ${name}`;
   }
 
   private keepGuestProgress(): void {

@@ -154,8 +154,14 @@ async function deliverEmail(userId, email, name) {
   const key = { pk: userId, sk: "EMAIL#welcome" };
   const current = (await db.send(new GetCommand({ TableName: table, Key: key }))).Item;
   const attempts = Number(current?.attempts || 0);
-  if (current?.state === "sent" || current?.state === "skipped" || current?.state === "suppressed") {
+  if (["sent", "skipped", "suppressed", "uncertain"].includes(current?.state)) {
     return { state: current.state, attempts };
+  }
+  if (current?.state === "sending") {
+    const age = Date.now() - Date.parse(current.updatedAt || "");
+    if (Number.isNaN(age) || age < 60 * 1000) return { state: "sending", attempts };
+    await markUncertain(key, attempts);
+    return { state: "uncertain", attempts };
   }
   if (attempts >= 5) return { state: "failed", attempts };
   const from = process.env.SES_FROM || "";
@@ -165,6 +171,8 @@ async function deliverEmail(userId, email, name) {
   }
   if (!from) return { state: "pending", attempts };
   const next = attempts + 1;
+  const reserved = await reserveSend(key, current, next);
+  if (!reserved) return { state: "sending", attempts };
   try {
     await ses.send(
       new SendEmailCommand({
@@ -181,16 +189,102 @@ async function deliverEmail(userId, email, name) {
         },
       })
     );
-    await putDelivery(key, "sent", next, "");
-    return { state: "sent", attempts: next };
   } catch (err) {
     const permanent = ["MessageRejected", "MailFromDomainNotVerifiedException", "ConfigurationSetDoesNotExistException"].includes(
       err.name
     );
     const state = permanent ? "suppressed" : "failed";
     const stored = permanent ? 5 : next;
-    await putDelivery(key, state, stored, err.name || "send");
+    await finishSend(key, state, stored, err.name || "send");
     return { state, attempts: stored };
+  }
+  const written = await finishSend(key, "sent", next, "");
+  if (!written) {
+    await markUncertain(key, next);
+    return { state: "uncertain", attempts: next };
+  }
+  return { state: "sent", attempts: next };
+}
+
+async function reserveSend(key, current, attempts) {
+  const now = new Date().toISOString();
+  try {
+    if (!current) {
+      await db.send(
+        new PutCommand({
+          TableName: table,
+          Item: { ...key, state: "sending", attempts, lastError: "", updatedAt: now },
+          ConditionExpression: "attribute_not_exists(pk)",
+        })
+      );
+    } else {
+      await db.send(
+        new UpdateCommand({
+          TableName: table,
+          Key: key,
+          UpdateExpression: "SET #state = :sending, attempts = :attempts, updatedAt = :now",
+          ConditionExpression: "#state = :previous",
+          ExpressionAttributeNames: { "#state": "state" },
+          ExpressionAttributeValues: {
+            ":sending": "sending",
+            ":attempts": attempts,
+            ":previous": current.state || "pending",
+            ":now": now,
+          },
+        })
+      );
+    }
+    return true;
+  } catch (err) {
+    if (err.name === "ConditionalCheckFailedException") return false;
+    throw err;
+  }
+}
+
+async function finishSend(key, state, attempts, lastError) {
+  try {
+    await db.send(
+      new UpdateCommand({
+        TableName: table,
+        Key: key,
+        UpdateExpression: "SET #state = :state, attempts = :attempts, lastError = :error, updatedAt = :now",
+        ConditionExpression: "#state = :sending",
+        ExpressionAttributeNames: { "#state": "state" },
+        ExpressionAttributeValues: {
+          ":state": state,
+          ":attempts": attempts,
+          ":error": lastError,
+          ":sending": "sending",
+          ":now": new Date().toISOString(),
+        },
+      })
+    );
+    return true;
+  } catch (err) {
+    console.error(err.name || "email-finish");
+    return false;
+  }
+}
+
+async function markUncertain(key, attempts) {
+  try {
+    await db.send(
+      new UpdateCommand({
+        TableName: table,
+        Key: key,
+        UpdateExpression: "SET #state = :uncertain, attempts = :attempts, updatedAt = :now",
+        ConditionExpression: "#state = :sending",
+        ExpressionAttributeNames: { "#state": "state" },
+        ExpressionAttributeValues: {
+          ":uncertain": "uncertain",
+          ":attempts": attempts,
+          ":sending": "sending",
+          ":now": new Date().toISOString(),
+        },
+      })
+    );
+  } catch (err) {
+    if (err.name !== "ConditionalCheckFailedException") console.error(err.name || "uncertain");
   }
 }
 

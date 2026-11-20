@@ -80,9 +80,9 @@ Esse primeiro `up` cria a zona, a US$ 0,50 por mês, e não pede certificado. Co
 
 As rotas privadas exigem o access token do Cognito, com escopo `openid`. ID token não passa. O início e o callback do Google, e a troca do ticket em `POST /auth/session`, continuam públicos. O `state` do login é aleatório, expira, só vale uma vez e precisa coincidir com o cookie da tentativa. O destino de retorno tem de ser a origem da CloudFront ou, na dev, `localhost:1234`.
 
-No primeiro cadastro, a Conta grava um pedido de boas-vindas junto do perfil. A notificação do jogo e o estado do e-mail ficam separados. Falha transitória do SES tenta de novo no próximo acesso, até cinco vezes, sem repetir um e-mail já aceito. Sem remetente, o e-mail fica pendente e o login segue. Na dev, o remetente opcional é `flesh-to-chrome:sesFromEmail`. Na prod, o remetente `noreply@nihil-legere-possum.lat` e a identidade SES só entram com `publishDomain` em `true`, no mesmo passo dos certificados. A permissão de envio aponta só para essa identidade.
+No primeiro cadastro, a Conta grava o pedido de boas-vindas e só enfileira a Lambda de comunicações. O login não espera o SES. A nota do jogo e o e-mail têm estados separados. O envio reserva a tentativa antes de chamar o SES. Se a resposta ficar incerta, não há segundo envio até a reconciliação. Sem remetente, o e-mail fica pendente e o login segue. Na dev, o remetente opcional é `flesh-to-chrome:sesFromEmail`. Na prod, o remetente `noreply@nihil-legere-possum.lat` e a identidade SES só entram com `publishDomain` em `true`, no mesmo passo dos certificados. A permissão de envio aponta só para essa identidade.
 
-O jogo publicado lê `cloud-config.json` e oferece Entrar com Google e Sair. Visitante não grava campanha no `localStorage` e não entra no multiplayer. O progresso de cada conta fica numa chave própria. Se a sessão e a conta divergem, o menu pede escolha e não sobrescreve sozinho.
+O jogo publicado usa só o `cloud-config.json`. O parâmetro `?api=` só vale em `localhost` ou `127.0.0.1`, e só para uma API local ou a origem publicada. O ticket sai da URL antes da troca. Visitante não grava campanha no `localStorage` e não entra no multiplayer. O progresso de cada conta fica numa chave própria, mesmo se o token expirar no meio da fase. Se a sessão, a conta e a nuvem divergem, o menu pede escolha. Conflito 409 não sobrescreve. Se a nuvem não responder, as cópias locais ficam e a sincronização fica pendente.
 
 ## Google e remetente
 
@@ -111,5 +111,5 @@ pulumi config set flesh-to-chrome:sesFromEmail seu-email@exemplo.com
 
 - API Gateway WebSocket, ticket de conexão e o transporte da corrida. Continuam condicionados à decisão D04.
 - Loja e rotas `/me/cosmetics`. O cronograma da loja segue pendente.
-- O barramento do documento 12 (DynamoDB Streams, publicador, SQS e o feedback SNS). A boas-vindas fica gravada na conta e pode ser repetida até cinco vezes. A campanha já grava o outbox na mesma transação do save. A Lambda de auditoria deduplica e persiste o evento quando recebe `{ "action": "ingest", "events": [...] }` por invocação direta. Essa invocação não está ligada a uma fila.
+- O barramento do documento 12 (DynamoDB Streams, publicador, SQS e o feedback SNS). A boas-vindas fica gravada na conta e a Lambda de comunicações é chamada de forma assíncrona, com reserva da tentativa antes do SES. A campanha já grava o outbox na mesma transação do save. A Lambda de auditoria deduplica e persiste o evento quando recebe `{ "action": "ingest", "events": [...] }` por invocação direta. Essa invocação não está ligada a uma fila.
 - Suíte de testes, integração contínua e deploy contínuo. Ficam para a entrega seguinte.

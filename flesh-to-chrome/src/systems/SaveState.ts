@@ -114,7 +114,8 @@ function normalizeSaveData(parsed: Partial<SaveData>): SaveData {
 
 type SaveStore = "session" | "account";
 
-let forcedStore: SaveStore | null = null;
+let ownerChosen = false;
+let ownerId: string | null = null;
 let guestBooted = false;
 
 function sessionKey(): string {
@@ -126,10 +127,12 @@ function accountKey(userId: string): string {
 }
 
 function activeStore(): { store: SaveStore; key: string } {
-  if (forcedStore === "session") return { store: "session", key: sessionKey() };
+  if (ownerChosen && ownerId) return { store: "account", key: accountKey(ownerId) };
+  if (ownerChosen) return { store: "session", key: sessionKey() };
   const session = CloudSession.current();
-  if (forcedStore === "account" && session) return { store: "account", key: accountKey(session.profile.id) };
   if (session) return { store: "account", key: accountKey(session.profile.id) };
+  const remembered = CloudSession.storedOwner();
+  if (remembered) return { store: "account", key: accountKey(remembered) };
   return { store: "session", key: sessionKey() };
 }
 
@@ -143,9 +146,11 @@ function writeRaw(store: SaveStore, key: string, value: string): void {
 
 export class SaveState {
   private data: SaveData;
+  private place: { store: SaveStore; key: string };
 
-  private constructor(data: SaveData) {
+  private constructor(data: SaveData, place: { store: SaveStore; key: string }) {
     this.data = data;
+    this.place = place;
   }
 
   static sessionKey(): string {
@@ -190,29 +195,49 @@ export class SaveState {
     }
   }
 
+  static bindAccount(userId: string): void {
+    ownerChosen = true;
+    ownerId = userId;
+  }
+
+  static bindSession(): void {
+    ownerChosen = true;
+    ownerId = null;
+  }
+
   static prefer(store: SaveStore): void {
-    forcedStore = store;
+    if (store === "session") SaveState.bindSession();
+    else {
+      const session = CloudSession.current();
+      if (session) SaveState.bindAccount(session.profile.id);
+      else SaveState.bindSession();
+    }
   }
 
   static importSession(userId: string): void {
     const guest = SaveState.readStored("session", sessionKey());
     if (guest) localStorage.setItem(accountKey(userId), JSON.stringify(guest));
     sessionStorage.removeItem(sessionKey());
-    forcedStore = "account";
+    SaveState.bindAccount(userId);
   }
 
-  static keepAccount(): void {
+  static keepAccount(userId?: string): void {
+    const id = userId || ownerId || CloudSession.current()?.profile.id || "";
     sessionStorage.removeItem(sessionKey());
-    forcedStore = "account";
+    if (!id) {
+      SaveState.bindSession();
+      return;
+    }
+    SaveState.bindAccount(id);
   }
 
   static keepSession(): void {
-    forcedStore = "session";
+    SaveState.bindSession();
   }
 
   static logoutLocal(): void {
-    if (forcedStore !== "session") sessionStorage.removeItem(sessionKey());
-    forcedStore = "session";
+    sessionStorage.removeItem(sessionKey());
+    SaveState.bindSession();
   }
 
   static hasExistingSave(): boolean {
@@ -224,12 +249,13 @@ export class SaveState {
   static load(): SaveState {
     const place = activeStore();
     const stored = SaveState.readStored(place.store, place.key);
-    return new SaveState(stored ?? defaultSave());
+    return new SaveState(stored ?? defaultSave(), place);
   }
 
   /** Seção 20.2 - Novo Jogo: apaga somente depois de confirmação (a confirmação é responsabilidade da MenuScene). */
   static newGame(): SaveState {
-    const fresh = new SaveState(defaultSave());
+    const place = activeStore();
+    const fresh = new SaveState(defaultSave(), place);
     fresh.persist();
     return fresh;
   }
@@ -287,7 +313,6 @@ export class SaveState {
   }
 
   persist(): void {
-    const place = activeStore();
-    writeRaw(place.store, place.key, JSON.stringify(this.data));
+    writeRaw(this.place.store, this.place.key, JSON.stringify(this.data));
   }
 }

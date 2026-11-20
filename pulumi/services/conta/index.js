@@ -20,7 +20,12 @@ const ticketTtlSeconds = 2 * 60;
 function response(statusCode, body, extra) {
   return {
     statusCode,
-    headers: { "content-type": "application/json", ...(extra?.headers || {}) },
+    headers: {
+      "content-type": "application/json",
+      "cache-control": "no-store",
+      "referrer-policy": "no-referrer",
+      ...(extra?.headers || {}),
+    },
     cookies: extra?.cookies,
     body: body === undefined || body === "" ? "" : JSON.stringify(body),
   };
@@ -78,9 +83,9 @@ exports.handler = async (event) => {
   const path = event.rawPath || "";
 
   try {
-    if (method === "GET" && path === "/auth/google/start") return startGoogle(event, requestId);
-    if (method === "GET" && path === "/auth/google/callback") return finishGoogle(event, requestId);
-    if (method === "POST" && path === "/auth/session") return exchangeTicket(event, requestId);
+    if (method === "GET" && path === "/auth/google/start") return await startGoogle(event, requestId);
+    if (method === "GET" && path === "/auth/google/callback") return await finishGoogle(event, requestId);
+    if (method === "POST" && path === "/auth/session") return await exchangeTicket(event, requestId);
   } catch (err) {
     console.error(err);
     return fail(503, "UNAVAILABLE", "Falha no login.", requestId);
@@ -344,47 +349,35 @@ async function ensureAccount(userId, claims) {
 }
 
 async function ensureWelcome(account) {
-  const current = await db.send(new GetCommand({ TableName: table, Key: { pk: account.id, sk: "WELCOME" } }));
-  if (!current.Item) {
-    try {
-      await db.send(
-        new PutCommand({
-          TableName: table,
-          Item: { pk: account.id, sk: "WELCOME", status: "pending", createdAt: new Date().toISOString() },
-          ConditionExpression: "attribute_not_exists(pk)",
-        })
-      );
-    } catch (err) {
-      if (err.name !== "ConditionalCheckFailedException") console.error(err.name || "welcome");
-    }
-  } else if (current.Item.status === "settled") {
-    return;
+  try {
+    await db.send(
+      new PutCommand({
+        TableName: table,
+        Item: {
+          pk: account.id,
+          sk: "WELCOME",
+          status: "pending",
+          note: "pending",
+          email: "pending",
+          createdAt: new Date().toISOString(),
+        },
+        ConditionExpression: "attribute_not_exists(pk)",
+      })
+    );
+  } catch (err) {
+    if (err.name !== "ConditionalCheckFailedException") console.error(err.name || "welcome");
   }
-  const result = await requestWelcome(account);
-  if (!result) return;
-  const attempts = Number(result.attempts || 0);
-  const settled =
-    (result.notified && ["sent", "skipped", "suppressed"].includes(result.email)) || attempts >= 5;
-  if (!settled) return;
-  await db.send(
-    new UpdateCommand({
-      TableName: table,
-      Key: { pk: account.id, sk: "WELCOME" },
-      UpdateExpression: "SET #status = :settled",
-      ExpressionAttributeNames: { "#status": "status" },
-      ExpressionAttributeValues: { ":settled": "settled" },
-    })
-  );
+  await requestWelcome(account);
 }
 
 async function requestWelcome(account) {
   const functionName = process.env.COMUNICACOES_FUNCTION_NAME || "";
-  if (!functionName) return null;
+  if (!functionName) return;
   try {
-    const result = await lambda.send(
+    await lambda.send(
       new InvokeCommand({
         FunctionName: functionName,
-        InvocationType: "RequestResponse",
+        InvocationType: "Event",
         Payload: Buffer.from(
           JSON.stringify({
             action: "welcome",
@@ -395,10 +388,7 @@ async function requestWelcome(account) {
         ),
       })
     );
-    if (result.FunctionError) return null;
-    return JSON.parse(Buffer.from(result.Payload || "{}").toString("utf8"));
   } catch (err) {
     console.error(err.name || "welcome-invoke");
-    return null;
   }
 }
