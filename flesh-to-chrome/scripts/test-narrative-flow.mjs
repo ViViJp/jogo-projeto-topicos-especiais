@@ -100,6 +100,11 @@ assert.match(menu, /restorePreGateSave\(state\.restoredSave\)/);
 assert.match(cloudSession, /\/me\/campaign\/restore-gate/);
 assert.match(cloudSession, /operationId: operation\.operationId/,
   "retentativas devem preservar o identificador da operação");
+assert.match(menu, /this\.ready = false/,
+  "MenuScene deve bloquear entradas enquanto recupera sessão e campanha");
+assert.match(menu, /const preparation = \+\+this\.preparationGeneration/);
+assert.match(menu, /if \(!this\.isCurrentPreparation\(preparation\)\) return;/,
+  "respostas de preparações antigas devem ser descartadas");
 assert.match(menu, /this\.scene\.start\("PrologueScene"\)/);
 assert.match(menu, /Portão — escolha final \(teste\)/);
 assert.match(menu, /this\.scene\.start\("GateScene", \{ testMode: true \}\)/);

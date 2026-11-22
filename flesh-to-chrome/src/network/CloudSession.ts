@@ -39,6 +39,7 @@ export interface CampaignSyncState {
 }
 
 interface PendingCampaignOperation {
+  ownerId: string;
   operationId: string;
   action: "save" | "reset" | "restore";
   save: SaveData | null;
@@ -47,6 +48,11 @@ interface PendingCampaignOperation {
   retryCount: number;
   conflicted: boolean;
 }
+
+type QueuedOperationResult = (CampaignSaveResult & { save?: SaveData }) | {
+  status: "owner-changed";
+  revision: number;
+};
 
 interface SessionResponse {
   accessToken: string;
@@ -65,6 +71,7 @@ const scheduledCampaigns = new Set<string>();
 const retryTimers = new Map<string, number>();
 const syncStates = new Map<string, CampaignSyncState>();
 const syncListeners = new Set<(state: CampaignSyncState) => void>();
+const activeRequests = new Map<string, Set<AbortController>>();
 let recoveryHooksReady = false;
 
 export class CloudSession {
@@ -110,6 +117,7 @@ export class CloudSession {
   }
 
   static async completeLoginIfNeeded(): Promise<PlayerSession | null> {
+    const previousSession = CloudSession.current();
     const currentUrl = new URL(window.location.href);
     const { ticket, href } = takeTicket(currentUrl.href);
     if (ticket) window.history.replaceState({}, "", href);
@@ -129,6 +137,11 @@ export class CloudSession {
       expiresAt: Date.now() + (body.expiresIn || 3600) * 1000,
       profile: body.profile,
     };
+    const currentSession = CloudSession.current();
+    if (currentSession && currentSession.accessToken !== previousSession?.accessToken) return currentSession;
+    if (previousSession && previousSession.profile.id !== session.profile.id) {
+      CloudSession.abortOwnerRequests(previousSession.profile.id);
+    }
     sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
     return session;
   }
@@ -141,16 +154,16 @@ export class CloudSession {
   }
 
   static async logout(): Promise<void> {
-    const api = await CloudSession.api();
     const session = CloudSession.current();
+    if (!session) return;
     sessionStorage.removeItem(SESSION_KEY);
-    if (session) {
-      campaignRevisions.delete(session.profile.id);
-      blockedCampaigns.delete(session.profile.id);
-      scheduledCampaigns.delete(session.profile.id);
-      CloudSession.clearRetry(session.profile.id);
-    }
-    if (!api || !session) return;
+    CloudSession.abortOwnerRequests(session.profile.id);
+    campaignRevisions.delete(session.profile.id);
+    blockedCampaigns.delete(session.profile.id);
+    scheduledCampaigns.delete(session.profile.id);
+    CloudSession.clearRetry(session.profile.id);
+    const api = await CloudSession.api();
+    if (!api) return;
     await fetch(`${api}/auth/logout`, {
       method: "POST",
       headers: {
@@ -162,31 +175,48 @@ export class CloudSession {
   }
 
   static async me(): Promise<PlayerProfile | null> {
-    const api = await CloudSession.api();
     const session = CloudSession.current();
-    if (!api || !session) return null;
-    const response = await fetch(`${api}/me`, {
-      headers: { authorization: `Bearer ${session.accessToken}` },
-    });
+    if (!session) return null;
+    const api = await CloudSession.api();
+    if (!api || !CloudSession.sameOwnerSession(session)) return null;
+    const controller = CloudSession.trackOwnerRequest(session.profile.id);
+    let response: Response;
+    try {
+      response = await fetch(`${api}/me`, {
+        headers: { authorization: `Bearer ${session.accessToken}` },
+        signal: controller.signal,
+      });
+    } catch {
+      return null;
+    } finally {
+      CloudSession.releaseOwnerRequest(session.profile.id, controller);
+    }
     if (!response.ok) return null;
     const profile = (await response.json()) as PlayerProfile;
-    if (!profile?.id) return null;
+    if (!profile?.id || !CloudSession.sameOwnerSession(session)) return null;
     session.profile = profile;
     sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
     return profile;
   }
 
   static async loadCampaign(): Promise<RemoteCampaign> {
-    const api = await CloudSession.api();
     const session = CloudSession.current();
-    if (!api || !session) return { status: "unavailable", revision: 0, save: null };
+    if (!session) return { status: "unavailable", revision: 0, save: null };
+    const api = await CloudSession.api();
+    if (!api || !CloudSession.sameOwnerSession(session)) {
+      return { status: "unavailable", revision: 0, save: null };
+    }
+    const controller = CloudSession.trackOwnerRequest(session.profile.id);
     let response: Response;
     try {
       response = await fetch(`${api}/me/campaign`, {
         headers: { authorization: `Bearer ${session.accessToken}` },
+        signal: controller.signal,
       });
     } catch {
       return { status: "unavailable", revision: 0, save: null };
+    } finally {
+      CloudSession.releaseOwnerRequest(session.profile.id, controller);
     }
     if (response.status === 404) {
       campaignRevisions.set(session.profile.id, 0);
@@ -204,9 +234,11 @@ export class CloudSession {
     revision: number,
     source: "online" | "guest-import" | "local-sync"
   ): Promise<CampaignSaveResult> {
-    const api = await CloudSession.api();
     const session = CloudSession.current();
-    if (!api || !session) return { status: "unavailable", revision };
+    if (!session) return { status: "unavailable", revision };
+    const api = await CloudSession.api();
+    if (!api || !CloudSession.sameOwnerSession(session)) return { status: "unavailable", revision };
+    const controller = CloudSession.trackOwnerRequest(session.profile.id);
     let response: Response;
     try {
       response = await fetch(`${api}/me/campaign`, {
@@ -222,9 +254,12 @@ export class CloudSession {
           source,
           state: toApiState(save),
         }),
+        signal: controller.signal,
       });
     } catch {
       return { status: "unavailable", revision };
+    } finally {
+      CloudSession.releaseOwnerRequest(session.profile.id, controller);
     }
     if (response.status === 409) return { status: "conflict", revision };
     if (!response.ok) return { status: "unavailable", revision };
@@ -319,6 +354,7 @@ export class CloudSession {
       tail.save = copy;
     } else {
       queue.push({
+        ownerId: userId,
         operationId: crypto.randomUUID(),
         action,
         save: copy,
@@ -363,9 +399,14 @@ export class CloudSession {
           if (revision === undefined) {
             const remote = await CloudSession.loadCampaign();
             if (remote.status === "unavailable") {
+              if (!CloudSession.isCurrentOwner(userId)) {
+                CloudSession.persistQueue(userId);
+                return;
+              }
               CloudSession.deferOperation(userId, operation);
               return;
             }
+            if (!CloudSession.isCurrentOwner(userId)) return;
             revision = remote.revision;
           }
           operation.expectedRevision = revision;
@@ -373,7 +414,11 @@ export class CloudSession {
         operation.attempted = true;
         CloudSession.persistQueue(userId);
         CloudSession.emitSync(userId, { status: "syncing", pending: queue.length, action: operation.action });
-        const result = await CloudSession.executeQueuedOperation(operation);
+        const result = await CloudSession.executeQueuedOperation(userId, operation);
+        if (result.status === "owner-changed") {
+          CloudSession.persistQueue(userId);
+          return;
+        }
         if (result.status === "saved") {
           campaignRevisions.set(userId, result.revision);
           queue.shift();
@@ -404,12 +449,21 @@ export class CloudSession {
   }
 
   private static async executeQueuedOperation(
+    userId: string,
     operation: PendingCampaignOperation
-  ): Promise<CampaignSaveResult & { save?: SaveData }> {
+  ): Promise<QueuedOperationResult> {
     const api = await CloudSession.api();
     const session = CloudSession.current();
     const revision = operation.expectedRevision ?? 0;
-    if (!api || !session) return { status: "unavailable", revision };
+    if (
+      !api ||
+      !session ||
+      operation.ownerId !== userId ||
+      session.profile.id !== operation.ownerId
+    ) {
+      return { status: "owner-changed", revision };
+    }
+    const accessToken = session.accessToken;
     const path = operation.action === "reset"
       ? "/me/campaign/reset"
       : operation.action === "restore"
@@ -429,17 +483,27 @@ export class CloudSession {
           ...(operation.action === "reset" ? { confirmed: true } : {}),
         };
     let response: Response;
+    const controller = CloudSession.trackOwnerRequest(operation.ownerId);
     try {
+      if (!CloudSession.isCurrentOwner(operation.ownerId, accessToken)) {
+        return { status: "owner-changed", revision };
+      }
       response = await fetch(`${api}${path}`, {
         method: operation.action === "save" ? "PUT" : "POST",
         headers: {
-          authorization: `Bearer ${session.accessToken}`,
+          authorization: `Bearer ${accessToken}`,
           "content-type": "application/json",
         },
         body: JSON.stringify(body),
+        signal: controller.signal,
       });
     } catch {
+      if (!CloudSession.isCurrentOwner(operation.ownerId, accessToken) || controller.signal.aborted) {
+        return { status: "owner-changed", revision };
+      }
       return { status: "unavailable", revision };
+    } finally {
+      CloudSession.releaseOwnerRequest(operation.ownerId, controller);
     }
     if (response.status === 409) return { status: "conflict", revision };
     if (!response.ok) return { status: "unavailable", revision };
@@ -471,11 +535,13 @@ export class CloudSession {
         queue = parsed
           .filter((operation) => (
             operation &&
+            (operation.ownerId === undefined || operation.ownerId === userId) &&
             typeof operation.operationId === "string" &&
             ["save", "reset", "restore"].includes(operation.action) &&
             (operation.expectedRevision === null || typeof operation.expectedRevision === "number")
           ))
           .map((operation) => ({
+            ownerId: userId,
             operationId: operation.operationId,
             action: operation.action,
             save: operation.save || null,
@@ -494,6 +560,38 @@ export class CloudSession {
 
   private static queueKey(userId: string): string {
     return `flesh-to-chrome:campaign-sync:${userId}`;
+  }
+
+  private static isCurrentOwner(userId: string, accessToken?: string): boolean {
+    const session = CloudSession.current();
+    return Boolean(
+      session &&
+      session.profile.id === userId &&
+      (accessToken === undefined || session.accessToken === accessToken)
+    );
+  }
+
+  private static sameOwnerSession(expected: PlayerSession): boolean {
+    return CloudSession.isCurrentOwner(expected.profile.id, expected.accessToken);
+  }
+
+  private static trackOwnerRequest(userId: string): AbortController {
+    const controller = new AbortController();
+    const requests = activeRequests.get(userId) || new Set<AbortController>();
+    requests.add(controller);
+    activeRequests.set(userId, requests);
+    return controller;
+  }
+
+  private static releaseOwnerRequest(userId: string, controller: AbortController): void {
+    const requests = activeRequests.get(userId);
+    requests?.delete(controller);
+    if (!requests?.size) activeRequests.delete(userId);
+  }
+
+  private static abortOwnerRequests(userId: string): void {
+    activeRequests.get(userId)?.forEach((controller) => controller.abort());
+    activeRequests.delete(userId);
   }
 
   private static persistQueue(userId: string): void {

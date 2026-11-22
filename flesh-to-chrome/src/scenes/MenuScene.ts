@@ -34,6 +34,7 @@ export class MenuScene extends Phaser.Scene {
   private mode: "main" | "phase-select" | "choice" = "main";
   private stopCampaignSync?: () => void;
   private pendingGateContinuation = false;
+  private preparationGeneration = 0;
 
   constructor() {
     super("MenuScene");
@@ -42,12 +43,18 @@ export class MenuScene extends Phaser.Scene {
   create(): void {
     // A instancia da cena e reutilizada ao voltar do jogo/multiplayer.
     this.optionTexts = [];
+    this.options = [];
     this.selectedIndex = 0;
     this.confirmVisible = false;
     this.confirmText = undefined;
     this.mode = "main";
+    this.ready = false;
+    this.hasSave = false;
+    this.remoteSave = null;
+    this.remoteRevision = 0;
     this.pendingGateContinuation = false;
     this.stopCampaignSync?.();
+    const preparation = ++this.preparationGeneration;
 
     this.cameras.main.setBackgroundColor(0x05050a);
     this.input$ = new InputManager(this);
@@ -86,10 +93,13 @@ export class MenuScene extends Phaser.Scene {
       .setOrigin(0.5);
     this.stopCampaignSync = CloudSession.subscribeCampaignSync((state) => this.handleCampaignSync(state));
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.preparationGeneration += 1;
+      this.ready = false;
+      this.options = [];
       this.stopCampaignSync?.();
       this.stopCampaignSync = undefined;
     });
-    void this.prepare();
+    void this.prepare(preparation);
 
     this.add
       .text(
@@ -226,11 +236,13 @@ export class MenuScene extends Phaser.Scene {
     this.options[this.selectedIndex]?.action();
   }
 
-  private async prepare(): Promise<void> {
+  private async prepare(preparation: number): Promise<void> {
     try {
       SaveState.bootGuest();
       await CloudSession.completeLoginIfNeeded();
+      if (!this.isCurrentPreparation(preparation)) return;
       await CloudSession.me();
+      if (!this.isCurrentPreparation(preparation)) return;
       const session = CloudSession.current();
       if (!session) {
         const remembered = CloudSession.storedOwner();
@@ -247,6 +259,7 @@ export class MenuScene extends Phaser.Scene {
       const guest = SaveState.readStored("session", SaveState.sessionKey());
       const account = SaveState.readStored("account", SaveState.accountKey(session.profile.id));
       const remote = await CloudSession.loadCampaign();
+      if (!this.isCurrentPreparation(preparation) || !this.isSameSession(session)) return;
       const guestProgress = Boolean(guest && SaveState.hasProgress(guest));
       const pendingSync = CloudSession.hasPendingCampaignSync(session.profile.id);
       const syncConflict = CloudSession.hasCampaignConflict(session.profile.id);
@@ -292,6 +305,7 @@ export class MenuScene extends Phaser.Scene {
       }
       if (!remote.save && account && SaveState.hasProgress(account)) {
         const result = await CloudSession.saveCampaign(account, remote.revision, "local-sync");
+        if (!this.isCurrentPreparation(preparation) || !this.isSameSession(session)) return;
         if (result.status === "conflict") {
           await this.refreshAfterConflict();
           return;
@@ -311,10 +325,24 @@ export class MenuScene extends Phaser.Scene {
       this.statusText?.setText(`Conta: ${session.profile.name}`);
       this.finishPrepare();
     } catch {
+      if (!this.isCurrentPreparation(preparation)) return;
       SaveState.bindSession();
       this.statusText?.setText("A nuvem não respondeu. O jogo segue como visitante.");
       this.finishPrepare();
     }
+  }
+
+  private isCurrentPreparation(preparation: number): boolean {
+    return preparation === this.preparationGeneration;
+  }
+
+  private isSameSession(expected: { accessToken: string; profile: { id: string } }): boolean {
+    const current = CloudSession.current();
+    return Boolean(
+      current &&
+      current.profile.id === expected.profile.id &&
+      current.accessToken === expected.accessToken
+    );
   }
 
   private finishPrepare(): void {
@@ -352,10 +380,12 @@ export class MenuScene extends Phaser.Scene {
   }
 
   private async importProgress(): Promise<void> {
+    const preparation = this.preparationGeneration;
     const session = CloudSession.current();
     const guest = SaveState.readStored("session", SaveState.sessionKey());
     if (!session || !guest) return;
     const result = await CloudSession.saveCampaign(guest, this.remoteRevision, "guest-import");
+    if (!this.isCurrentPreparation(preparation) || !this.isSameSession(session)) return;
     if (result.status === "conflict") {
       await this.refreshAfterConflict();
       return;
@@ -373,6 +403,7 @@ export class MenuScene extends Phaser.Scene {
   }
 
   private async keepAccountProgress(): Promise<void> {
+    const preparation = this.preparationGeneration;
     const session = CloudSession.current();
     if (!session) return;
     const local = SaveState.readStored("account", SaveState.accountKey(session.profile.id));
@@ -381,6 +412,7 @@ export class MenuScene extends Phaser.Scene {
       return;
     }
     const result = await CloudSession.saveCampaign(local, this.remoteRevision, "local-sync");
+    if (!this.isCurrentPreparation(preparation) || !this.isSameSession(session)) return;
     if (result.status === "conflict") {
       await this.refreshAfterConflict();
       return;
@@ -420,9 +452,11 @@ export class MenuScene extends Phaser.Scene {
   }
 
   private async refreshAfterConflict(): Promise<void> {
+    const preparation = this.preparationGeneration;
     const session = CloudSession.current();
     if (!session) return;
     const latest = await CloudSession.loadCampaign();
+    if (!this.isCurrentPreparation(preparation) || !this.isSameSession(session)) return;
     CloudSession.pauseCampaignSync(session.profile.id);
     if (latest.status === "present") {
       this.remoteRevision = latest.revision;
@@ -447,15 +481,20 @@ export class MenuScene extends Phaser.Scene {
   }
 
   private async login(): Promise<void> {
+    const preparation = this.preparationGeneration;
     if (!(await CloudSession.api())) {
+      if (!this.isCurrentPreparation(preparation)) return;
       this.statusText?.setText("Login indisponível neste endereço.");
       return;
     }
+    if (!this.isCurrentPreparation(preparation)) return;
     await CloudSession.login();
   }
 
   private async logout(): Promise<void> {
+    const preparation = this.preparationGeneration;
     await CloudSession.logout();
+    if (!this.isCurrentPreparation(preparation)) return;
     SaveState.logoutLocal();
     this.statusText?.setText("Visitante: fechar a aba apaga o progresso desta sessão.");
     this.finishPrepare();

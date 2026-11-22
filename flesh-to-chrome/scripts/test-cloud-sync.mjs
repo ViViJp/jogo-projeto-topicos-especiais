@@ -47,6 +47,7 @@ const window = {
 const requests = [];
 let requestMode = "load";
 let currentRevision = 1;
+let slowCampaignStarted = false;
 const restoredSave = {
   version: 1,
   currentPhaseId: "fase5",
@@ -73,10 +74,20 @@ function response(status, body = {}) {
 async function fetchMock(url, options = {}) {
   if (url === "/cloud-config.json") return response(200, { api: "https://api.example.com" });
   if (options.method === undefined && url.endsWith("/me/campaign")) {
+    if (requestMode === "slow-load") {
+      slowCampaignStarted = true;
+      return new Promise((resolve, reject) => {
+        options.signal?.addEventListener("abort", () => {
+          reject(Object.assign(new Error("aborted"), { name: "AbortError" }));
+        });
+        void resolve;
+      });
+    }
     return response(200, { revision: currentRevision, state: restoredSave });
   }
+  if (url.endsWith("/auth/logout")) return response(204, {});
   const body = JSON.parse(options.body || "{}");
-  requests.push({ url, method: options.method, body });
+  requests.push({ url, method: options.method, body, authorization: options.headers?.authorization });
   if (requestMode === "unavailable") throw new Error("network unavailable");
   if (requestMode === "conflict") return response(409, {});
   currentRevision = body.expectedRevision + 1;
@@ -123,6 +134,7 @@ new vm.Script(output, { filename: "CloudSession.ts" }).runInNewContext({
   Promise,
   console,
   queueMicrotask,
+  AbortController,
 });
 
 const { CloudSession } = module.exports;
@@ -187,4 +199,41 @@ assert.equal(restoreRequest.method, "POST");
 assert.equal(restoredEvent.restoredSave.currentPhaseId, "fase5");
 assert.equal(CloudSession.campaignSyncState().status, "idle");
 
-console.log("campaign sync: retry idempotente, conflito e restore-gate OK");
+await CloudSession.logout();
+sessionStorage.setItem("flesh-to-chrome:session", JSON.stringify({
+  accessToken: "access-a",
+  refreshToken: "refresh-a",
+  expiresAt: Date.now() + 60_000,
+  profile: { id: "player-a", name: "A", email: "a@example.com" },
+}));
+requestMode = "slow-load";
+CloudSession.queueCampaignSync(saveAt(500));
+await waitFor(() => slowCampaignStarted, "a leitura atrasada da conta A deve iniciar");
+await CloudSession.logout();
+sessionStorage.setItem("flesh-to-chrome:session", JSON.stringify({
+  accessToken: "access-b",
+  refreshToken: "refresh-b",
+  expiresAt: Date.now() + 60_000,
+  profile: { id: "player-b", name: "B", email: "b@example.com" },
+}));
+await tick();
+
+const queueA = JSON.parse(localStorage.getItem("flesh-to-chrome:campaign-sync:player-a"));
+assert.equal(queueA.length, 1, "a fila de A deve permanecer recuperável após o logout");
+assert.equal(queueA[0].ownerId, "player-a");
+assert.equal(
+  requests.some((request) => request.body?.state?.checkpoint?.x === 500),
+  false,
+  "o save de A não pode ser enviado depois que B assume a sessão",
+);
+
+requestMode = "success";
+CloudSession.resumeCampaignSync("player-b", currentRevision);
+CloudSession.queueCampaignSync(saveAt(600));
+await waitFor(() => requests.some((request) => request.body?.state?.checkpoint?.x === 600),
+  "a fila de B deve continuar funcional");
+const requestB = requests.find((request) => request.body?.state?.checkpoint?.x === 600);
+assert.equal(requestB.authorization, "Bearer access-b");
+assert.equal(localStorage.getItem("flesh-to-chrome:campaign-sync:player-a") !== null, true);
+
+console.log("campaign sync: retry, conflito, restore-gate e isolamento por conta OK");
