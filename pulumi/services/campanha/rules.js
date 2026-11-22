@@ -90,6 +90,7 @@ function sameList(left, right) {
 
 function validateState(state) {
   if (!state || typeof state !== "object" || Array.isArray(state)) return "state ausente";
+  if (Object.prototype.hasOwnProperty.call(state, "progress")) return "state.progress não é uma representação canônica";
   for (const key of ["phase", "stageId", "credits", "implants", "bodyState", "descent", "gateChoice", "ending"]) {
     if (state[key] === undefined) return `state.${key} ausente`;
   }
@@ -97,6 +98,27 @@ function validateState(state) {
   if (!stages.includes(state.stageId)) return "setor inválido";
   if (state.checkpointId !== null && (typeof state.checkpointId !== "string" || !state.checkpointId)) {
     return "checkpoint inválido";
+  }
+  if (!state.resumePoint || typeof state.resumePoint !== "object" || typeof state.resumePoint.kind !== "string") {
+    return "ponto de retomada inválido";
+  }
+  if (state.resumePoint.kind === "checkpoint") {
+    if (!state.checkpointId || !Number.isFinite(state.resumePoint.x) || !Number.isFinite(state.resumePoint.y)) {
+      return "checkpoint sem posição de retomada";
+    }
+  }
+  if (state.preGateSnapshot !== null && state.preGateSnapshot !== undefined) {
+    if (state.preGateSnapshot?.preGateSnapshot) return "snapshot pré-Portão recursivo";
+    const snapshotProblem = validateState({ ...state.preGateSnapshot, preGateSnapshot: null });
+    if (snapshotProblem) return `snapshot pré-Portão inválido: ${snapshotProblem}`;
+    if (
+      state.preGateSnapshot.phase !== "ascent" ||
+      state.preGateSnapshot.stageId !== "topo" ||
+      state.preGateSnapshot.gateChoice !== null ||
+      state.preGateSnapshot.ending !== null
+    ) {
+      return "snapshot pré-Portão fora do Portão";
+    }
   }
   const credits = validateCredits(state);
   if (credits) return credits;

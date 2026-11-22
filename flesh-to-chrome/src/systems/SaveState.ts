@@ -33,8 +33,12 @@ export interface SaveData {
   /** Seção 18 - preenchido a partir do Marco 4 (descida Flesh/Hollow). */
   descentState: {
     active: boolean;
-    brokenChain: boolean;
-    recoveredFragmentIds: string[];
+    step: string | null;
+    chainStatus: "inactive" | "active" | "broken" | "complete";
+    memories: string[];
+    pendingMemory: string | null;
+    removals: string[];
+    retryUsedByStage: Record<string, boolean>;
   };
   /** Seção 20.2/20.3 - save narrativo automático antes da escolha do Portão. */
   preGateSave: SaveData | null;
@@ -48,7 +52,15 @@ function defaultSave(): SaveData {
     checkpoint: { x: 0, y: 0, consolidatedCreditIds: [] },
     wallet: 0,
     abilities: createInitialAbilityState(),
-    descentState: { active: false, brokenChain: false, recoveredFragmentIds: [] },
+    descentState: {
+      active: false,
+      step: null,
+      chainStatus: "inactive",
+      memories: [],
+      pendingMemory: null,
+      removals: [],
+      retryUsedByStage: {},
+    },
     preGateSave: null,
     endingReached: null,
   };
@@ -67,8 +79,12 @@ function cloneSaveData(data: SaveData, includePreGateSave = true): SaveData {
     abilities: { ...data.abilities },
     descentState: {
       active: data.descentState.active,
-      brokenChain: data.descentState.brokenChain,
-      recoveredFragmentIds: [...data.descentState.recoveredFragmentIds],
+      step: data.descentState.step,
+      chainStatus: data.descentState.chainStatus,
+      memories: [...data.descentState.memories],
+      pendingMemory: data.descentState.pendingMemory,
+      removals: [...data.descentState.removals],
+      retryUsedByStage: { ...data.descentState.retryUsedByStage },
     },
     preGateSave: includePreGateSave && data.preGateSave
       ? cloneSaveData(data.preGateSave, false)
@@ -81,6 +97,17 @@ function normalizeSaveData(parsed: Partial<SaveData>): SaveData {
   const fresh = defaultSave();
   const checkpoint = parsed.checkpoint ?? fresh.checkpoint;
   const descentState = parsed.descentState ?? fresh.descentState;
+  const legacyDescent = descentState as typeof descentState & {
+    brokenChain?: boolean;
+    recoveredFragmentIds?: string[];
+  };
+  const chainStatus = ["inactive", "active", "broken", "complete"].includes(descentState.chainStatus)
+    ? descentState.chainStatus
+    : legacyDescent.brokenChain
+      ? "broken"
+      : descentState.active
+        ? "active"
+        : "inactive";
   const endingReached = ["chrome", "flesh", "hollow"].includes(parsed.endingReached ?? "")
     ? parsed.endingReached as SaveData["endingReached"]
     : null;
@@ -97,11 +124,19 @@ function normalizeSaveData(parsed: Partial<SaveData>): SaveData {
     },
     abilities: { ...fresh.abilities, ...(parsed.abilities ?? {}) },
     descentState: {
-      ...fresh.descentState,
-      ...descentState,
-      recoveredFragmentIds: Array.isArray(descentState.recoveredFragmentIds)
-        ? [...descentState.recoveredFragmentIds]
-        : [],
+      active: Boolean(descentState.active),
+      step: typeof descentState.step === "string" ? descentState.step : null,
+      chainStatus: chainStatus as SaveData["descentState"]["chainStatus"],
+      memories: Array.isArray(descentState.memories)
+        ? [...descentState.memories]
+        : Array.isArray(legacyDescent.recoveredFragmentIds)
+          ? [...legacyDescent.recoveredFragmentIds]
+          : [],
+      pendingMemory: typeof descentState.pendingMemory === "string" ? descentState.pendingMemory : null,
+      removals: Array.isArray(descentState.removals) ? [...descentState.removals] : [],
+      retryUsedByStage: descentState.retryUsedByStage && typeof descentState.retryUsedByStage === "object"
+        ? { ...descentState.retryUsedByStage }
+        : {},
     },
     preGateSave: null,
     endingReached,
@@ -173,7 +208,9 @@ export class SaveState {
       data.preGateSave !== null ||
       data.endingReached !== null ||
       data.descentState.active ||
-      data.descentState.recoveredFragmentIds.length > 0
+      data.descentState.memories.length > 0 ||
+      data.descentState.pendingMemory !== null ||
+      data.descentState.removals.length > 0
     );
   }
 
@@ -256,7 +293,8 @@ export class SaveState {
   static newGame(): SaveState {
     const place = activeStore();
     const fresh = new SaveState(defaultSave(), place);
-    fresh.persist();
+    writeRaw(place.store, place.key, JSON.stringify(fresh.data));
+    if (place.store === "account") CloudSession.queueCampaignReset(cloneSaveData(fresh.data));
     return fresh;
   }
 
@@ -272,7 +310,11 @@ export class SaveState {
 
   setPhase(phaseId: string): void {
     this.data.currentPhaseId = phaseId;
-    this.data.checkpoint = { x: 0, y: 0, consolidatedCreditIds: [] };
+    this.data.checkpoint = {
+      x: 0,
+      y: 0,
+      consolidatedCreditIds: [...this.data.checkpoint.consolidatedCreditIds],
+    };
     this.persist();
   }
 
@@ -314,5 +356,8 @@ export class SaveState {
 
   persist(): void {
     writeRaw(this.place.store, this.place.key, JSON.stringify(this.data));
+    if (this.place.store === "account") {
+      CloudSession.queueCampaignSync(cloneSaveData(this.data));
+    }
   }
 }

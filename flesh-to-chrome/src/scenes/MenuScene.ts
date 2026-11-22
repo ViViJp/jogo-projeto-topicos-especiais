@@ -242,7 +242,10 @@ export class MenuScene extends Phaser.Scene {
       this.remoteRevision = remote.revision;
       this.remoteSave = remote.save;
       if (remote.status === "unavailable") {
-        SaveState.keepSession();
+        CloudSession.pauseCampaignSync(session.profile.id);
+        if (guestProgress) SaveState.keepSession();
+        else if (account) SaveState.bindAccount(session.profile.id);
+        else SaveState.bindSession();
         this.statusText?.setText(
           "Não foi possível verificar a campanha na nuvem. As cópias locais foram preservadas."
         );
@@ -253,17 +256,34 @@ export class MenuScene extends Phaser.Scene {
         remote.save && account && !CloudSession.same(account, remote.save)
       );
       if (guestProgress) {
+        CloudSession.pauseCampaignSync(session.profile.id);
         SaveState.keepSession();
         this.showChoice();
         return;
       }
       if (remote.save && (!account || remoteDiffers)) {
-        SaveState.bindAccount(session.profile.id);
+        CloudSession.pauseCampaignSync(session.profile.id);
         this.showChoice();
         return;
       }
+      if (!remote.save && account && SaveState.hasProgress(account)) {
+        const result = await CloudSession.saveCampaign(account, remote.revision, "local-sync");
+        if (result.status === "conflict") {
+          await this.refreshAfterConflict();
+          return;
+        }
+        if (result.status === "unavailable") {
+          CloudSession.pauseCampaignSync(session.profile.id);
+          SaveState.bindAccount(session.profile.id);
+          this.statusText?.setText("O save da conta ficou neste aparelho e aguarda sincronização.");
+          this.finishPrepare();
+          return;
+        }
+        this.remoteRevision = result.revision;
+      }
       if (remote.save) this.writeAccount(session.profile.id, remote.save);
       SaveState.bindAccount(session.profile.id);
+      CloudSession.resumeCampaignSync(session.profile.id, this.remoteRevision);
       this.statusText?.setText(`Conta: ${session.profile.name}`);
       this.finishPrepare();
     } catch {
@@ -287,12 +307,18 @@ export class MenuScene extends Phaser.Scene {
     this.menuHint?.setText("ESCOLHA O PROGRESSO");
     this.statusText?.setText("Nada foi sobrescrito. Escolha qual cópia continua.");
     const guest = session ? SaveState.readStored("session", SaveState.sessionKey()) : null;
+    const account = session
+      ? SaveState.readStored("account", SaveState.accountKey(session.profile.id))
+      : null;
     const guestProgress = Boolean(guest && SaveState.hasProgress(guest));
+    const accountProgress = Boolean(account && SaveState.hasProgress(account));
     this.options = [];
     if (guestProgress) {
       this.options.push({ label: "Trazer o progresso desta sessão", action: () => void this.importProgress() });
     }
-    this.options.push({ label: "Manter o save da conta", action: () => void this.keepAccountProgress() });
+    if (accountProgress) {
+      this.options.push({ label: "Manter o save da conta", action: () => void this.keepAccountProgress() });
+    }
     if (this.remoteSave) {
       this.options.push({ label: "Usar a campanha da nuvem", action: () => this.useRemote() });
     }
@@ -305,23 +331,43 @@ export class MenuScene extends Phaser.Scene {
     const session = CloudSession.current();
     const guest = SaveState.readStored("session", SaveState.sessionKey());
     if (!session || !guest) return;
-    SaveState.importSession(session.profile.id);
     const result = await CloudSession.saveCampaign(guest, this.remoteRevision, "guest-import");
-    this.statusText?.setText(this.syncText(session.profile.name, result));
+    if (result.status === "conflict") {
+      await this.refreshAfterConflict();
+      return;
+    }
+    if (result.status === "unavailable") {
+      this.statusText?.setText("A importação aguarda confirmação da nuvem. Todas as cópias foram preservadas.");
+      return;
+    }
+    SaveState.importSession(session.profile.id);
+    this.remoteRevision = result.revision;
+    CloudSession.resumeCampaignSync(session.profile.id, result.revision);
+    this.statusText?.setText(this.syncText(session.profile.name, result.status));
     this.finishPrepare();
   }
 
   private async keepAccountProgress(): Promise<void> {
     const session = CloudSession.current();
     if (!session) return;
-    SaveState.keepAccount(session.profile.id);
     const local = SaveState.readStored("account", SaveState.accountKey(session.profile.id));
     if (!local) {
       this.finishPrepare();
       return;
     }
     const result = await CloudSession.saveCampaign(local, this.remoteRevision, "local-sync");
-    this.statusText?.setText(this.syncText(session.profile.name, result));
+    if (result.status === "conflict") {
+      await this.refreshAfterConflict();
+      return;
+    }
+    if (result.status === "unavailable") {
+      this.statusText?.setText("A sincronização não foi confirmada. As cópias local, remota e visitante foram preservadas.");
+      return;
+    }
+    SaveState.keepAccount(session.profile.id);
+    this.remoteRevision = result.revision;
+    CloudSession.resumeCampaignSync(session.profile.id, result.revision);
+    this.statusText?.setText(this.syncText(session.profile.name, result.status));
     this.finishPrepare();
   }
 
@@ -330,6 +376,7 @@ export class MenuScene extends Phaser.Scene {
     if (!session || !this.remoteSave) return;
     this.writeAccount(session.profile.id, this.remoteSave);
     SaveState.bindAccount(session.profile.id);
+    CloudSession.resumeCampaignSync(session.profile.id, this.remoteRevision);
     this.statusText?.setText(`Conta: ${session.profile.name}. A campanha da nuvem foi carregada.`);
     this.finishPrepare();
   }
@@ -345,9 +392,25 @@ export class MenuScene extends Phaser.Scene {
     return `Conta: ${name}`;
   }
 
+  private async refreshAfterConflict(): Promise<void> {
+    const session = CloudSession.current();
+    if (!session) return;
+    const latest = await CloudSession.loadCampaign();
+    CloudSession.pauseCampaignSync(session.profile.id);
+    if (latest.status === "present") {
+      this.remoteRevision = latest.revision;
+      this.remoteSave = latest.save;
+      this.showChoice();
+      this.statusText?.setText("A campanha mudou em outro dispositivo. Revise novamente as cópias preservadas.");
+      return;
+    }
+    this.statusText?.setText("O conflito não pôde ser atualizado. Todas as cópias continuam preservadas.");
+  }
+
   private keepGuestProgress(): void {
     SaveState.keepSession();
     const session = CloudSession.current();
+    if (session) CloudSession.pauseCampaignSync(session.profile.id);
     this.statusText?.setText(
       session
         ? `${session.profile.name}: o progresso desta sessão ainda não foi para a conta.`

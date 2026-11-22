@@ -27,7 +27,8 @@ function loadTypeScriptModule(filename) {
   moduleCache.set(absolutePath, module);
   const localRequire = (specifier) => {
     if (!specifier.startsWith(".")) throw new Error(`Import não suportado no teste: ${specifier}`);
-    const resolved = path.resolve(path.dirname(absolutePath), `${specifier}.ts`);
+    const base = path.resolve(path.dirname(absolutePath), specifier);
+    const resolved = fs.existsSync(`${base}.ts`) ? `${base}.ts` : `${base}.js`;
     return loadTypeScriptModule(resolved);
   };
   new vm.Script(output, { filename: absolutePath }).runInNewContext({
@@ -36,6 +37,7 @@ function loadTypeScriptModule(filename) {
     require: localRequire,
     console,
     localStorage,
+    sessionStorage: localStorage,
   });
   return module.exports;
 }
@@ -57,6 +59,8 @@ assert.deepEqual(
 
 save.markEndingReached("chrome");
 save.setPhase("fase1");
+assert.deepEqual(Array.from(save.get().checkpoint.consolidatedCreditIds), ["f5-credit-01"],
+  "trocar de fase preserva os IDs consolidados da campanha");
 const restored = save.restorePreGateSave();
 assert.ok(restored);
 assert.equal(restored.currentPhaseId, "fase5");

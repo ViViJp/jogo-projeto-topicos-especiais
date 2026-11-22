@@ -1,9 +1,10 @@
 const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
 const { DynamoDBDocumentClient, GetCommand, PutCommand, QueryCommand, UpdateCommand } = require("@aws-sdk/lib-dynamodb");
 const { SESClient, SendEmailCommand } = require("@aws-sdk/client-ses");
+const { randomUUID } = require("crypto");
 
-const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
-const ses = new SESClient({});
+let db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
+let ses = new SESClient({});
 const table = process.env.TABLE_NAME;
 
 function response(statusCode, body) {
@@ -160,7 +161,7 @@ async function deliverEmail(userId, email, name) {
   if (current?.state === "sending") {
     const age = Date.now() - Date.parse(current.updatedAt || "");
     if (Number.isNaN(age) || age < 60 * 1000) return { state: "sending", attempts };
-    await markUncertain(key, attempts);
+    await markUncertain(key, current.attemptId || "", current.messageId || "", "stale-reservation");
     return { state: "uncertain", attempts };
   }
   if (attempts >= 5) return { state: "failed", attempts };
@@ -170,11 +171,12 @@ async function deliverEmail(userId, email, name) {
     return { state: "skipped", attempts };
   }
   if (!from) return { state: "pending", attempts };
-  const next = attempts + 1;
-  const reserved = await reserveSend(key, current, next);
-  if (!reserved) return { state: "sending", attempts };
+  const reservation = await reserveSend(key, current);
+  if (!reservation) return { state: "sending", attempts };
+  const { attemptId, attempts: reservedAttempts } = reservation;
+  let accepted;
   try {
-    await ses.send(
+    accepted = await ses.send(
       new SendEmailCommand({
         Source: from,
         Destination: { ToAddresses: [email] },
@@ -190,30 +192,38 @@ async function deliverEmail(userId, email, name) {
       })
     );
   } catch (err) {
-    const permanent = ["MessageRejected", "MailFromDomainNotVerifiedException", "ConfigurationSetDoesNotExistException"].includes(
-      err.name
-    );
-    const state = permanent ? "suppressed" : "failed";
-    const stored = permanent ? 5 : next;
-    await finishSend(key, state, stored, err.name || "send");
-    return { state, attempts: stored };
+    const state = classifySesFailure(err);
+    if (state === "uncertain") {
+      await markUncertain(key, attemptId, "", err.name || "send-uncertain");
+    } else {
+      const written = await finishSend(key, attemptId, state, err.name || "send", "");
+      if (!written) {
+        await markUncertain(key, attemptId, "", "delivery-state-not-confirmed");
+        return { state: "uncertain", attempts: reservedAttempts };
+      }
+    }
+    return { state, attempts: reservedAttempts };
   }
-  const written = await finishSend(key, "sent", next, "");
+  const messageId = accepted?.MessageId || accepted?.messageId || "";
+  const written = await finishSend(key, attemptId, "sent", "", messageId);
   if (!written) {
-    await markUncertain(key, next);
-    return { state: "uncertain", attempts: next };
+    await markUncertain(key, attemptId, messageId, "accepted-state-not-confirmed");
+    return { state: "uncertain", attempts: reservedAttempts };
   }
-  return { state: "sent", attempts: next };
+  return { state: "sent", attempts: reservedAttempts };
 }
 
-async function reserveSend(key, current, attempts) {
+async function reserveSend(key, current) {
   const now = new Date().toISOString();
+  const observedAttempts = Number(current?.attempts || 0);
+  if (observedAttempts >= 5) return null;
+  const attemptId = randomUUID();
   try {
     if (!current) {
       await db.send(
         new PutCommand({
           TableName: table,
-          Item: { ...key, state: "sending", attempts, lastError: "", updatedAt: now },
+          Item: { ...key, state: "sending", attempts: 1, attemptId, messageId: "", lastError: "", updatedAt: now },
           ConditionExpression: "attribute_not_exists(pk)",
         })
       );
@@ -222,39 +232,45 @@ async function reserveSend(key, current, attempts) {
         new UpdateCommand({
           TableName: table,
           Key: key,
-          UpdateExpression: "SET #state = :sending, attempts = :attempts, updatedAt = :now",
-          ConditionExpression: "#state = :previous",
+          UpdateExpression: "SET #state = :sending, attempts = if_not_exists(attempts, :zero) + :one, attemptId = :attemptId, messageId = :empty, lastError = :empty, updatedAt = :now",
+          ConditionExpression: "#state = :previous AND (attribute_not_exists(attempts) OR attempts = :observed) AND (attribute_not_exists(attempts) OR attempts < :max)",
           ExpressionAttributeNames: { "#state": "state" },
           ExpressionAttributeValues: {
             ":sending": "sending",
-            ":attempts": attempts,
             ":previous": current.state || "pending",
+            ":observed": observedAttempts,
+            ":zero": 0,
+            ":one": 1,
+            ":max": 5,
+            ":attemptId": attemptId,
+            ":empty": "",
             ":now": now,
           },
         })
       );
     }
-    return true;
+    return { attemptId, attempts: observedAttempts + 1 };
   } catch (err) {
     if (err.name === "ConditionalCheckFailedException") return false;
     throw err;
   }
 }
 
-async function finishSend(key, state, attempts, lastError) {
+async function finishSend(key, attemptId, state, lastError, messageId) {
   try {
     await db.send(
       new UpdateCommand({
         TableName: table,
         Key: key,
-        UpdateExpression: "SET #state = :state, attempts = :attempts, lastError = :error, updatedAt = :now",
-        ConditionExpression: "#state = :sending",
+        UpdateExpression: "SET #state = :state, lastError = :error, messageId = :messageId, updatedAt = :now",
+        ConditionExpression: "#state = :sending AND attemptId = :attemptId",
         ExpressionAttributeNames: { "#state": "state" },
         ExpressionAttributeValues: {
           ":state": state,
-          ":attempts": attempts,
           ":error": lastError,
+          ":messageId": messageId,
           ":sending": "sending",
+          ":attemptId": attemptId,
           ":now": new Date().toISOString(),
         },
       })
@@ -266,19 +282,24 @@ async function finishSend(key, state, attempts, lastError) {
   }
 }
 
-async function markUncertain(key, attempts) {
+async function markUncertain(key, attemptId, messageId, lastError) {
+  const hasAttemptId = Boolean(attemptId);
   try {
     await db.send(
       new UpdateCommand({
         TableName: table,
         Key: key,
-        UpdateExpression: "SET #state = :uncertain, attempts = :attempts, updatedAt = :now",
-        ConditionExpression: "#state = :sending",
+        UpdateExpression: "SET #state = :uncertain, messageId = :messageId, lastError = :error, updatedAt = :now",
+        ConditionExpression: hasAttemptId
+          ? "#state = :sending AND attemptId = :attemptId"
+          : "#state = :sending AND attribute_not_exists(attemptId)",
         ExpressionAttributeNames: { "#state": "state" },
         ExpressionAttributeValues: {
           ":uncertain": "uncertain",
-          ":attempts": attempts,
           ":sending": "sending",
+          ...(hasAttemptId ? { ":attemptId": attemptId } : {}),
+          ":messageId": messageId,
+          ":error": lastError,
           ":now": new Date().toISOString(),
         },
       })
@@ -286,6 +307,20 @@ async function markUncertain(key, attempts) {
   } catch (err) {
     if (err.name !== "ConditionalCheckFailedException") console.error(err.name || "uncertain");
   }
+}
+
+function classifySesFailure(err) {
+  const permanent = new Set([
+    "MessageRejected",
+    "MailFromDomainNotVerifiedException",
+    "ConfigurationSetDoesNotExistException",
+    "AccountSendingPausedException",
+  ]);
+  if (permanent.has(err?.name)) return "suppressed";
+  const status = Number(err?.$metadata?.httpStatusCode || 0);
+  if (status === 429 || status >= 500) return "failed";
+  if (status >= 400 && status < 500) return "suppressed";
+  return "uncertain";
 }
 
 async function putDelivery(key, state, attempts, lastError) {
@@ -296,3 +331,13 @@ async function putDelivery(key, state, attempts, lastError) {
     })
   );
 }
+
+exports.__test = {
+  classifySesFailure,
+  deliverEmail,
+  reserveSend,
+  setClients(nextDb, nextSes) {
+    db = nextDb;
+    ses = nextSes;
+  },
+};
