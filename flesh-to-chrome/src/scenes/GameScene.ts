@@ -5,6 +5,7 @@ import { InputManager } from "../systems/InputManager";
 import { CreditsSystem } from "../systems/CreditsSystem";
 import { HUD } from "../systems/HUD";
 import { SaveState } from "../systems/SaveState";
+import { CampaignSyncState, CloudSession } from "../network/CloudSession";
 import { Player } from "../entities/Player";
 import { LevelRuntime } from "../objects/LevelRuntime";
 import {
@@ -171,6 +172,8 @@ export class GameScene extends Phaser.Scene {
   private pendingTestClinicData?: TestClinicChoiceData;
   private levelLengthPx = 0;
   private checkpointInteraction?: Phaser.Time.TimerEvent;
+  private syncStatusText?: Phaser.GameObjects.Text;
+  private stopCampaignSync?: () => void;
 
   constructor() {
     super("GameScene");
@@ -190,6 +193,9 @@ export class GameScene extends Phaser.Scene {
     this.pauseText = undefined;
     this.scanOverlay = undefined;
     this.checkpointInteraction = undefined;
+    this.syncStatusText = undefined;
+    this.stopCampaignSync?.();
+    this.stopCampaignSync = undefined;
     this.awaitingTestClinicChoice = false;
     this.testClinicWatchSelected = true;
     this.testClinicPrompt = undefined;
@@ -469,6 +475,18 @@ export class GameScene extends Phaser.Scene {
     this.credits = new CreditsSystem(this.data$.wallet, this.data$.consolidatedCreditIds);
     this.hud = new HUD(this);
     this.hud.setDashUnlocked(this.activeAbilities.thrusters);
+    this.syncStatusText = this.add.text(SCREEN_WIDTH - 18, 18, "", {
+      fontFamily: "Courier New, monospace",
+      fontSize: "14px",
+      color: "#FFD37C",
+      backgroundColor: "#05050acc",
+      padding: { x: 8, y: 5 },
+    }).setOrigin(1, 0).setScrollFactor(0).setDepth(2100);
+    this.stopCampaignSync = CloudSession.subscribeCampaignSync((state) => this.renderCampaignSync(state));
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.stopCampaignSync?.();
+      this.stopCampaignSync = undefined;
+    });
     this.events.on("player-attack", (_x: number, _y: number, showFeedback = true) => {
       if (showFeedback) this.hud.flashPrompt("ATAQUE", 300);
     });
@@ -969,8 +987,14 @@ export class GameScene extends Phaser.Scene {
       const menuHelp = this.data$.testMode
         ? "\nS / ↓ para voltar ao seletor de fases"
         : "\nS / ↓ para voltar ao menu principal";
+      const syncState = CloudSession.campaignSyncState();
+      const syncWarning = syncState.status === "idle"
+        ? ""
+        : syncState.status === "conflict"
+          ? "\nCONFLITO: o save local ainda não foi reconciliado."
+          : "\nAVISO: há progresso local aguardando a nuvem.";
       this.pauseText = this.add
-        .text(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, `PAUSADO\nESC / START para voltar | ENTER / A para reiniciar a fase${menuHelp}`, {
+        .text(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, `PAUSADO\nESC / START para voltar | ENTER / A para reiniciar a fase${menuHelp}${syncWarning}`, {
           fontFamily: "Courier New, monospace",
           fontSize: "26px",
           color: "#ffffff",
@@ -989,6 +1013,23 @@ export class GameScene extends Phaser.Scene {
       this.pauseText?.destroy();
       this.pauseText = undefined;
     }
+  }
+
+  private renderCampaignSync(state: CampaignSyncState): void {
+    if (!this.syncStatusText) return;
+    if (state.status === "idle") {
+      this.syncStatusText.setText("").setVisible(false);
+      return;
+    }
+    const label = state.status === "syncing"
+      ? "SALVANDO NA NUVEM..."
+      : state.status === "conflict"
+        ? "CONFLITO DE SAVE — VOLTE AO MENU"
+        : "SAVE LOCAL — NUVEM PENDENTE";
+    this.syncStatusText
+      .setText(label)
+      .setColor(state.status === "conflict" ? "#ff8a8a" : "#FFD37C")
+      .setVisible(true);
   }
 
   update(_time: number, delta: number): void {

@@ -28,6 +28,26 @@ export interface CampaignSaveResult {
   revision: number;
 }
 
+export type CampaignSyncStatus = "idle" | "syncing" | "pending" | "conflict";
+
+export interface CampaignSyncState {
+  status: CampaignSyncStatus;
+  pending: number;
+  action?: "save" | "reset" | "restore";
+  completedAction?: "save" | "reset" | "restore";
+  restoredSave?: SaveData;
+}
+
+interface PendingCampaignOperation {
+  operationId: string;
+  action: "save" | "reset" | "restore";
+  save: SaveData | null;
+  expectedRevision: number | null;
+  attempted: boolean;
+  retryCount: number;
+  conflicted: boolean;
+}
+
 interface SessionResponse {
   accessToken: string;
   refreshToken?: string;
@@ -38,10 +58,14 @@ interface SessionResponse {
 let apiBase: string | null = null;
 let publishedApi = "";
 const campaignRevisions = new Map<string, number>();
-const queuedCampaigns = new Map<string, { save: SaveData; action: "save" | "reset" }>();
+const campaignQueues = new Map<string, PendingCampaignOperation[]>();
 const syncingCampaigns = new Set<string>();
 const blockedCampaigns = new Set<string>();
 const scheduledCampaigns = new Set<string>();
+const retryTimers = new Map<string, number>();
+const syncStates = new Map<string, CampaignSyncState>();
+const syncListeners = new Set<(state: CampaignSyncState) => void>();
+let recoveryHooksReady = false;
 
 export class CloudSession {
   static storedOwner(): string | null {
@@ -122,9 +146,9 @@ export class CloudSession {
     sessionStorage.removeItem(SESSION_KEY);
     if (session) {
       campaignRevisions.delete(session.profile.id);
-      queuedCampaigns.delete(session.profile.id);
       blockedCampaigns.delete(session.profile.id);
       scheduledCampaigns.delete(session.profile.id);
+      CloudSession.clearRetry(session.profile.id);
     }
     if (!api || !session) return;
     await fetch(`${api}/auth/logout`, {
@@ -212,36 +236,106 @@ export class CloudSession {
 
   static resumeCampaignSync(userId: string, revision: number): void {
     campaignRevisions.set(userId, revision);
-    queuedCampaigns.delete(userId);
-    blockedCampaigns.delete(userId);
-    CloudSession.scheduleCampaignSync(userId);
+    const queue = CloudSession.queueFor(userId);
+    if (queue.some((operation) => operation.conflicted)) blockedCampaigns.add(userId);
+    else blockedCampaigns.delete(userId);
+    CloudSession.ensureRecoveryHooks();
+    CloudSession.scheduleCampaignSync(userId, true);
   }
 
   static pauseCampaignSync(userId: string): void {
     blockedCampaigns.add(userId);
   }
 
+  static discardPendingCampaignSync(userId: string): void {
+    campaignQueues.set(userId, []);
+    blockedCampaigns.delete(userId);
+    CloudSession.clearRetry(userId);
+    CloudSession.persistQueue(userId);
+    CloudSession.emitSync(userId, { status: "idle", pending: 0 });
+  }
+
+  static hasPendingCampaignSync(userId: string): boolean {
+    return CloudSession.queueFor(userId).length > 0;
+  }
+
+  static hasCampaignConflict(userId: string): boolean {
+    return CloudSession.queueFor(userId).some((operation) => operation.conflicted);
+  }
+
+  static campaignSyncState(): CampaignSyncState {
+    const session = CloudSession.current();
+    if (!session) return { status: "idle", pending: 0 };
+    return syncStates.get(session.profile.id) || CloudSession.stateFor(session.profile.id);
+  }
+
+  static subscribeCampaignSync(listener: (state: CampaignSyncState) => void): () => void {
+    syncListeners.add(listener);
+    listener(CloudSession.campaignSyncState());
+    return () => syncListeners.delete(listener);
+  }
+
   static queueCampaignSync(save: SaveData): void {
     const session = CloudSession.current();
-    if (!session || !campaignRevisions.has(session.profile.id)) return;
-    queuedCampaigns.set(session.profile.id, {
-      save: JSON.parse(JSON.stringify(save)) as SaveData,
-      action: "save",
-    });
-    CloudSession.scheduleCampaignSync(session.profile.id);
+    if (!session) return;
+    CloudSession.enqueue(session.profile.id, "save", save);
   }
 
-  static queueCampaignReset(save: SaveData): void {
+  static queueCampaignReset(_save: SaveData): void {
     const session = CloudSession.current();
-    if (!session || !campaignRevisions.has(session.profile.id)) return;
-    queuedCampaigns.set(session.profile.id, {
-      save: JSON.parse(JSON.stringify(save)) as SaveData,
-      action: "reset",
-    });
-    CloudSession.scheduleCampaignSync(session.profile.id);
+    if (!session) return;
+    CloudSession.enqueue(session.profile.id, "reset", null);
   }
 
-  private static scheduleCampaignSync(userId: string): void {
+  static queueGateRestore(): boolean {
+    const session = CloudSession.current();
+    if (!session) return false;
+    const queue = CloudSession.queueFor(session.profile.id);
+    if (!queue.some((operation) => operation.action === "restore")) {
+      CloudSession.enqueue(session.profile.id, "restore", null);
+    } else {
+      CloudSession.scheduleCampaignSync(session.profile.id, true);
+    }
+    return true;
+  }
+
+  static retryCampaignSync(): void {
+    const session = CloudSession.current();
+    if (!session || CloudSession.hasCampaignConflict(session.profile.id)) return;
+    CloudSession.clearRetry(session.profile.id);
+    blockedCampaigns.delete(session.profile.id);
+    CloudSession.scheduleCampaignSync(session.profile.id, true);
+  }
+
+  private static enqueue(
+    userId: string,
+    action: PendingCampaignOperation["action"],
+    save: SaveData | null
+  ): void {
+    const queue = CloudSession.queueFor(userId);
+    const tail = queue.at(-1);
+    const copy = save ? JSON.parse(JSON.stringify(save)) as SaveData : null;
+    if (action === "save" && tail?.action === "save" && !tail.attempted && !tail.conflicted) {
+      tail.save = copy;
+    } else {
+      queue.push({
+        operationId: crypto.randomUUID(),
+        action,
+        save: copy,
+        expectedRevision: null,
+        attempted: false,
+        retryCount: 0,
+        conflicted: false,
+      });
+    }
+    CloudSession.persistQueue(userId);
+    CloudSession.emitSync(userId, { status: "pending", pending: queue.length, action: queue[0]?.action });
+    CloudSession.ensureRecoveryHooks();
+    CloudSession.scheduleCampaignSync(userId);
+  }
+
+  private static scheduleCampaignSync(userId: string, force = false): void {
+    if (!force && retryTimers.has(userId)) return;
     if (scheduledCampaigns.has(userId)) return;
     scheduledCampaigns.add(userId);
     queueMicrotask(() => {
@@ -254,51 +348,213 @@ export class CloudSession {
     if (syncingCampaigns.has(userId) || blockedCampaigns.has(userId)) return;
     syncingCampaigns.add(userId);
     try {
-      while (queuedCampaigns.has(userId) && !blockedCampaigns.has(userId)) {
+      const queue = CloudSession.queueFor(userId);
+      while (queue.length > 0 && !blockedCampaigns.has(userId)) {
         const session = CloudSession.current();
-        const revision = campaignRevisions.get(userId);
-        if (!session || session.profile.id !== userId || revision === undefined) return;
-        const queued = queuedCampaigns.get(userId)!;
-        queuedCampaigns.delete(userId);
-        const result = queued.action === "reset"
-          ? await CloudSession.resetCampaign(revision)
-          : await CloudSession.saveCampaign(queued.save, revision, "online");
-        if (result.status === "saved") continue;
-        blockedCampaigns.add(userId);
-        if (result.status === "conflict") await CloudSession.loadCampaign();
+        if (!session || session.profile.id !== userId) return;
+        const operation = queue[0];
+        if (operation.conflicted) {
+          blockedCampaigns.add(userId);
+          CloudSession.emitSync(userId, { status: "conflict", pending: queue.length, action: operation.action });
+          return;
+        }
+        if (operation.expectedRevision === null) {
+          let revision = campaignRevisions.get(userId);
+          if (revision === undefined) {
+            const remote = await CloudSession.loadCampaign();
+            if (remote.status === "unavailable") {
+              CloudSession.deferOperation(userId, operation);
+              return;
+            }
+            revision = remote.revision;
+          }
+          operation.expectedRevision = revision;
+        }
+        operation.attempted = true;
+        CloudSession.persistQueue(userId);
+        CloudSession.emitSync(userId, { status: "syncing", pending: queue.length, action: operation.action });
+        const result = await CloudSession.executeQueuedOperation(operation);
+        if (result.status === "saved") {
+          campaignRevisions.set(userId, result.revision);
+          queue.shift();
+          CloudSession.clearRetry(userId);
+          CloudSession.persistQueue(userId);
+          CloudSession.emitSync(userId, {
+            status: queue.length ? "pending" : "idle",
+            pending: queue.length,
+            action: queue[0]?.action,
+            completedAction: operation.action,
+            restoredSave: result.save,
+          });
+          continue;
+        }
+        if (result.status === "conflict") {
+          operation.conflicted = true;
+          blockedCampaigns.add(userId);
+          CloudSession.persistQueue(userId);
+          CloudSession.emitSync(userId, { status: "conflict", pending: queue.length, action: operation.action });
+          return;
+        }
+        CloudSession.deferOperation(userId, operation);
+        return;
       }
     } finally {
       syncingCampaigns.delete(userId);
     }
   }
 
-  private static async resetCampaign(revision: number): Promise<CampaignSaveResult> {
+  private static async executeQueuedOperation(
+    operation: PendingCampaignOperation
+  ): Promise<CampaignSaveResult & { save?: SaveData }> {
     const api = await CloudSession.api();
     const session = CloudSession.current();
+    const revision = operation.expectedRevision ?? 0;
     if (!api || !session) return { status: "unavailable", revision };
+    const path = operation.action === "reset"
+      ? "/me/campaign/reset"
+      : operation.action === "restore"
+        ? "/me/campaign/restore-gate"
+        : "/me/campaign";
+    const body = operation.action === "save"
+      ? {
+          operationId: operation.operationId,
+          expectedRevision: revision,
+          schemaVersion: 1,
+          source: "online",
+          state: toApiState(operation.save!),
+        }
+      : {
+          operationId: operation.operationId,
+          expectedRevision: revision,
+          ...(operation.action === "reset" ? { confirmed: true } : {}),
+        };
     let response: Response;
     try {
-      response = await fetch(`${api}/me/campaign/reset`, {
-        method: "POST",
+      response = await fetch(`${api}${path}`, {
+        method: operation.action === "save" ? "PUT" : "POST",
         headers: {
           authorization: `Bearer ${session.accessToken}`,
           "content-type": "application/json",
         },
-        body: JSON.stringify({
-          operationId: crypto.randomUUID(),
-          expectedRevision: revision,
-          confirmed: true,
-        }),
+        body: JSON.stringify(body),
       });
     } catch {
       return { status: "unavailable", revision };
     }
     if (response.status === 409) return { status: "conflict", revision };
     if (!response.ok) return { status: "unavailable", revision };
-    const body = (await response.json().catch(() => ({}))) as { revision?: number };
-    const nextRevision = typeof body.revision === "number" ? body.revision : revision + 1;
-    campaignRevisions.set(session.profile.id, nextRevision);
-    return { status: "saved", revision: nextRevision };
+    const responseBody = (await response.json().catch(() => ({}))) as {
+      revision?: number;
+      state?: Parameters<typeof fromApiState>[0];
+    };
+    if (operation.action === "restore" && !responseBody.state) {
+      return { status: "unavailable", revision };
+    }
+    const nextRevision = typeof responseBody.revision === "number" ? responseBody.revision : revision + 1;
+    return {
+      status: "saved",
+      revision: nextRevision,
+      save: operation.action === "restore" && responseBody.state
+        ? fromApiState(responseBody.state)
+        : undefined,
+    };
+  }
+
+  private static queueFor(userId: string): PendingCampaignOperation[] {
+    const cached = campaignQueues.get(userId);
+    if (cached) return cached;
+    let queue: PendingCampaignOperation[] = [];
+    try {
+      const raw = localStorage.getItem(CloudSession.queueKey(userId));
+      const parsed = raw ? JSON.parse(raw) : [];
+      if (Array.isArray(parsed)) {
+        queue = parsed
+          .filter((operation) => (
+            operation &&
+            typeof operation.operationId === "string" &&
+            ["save", "reset", "restore"].includes(operation.action) &&
+            (operation.expectedRevision === null || typeof operation.expectedRevision === "number")
+          ))
+          .map((operation) => ({
+            operationId: operation.operationId,
+            action: operation.action,
+            save: operation.save || null,
+            expectedRevision: operation.expectedRevision,
+            attempted: Boolean(operation.attempted),
+            retryCount: Number.isFinite(operation.retryCount) ? operation.retryCount : 0,
+            conflicted: Boolean(operation.conflicted),
+          }));
+      }
+    } catch {
+      queue = [];
+    }
+    campaignQueues.set(userId, queue);
+    return queue;
+  }
+
+  private static queueKey(userId: string): string {
+    return `flesh-to-chrome:campaign-sync:${userId}`;
+  }
+
+  private static persistQueue(userId: string): void {
+    const queue = campaignQueues.get(userId) || [];
+    try {
+      if (queue.length) localStorage.setItem(CloudSession.queueKey(userId), JSON.stringify(queue));
+      else localStorage.removeItem(CloudSession.queueKey(userId));
+    } catch {
+      // O save da conta continua sendo a cópia de recuperação se a fila não puder ser persistida.
+    }
+  }
+
+  private static deferOperation(userId: string, operation: PendingCampaignOperation): void {
+    operation.retryCount += 1;
+    CloudSession.persistQueue(userId);
+    const queue = CloudSession.queueFor(userId);
+    CloudSession.emitSync(userId, { status: "pending", pending: queue.length, action: operation.action });
+    CloudSession.clearRetry(userId);
+    const delay = Math.min(1000 * 2 ** Math.max(0, operation.retryCount - 1), 30000);
+    const timer = window.setTimeout(() => {
+      retryTimers.delete(userId);
+      CloudSession.scheduleCampaignSync(userId, true);
+    }, delay);
+    retryTimers.set(userId, timer);
+  }
+
+  private static clearRetry(userId: string): void {
+    const timer = retryTimers.get(userId);
+    if (timer !== undefined) window.clearTimeout(timer);
+    retryTimers.delete(userId);
+  }
+
+  private static stateFor(userId: string): CampaignSyncState {
+    const queue = CloudSession.queueFor(userId);
+    if (!queue.length) return { status: "idle", pending: 0 };
+    if (queue.some((operation) => operation.conflicted)) {
+      return { status: "conflict", pending: queue.length, action: queue[0]?.action };
+    }
+    return { status: "pending", pending: queue.length, action: queue[0]?.action };
+  }
+
+  private static emitSync(userId: string, state: CampaignSyncState): void {
+    const currentState = { ...state };
+    delete currentState.completedAction;
+    delete currentState.restoredSave;
+    syncStates.set(userId, currentState);
+    const session = CloudSession.current();
+    if (!session || session.profile.id !== userId) return;
+    syncListeners.forEach((listener) => listener(state));
+  }
+
+  private static ensureRecoveryHooks(): void {
+    if (recoveryHooksReady) return;
+    recoveryHooksReady = true;
+    window.addEventListener("online", () => {
+      const session = CloudSession.current();
+      if (!session || CloudSession.hasCampaignConflict(session.profile.id)) return;
+      CloudSession.clearRetry(session.profile.id);
+      blockedCampaigns.delete(session.profile.id);
+      CloudSession.scheduleCampaignSync(session.profile.id, true);
+    });
   }
 
   static same(left: SaveData, right: SaveData): boolean {

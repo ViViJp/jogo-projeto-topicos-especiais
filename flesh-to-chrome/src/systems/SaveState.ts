@@ -336,16 +336,25 @@ export class SaveState {
     return snapshot;
   }
 
-  /** Restaura atributos, carteira e progresso sem consumir o ponto pré-Portão. */
-  restorePreGateSave(): Readonly<SaveData> | null {
-    if (!this.data.preGateSave) return null;
-    const snapshot = cloneSaveData(this.data.preGateSave, false);
-    this.data = {
-      ...cloneSaveData(snapshot, false),
-      preGateSave: cloneSaveData(snapshot, false),
-      endingReached: null,
-    };
-    this.persist();
+  /**
+   * Aplica a restauração localmente sem usar o PUT normal da campanha.
+   * Para uma conta autenticada, `confirmed` deve ser o estado devolvido por
+   * POST /me/campaign/restore-gate; visitantes restauram o snapshot da sessão.
+   */
+  restorePreGateSave(confirmed?: SaveData): Readonly<SaveData> | null {
+    if (!confirmed && this.place.store === "account") return null;
+    if (!confirmed && !this.data.preGateSave) return null;
+    if (confirmed) {
+      this.data = cloneSaveData(confirmed);
+    } else {
+      const snapshot = cloneSaveData(this.data.preGateSave!, false);
+      this.data = {
+        ...cloneSaveData(snapshot, false),
+        preGateSave: cloneSaveData(snapshot, false),
+        endingReached: null,
+      };
+    }
+    writeRaw(this.place.store, this.place.key, JSON.stringify(this.data));
     return this.data;
   }
 

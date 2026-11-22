@@ -1,7 +1,7 @@
 import Phaser from "phaser";
 import { SCREEN_WIDTH, SCREEN_HEIGHT } from "../config/GameConfig";
 import { InputManager } from "../systems/InputManager";
-import { CloudSession } from "../network/CloudSession";
+import { CampaignSyncState, CloudSession } from "../network/CloudSession";
 import { SaveState, SaveData } from "../systems/SaveState";
 import { GameSceneData } from "./GameScene";
 
@@ -32,6 +32,8 @@ export class MenuScene extends Phaser.Scene {
   private remoteSave: SaveData | null = null;
   private remoteRevision = 0;
   private mode: "main" | "phase-select" | "choice" = "main";
+  private stopCampaignSync?: () => void;
+  private pendingGateContinuation = false;
 
   constructor() {
     super("MenuScene");
@@ -44,6 +46,8 @@ export class MenuScene extends Phaser.Scene {
     this.confirmVisible = false;
     this.confirmText = undefined;
     this.mode = "main";
+    this.pendingGateContinuation = false;
+    this.stopCampaignSync?.();
 
     this.cameras.main.setBackgroundColor(0x05050a);
     this.input$ = new InputManager(this);
@@ -80,6 +84,11 @@ export class MenuScene extends Phaser.Scene {
         wordWrap: { width: 900 },
       })
       .setOrigin(0.5);
+    this.stopCampaignSync = CloudSession.subscribeCampaignSync((state) => this.handleCampaignSync(state));
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.stopCampaignSync?.();
+      this.stopCampaignSync = undefined;
+    });
     void this.prepare();
 
     this.add
@@ -239,15 +248,19 @@ export class MenuScene extends Phaser.Scene {
       const account = SaveState.readStored("account", SaveState.accountKey(session.profile.id));
       const remote = await CloudSession.loadCampaign();
       const guestProgress = Boolean(guest && SaveState.hasProgress(guest));
+      const pendingSync = CloudSession.hasPendingCampaignSync(session.profile.id);
+      const syncConflict = CloudSession.hasCampaignConflict(session.profile.id);
       this.remoteRevision = remote.revision;
       this.remoteSave = remote.save;
       if (remote.status === "unavailable") {
-        CloudSession.pauseCampaignSync(session.profile.id);
         if (guestProgress) SaveState.keepSession();
         else if (account) SaveState.bindAccount(session.profile.id);
         else SaveState.bindSession();
+        if (pendingSync && !syncConflict) CloudSession.retryCampaignSync();
         this.statusText?.setText(
-          "Não foi possível verificar a campanha na nuvem. As cópias locais foram preservadas."
+          pendingSync
+            ? "Save local preservado. A sincronização será retomada quando a conexão voltar."
+            : "Não foi possível verificar a campanha na nuvem. As cópias locais foram preservadas."
         );
         this.finishPrepare();
         return;
@@ -255,10 +268,21 @@ export class MenuScene extends Phaser.Scene {
       const remoteDiffers = Boolean(
         remote.save && account && !CloudSession.same(account, remote.save)
       );
-      if (guestProgress) {
+      if (guestProgress || syncConflict) {
         CloudSession.pauseCampaignSync(session.profile.id);
-        SaveState.keepSession();
+        if (guestProgress) SaveState.keepSession();
+        else SaveState.bindAccount(session.profile.id);
         this.showChoice();
+        if (syncConflict) {
+          this.statusText?.setText("Conflito de save: escolha qual cópia deve continuar.");
+        }
+        return;
+      }
+      if (pendingSync) {
+        SaveState.bindAccount(session.profile.id);
+        CloudSession.resumeCampaignSync(session.profile.id, remote.revision);
+        this.statusText?.setText("Há progresso local aguardando sincronização com a nuvem.");
+        this.finishPrepare();
         return;
       }
       if (remote.save && (!account || remoteDiffers)) {
@@ -342,6 +366,7 @@ export class MenuScene extends Phaser.Scene {
     }
     SaveState.importSession(session.profile.id);
     this.remoteRevision = result.revision;
+    CloudSession.discardPendingCampaignSync(session.profile.id);
     CloudSession.resumeCampaignSync(session.profile.id, result.revision);
     this.statusText?.setText(this.syncText(session.profile.name, result.status));
     this.finishPrepare();
@@ -366,6 +391,7 @@ export class MenuScene extends Phaser.Scene {
     }
     SaveState.keepAccount(session.profile.id);
     this.remoteRevision = result.revision;
+    CloudSession.discardPendingCampaignSync(session.profile.id);
     CloudSession.resumeCampaignSync(session.profile.id, result.revision);
     this.statusText?.setText(this.syncText(session.profile.name, result.status));
     this.finishPrepare();
@@ -374,6 +400,7 @@ export class MenuScene extends Phaser.Scene {
   private useRemote(): void {
     const session = CloudSession.current();
     if (!session || !this.remoteSave) return;
+    CloudSession.discardPendingCampaignSync(session.profile.id);
     this.writeAccount(session.profile.id, this.remoteSave);
     SaveState.bindAccount(session.profile.id);
     CloudSession.resumeCampaignSync(session.profile.id, this.remoteRevision);
@@ -456,11 +483,48 @@ export class MenuScene extends Phaser.Scene {
   }
 
   private continueFromGate(): void {
-    const restored = SaveState.load().restorePreGateSave();
+    const save = SaveState.load();
+    if (!save.hasPreGateSave()) return;
+    if (CloudSession.current()) {
+      this.pendingGateContinuation = true;
+      if (!CloudSession.queueGateRestore()) {
+        this.pendingGateContinuation = false;
+        this.statusText?.setText("Não foi possível preparar a restauração do Portão.");
+        return;
+      }
+      this.statusText?.setText("Restaurando o save pré-Portão na nuvem...");
+      return;
+    }
+    const restored = save.restorePreGateSave();
     if (!restored) return;
     // Phaser preserva os dados anteriores quando uma cena é iniciada sem
     // um novo objeto. Sobrescreve explicitamente a prévia do seletor.
     this.scene.start("GateScene", { testMode: false });
+  }
+
+  private handleCampaignSync(state: CampaignSyncState): void {
+    if (state.completedAction === "restore" && state.restoredSave) {
+      const restored = SaveState.load().restorePreGateSave(state.restoredSave);
+      if (!restored) return;
+      const shouldContinue = this.pendingGateContinuation;
+      this.pendingGateContinuation = false;
+      if (shouldContinue) {
+        this.scene.start("GateScene", { testMode: false });
+      } else {
+        this.statusText?.setText("Save pré-Portão restaurado e confirmado na nuvem.");
+        this.finishPrepare();
+      }
+      return;
+    }
+    if (state.status === "conflict") {
+      this.pendingGateContinuation = false;
+      this.statusText?.setText("Conflito de save. Volte ao menu para escolher qual cópia continuar.");
+      if (this.ready && this.mode === "main") void this.refreshAfterConflict();
+    } else if (state.status === "pending") {
+      this.statusText?.setText("Save local preservado; sincronização com a nuvem pendente.");
+    } else if (state.status === "syncing") {
+      this.statusText?.setText("Sincronizando campanha com a nuvem...");
+    }
   }
 
   private newGame(hasSave: boolean): void {

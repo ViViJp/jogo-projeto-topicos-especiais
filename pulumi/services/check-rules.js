@@ -153,6 +153,11 @@ const atGate = {
   bodyState: "implanted",
 };
 assert.equal(validateTransition(atGate, chrome), "");
+assert.equal(
+  validateTransition(chrome, atGate),
+  "fase regrediu",
+  "restauração pós-Chrome não pode usar o PUT online comum"
+);
 assert.notEqual(validateTransition({ ...descent, stageId: "topo" }, flesh), "");
 const withCredit = { ...initial, credits: { total: 10, consolidatedIds: ["f1-risk-01"] } };
 assert.notEqual(validateTransition(withCredit, initial), "");
