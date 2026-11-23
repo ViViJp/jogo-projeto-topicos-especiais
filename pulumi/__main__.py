@@ -205,7 +205,12 @@ def http_api(api, functions, authorizer):
         )
         for route_key in route_keys:
             slug = route_key.lower().replace(" ", "-").replace("/", "-").replace("{", "").replace("}", "")
-            public = route_key in ("GET /auth/google/start", "GET /auth/google/callback", "POST /auth/session")
+            public = route_key in (
+                "GET /auth/google/start",
+                "GET /auth/google/callback",
+                "POST /auth/session",
+                "POST /auth/logout",
+            )
             routes.append(
                 aws.apigatewayv2.Route(
                     f"route-{slug}",

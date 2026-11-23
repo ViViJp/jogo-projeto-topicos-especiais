@@ -83,6 +83,19 @@ exports.handler = async (event) => {
   const method = event.requestContext?.http?.method || "";
   const path = event.rawPath || "";
 
+  if (method === "POST" && path === "/auth/logout") {
+    try {
+      return await logout(event, requestId);
+    } catch (err) {
+      console.error("refresh token revocation failed", {
+        requestId,
+        outcome: "unavailable",
+        errorName: typeof err?.name === "string" ? err.name : "Error",
+      });
+      return fail(503, "TOKEN_REVOCATION_UNAVAILABLE", "Não foi possível confirmar a revogação do token.", requestId);
+    }
+  }
+
   try {
     if (method === "GET" && path === "/auth/google/start") return await startGoogle(event, requestId);
     if (method === "GET" && path === "/auth/google/callback") return await finishGoogle(event, requestId);
@@ -99,7 +112,6 @@ exports.handler = async (event) => {
     return fail(401, "UNAUTHENTICATED", "Access token ausente.", requestId);
   }
 
-  if (method === "POST" && path === "/auth/logout") return logout(event, requestId);
   if (method === "GET" && path === "/me") return profile(userId, claims);
 
   return fail(404, "NOT_FOUND", "Rota ausente.", requestId);

@@ -192,6 +192,9 @@ export class MenuScene extends Phaser.Scene {
     if (CloudSession.current()) {
       this.options.push({ label: "Sair", action: () => void this.logout() });
     } else {
+      if (CloudSession.stored()) {
+        this.options.push({ label: "Sair da sessão expirada", action: () => void this.logout() });
+      }
       this.options.push({ label: "Entrar com Google", action: () => void this.login() });
     }
     this.renderOptions();

@@ -80,27 +80,27 @@ const activeRequests = new Map<string, Set<AbortController>>();
 let recoveryHooksReady = false;
 
 export class CloudSession {
-  static storedOwner(): string | null {
+  static stored(): PlayerSession | null {
     try {
       const raw = sessionStorage.getItem(SESSION_KEY);
       if (!raw) return null;
       const parsed = JSON.parse(raw) as PlayerSession;
-      return parsed.profile?.id || null;
-    } catch {
-      return null;
-    }
-  }
-  static current(): PlayerSession | null {
-    try {
-      const raw = sessionStorage.getItem(SESSION_KEY);
-      if (!raw) return null;
-      const parsed = JSON.parse(raw) as PlayerSession;
-      if (!parsed.accessToken || !parsed.profile?.id) return null;
-      if (parsed.expiresAt && parsed.expiresAt <= Date.now()) return null;
+      if (!parsed.profile?.id || (!parsed.accessToken && !parsed.refreshToken)) return null;
       return parsed;
     } catch {
       return null;
     }
+  }
+
+  static storedOwner(): string | null {
+    return CloudSession.stored()?.profile.id || null;
+  }
+
+  static current(): PlayerSession | null {
+    const stored = CloudSession.stored();
+    if (!stored?.accessToken) return null;
+    if (stored.expiresAt && stored.expiresAt <= Date.now()) return null;
+    return stored;
   }
 
   static async api(): Promise<string | null> {
@@ -159,7 +159,7 @@ export class CloudSession {
   }
 
   static async logout(): Promise<LogoutResult> {
-    const session = CloudSession.current();
+    const session = CloudSession.stored();
     sessionStorage.removeItem(SESSION_KEY);
     if (!session) return { localLogout: "completed", refreshTokenRevocation: "not-requested" };
     CloudSession.abortOwnerRequests(session.profile.id);
@@ -179,7 +179,6 @@ export class CloudSession {
       const response = await fetch(`${api}/auth/logout`, {
         method: "POST",
         headers: {
-          authorization: `Bearer ${session.accessToken}`,
           "content-type": "application/json",
         },
         body: JSON.stringify({ refreshToken: session.refreshToken }),

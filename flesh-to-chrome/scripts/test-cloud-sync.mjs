@@ -45,6 +45,7 @@ const window = {
 };
 
 const requests = [];
+const logoutRequests = [];
 let requestMode = "load";
 let logoutMode = "success";
 let currentRevision = 1;
@@ -87,6 +88,10 @@ async function fetchMock(url, options = {}) {
     return response(200, { revision: currentRevision, state: restoredSave });
   }
   if (url.endsWith("/auth/logout")) {
+    logoutRequests.push({
+      authorization: options.headers?.authorization,
+      body: JSON.parse(options.body || "{}"),
+    });
     if (logoutMode === "unavailable") throw new Error("logout network unavailable");
     if (logoutMode === "rejected") {
       return response(502, { error: { code: "TOKEN_REVOCATION_REJECTED" } });
@@ -263,5 +268,22 @@ const unavailableLogout = await CloudSession.logout();
 assert.equal(unavailableLogout.refreshTokenRevocation, "unavailable");
 assert.equal(sessionStorage.getItem("flesh-to-chrome:session"), null,
   "falha de rede na revogação não pode preservar a sessão local");
+
+sessionStorage.setItem("flesh-to-chrome:session", JSON.stringify({
+  accessToken: "expired-access",
+  refreshToken: "valid-refresh",
+  expiresAt: Date.now() - 1_000,
+  profile: { id: "player-expired", name: "Expirado", email: "expired@example.com" },
+}));
+logoutMode = "success";
+assert.equal(CloudSession.current(), null, "access token expirado não pode autenticar rotas protegidas");
+assert.equal(CloudSession.stored().profile.id, "player-expired",
+  "a sessão armazenada deve permanecer disponível para encerramento");
+const expiredLogout = await CloudSession.logout();
+assert.equal(expiredLogout.refreshTokenRevocation, "confirmed");
+assert.equal(sessionStorage.getItem("flesh-to-chrome:session"), null);
+assert.equal(logoutRequests.at(-1).body.refreshToken, "valid-refresh");
+assert.equal(logoutRequests.at(-1).authorization, undefined,
+  "a revogação não deve depender do access token expirado");
 
 console.log("campaign sync e logout seguro: retry, conflito, isolamento e revogação OK");
