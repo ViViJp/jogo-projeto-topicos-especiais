@@ -19,6 +19,8 @@ Gerados a partir de `levelDesign.md` + GDD §16 (draft jogável; editável no Ti
 - `scan-visuals` — visuais das Fases 4 e 5 controlados pelo scan, sem colisão
 - `hazards` — canos, prensas, barricadas (tiles)
 - `objects` — spawn, checkpoint, créditos, inimigos, clínica, Portão
+- `parallax-*` (Image Layers, Fases 1-5 e multiplayer) — fundo com parallax e clima;
+  regras em `docs/TILED_PHASER_CONTRACT.md` §3.1
 
 ## Abrir no Tiled
 

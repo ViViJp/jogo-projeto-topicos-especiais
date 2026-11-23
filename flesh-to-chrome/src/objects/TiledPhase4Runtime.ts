@@ -6,9 +6,11 @@ import {
   TILED_FASE4_TILESETS,
 } from "../levels/TiledFase4";
 import { AbilityState } from "../systems/AbilityState";
-import { TEX } from "../utils/PlaceholderTextures";
+import { AudioManager, SFX } from "../systems/AudioManager";
+import { CREDIT_ANIMATION_KEY, TEX } from "../utils/PlaceholderTextures";
 import { CheckpointMarker } from "./CheckpointMarker";
 import { nearestScanObstacleIndex } from "./HazardMotion";
+import { ScanBarrierVisual } from "./ScanBarrierVisual";
 
 interface Phase4Credit {
   id: string;
@@ -56,6 +58,7 @@ interface AutomaticDoor {
   zone: Phaser.GameObjects.Zone;
   col: number;
   prompt: Phaser.GameObjects.Text;
+  visual: ScanBarrierVisual;
   disabled: boolean;
 }
 
@@ -97,6 +100,11 @@ export class TiledPhase4Runtime {
   private readonly tutorialLabels: Phaser.GameObjects.Text[] = [];
   private readonly narrativeLabels: Phaser.GameObjects.Text[] = [];
   private readonly narrativeVisuals: Phaser.GameObjects.Image[] = [];
+  private readonly tileLayers: Phaser.Tilemaps.TilemapLayer[] = [];
+  private fatherAd?: {
+    visual: Phaser.GameObjects.Image;
+    label: Phaser.GameObjects.Text;
+  };
   private endGateTriggered = false;
   private playerRef?: Player;
 
@@ -125,6 +133,7 @@ export class TiledPhase4Runtime {
     ground.setCollisionByExclusion([-1, 0]);
     ground.setDepth(0);
     this.groundLayer = ground;
+    this.tileLayers.push(ground);
 
     this.scanVisualsLayer = this.createVisualLayer("scan-visuals", tilesets, 1);
     this.hazardsLayer = this.createVisualLayer("hazards", tilesets, 2);
@@ -173,7 +182,60 @@ export class TiledPhase4Runtime {
     if (!layer) return undefined;
     layer.setPosition(layer.x, layer.y + TILED_FASE4_OFFSET_Y);
     layer.setDepth(depth);
+    this.tileLayers.push(layer);
     return layer;
+  }
+
+  /**
+   * O recorte da descida começa no meio do mapa. A câmera mantém Alex a 35%
+   * da tela e, sem este corte visual, ainda mostra plataformas abandonadas
+   * do trecho anterior atrás dele, embora não exista caminho de volta.
+   */
+  hideBeforeX(worldX: number, flatGroundWidthPx = 0): void {
+    const startColumn = Phaser.Math.Clamp(
+      Math.floor(worldX / this.map.tileWidth),
+      0,
+      this.map.width - 1,
+    );
+    const groundTemplate = Array.from({ length: this.map.height }, (_, row) => {
+      const tile = this.groundLayer.getTileAt(startColumn, row);
+      return tile && tile.index !== -1 ? { row, index: tile.index } : null;
+    }).filter((entry): entry is { row: number; index: number } => entry !== null);
+    const lastHiddenColumn = Math.floor((worldX - 1) / this.map.tileWidth);
+    for (const layer of this.tileLayers) {
+      for (let col = 0; col <= lastHiddenColumn; col += 1) {
+        for (let row = 0; row < this.map.height; row += 1) {
+          const tile = layer.getTileAt(col, row);
+          if (tile) tile.visible = false;
+        }
+      }
+    }
+    if (flatGroundWidthPx <= 0) return;
+    const firstGroundColumn = Math.max(
+      0,
+      startColumn - Math.ceil(flatGroundWidthPx / this.map.tileWidth),
+    );
+    for (let col = firstGroundColumn; col < startColumn; col += 1) {
+      for (const template of groundTemplate) {
+        const tile = this.groundLayer.putTileAt(template.index, col, template.row);
+        if (tile) tile.visible = true;
+      }
+    }
+    this.groundLayer.setCollisionByExclusion([-1, 0]);
+  }
+
+  /**
+   * Na descida, a propaganda é o primeiro sinal de que Alex está refazendo o
+   * caminho. O crédito e o fragmento permanecem nas coordenadas finais do
+   * mapa; somente a composição narrativa é deslocada.
+   */
+  moveFatherAdToDescentStart(startX: number): void {
+    if (!this.fatherAd) return;
+    this.fatherAd.visual.setX(startX + 210);
+    this.fatherAd.label
+      .setX(startX + 430)
+      .setData("triggerX", startX)
+      .setData("triggerWidth", 1024);
   }
 
   private readString(
@@ -220,6 +282,7 @@ export class TiledPhase4Runtime {
     for (const credit of this.credits) {
       if (this.consolidatedThisPhase.has(credit.id)) continue;
       const sprite = this.scene.physics.add.sprite(credit.x, credit.y, TEX.credit);
+      sprite.anims.play(CREDIT_ANIMATION_KEY);
       sprite.body!.setAllowGravity(false);
       sprite.setData("creditValue", credit.value);
       sprite.setDepth(6);
@@ -355,16 +418,15 @@ export class TiledPhase4Runtime {
   private buildAutomaticDoors(objects: Phaser.Types.Tilemaps.TiledObject[]): void {
     for (const object of objects) {
       const width = object.width ?? 32;
-      const height = object.height ?? 256;
       const x = object.x ?? 0;
       const y = object.y ?? 128;
       const doorCol = Math.floor(x / this.map.tileWidth);
       let firstDoorTileRow: number | undefined;
       for (let row = 0; row < this.map.height; row += 1) {
-        if (this.hazardsLayer?.getTileAt(doorCol, row)?.index === DOOR_FIRST_GID) {
-          firstDoorTileRow = row;
-          break;
-        }
+        const tile = this.hazardsLayer?.getTileAt(doorCol, row);
+        if (tile?.index !== DOOR_FIRST_GID) continue;
+        firstDoorTileRow ??= row;
+        tile.visible = false;
       }
       const collisionTop = (firstDoorTileRow ?? Math.floor(y / this.map.tileHeight))
         * this.map.tileHeight + TILED_FASE4_OFFSET_Y;
@@ -377,12 +439,6 @@ export class TiledPhase4Runtime {
         collisionHeight,
       );
       this.scene.physics.add.existing(zone, true);
-      const bottomTileRow = Math.ceil((y + height) / this.map.tileHeight) - 1;
-      const bottomTile = this.hazardsLayer?.getTileAt(doorCol, bottomTileRow);
-      if (bottomTile?.index === DOOR_FIRST_GID) {
-        this.hazardsLayer?.putTileAt(DOOR_FIRST_GID, doorCol, bottomTileRow - 1);
-        bottomTile.visible = false;
-      }
       this.doors.push({
         id: this.readString(object, "id") ?? object.name ?? `door-${object.id}`,
         x,
@@ -399,6 +455,13 @@ export class TiledPhase4Runtime {
           })
           .setOrigin(0.5, 1)
           .setDepth(7),
+        visual: new ScanBarrierVisual(
+          this.scene,
+          TILED_FASE4_TILESETS[4].key,
+          x + width / 2,
+          collisionTop,
+          collisionHeight,
+        ),
         disabled: false,
       });
     }
@@ -461,6 +524,7 @@ export class TiledPhase4Runtime {
       label.setData("triggerX", x);
       label.setData("triggerWidth", width);
       this.narrativeLabels.push(label);
+      this.fatherAd = { visual: propaganda, label };
     }
   }
 
@@ -503,6 +567,8 @@ export class TiledPhase4Runtime {
   private setDoorDisabled(door: AutomaticDoor, disabled: boolean): void {
     if (door.disabled === disabled) return;
     door.disabled = disabled;
+    if (disabled) AudioManager.playSfx(this.scene, SFX.securityDoorUnlock, { volume: 0.56 });
+    door.visual.setEnabled(!disabled);
     const body = door.zone.body as Phaser.Physics.Arcade.StaticBody | null;
     if (body) body.enable = !disabled;
     door.prompt
@@ -547,8 +613,8 @@ export class TiledPhase4Runtime {
     }
   }
 
-  private revealGroup(group: string): void {
-    if (this.revealedGroups.has(group)) return;
+  private revealGroup(group: string): boolean {
+    if (this.revealedGroups.has(group)) return false;
     this.revealedGroups.add(group);
     for (const region of this.revealRegions.filter((item) => item.group === group)) {
       region.outline.setVisible(true);
@@ -561,6 +627,7 @@ export class TiledPhase4Runtime {
         tile.tint = 0x36e2ff;
       }
     }
+    return true;
   }
 
   private clearPassedRevealGroups(playerX: number): void {
@@ -593,7 +660,11 @@ export class TiledPhase4Runtime {
         .filter((region) => this.distanceToRegion(playerX, region) <= SCAN_RANGE)
         .map((region) => region.group),
     );
-    groups.forEach((group) => this.revealGroup(group));
+    let revealedSomething = false;
+    groups.forEach((group) => {
+      revealedSomething = this.revealGroup(group) || revealedSomething;
+    });
+    if (revealedSomething) AudioManager.playSfx(this.scene, SFX.scanReveal, { volume: 0.48 });
     this.falseWalls
       .filter((wall) => groups.has(wall.region.group))
       .forEach((wall) => this.setFalseWallIntangible(wall, true));
@@ -615,7 +686,11 @@ export class TiledPhase4Runtime {
       if (this.checkpointTriggered.has(checkpoint.id)) continue;
       if (Math.abs(player.sprite.x - checkpoint.x) < 28) {
         this.checkpointTriggered.add(checkpoint.id);
-        const withFeedback = this.callbacks.onCheckpoint(checkpoint.id, checkpoint.x, checkpoint.y) !== false;
+        const withFeedback = this.callbacks.onCheckpoint(
+          checkpoint.id,
+          checkpoint.x + checkpoint.width / 2,
+          checkpoint.y,
+        ) !== false;
         this.checkpointMarkers.get(checkpoint.id)?.activate(withFeedback);
       }
     }
@@ -630,6 +705,14 @@ export class TiledPhase4Runtime {
     }
   }
 
+  hideCredits(): void {
+    this.creditSprites.forEach((sprite) => {
+      const body = sprite.body as Phaser.Physics.Arcade.Body | null;
+      if (body) body.enable = false;
+      sprite.setActive(false).setVisible(false);
+    });
+  }
+
   destroy(): void {
     this.creditSprites.forEach((sprite) => sprite.destroy());
     this.checkpointMarkers.forEach((marker) => marker.destroy());
@@ -637,6 +720,7 @@ export class TiledPhase4Runtime {
     this.doors.forEach((door) => {
       door.zone.destroy();
       door.prompt.destroy();
+      door.visual.destroy();
     });
     this.revealRegions.forEach((region) => region.outline.destroy());
     this.falseWalls.forEach((wall) => wall.zone.destroy());

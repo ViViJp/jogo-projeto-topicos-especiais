@@ -11,12 +11,12 @@ function save(extra) {
     abilities: { legs: false, arms: false, eyes: false, thrusters: false },
     descentState: {
       active: false,
-      step: null,
-      chainStatus: "inactive",
-      memories: [],
-      pendingMemory: null,
-      removals: [],
-      retryUsedByStage: {},
+      brokenChain: false,
+      epiloguePending: false,
+      currentStep: 0,
+      recoveredFragmentIds: [],
+      retryUsedPhaseIds: [],
+      pendingRemoval: null,
     },
     preGateSave: null,
     endingReached: null,
@@ -49,20 +49,22 @@ const descent = save({
   abilities: { legs: true, arms: true, eyes: true, thrusters: false },
   descentState: {
     active: true,
-    step: "D2",
-    chainStatus: "active",
-    memories: ["quem-alex-era"],
-    pendingMemory: "rua-voz",
-    removals: ["propulsores"],
-    retryUsedByStage: { topo: true },
+    brokenChain: false,
+    epiloguePending: false,
+    currentStep: 1,
+    recoveredFragmentIds: ["glitch-topo-identidade", "glitch-corporativo-voz"],
+    retryUsedPhaseIds: ["fase5"],
+    pendingRemoval: "eyes",
   },
 });
 const descentState = toApiState(descent);
 assert.equal(validateState(descentState), "");
 const restoredDescent = fromApiState(descentState);
-assert.deepEqual(restoredDescent.descentState.removals, ["propulsores"]);
-assert.deepEqual(restoredDescent.descentState.memories, ["quem-alex-era"]);
-assert.equal(restoredDescent.descentState.pendingMemory, null);
+assert.equal(restoredDescent.descentState.currentStep, 1);
+assert.deepEqual(restoredDescent.descentState.recoveredFragmentIds,
+  ["glitch-topo-identidade", "glitch-corporativo-voz"]);
+assert.equal(restoredDescent.descentState.pendingRemoval, "eyes");
+assert.deepEqual(restoredDescent.descentState.retryUsedPhaseIds, ["fase5"]);
 
 const tampered = {
   ...toApiState(save()),

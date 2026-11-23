@@ -266,13 +266,13 @@ carregada de seu blockout Tiled real e interpretada por um runtime próprio:
   hazards ocultos, lasers e portas automáticas temporizadas.
 - **Fase 5 — Topo da Cidade:** dash com bateria no HUD, lasers, barreiras
   rotativas, portas automáticas, quebráveis e trecho final do Portão.
-  A escolha narrativa Chrome/Flesh ainda está representada apenas no
-  blockout e não encaminha finais distintos.
+  A escolha narrativa encaminha o Final Chrome ou a descida Flesh/Hollow,
+  incluindo confronto com George, memórias, ReForge e retirada de implantes.
 
 Também estão ativos o save único em `localStorage`, checkpoints com posição
 X/Y, consolidação e descarte de créditos, progressão de implantes nas quatro
-clínicas, sprites progressivos de Alex, seletor temporário de fases que não
-grava o save e a base de multiplayer MQTT/WebSocket integrada da `main`.
+clínicas, sprites progressivos de Alex, transições temáticas centralizadas e a
+corrida multiplayer por WebRTC (`MultiplayerScene`).
 
 ## Como rodar
 
@@ -1184,12 +1184,11 @@ Os próximos passos, em ordem:
   15.5/15.6), Hollow, Flesh e epílogo. O formato de save já reserva os
   campos `descentState`, `preGateSave` e `endingReached` em
   `src/systems/SaveState.ts` para isso.
-- **Marco 5 — Multiplayer** (Seção 24.5): a base de conexão MQTT/WebSocket,
-  criação/entrada em salas, identificação de host e jogadores, presença e
-  reconexão já está implementada em `src/network/` e integrada à
-  `MultiplayerScene`. Ainda faltam a pista própria, movimentação e
-  sincronização da corrida, créditos individuais, tempo ajustado, regras
-  de DNF, tratamento completo de desconexão e apresentação dos resultados.
+- **Marco 5 — Multiplayer** (Seção 24.5): corrida para dois jogadores por
+  WebRTC implementada em `src/multiplayer/` e `MultiplayerScene`, com pista
+  própria, créditos individuais, tempo ajustado, DNF, reconexão e tela de
+  resultado. Falta o teste de aceite em dois dispositivos físicos (roteiro em
+  `docs/MULTIPLAYER_SECURITY_AND_PLAYTEST.md`).
 - **Marco 6 — Polimento e entrega** (Seção 24.6): playtests para calibrar
   os valores marcados como provisórios, arte final substituindo os
   placeholders, áudio, e — só depois de tudo estável — a loja cosmética
@@ -1203,53 +1202,27 @@ Os próximos passos, em ordem:
 | Victor Blum | Game design / level design / GDD |
 | João Pedro | Arte 2D / UI |
 
-## Multiplayer via MQTT — configuração e testes
+## Multiplayer via WebRTC — configuração e testes
 
-A base de multiplayer está implementada em `src/network/` e contempla:
-
-- conexão MQTT sobre WebSocket;
-- reconexão automática e keep-alive;
-- criação de salas com código de 6 caracteres e entrada por código;
-- identificação de host e jogadores;
-- mensagens de boas-vindas e presença dos participantes;
-- nova confirmação do host quando um jogador expira por timeout;
-- desempate determinístico caso dois clientes tentem ser host da mesma sala.
-
-A pista de corrida, a movimentação e a sincronização da corrida, a pontuação, as regras de DNF e a apresentação dos resultados ainda fazem parte do roadmap.
-
-### Configurar e iniciar o broker
-
-O cliente usa, por padrão, o broker MQTT via WebSocket em `ws://localhost:9001`. Instale o [Eclipse Mosquitto](https://mosquitto.org/download/) e configure um listener WebSocket na porta `9001`. O arquivo `mqtt-dev.conf`, localizado na raiz de `flesh-to-chrome/`, contém a configuração de desenvolvimento usada pelo projeto.
-
-No terminal, dentro da pasta `flesh-to-chrome/`, inicie o broker:
-
-```bash
-mosquitto -c mqtt-dev.conf -v
-```
-
-Mantenha esse terminal aberto. Se o comando `mosquitto` não for reconhecido no Windows, execute o `mosquitto.exe` pelo caminho completo da instalação e informe o caminho completo para `mqtt-dev.conf`.
-
-A configuração de desenvolvimento pode permitir conexões sem autenticação; use-a apenas em ambiente confiável. Para produção, configure autenticação, transporte seguro (`wss://`) e as regras de acesso adequadas.
-
-### Iniciar o jogo e testar salas
-
-Em outro terminal, também dentro de `flesh-to-chrome/`, execute:
+A corrida usa WebRTC entre os dois navegadores; um servidor de sinalização
+WebSocket (`server/signaling-server.mjs`) só apresenta os jogadores um ao outro.
 
 ```bash
 npm install
-npm start
+npm run dev:multiplayer
 ```
 
-No menu do jogo, escolha **Multiplayer**. Em uma janela, selecione **Criar sala**; em outra, informe o código gerado e selecione **Entrar na sala**. As duas instâncias devem conectar ao broker e mostrar o mesmo código de sala.
+O comando sobe o servidor de sinalização (porta `8080`) e o jogo acessível na
+rede local (porta `1234`). Abra o jogo pelo IP do computador anfitrião, escolha
+**Multiplayer** no menu e use **Copiar convite** para enviar o link ao oponente.
+A corrida começa quando os dois estiverem na mesma sala.
 
-### Testar em outro computador pela rede local
+- **Teste em uma máquina só:** abra duas abas com `?signal=local&room=TESTE`;
+  a sinalização passa a usar `BroadcastChannel`, sem servidor.
+- **Outro servidor de sinalização:** `?signal=wss://host/ws`.
+- **Portas e TURN:** variáveis `SIGNALING_PORT`, `GAME_PORT`, `STUN_URL`,
+  `TURN_URL`, `TURN_USERNAME` e `TURN_CREDENTIAL`. Redes diferentes (NAT)
+  normalmente exigem TURN.
 
-O cliente aceita o parâmetro `broker` na URL para apontar para o broker MQTT de outro computador. No computador anfitrião, descubra o IPv4 com `ipconfig` e confirme que o broker WebSocket está acessível pela porta `9001`. No outro computador, abra o jogo usando o IP do anfitrião e acrescente o parâmetro abaixo à URL:
-
-```text
-?broker=ws://IP:9001
-```
-
-Por exemplo, se o IP do computador que executa o broker for `192.168.1.50`, use `?broker=ws://192.168.1.50:9001`. Se a URL do jogo já tiver parâmetros, acrescente `&broker=ws://192.168.1.50:9001` em vez de um segundo `?`.
-
-O servidor de desenvolvimento do jogo também precisa aceitar conexões pela rede local; acesse-o usando o IP do computador anfitrião e a porta exibida pelo Parcel, não `localhost`. Libere no Firewall do Windows as portas necessárias para o servidor do jogo e para o broker. O parâmetro `broker` muda o endereço MQTT, mas não expõe por si só o servidor do jogo à rede.
+Limites de confiança, reconexão e o roteiro de aceite estão em
+`docs/MULTIPLAYER_SECURITY_AND_PLAYTEST.md`.

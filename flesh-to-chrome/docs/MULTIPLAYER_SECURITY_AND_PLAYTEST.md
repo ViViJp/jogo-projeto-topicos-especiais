@@ -115,8 +115,8 @@ Use dois dispositivos reais e marque cada item no comentário do PR:
 - [ ] os dois cronômetros iniciam juntos;
 - [ ] posição, animação, progresso e créditos do oponente são atualizados;
 - [ ] cada jogador coleta créditos de forma independente;
-- [ ] o checkpoint central muda o local de respawn;
-- [ ] antes e depois do checkpoint, destruir/revelar obstáculos e morrer os
+- [ ] cada um dos três checkpoints muda o local de respawn;
+- [ ] antes e depois de cada checkpoint, destruir/revelar obstáculos e morrer os
       restaura sem objetos sobrepostos nem colisão invisível;
 - [ ] tocar uma barreira visível mata; cada scan torna invisível e desativa
       somente a próxima barreira local, e todas voltam após o respawn;

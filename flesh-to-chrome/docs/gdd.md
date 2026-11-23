@@ -343,7 +343,7 @@ No topo, o Portão materializa a decisão temática do jogo. Aceitar a conversã
 
 Como George se recusa a retirar os implantes, Alex utiliza a ReForge Industries. A empresa recupera o cromo — material socialmente mais valioso — e fornece substitutos orgânicos bioprintados de qualidade inferior. A cada remoção Alex perde uma habilidade especial e recupera uma parte imperfeita de sua condição humana.
 
-No caminho Flesh, a imagem do pai reaparece como holograma corporativo na Fase 2 — Industrial. Mesmo depois de chegar ao símbolo que perseguiu, Alex continua descendo para a família. Se recuperar todas as memórias, chega ao Flesh. Se quebrar a cadeia, chega ao Hollow.
+No caminho Flesh, as três primeiras retiradas utilizam um operador ciborgue anônimo da ReForge. A imagem do pai aparece como holograma corporativo **somente na última remoção**, no setor Industrial, quando as pernas mecânicas são vendidas e Alex perde o salto duplo. Essa aparição única concentra o impacto narrativo no momento em que Alex abandona a última parte robótica. Se recuperar todas as memórias, chega ao Flesh. Se quebrar a cadeia, chega ao Hollow.
 
 ## 13.3 Gameplay — Brief
 
@@ -359,7 +359,7 @@ Créditos funcionam como pontuação persistente da campanha. Antes de um checkp
 
 Objetos quebráveis não matam imediatamente: ao colidir, Alex recebe uma pequena janela para reagir com ataque. O scan funciona como pulso temporário e revela elementos daquele trecho. O dash possui cooldown e não concede invencibilidade.
 
-A descida mantém os mesmos mapas-base e direção horizontal, mas adiciona rotas secretas, glitches, unidades da ReForge Industries e mudanças de atmosfera. Se um glitch for perdido, o jogador recebe uma única oportunidade especial de repetir a fase. Uma segunda falha quebra o caminho Flesh.
+A descida mantém os mesmos mapas-base e direção horizontal, mas utiliza recortes curtos de aproximadamente **30 segundos por setor**. Cada recorte adiciona uma rota secreta com glitch, uma memória ligada ao motivo humano de Alex para abandonar o cromo, uma transição pela ReForge Industries e mudanças de atmosfera. Se um glitch for perdido, o jogador recebe uma única oportunidade especial de repetir o setor. Uma segunda falha quebra o caminho Flesh.
 
 Fases concluídas não podem ser livremente selecionadas para replay durante a campanha. O jogador pode reiniciar apenas a fase atual, utilizar o retry especial da descida ou retornar aos setores quando a própria narrativa exige.
 
@@ -655,9 +655,11 @@ O reencontro físico é exclusivo e central nesse final:
 
 ### Caminho Flesh
 
-A imagem do pai também é utilizada por interfaces corporativas de reciclagem.
+A imagem do pai é utilizada como avatar pré-programado somente no último procedimento da ReForge Industries. Os três procedimentos anteriores usam um operador ciborgue anônimo na mesma interface.
 
-Durante a descida, Alex volta a ser confrontado com essa imagem na **Fase 2 — Industrial**, quando já abandonou quase toda a ascensão.
+Antes de cada retirada, um holograma apresenta a avaliação e a venda do implante recuperado, confirma que o cromo conserva valor comercial e oferece a parte bioprintada como substituição barata. O operador anônimo dos três primeiros procedimentos evidencia que esse discurso é institucional. O rosto do pai surge apenas na retirada das pernas, transformando a perda do salto duplo e da última parte robótica no confronto final com o destino que Alex decidiu recusar.
+
+Na **Fase 2 — Industrial**, quando Alex já abandonou quase toda a ascensão, a presença do holograma recebe ênfase narrativa especial.
 
 Esse encontro continua sendo apenas corporativo: um **holograma/interface pré-programada**, não a presença física do pai.
 
@@ -704,15 +706,17 @@ George vê Alex como oportunidade para:
 
 ### Recusa no caminho Flesh
 
-Depois que Alex rejeita Chrome e recupera o primeiro glitch:
+Imediatamente depois que Alex rejeita Chrome e antes do primeiro setor da descida:
 
 1. procura uma clínica de George;
-2. informa que quer remover os implantes;
-3. George se recusa.
+2. informa que não atravessará o Portão e quer abandonar a robotização;
+3. explica que chegou ao topo sem conseguir lembrar por quem havia começado a subida;
+4. afirma que família, rua e amigos se tornaram ruído atrás do cromo;
+5. George reage com raiva e se recusa a remover os implantes.
 
-George não quer destruir aquilo que considera sua maior obra e teme perder o prestígio conquistado.
+George não quer destruir aquilo que considera sua maior obra, trata Alex como propriedade de sua reputação e teme perder o prestígio conquistado. Alex responde que não é uma obra e decide descer para recuperar cada motivo humano deixado para trás.
 
-Depois disso, Alex procura outra solução.
+Depois disso, Alex inicia a descida. As memórias recuperadas nos glitches confirmam progressivamente essa decisão e permitem que ele procure a ReForge Industries para cada retirada.
 
 Referências posteriores a George nos finais são opcionais e ficam fora do MVP.
 
@@ -773,6 +777,11 @@ As unidades de reciclagem usam hologramas com rostos de ciborgues famosos.
 - são interfaces pré-programadas;
 - não possuem consciência;
 - não representam comunicação real com a pessoa exibida.
+- as três primeiras retiradas usam um operador ciborgue anônimo da corporação;
+- somente o último avatar, durante a remoção das pernas mecânicas, exibe o rosto do pai de Alex;
+- aparece depois da memória e antes da retirada do implante;
+- conduz a avaliação/venda da peça mecânica e a autorização do bioprinting;
+- reforça a lógica corporativa de que o cromo vale mais do que a carne.
 
 Na descida, uma unidade da **Fase 2 — Industrial** utiliza o rosto do pai de Alex.
 
@@ -829,7 +838,7 @@ Final: George instala os braços.
 
 ### Durante a descida
 
-Uma unidade da **ReForge Industries** utiliza um holograma com o rosto do pai de Alex. Mesmo diante do símbolo que originou sua obsessão, Alex continua descendo em direção à família.
+Os três primeiros procedimentos usam o operador ciborgue da ReForge. O holograma do pai aparece uma única vez, com destaque especial no setor Industrial. Mesmo diante do símbolo que originou sua obsessão, Alex vende as pernas mecânicas, perde o salto duplo e continua descendo em direção à família.
 
 ## 16.3 Fase 3 — Meio Urbano
 
@@ -900,7 +909,19 @@ Hipótese para as Fases 1–4:
 
 A Fase 5 começa com 1 checkpoint.
 
-Esses valores permanecem provisórios até os playtests.
+### Descida Flesh/Hollow
+
+Cada setor jogável da cadeia ativa deve durar aproximadamente **30 segundos sem mortes**, equivalente a cerca de **9.600 px** na velocidade-base de 320 px/s.
+
+| Ordem | Setor revisitado | Duração-alvo | Implantes usados no recorte |
+| --- | --- | ---: | --- |
+| D1 | Topo | ~30 s | salto duplo, ataque, visor e dash |
+| D2 | Corporativo | ~30 s | salto duplo, ataque e visor |
+| D3 | Meio Urbano | ~30 s | salto duplo e ataque |
+| D4 | Industrial | ~30 s | salto duplo |
+| Epílogo | Esgoto | ~5 s | nenhum implante; apenas ações humanas básicas |
+
+A cadeia de desafios da descida possui aproximadamente **120 segundos de gameplay**, sem contar diálogos, ReForge, retry e o trecho jogável do epílogo. O Esgoto é intencionalmente muito mais curto: serve como retorno contemplativo à família depois da última retirada, não como um quinto teste de implantes. Esses valores permanecem provisórios até os playtests.
 
 ---
 
@@ -931,14 +952,15 @@ A conversão completa ocorre e segue para o Final Chrome.
 ### Flesh
 
 1. Alex rejeita o Portão;
-2. Fase 5 é carregada novamente no contexto de descida;
-3. o primeiro glitch passa a existir;
-4. Alex recupera o primeiro glitch;
-5. procura George;
-6. George se recusa;
-7. Alex procura a ReForge Industries;
-8. remove o primeiro implante;
-9. segue para a Fase 4.
+2. procura George e comunica que abandonará a robotização;
+3. George reprova a decisão, chama Alex de sua maior obra e se recusa a remover os implantes;
+4. Alex afirma que não é uma obra e que precisa recuperar os motivos esquecidos da subida;
+5. um recorte de aproximadamente 30 segundos da Fase 5 é carregado no contexto de descida;
+6. o primeiro glitch passa a existir numa pequena rota secreta;
+7. Alex recupera a primeira memória e confirma um motivo para abandonar o cromo;
+8. procura uma unidade da ReForge Industries;
+9. um operador ciborgue anônimo conduz a venda do implante e o bioprinting;
+10. Alex remove o primeiro implante e segue para o recorte da Fase 4.
 
 ## 18.3 Natureza dos fragmentos
 
@@ -950,6 +972,8 @@ Não são objetos físicos comuns.
 - os implantes entram em conflito com memórias humanas reprimidas;
 - o jogador percebe isso como ruído e glitch;
 - alcançar o núcleo do glitch recupera uma memória;
+- cada memória relembra uma pessoa, vínculo ou parte da identidade que a robotização estava apagando;
+- a lembrança fornece a Alex um motivo concreto para continuar abandonando o corpo ciborgue;
 - cada memória permite acessar a próxima.
 
 Se a cadeia é quebrada, os glitches seguintes deixam de se manifestar.
@@ -958,28 +982,78 @@ Os glitches ficam no final de pequenas rotas secretas.
 
 ## 18.4 Ordem da descida
 
-| Ordem | Setor | Memória/glitch | Implante removido |
-| --- | --- | --- | --- |
-| D1 | Topo | memória de quem Alex era | propulsores |
-| D2 | Corporativo | memória da rua/voz | olhos |
-| D3 | Meio Urbano | memória dos amigos | braços |
-| D4 | Industrial | memória da família | pernas |
-| Epílogo | Esgoto | — | humano |
+| Ordem | Setor | Memória/glitch | Motivo humano recuperado | Implante removido |
+| --- | --- | --- | --- | --- |
+| D1 | Topo | memória de quem Alex era | lembrar que é um filho e não uma obra | propulsores |
+| D2 | Corporativo | memória da rua/voz | recuperar a própria voz e suas raízes | olhos |
+| D3 | Meio Urbano | memória dos amigos | lembrar de quem o ergueu sem tratá-lo como peça | braços |
+| D4 | Industrial | memória da família | voltar para quem permaneceu esperando por ele | pernas |
+| Epílogo | Esgoto | — | reencontrar a família | humano |
 
 ## 18.5 Mapas da descida
 
 - mesmo mapa-base;
 - mesma direção horizontal;
 - mesma câmera.
+- recorte próprio de aproximadamente 9.600 px / 30 s por setor;
+- ponto `descent_spawn` independente do spawn da subida;
+- reinício e retry retornam ao início do recorte, não ao início do mapa completo;
 
-Podem receber:
+Cada recorte deve:
 
-- rotas secretas;
-- glitches;
-- unidades da ReForge Industries;
-- iluminação diferente;
-- ambientação diferente;
-- pequenos encurtamentos.
+- preservar a identidade visual e parte dos obstáculos do setor original;
+- permanecer atravessável com as habilidades que Alex ainda possui naquele ponto;
+- incluir uma pequena rota secreta opcional com o glitch;
+- reservar tempo para o jogador perceber a habilidade perdida no setor anterior;
+- remover créditos, clínica, tutorial e checkpoint comuns da subida;
+- terminar na transição para a unidade da ReForge Industries;
+- utilizar iluminação e ambientação próprias da descida.
+
+### Porta da ReForge
+
+Os quatro recortes ativos terminam numa porta física da ReForge Industries,
+com dois estados visuais:
+
+- **fechada:** o fragmento de memória da fase ainda não foi recuperado; ao
+  alcançá-la, o fluxo segue para o retry especial ou para Hollow;
+- **aberta:** o fragmento foi recuperado e validado; atravessá-la conduz ao
+  procedimento de venda do implante e bioprinting.
+
+A porta reage imediatamente à coleta do fragmento e preserva o estado aberto
+se a fase for reiniciada depois da recuperação. No recorte D1 — Topo, todo o
+conteúdo do mapa posterior à entrada é ocultado: a porta encerra visualmente a
+fase e o antigo trecho contemplativo da subida não aparece depois dela. A
+soleira permanece visível sob toda a largura da porta, sem deixar parte do
+sprite suspensa sobre o vazio.
+
+### Distribuição mecânica dos recortes
+
+- **D1 — Topo:** combina vãos de dash e salto duplo, barricadas quebráveis,
+  revelações do visor e ameaças que exigem leitura das quatro habilidades;
+- **D2 — Corporativo:** combina rota revelada pelo visor, travessia de salto
+  duplo e um lacre da ReForge quebrável por ataque. A aproximação à esquerda
+  do spawn usa apenas piso plano, sem recuperar plataformas ou obstáculos do
+  trecho anterior. O lacre tem sprite metálico próprio e se divide em seis
+  fragmentos animados quando destruído. Para comunicar que Alex está refazendo
+  o caminho, a propaganda do pai aparece no início do recorte da descida; o
+  fragmento de memória permanece no fim. Na subida, a propaganda e o crédito
+  comum conservam suas posições originais no final do mapa;
+- **D3 — Meio Urbano:** combina barricadas/inimigos com uma travessia larga
+  demais para o salto simples. Essa travessia é uma grade elétrica urbana
+  exclusiva da descida, com sprite ciano/azul próprio e leitura visual baseada
+  nos portões elétricos da Fase 3. Não utiliza o retângulo vermelho de blockout.
+  Inimigos que sobreponham a janela inicial de reação são removidos do recorte;
+- **D4 — Industrial:** concentra o desafio numa travessia de salto duplo e
+  permanece completável sem braços, olhos ou propulsores. O teto baixo do
+  mapa-base que começa exatamente no spawn é removido, incluindo sua arte e
+  colisão letal, garantindo uma entrada neutra antes do primeiro obstáculo.
+  A fase usa os vãos industriais do próprio mapa e não repete a grade/piso
+  elétrico exclusivo do Meio Urbano;
+- **Epílogo — Esgoto:** usa apenas um corredor plano de aproximadamente 1.600
+  px / 5 s, sem tutorial, créditos, checkpoint, vãos ou hazards. Alex já está
+  inteiramente humano e o ritmo deve comunicar retorno, não escalada. O chão
+  reutiliza a arte do Esgoto, mas fecha os vãos do mapa-base e remove as
+  plataformas elevadas do recorte antes do Final Flesh.
 
 ## 18.6 Cadeia de redenção
 
@@ -991,7 +1065,9 @@ Ao concluir um setor sem recuperar o glitch:
 
 1. aparece a mensagem:
 
-> **“Alex sente que esqueceu um dos motivos de estar descendo.”**
+> **“MEMÓRIA PERDIDA // [nome da memória]”**
+
+   seguida de **“Alex sente que esqueceu um dos motivos de estar descendo.”**;
 
 2. o jogador recebe uma única oportunidade especial de repetir a fase;
 3. se aceitar, reinicia do começo com a cadeia ativa;
@@ -1026,22 +1102,22 @@ Depois segue ao epílogo.
 
 ### Aparência
 
-Hollow usa exatamente o estado corporal em que a cadeia foi quebrada:
-
-- falhou no primeiro → todos os implantes;
-- no segundo → sem propulsores;
-- no terceiro → pernas + braços;
-- no quarto → apenas pernas.
+Nesta versão, todas as combinações corporais que levam ao Hollow usam a mesma
+sequência de três ilustrações: ecos da memória perdida, a casa fechada e Alex
+partindo. A produção de uma variante visual para cada combinação de implantes
+fica adiada para uma etapa posterior; nenhum sprite adicional deve ser
+sobreposto a esses quadros.
 
 ## 18.8 Retirada nas unidades de reciclagem
 
 1. memória recuperada;
 2. Alex encontra unidade da ReForge Industries;
-3. holograma aparece;
-4. implante é removido;
-5. peça mecânica é recolhida;
-6. parte orgânica é bioprintada/reconstruída;
-7. Alex continua sem a habilidade correspondente.
+3. o holograma corporativo correspondente aparece — operador ciborgue anônimo nas três primeiras retiradas e pai de Alex somente na última, durante a remoção das pernas/salto duplo;
+4. a interface avalia e registra a venda da peça mecânica;
+5. o discurso corporativo reforça que o cromo conserva valor e que a carne é um substituto barato;
+6. implante é removido e recolhido pela corporação;
+7. parte orgânica é bioprintada/reconstruída;
+8. Alex continua sem a habilidade correspondente.
 
 ## 18.9 Epílogo
 
@@ -1049,21 +1125,39 @@ Hollow usa exatamente o estado corporal em que a cadeia foi quebrada:
 
 Alex chega ao Esgoto completamente humano, mas com marcas do bioprinting.
 
-Um trecho curto leva até a casa da família.
+Um trecho curto de aproximadamente **5 segundos** leva até a casa da família.
+Ele reutiliza a arte do setor final da Fase 1, mas transforma o caminho em um
+corredor plano e contínuo: sem vãos, plataformas elevadas ou hazards. Não exige
+nenhuma habilidade de implante. Ao alcançar a saída, o Final Flesh é iniciado.
 
 ### Hollow
 
 O mesmo epílogo-base é reaproveitado com a aparência e reação correspondentes aos implantes restantes.
 
+O estado persistido distingue a última retirada da conclusão do percurso:
+`epiloguePending` permanece ativo entre a quarta ReForge e a saída do trecho
+jogável do Esgoto. **Continuar** durante esse intervalo sempre restaura o
+corredor curto, sem saltar diretamente para a cena final.
+
 ## 18.10 Final Flesh
 
 Alex retorna para sua verdadeira família.
+
+A imagem da casa mostra coletivamente o avô e o tio paterno, os parentes que
+permaneceram nos níveis inferiores. O retrato ciborgue do pai não representa a
+família neste final e permanece exclusivo do encontro do Final Chrome.
 
 Está novamente humano, mas carrega cicatrizes e diferenças físicas das substituições.
 
 ## 18.11 Final Hollow
 
 Alex retorna parcialmente mecanizado e não consegue falar com a família.
+Mesmo sem conseguir se reconectar, a imagem do outro lado da porta continua
+mostrando o avô e o tio; o pai não participa desse retorno.
+
+O epílogo jogável ainda reflete o estado corporal da quebra da cadeia. Nos três
+quadros finais, porém, todas as combinações usam a mesma sequência ilustrada
+Hollow desta versão, sem contador ou sprite sobreposto.
 
 A incapacidade é emocional e simbólica.
 
@@ -1079,6 +1173,17 @@ Depois dos créditos:
 - `Menu Principal`
 
 Continuar do Portão restaura integralmente o estado anterior à escolha.
+
+## 18.13 Avaliação opcional após os finais
+
+Depois que o jogador confirma o último quadro de Chrome, Flesh ou Hollow, o
+final é registrado e a campanha abre uma tela única de avaliação antes do menu.
+A tela identifica o desfecho alcançado pela cor e pelo texto, preserva sua
+música e apresenta o formulário oficial por QR Code e por um botão que abre uma
+nova aba. A resposta é voluntária.
+
+O jogador também pode voltar diretamente ao menu por botão, `Esc` ou `B`. Essa
+saída não reinicia a campanha nem modifica o save.
 
 ---
 
@@ -1128,6 +1233,33 @@ O jogo aceita controles no padrão Web Gamepad e controles USB retrô com layout
 - **Navegação de menus:** direcional
 
 Como Flesh to Chrome é um auto-runner, Alex continua correndo automaticamente; esquerda e direita são usadas na navegação dos menus. O jogo detecta automaticamente o perfil USB/SNES e também aceita direcionais expostos pelo navegador como eixos.
+
+## 19.1.2 Tela de controles
+
+O menu principal mantém uma opção permanente **Controles**, disponível sem
+alterar o save. A tela apresenta lado a lado os comandos de teclado/mouse e de
+controle, além da relação entre cada habilidade e o implante que a libera.
+
+Ao escolher **Novo Jogo**, essa mesma tela funciona como confirmação final da
+campanha: o save anterior permanece intacto enquanto ela estiver aberta e só é
+substituído ao confirmar **Iniciar Campanha**. Voltar ao menu cancela a operação.
+
+## 19.1.3 Tutoriais de implante
+
+A última página de cada procedimento da clínica confirma o novo implante em um
+painel próprio antes de liberar a próxima fase. O painel apresenta o nome do
+implante, a habilidade, sua aplicação, os comandos atuais de teclado/mouse e
+gamepad e uma demonstração animada de Alex:
+
+- pernas mecânicas → salto duplo;
+- braços mecânicos → ataque e quebra;
+- olhos mecânicos → scan e revelação;
+- propulsores → dash.
+
+O jogador precisa confirmar **Continuar**. A confirmação mantém o fluxo de
+`SaveState.unlockAbility()`, salva a habilidade e abre a próxima fase. O painel
+pertence somente à aquisição do implante e não reaparece em mortes, checkpoints
+ou reinícios da fase seguinte.
 
 ## 19.2 Pausa
 
@@ -1187,7 +1319,30 @@ Existe um único save de campanha.
 Se já existir save:
 
 1. exibir confirmação;
-2. apagar somente depois de confirmação.
+2. abrir a tela de controles no modo de preparação da campanha;
+3. preservar o save enquanto o jogador consulta os comandos ou volta ao menu;
+4. apagar e criar o novo save somente ao confirmar **Iniciar Campanha**;
+5. iniciar o prólogo.
+
+## 20.2.1 Apresentação do menu
+
+O menu utiliza Glitch City como fundo, com camadas urbanas em movimento leve,
+névoa e luzes discretas. Um degradê escuro e um painel tecnológico à esquerda
+preservam a legibilidade das opções. O título ocupa a região superior esquerda
+e a seleção ativa é marcada por `▶` em amarelo.
+
+O seletor temporário de fases foi removido do jogo e dos scripts de
+desenvolvimento. Os percursos, o Portão e os finais são validados pelo fluxo de
+campanha e pelos testes automatizados, sem uma segunda entrada de progressão.
+
+## 20.2.2 Transição e carregamento
+
+Toda troca de campanha que pode carregar mapas, músicas ou sprites passa pela
+`LoadingScene`. A tela mantém fundo escuro, destino, indicador animado e barra
+de progresso enquanto a próxima cena executa `preload()` e `create()` atrás
+dela. O destino só é revelado após o evento `CREATE`; falhas de arquivo exibem
+uma mensagem com opções de tentar novamente ou voltar ao menu. Nenhuma cena
+deve iniciar um loader concorrente ou deixar um canvas preto durante a espera.
 
 ## 20.3 Continue
 
@@ -1216,7 +1371,7 @@ Corrida competitiva simultânea:
 - sem PvP;
 - quatro implantes;
 - duração-alvo ~120 s;
-- 1 checkpoint central.
+- 3 checkpoints (a cada ~1/4 da pista).
 
 ## 21.2 Créditos
 
@@ -1319,7 +1474,7 @@ Não haverá `HubScene`.
 - HUD
 - Save State
 - Camera
-- Audio
+- Audio Manager (BGM exclusiva por cena e barramento de SFX)
 - Fragment/Memory State
 - Recycling State
 - Multiplayer Sync
@@ -1422,6 +1577,14 @@ Flesh to Chrome é um jogo 2D. Nenhum asset 3D é necessário para o escopo atua
 - máquinas da ReForge Industries;
 - stingers/cues dos finais;
 - trilha ou loops por fase.
+
+**Estado de implementação — Branch 4:** onze chaves de trilha e os pontos de
+disparo dos efeitos principais estão integrados pelo `AudioManager`. As cinco
+fases, menu/prólogo, clínica/ReForge, Portão e os finais Chrome, Flesh e Hollow
+usam masters registrados em `src/assets/audio/credits.txt`. O Boot carrega
+somente os SFX compartilhados e cada cena solicita sua BGM sob demanda. A troca
+de cena encerra a música anterior, e a pausa congela e retoma a faixa junto com
+o gameplay.
 
 ## 23.4 Code
 
@@ -1552,7 +1715,7 @@ Os valores são referência de produção e podem mudar de acordo com a arte dis
 - dois jogadores;
 - sincronização;
 - quatro implantes;
-- checkpoint central;
+- três checkpoints;
 - créditos individuais;
 - tempo ajustado;
 - DNF;
@@ -1582,7 +1745,9 @@ Depois que todos os itens anteriores estiverem estáveis:
 - persistência de cosméticos;
 - vitrine de preço representativo;
 - pagamento simulado;
-- parallax e áudio não essenciais.
+
+- parallax, tratado em uma branch visual separada;
+- seleção e integração dos masters definitivos de áudio.
 
 ## 24.7 Feature Freeze
 
@@ -1717,7 +1882,12 @@ Se não houver tempo, esta seção permanece apenas como **modelo documentado de
 ## 26.3 Descida
 
 - [ ] Reutilização dos mapas.
+- [ ] Duração dos recortes: aproximadamente 30 s / 9.600 px por setor.
+- [ ] `descent_spawn`, glitch e saída legíveis em cada recorte.
 - [ ] Retry do glitch: validar se uma única segunda tentativa parece justa.
+- [ ] Clareza de que cada memória representa um motivo para abandonar o cromo.
+- [ ] Holograma do pai legível antes da avaliação, venda e bioprinting.
+- [ ] Cena de reprovação de George antes do primeiro setor.
 - [ ] Epílogo no Esgoto.
 - [ ] Clareza visual da perda das habilidades após bioprinting.
 

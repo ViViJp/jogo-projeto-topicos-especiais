@@ -1,0 +1,11 @@
+Alex checkpoint animation — Flesh to Chrome
+
+Folhas finais de cinco frames em 64×64 para os estados Flesh, pernas,
+braços, olhos e propulsores. Geradas com assistência do OpenAI Imagegen em
+11/11/2026 a partir das cinco variantes LPC de Alex e da TV de checkpoint
+já integrada ao projeto. A TV serviu apenas como referência de orientação e
+não está incorporada às folhas do personagem.
+
+Recorte, normalização para 320×64 e alinhamento do último pixel opaco à base
+de 64 px realizados no projeto.
+Uso exclusivo neste jogo. Sem conteúdo de terceiros incorporado.

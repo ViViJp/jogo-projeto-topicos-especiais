@@ -14,7 +14,7 @@ const phases = [
     tile: 16,
     layers: ["background", "deco-back", "ground", "hazards", "deco", "objects"],
     objects: ["spawn", "checkpoint", "credit", "hazard", "clinic", "phase_end"],
-    hazards: ["toxic_water", "electric_wire", "broken_pipe"],
+    hazards: ["toxic_water", "electric_wire", "broken_pipe", "low_pipe"],
     implant: "legs",
   },
   {
@@ -22,7 +22,7 @@ const phases = [
     map: "src/assets/maps/industrial/fase-2",
     tile: 32,
     layers: ["background", "deco-back", "ground", "hazards", "deco-low-ceilings", "deco", "objects"],
-    objects: ["spawn", "checkpoint", "credit", "hazard", "conveyor", "low_ceiling", "tutorial", "clinic", "phase_end"],
+    objects: ["spawn", "checkpoint", "credit", "hazard", "conveyor", "low_ceiling", "tutorial", "clinic", "memory_glitch", "phase_end"],
     hazards: ["press", "steam", "mech_arm"],
     implant: "arms",
   },
@@ -31,7 +31,7 @@ const phases = [
     map: "src/assets/maps/meio-urbano/fase-3",
     tile: 16,
     layers: ["background", "deco-back", "ground", "hazards", "deco", "objects"],
-    objects: ["spawn", "checkpoint", "credit", "hazard", "breakable", "enemy", "tutorial", "clinic", "phase_end"],
+    objects: ["spawn", "checkpoint", "credit", "hazard", "breakable", "enemy", "tutorial", "clinic", "memory_glitch", "phase_end"],
     hazards: ["electric_gate"],
     implant: "eyes",
   },
@@ -40,7 +40,7 @@ const phases = [
     map: "src/assets/maps/corporativo/fase-4",
     tile: 32,
     layers: ["background", "deco-back", "ground", "scan-visuals", "hazards", "deco", "objects"],
-    objects: ["spawn", "checkpoint", "credit", "hazard", "scan_reveal", "automatic_door", "tutorial", "clinic", "phase_end"],
+    objects: ["spawn", "checkpoint", "credit", "hazard", "scan_reveal", "automatic_door", "tutorial", "clinic", "memory_glitch", "phase_end"],
     hazards: ["laser", "hidden_spikes"],
     implant: "thrusters",
   },
@@ -49,7 +49,7 @@ const phases = [
     map: "src/assets/maps/topo/fase-5",
     tile: 32,
     layers: ["background", "deco-back", "ground", "scan-visuals", "hazards", "deco", "objects"],
-    objects: ["spawn", "checkpoint", "credit", "hazard", "automatic_door", "breakable", "tutorial", "phase_end"],
+    objects: ["spawn", "checkpoint", "credit", "hazard", "automatic_door", "breakable", "tutorial", "memory_glitch", "phase_end"],
     hazards: ["laser_grid", "rotating_barrier", "hidden_spikes"],
   },
   {
@@ -57,14 +57,14 @@ const phases = [
     map: "src/assets/maps/multiplayer/multiplayer-race",
     tile: 32,
     layers: ["background", "deco-back", "ground", "scan-visuals", "hazards", "deco", "objects"],
-    objects: ["spawn", "checkpoint", "credit", "hazard", "automatic_door", "breakable", "tutorial", "phase_end"],
+    objects: ["spawn", "checkpoint", "credit", "hazard", "automatic_door", "breakable", "enemy", "phase_end"],
     hazards: ["laser_grid", "rotating_barrier", "hidden_spikes"],
     expectedCredits: 20,
-    expectedCheckpoints: 1,
-    expectedCheckpointX: 19200,
+    expectedCheckpoints: 3,
+    expectedCheckpointX: 10624,
     expectedEndX: 38272,
     expectedWidth: 1200,
-    forbiddenObjects: ["zone", "gate", "ending_choice", "clinic"],
+    forbiddenObjects: ["zone", "gate", "ending_choice", "clinic", "tutorial", "memory_glitch"],
   },
 ];
 
@@ -74,6 +74,17 @@ const runtimeImages = [
   "src/assets/player/alex-arms/alex-arms.png",
   "src/assets/player/alex-eyes/alex-eyes.png",
   "src/assets/player/alex-dash/alex-dash.png",
+  "src/assets/player/alex-slide/alex-slide-flesh.png",
+  "src/assets/player/alex-slide/alex-slide-legs.png",
+  "src/assets/player/alex-slide/alex-slide-arms.png",
+  "src/assets/player/alex-slide/alex-slide-eyes.png",
+  "src/assets/player/alex-slide/alex-slide-dash.png",
+  "src/assets/player/alex-checkpoint/alex-checkpoint-flesh.png",
+  "src/assets/player/alex-checkpoint/alex-checkpoint-legs.png",
+  "src/assets/player/alex-checkpoint/alex-checkpoint-arms.png",
+  "src/assets/player/alex-checkpoint/alex-checkpoint-eyes.png",
+  "src/assets/player/alex-checkpoint/alex-checkpoint-dash.png",
+  "src/assets/player/alex-dialogue/alex-complete-dialogue.png",
   "src/assets/tiles/esgoto/tiles/tilesetSewer.png",
   "src/assets/tiles/esgoto/crystal-cave-tiles.png",
   "src/assets/tiles/industrial/tiles/1_Industrial_Tileset_1.png",
@@ -84,10 +95,18 @@ const runtimeImages = [
   "src/assets/tiles/topo/cyber-purp/tileset.png",
   "src/assets/props/obstacles/barricade.png",
   "src/assets/props/obstacles/phase5-barricade.png",
+  "src/assets/props/obstacles/reforge-security-seal.png",
+  "src/assets/props/hazards/urban-electric-floor.png",
+  "src/assets/props/hazards/rotating-energy-barrier.png",
+  "src/assets/props/hazards/mech-arm-housing.png",
+  "src/assets/props/hazards/mech-arm-shaft.png",
+  "src/assets/props/hazards/mech-arm-claw.png",
   "src/assets/props/checkpoint/tv-checkpoint.png",
+  "src/assets/props/collectibles/credit-cyberpunk.png",
   "src/assets/npcs/enemies/bandido/bandido.png",
   "src/assets/npcs/enemies/drone/drone.png",
   "src/assets/narrative/prologue/familia.png",
+  "src/assets/narrative/endings/chrome-father-son.png",
   "src/assets/narrative/prologue/jornal-pai.png",
   "src/assets/narrative/father/pai-antes.png",
   "src/assets/narrative/father/pai-portrait.png",
@@ -95,6 +114,9 @@ const runtimeImages = [
   "src/assets/narrative/family/avo-portrait.png",
   "src/assets/narrative/family/tio-portrait.png",
   "src/assets/narrative/recycling/holograma-pai.png",
+  "src/assets/narrative/recycling/holograma-ciborgue.png",
+  "src/assets/narrative/reforge-door/reforge-door-closed.png",
+  "src/assets/narrative/reforge-door/reforge-door-open.png",
   "src/assets/narrative/gate/portao.png",
   "src/assets/npcs/george/george/george.png",
   "src/assets/npcs/george/george-nervous/george-nervous.png",
@@ -103,26 +125,61 @@ const runtimeImages = [
   "src/assets/npcs/george/george-clinic/george-clinic-01.png",
   "src/assets/npcs/george/george-clinic/george-clinic-02.png",
   "src/assets/npcs/george/george-clinic/george-clinic-03.png",
+  "src/assets/npcs/george/george-angry/george-angry.png",
   "src/assets/scenes/clinic/clinic-bg.png",
   "src/assets/player/alex-chrome/alex-chrome.png",
-  "src/assets/audio/music/bgm-clinic.wav",
-  "src/assets/audio/music/bgm-portao.wav",
-  "src/assets/audio/sfx/sfx-implant.wav",
+  "src/assets/player/alex-flesh-happy/alex-flesh-happy.png",
+  "src/assets/player/alex-hollow/alex-hollow.png",
+  "src/assets/narrative/fragments/fragmento-topo.png",
+  "src/assets/narrative/fragments/fragmento-corporativo.png",
+  "src/assets/narrative/fragments/fragmento-urbano.png",
+  "src/assets/narrative/fragments/fragmento-industrial.png",
+  "src/assets/props/collectibles/memory-fragment-64.png",
+  "src/assets/narrative/recycling/unidade-reciclagem.png",
+  "src/assets/narrative/recycling/holograma-frame.png",
 ];
 
 const runtimeImageContracts = new Map([
+  ["src/assets/player/alex-slide/alex-slide-flesh.png", [256, 64]],
+  ["src/assets/player/alex-slide/alex-slide-legs.png", [256, 64]],
+  ["src/assets/player/alex-slide/alex-slide-arms.png", [256, 64]],
+  ["src/assets/player/alex-slide/alex-slide-eyes.png", [256, 64]],
+  ["src/assets/player/alex-slide/alex-slide-dash.png", [256, 64]],
+  ["src/assets/player/alex-checkpoint/alex-checkpoint-flesh.png", [320, 64]],
+  ["src/assets/player/alex-checkpoint/alex-checkpoint-legs.png", [320, 64]],
+  ["src/assets/player/alex-checkpoint/alex-checkpoint-arms.png", [320, 64]],
+  ["src/assets/player/alex-checkpoint/alex-checkpoint-eyes.png", [320, 64]],
+  ["src/assets/player/alex-checkpoint/alex-checkpoint-dash.png", [320, 64]],
+  ["src/assets/props/collectibles/credit-cyberpunk.png", [128, 32]],
   ["src/assets/scenes/clinic/clinic-bg.png", [960, 320]],
   ["src/assets/npcs/enemies/bandido/bandido.png", [192, 48]],
   ["src/assets/npcs/enemies/drone/drone.png", [64, 32]],
   ["src/assets/props/obstacles/phase5-barricade.png", [96, 44]],
-  ["src/assets/narrative/prologue/familia.png", [256, 160]],
-  ["src/assets/narrative/prologue/jornal-pai.png", [240, 128]],
-  ["src/assets/narrative/father/pai-antes.png", [96, 96]],
-  ["src/assets/narrative/father/pai-portrait.png", [96, 96]],
-  ["src/assets/narrative/father/propaganda-pai.png", [160, 96]],
-  ["src/assets/narrative/family/avo-portrait.png", [96, 96]],
-  ["src/assets/narrative/family/tio-portrait.png", [96, 96]],
-  ["src/assets/narrative/recycling/holograma-pai.png", [80, 96]],
+  ["src/assets/props/obstacles/reforge-security-seal.png", [971, 1619]],
+  ["src/assets/props/hazards/urban-electric-floor.png", [640, 68]],
+  ["src/assets/props/hazards/rotating-energy-barrier.png", [2172, 724]],
+  ["src/assets/props/hazards/mech-arm-housing.png", [64, 48]],
+  ["src/assets/props/hazards/mech-arm-shaft.png", [64, 16]],
+  ["src/assets/props/hazards/mech-arm-claw.png", [64, 40]],
+  ["src/assets/narrative/endings/chrome-father-son.png", [1672, 941]],
+  ["src/assets/narrative/endings/flesh/ending-flesh-01-renuncia.png", [1280, 720]],
+  ["src/assets/narrative/endings/flesh/ending-flesh-02-retorno.png", [1280, 720]],
+  ["src/assets/narrative/endings/flesh/ending-flesh-03-abraco.png", [1280, 720]],
+  ["src/assets/narrative/endings/hollow/ending-hollow-01-ecos.png", [1280, 720]],
+  ["src/assets/narrative/endings/hollow/ending-hollow-02-casa-fechada.png", [1280, 720]],
+  ["src/assets/narrative/endings/hollow/ending-hollow-03-partida.png", [1280, 720]],
+  ["src/assets/narrative/prologue/familia.png", [512, 320]],
+  ["src/assets/narrative/prologue/jornal-pai.png", [480, 256]],
+  ["src/assets/narrative/father/pai-antes.png", [256, 256]],
+  ["src/assets/narrative/father/pai-portrait.png", [256, 256]],
+  ["src/assets/narrative/father/propaganda-pai.png", [320, 192]],
+  ["src/assets/narrative/family/avo-portrait.png", [256, 256]],
+  ["src/assets/narrative/family/tio-portrait.png", [256, 256]],
+  ["src/assets/narrative/recycling/holograma-pai.png", [160, 192]],
+  ["src/assets/narrative/recycling/holograma-ciborgue.png", [160, 192]],
+  ["src/assets/narrative/recycling/unidade-reciclagem.png", [240, 320]],
+  ["src/assets/narrative/reforge-door/reforge-door-closed.png", [1122, 1402]],
+  ["src/assets/narrative/reforge-door/reforge-door-open.png", [1122, 1402]],
   ["src/assets/narrative/gate/portao.png", [192, 224]],
   ["src/assets/npcs/george/george-proud/george-proud-clinic.png", [64, 64]],
   ["src/assets/npcs/george/george-clinic/george-clinic-01.png", [96, 96]],
@@ -130,9 +187,110 @@ const runtimeImageContracts = new Map([
   ["src/assets/npcs/george/george-clinic/george-clinic-03.png", [96, 96]],
 ]);
 
+const runtimeAudio = [
+  "sfx-attack.mp3",
+  "sfx-barrier-disable.mp3",
+  "sfx-breakable-destroy.mp3",
+  "sfx-checkpoint.mp3",
+  "sfx-conveyor-belt.mp3",
+  "sfx-credit.mp3",
+  "sfx-dash.mp3",
+  "sfx-death.mp3",
+  "sfx-drone-hum.mp3",
+  "sfx-electric-gate.mp3",
+  "sfx-enemy-hit.mp3",
+  "sfx-footstep.mp3",
+  "sfx-gate-opening.mp3",
+  "sfx-glitch.mp3",
+  "sfx-hydraulic-press.mp3",
+  "sfx-hazard-water.mp3",
+  "sfx-electric-wire.mp3",
+  "sfx-hurt.mp3",
+  "sfx-implant.mp3",
+  "sfx-jump.mp3",
+  "sfx-land.mp3",
+  "sfx-mechanical-arm.mp3",
+  "sfx-phase-clear.mp3",
+  "sfx-scan.mp3",
+  "sfx-scan-reveal.mp3",
+  "sfx-security-door-unlock.mp3",
+  "sfx-slide.mp3",
+  "sfx-steam-burst.mp3",
+  "sfx-ui-confirm.mp3",
+  "sfx-ui-select.mp3",
+  "sfx-warning-beep.mp3",
+].map((filename) => `src/assets/audio/sfx/${filename}`).concat(
+  [1, 2, 3, 4, 5].map((phase) => `src/assets/audio/music/bgm-phase-${phase}.ogg`),
+  [
+    "bgm-menu.mp3",
+    "bgm-clinic.ogg",
+    "bgm-gate.mp3",
+    "bgm-ending-chrome.mp3",
+    "bgm-ending-flesh.mp3",
+    "bgm-ending-hollow.ogg",
+  ].map((filename) => `src/assets/audio/music/${filename}`),
+);
+
 const readJson = (filename) => JSON.parse(fs.readFileSync(filename, "utf8"));
 const property = (object, name) => object.properties?.find((item) => item.name === name)?.value;
 const fail = (message) => errors.push(message);
+
+/** Decodificação mínima para validar o alinhamento alfa dos sprites RGBA. */
+function readRgbaPng(filename) {
+  const png = fs.readFileSync(filename);
+  let offset = 8;
+  let width = 0;
+  let height = 0;
+  const idat = [];
+  while (offset < png.length) {
+    const length = png.readUInt32BE(offset);
+    const type = png.toString("ascii", offset + 4, offset + 8);
+    const data = png.subarray(offset + 8, offset + 8 + length);
+    if (type === "IHDR") {
+      width = data.readUInt32BE(0);
+      height = data.readUInt32BE(4);
+      if (data[8] !== 8 || data[9] !== 6 || data[12] !== 0) {
+        throw new Error(`${filename}: esperado PNG RGBA 8-bit não entrelaçado`);
+      }
+    } else if (type === "IDAT") {
+      idat.push(data);
+    } else if (type === "IEND") {
+      break;
+    }
+    offset += length + 12;
+  }
+  const packed = inflateSync(Buffer.concat(idat));
+  const stride = width * 4;
+  const pixels = Buffer.alloc(stride * height);
+  let inputOffset = 0;
+  const paeth = (left, up, diagonal) => {
+    const estimate = left + up - diagonal;
+    const leftDistance = Math.abs(estimate - left);
+    const upDistance = Math.abs(estimate - up);
+    const diagonalDistance = Math.abs(estimate - diagonal);
+    return leftDistance <= upDistance && leftDistance <= diagonalDistance
+      ? left
+      : upDistance <= diagonalDistance ? up : diagonal;
+  };
+  for (let y = 0; y < height; y += 1) {
+    const filter = packed[inputOffset++];
+    for (let x = 0; x < stride; x += 1) {
+      const raw = packed[inputOffset++];
+      const target = y * stride + x;
+      const left = x >= 4 ? pixels[target - 4] : 0;
+      const up = y > 0 ? pixels[target - stride] : 0;
+      const diagonal = y > 0 && x >= 4 ? pixels[target - stride - 4] : 0;
+      const predictor = filter === 0 ? 0
+        : filter === 1 ? left
+          : filter === 2 ? up
+            : filter === 3 ? Math.floor((left + up) / 2)
+              : filter === 4 ? paeth(left, up, diagonal) : NaN;
+      if (!Number.isFinite(predictor)) throw new Error(`${filename}: filtro PNG desconhecido ${filter}`);
+      pixels[target] = (raw + predictor) & 0xff;
+    }
+  }
+  return { width, height, pixels };
+}
 
 function normalizeEditableMap(map, mapDir) {
   delete map.editorsettings;
@@ -167,6 +325,19 @@ function stripTilesetEditorMetadata(map) {
   return map;
 }
 
+// Imagens de fundo registradas para o Parcel (nome do arquivo -> caminho).
+const registeredBackdrops = new Map();
+{
+  const source = fs.readFileSync(path.join(projectRoot, "src/levels/BackdropAssets.ts"), "utf8");
+  for (const match of source.matchAll(/"([^"]+\.png)":\s*new URL\("\.\.\/([^"]+)", import\.meta\.url\)/g)) {
+    const [, name, relative] = match;
+    registeredBackdrops.set(name, relative);
+    if (path.basename(relative) !== name) fail(`BackdropAssets.ts: chave ${name} aponta para ${relative}`);
+    if (!fs.existsSync(path.join(projectRoot, "src", relative))) fail(`BackdropAssets.ts: imagem ausente: src/${relative}`);
+  }
+  if (registeredBackdrops.size === 0) fail("BackdropAssets.ts: nenhuma imagem de fundo encontrada (formato do registro mudou?)");
+}
+
 for (const image of runtimeImages) {
   const imagePath = path.join(projectRoot, image);
   if (!fs.existsSync(imagePath)) {
@@ -180,6 +351,34 @@ for (const image of runtimeImages) {
     if (!isDeepStrictEqual(actualSize, expectedSize)) {
       fail(`${image}: dimensão deve ser ${expectedSize[0]}x${expectedSize[1]}, recebido ${actualSize[0]}x${actualSize[1]}`);
     }
+  }
+}
+
+for (const audio of runtimeAudio) {
+  const audioPath = path.join(projectRoot, audio);
+  if (!fs.existsSync(audioPath)) {
+    fail(`asset de áudio ausente: ${audio}`);
+    continue;
+  }
+  const data = fs.readFileSync(audioPath);
+  const hasId3 = data.subarray(0, 3).toString("ascii") === "ID3";
+  const hasMpegSync = data[0] === 0xff && (data[1] & 0xe0) === 0xe0;
+  const hasOggContainer = data.subarray(0, 4).toString("ascii") === "OggS";
+  const validContainer = audio.endsWith(".ogg") ? hasOggContainer : hasId3 || hasMpegSync;
+  if (data.length < 1024 || !validContainer) {
+    fail(`${audio}: master de áudio inválido ou vazio`);
+  }
+}
+
+for (const stage of ["flesh", "legs", "arms", "eyes", "dash"]) {
+  const relativePath = `src/assets/player/alex-checkpoint/alex-checkpoint-${stage}.png`;
+  const { width, height, pixels } = readRgbaPng(path.join(projectRoot, relativePath));
+  const stride = width * 4;
+  for (let frame = 0; frame < 5; frame += 1) {
+    const touchesGround = Array.from({ length: 64 }, (_, x) => (
+      pixels[(height - 1) * stride + (frame * 64 + x) * 4 + 3]
+    )).some((alpha) => alpha > 0);
+    if (!touchesGround) fail(`${relativePath}: frame ${frame} precisa tocar a base de 64 px`);
   }
 }
 
@@ -307,8 +506,32 @@ for (const phase of phases) {
     const invalid = layer.data.find((rawGid) => (rawGid & 0x1fffffff) > maxGid);
     if (invalid !== undefined) fail(`${phase.id}: GID fora dos tilesets na layer ${layer.name}: ${invalid}`);
   }
+  // Fundo com parallax (contrato §3.1): toda image layer precisa apontar para
+  // um PNG existente, com o tamanho declarado, e registrado em
+  // BACKDROP_IMAGE_URLS (senão o Parcel não empacota e o jogo ignora a camada).
+  const imageLayers = map.layers.filter((item) => item.type === "imagelayer");
+  for (const layer of imageLayers) {
+    const imagePath = layer.image ? path.resolve(mapDir, layer.image) : "";
+    if (!layer.image || !fs.existsSync(imagePath)) {
+      fail(`${phase.id}: imagem ausente na image layer ${layer.name}: ${String(layer.image)}`);
+      continue;
+    }
+    const png = fs.readFileSync(imagePath);
+    const size = [png.readUInt32BE(16), png.readUInt32BE(20)];
+    if (!isDeepStrictEqual(size, [layer.imagewidth, layer.imageheight])) {
+      fail(`${phase.id}: image layer ${layer.name}: o mapa declara ${layer.imagewidth}x${layer.imageheight}, o PNG tem ${size[0]}x${size[1]} (recarregue a imagem no Tiled)`);
+    }
+    const imageName = path.basename(layer.image);
+    if (!registeredBackdrops.has(imageName)) {
+      fail(`${phase.id}: image layer ${layer.name} usa ${imageName}, que não está registrada em src/levels/BackdropAssets.ts`);
+    }
+  }
+  const ambient = property(map, "ambient");
+  if (ambient !== undefined && !["drips", "embers", "rain", "motes"].includes(ambient)) {
+    fail(`${phase.id}: propriedade de mapa ambient inválida: ${ambient}`);
+  }
 
-  console.log(`${phase.id}: OK (${map.width}x${map.height}, ${objects.length} objetos, ${map.tilesets.length} tilesets)`);
+  console.log(`${phase.id}: OK (${map.width}x${map.height}, ${objects.length} objetos, ${map.tilesets.length} tilesets${imageLayers.length ? `, ${imageLayers.length} camadas de parallax` : ""})`);
 }
 
 if (errors.length > 0) {

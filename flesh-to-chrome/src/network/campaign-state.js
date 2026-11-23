@@ -2,6 +2,14 @@ const stages = ["esgoto", "industrial", "meio-urbano", "corporativo", "topo"];
 const implantOrder = ["pernas", "bracos", "olhos", "propulsores"];
 const removalOrder = ["propulsores", "olhos", "bracos", "pernas"];
 const memoryOrder = ["quem-alex-era", "rua-voz", "amigos", "familia"];
+const fragmentOrder = [
+  "glitch-topo-identidade",
+  "glitch-corporativo-voz",
+  "glitch-urbano-amigos",
+  "glitch-industrial-familia",
+];
+const descentPhaseOrder = ["fase5", "fase4", "fase3", "fase2-intro"];
+const abilityRemovalOrder = ["thrusters", "eyes", "arms", "legs"];
 const creditLimits = {
   "f1-risk": 15,
   "f1-safe": 1,
@@ -86,40 +94,65 @@ function checkpointFor(save) {
 
 function activeDescent(save) {
   const source = save.descentState || {};
-  const removals = prefixFrom(source.removals, removalOrder);
-  const memories = prefixFrom(source.memories, memoryOrder).slice(0, removals.length);
-  const completePairs = Math.min(removals.length, memories.length);
-  const stableRemovals = removals.slice(0, completePairs);
-  const stableMemories = memories.slice(0, completePairs);
-  let chainStatus = source.chainStatus;
-  if (!["active", "broken", "complete"].includes(chainStatus)) {
-    chainStatus = source.brokenChain ? "broken" : stableRemovals.length === 4 ? "complete" : "active";
+  const legacyRemovals = prefixFrom(source.removals, removalOrder);
+  const legacyMemories = prefixFrom(source.memories, memoryOrder).slice(0, legacyRemovals.length);
+  const legacyPairs = Math.min(legacyRemovals.length, legacyMemories.length);
+  const completedCount = Number.isInteger(source.currentStep)
+    ? Math.max(0, Math.min(removalOrder.length, source.currentStep))
+    : legacyPairs;
+  const stableRemovals = removalOrder.slice(0, completedCount);
+  const stableMemories = memoryOrder.slice(0, completedCount);
+  let chainStatus = source.brokenChain || source.chainStatus === "broken"
+    ? "broken"
+    : completedCount === removalOrder.length || source.chainStatus === "complete"
+      ? "complete"
+      : "active";
+  if (chainStatus === "complete" && completedCount !== removalOrder.length) chainStatus = "active";
+  const recovered = Array.isArray(source.recoveredFragmentIds) ? source.recoveredFragmentIds : [];
+  const nextMemoryRecovered = recovered.includes(fragmentOrder[completedCount])
+    || source.pendingRemoval === abilityRemovalOrder[completedCount];
+  let pendingMemory = nextMemoryRecovered ? memoryOrder[completedCount] || null : null;
+  if (typeof source.pendingMemory === "string") pendingMemory = source.pendingMemory;
+  if (pendingMemory !== memoryOrder[completedCount] || chainStatus !== "active") pendingMemory = null;
+  const retryUsedByStage = {};
+  if (source.retryUsedByStage && typeof source.retryUsedByStage === "object") {
+    Object.assign(retryUsedByStage, source.retryUsedByStage);
   }
-  if (chainStatus === "complete" && stableRemovals.length !== 4) chainStatus = "active";
-  let pendingMemory = typeof source.pendingMemory === "string" ? source.pendingMemory : null;
-  if (pendingMemory !== memoryOrder[stableMemories.length] || chainStatus !== "active") pendingMemory = null;
+  for (const phaseId of source.retryUsedPhaseIds || []) {
+    retryUsedByStage[stageFor({ currentPhaseId: phaseId })] = true;
+  }
   return {
-    step: typeof source.step === "string" ? source.step : null,
+    step: typeof source.step === "string"
+      ? source.step
+      : completedCount < descentPhaseOrder.length
+        ? `D${completedCount + 1}`
+        : null,
     chainStatus,
     memories: stableMemories,
     pendingMemory,
     removals: stableRemovals,
-    retryUsedByStage: source.retryUsedByStage && typeof source.retryUsedByStage === "object"
-      ? { ...source.retryUsedByStage }
-      : {},
+    retryUsedByStage,
   };
 }
 
 function baseState(save, includeSnapshot) {
   const stageId = stageFor(save);
   const checkpoint = checkpointFor(save);
+  const descent = save.descentState || {};
+  const descentStarted = Boolean(
+    descent.active ||
+    descent.brokenChain ||
+    descent.epiloguePending ||
+    descent.currentStep > 0 ||
+    descent.recoveredFragmentIds?.length
+  );
   const preGateSnapshot = includeSnapshot && save.preGateSave
     ? toApiState({ ...save.preGateSave, preGateSave: null }, false)
     : null;
   return {
     stageId,
     ...checkpoint,
-    credits: creditsFor(save, save.descentState?.active ? stages.length - 1 : stages.indexOf(stageId)),
+    credits: creditsFor(save, descentStarted ? stages.length - 1 : stages.indexOf(stageId)),
     endings: save.endingReached ? [save.endingReached] : [],
     preGateSnapshot,
   };
@@ -153,7 +186,7 @@ function toApiState(save, includeSnapshot = true) {
         memories: [...memoryOrder],
         pendingMemory: null,
         removals: [...removalOrder],
-        retryUsedByStage: { ...(save.descentState?.retryUsedByStage || {}) },
+        retryUsedByStage: activeDescent(save).retryUsedByStage,
       },
       ending: "flesh",
     };
@@ -185,6 +218,20 @@ function toApiState(save, includeSnapshot = true) {
       ending: null,
     };
   }
+  if (save.descentState?.brokenChain || save.descentState?.currentStep >= removalOrder.length) {
+    const descent = activeDescent(save);
+    const implants = implantOrder.filter((implant) => !descent.removals.includes(implant));
+    return {
+      ...base,
+      phase: "epilogue",
+      stageId: descent.chainStatus === "complete" ? "esgoto" : base.stageId,
+      implants,
+      bodyState: implants.length === 0 ? "bioprinted" : "implanted",
+      gateChoice: "descida",
+      descent,
+      ending: null,
+    };
+  }
   const count = stages.indexOf(base.stageId);
   return {
     ...base,
@@ -204,7 +251,22 @@ function fromApiState(state, includeSnapshot = true) {
     ? { x: Number(point.x) || 0, y: Number(point.y) || 0 }
     : { x: 0, y: 0 };
   const descent = state?.descent || {};
-  const phaseIsDescent = state?.phase === "descent" || state?.phase === "epilogue";
+  const chainStatus = ["inactive", "active", "broken", "complete"].includes(descent.chainStatus)
+    ? descent.chainStatus
+    : "inactive";
+  const completedCount = Math.min(
+    removalOrder.length,
+    prefixFrom(descent.removals, removalOrder).length,
+  );
+  const pendingIndex = memoryOrder.indexOf(descent.pendingMemory);
+  const recoveredFragmentIds = fragmentOrder.slice(0, completedCount);
+  if (pendingIndex === completedCount && fragmentOrder[pendingIndex]) {
+    recoveredFragmentIds.push(fragmentOrder[pendingIndex]);
+  }
+  const retryUsedPhaseIds = Object.entries(descent.retryUsedByStage || {})
+    .filter(([, used]) => used)
+    .map(([stageId]) => phaseForStage(stageId))
+    .filter((phaseId) => descentPhaseOrder.includes(phaseId));
   const preGateSave = includeSnapshot && state?.preGateSnapshot
     ? fromApiState({ ...state.preGateSnapshot, preGateSnapshot: null }, false)
     : null;
@@ -223,17 +285,13 @@ function fromApiState(state, includeSnapshot = true) {
       thrusters: implants.includes("propulsores"),
     },
     descentState: {
-      active: phaseIsDescent,
-      step: typeof descent.step === "string" ? descent.step : null,
-      chainStatus: ["inactive", "active", "broken", "complete"].includes(descent.chainStatus)
-        ? descent.chainStatus
-        : "inactive",
-      memories: prefixFrom(descent.memories, memoryOrder),
-      pendingMemory: null,
-      removals: prefixFrom(descent.removals, removalOrder),
-      retryUsedByStage: descent.retryUsedByStage && typeof descent.retryUsedByStage === "object"
-        ? { ...descent.retryUsedByStage }
-        : {},
+      active: state?.phase === "descent" && chainStatus === "active",
+      brokenChain: chainStatus === "broken",
+      epiloguePending: state?.phase === "epilogue" && chainStatus === "complete" && state?.ending == null,
+      currentStep: completedCount,
+      recoveredFragmentIds,
+      retryUsedPhaseIds,
+      pendingRemoval: pendingIndex === completedCount ? abilityRemovalOrder[pendingIndex] || null : null,
     },
     preGateSave,
     endingReached: ["chrome", "flesh", "hollow"].includes(state?.ending) ? state.ending : null,

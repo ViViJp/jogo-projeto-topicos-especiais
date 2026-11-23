@@ -6,9 +6,12 @@ import {
   TILED_FASE5_OFFSET_Y,
   TILED_FASE5_TILESETS,
 } from "../levels/TiledFase5";
-import { TEX } from "../utils/PlaceholderTextures";
+import { CREDIT_ANIMATION_KEY, TEX } from "../utils/PlaceholderTextures";
+import { AudioManager, SFX } from "../systems/AudioManager";
 import { CheckpointMarker } from "./CheckpointMarker";
+import { EnemyRuntime } from "./EnemyRuntime";
 import { nearestScanObstacleIndex, rotatingBarrierPoints } from "./HazardMotion";
+import { ScanBarrierVisual } from "./ScanBarrierVisual";
 
 interface Phase5Credit {
   id: string;
@@ -52,6 +55,7 @@ interface AutomaticDoor {
   zone: Phaser.GameObjects.Zone;
   col: number;
   prompt: Phaser.GameObjects.Text;
+  visual: ScanBarrierVisual;
   disabled: boolean;
 }
 
@@ -62,8 +66,7 @@ interface RotatingBarrier {
   collisionSpan: number;
   cycleMs: number;
   phaseMs: number;
-  arm: Phaser.GameObjects.Rectangle;
-  hub: Phaser.GameObjects.Arc;
+  arm: Phaser.GameObjects.Image;
   collisionNodes: Phaser.GameObjects.Zone[];
 }
 
@@ -103,6 +106,7 @@ const BARRICADE_VISUAL_HEIGHT = 44;
 const ASSET_BASELINE_PADDING = 2;
 export const TILED_PHASE5_BARRICADE_TEXTURE_KEY = "phase5-barricade";
 export const TILED_PHASE5_GATE_TEXTURE_KEY = "narrative-gate";
+export const TILED_PHASE5_ROTATING_BARRIER_TEXTURE_KEY = "phase5-rotating-energy-barrier";
 
 /** Runtime de playtest do blockout Tiled da Fase 5. */
 export class TiledPhase5Runtime {
@@ -130,6 +134,7 @@ export class TiledPhase5Runtime {
   private readonly breakableDefinitions: RuntimeBreakableDefinition[] = [];
   private readonly labels: Phaser.GameObjects.Text[] = [];
   private readonly endMarkerObjects: Array<{ destroy(): void }> = [];
+  private readonly tileLayers: Phaser.Tilemaps.TilemapLayer[] = [];
   private readonly offsetY: number;
   private readonly creditValue: number;
   private readonly contextLabel: string;
@@ -138,6 +143,8 @@ export class TiledPhase5Runtime {
   private elapsedMs = 0;
   private endGateTriggered = false;
   private playerRef?: Player;
+  private readonly enemyObjects: Phaser.Types.Tilemaps.TiledObject[];
+  private enemies?: EnemyRuntime;
   private pressedAttackListener: (breakable: Phaser.GameObjects.GameObject | null) => void = () => undefined;
   private normalAttackListener: (x: number, y: number) => void = () => undefined;
 
@@ -172,6 +179,7 @@ export class TiledPhase5Runtime {
     ground.setCollisionByExclusion([-1, 0]);
     ground.setDepth(0);
     this.groundLayer = ground;
+    this.tileLayers.push(ground);
 
     this.scanVisualsLayer = this.createVisualLayer("scan-visuals", tilesets, 1);
     this.hazardsLayer = this.createVisualLayer("hazards", tilesets, 2);
@@ -192,6 +200,7 @@ export class TiledPhase5Runtime {
     const gateObjects = byType("gate");
     this.endGateX = gateObjects[0]?.x ?? endObject?.x ?? this.lengthPx - 100;
 
+    this.enemyObjects = byType("enemy");
     this.readCredits(byType("credit"));
     this.readCheckpoints(byType("checkpoint"));
     this.buildRevealRegions(byType("scan_reveal"));
@@ -214,7 +223,25 @@ export class TiledPhase5Runtime {
     if (!layer) return undefined;
     layer.setPosition(layer.x, layer.y + this.offsetY);
     layer.setDepth(depth);
+    this.tileLayers.push(layer);
     return layer;
+  }
+
+  /** Remove do recorte Flesh o trecho contemplativo que pertence à subida. */
+  hideAfterX(worldX: number): void {
+    for (const layer of this.tileLayers) {
+      // A soleira precisa continuar além do centro da porta; cortar o chão
+      // exatamente no endX fazia metade direita do sprite flutuar no vazio.
+      const groundExtension = layer === this.groundLayer ? 128 : 0;
+      const firstHiddenColumn = Math.ceil((worldX + groundExtension) / this.map.tileWidth);
+      for (let col = firstHiddenColumn; col < this.map.width; col += 1) {
+        for (let row = 0; row < this.map.height; row += 1) {
+          const tile = layer.getTileAt(col, row);
+          if (tile) tile.visible = false;
+        }
+      }
+    }
+    this.labels.filter((label) => label.x >= worldX).forEach((label) => label.setVisible(false));
   }
 
   private readString(
@@ -267,6 +294,7 @@ export class TiledPhase5Runtime {
     for (const credit of this.credits) {
       if (this.consolidatedThisPhase.has(credit.id)) continue;
       const sprite = this.scene.physics.add.sprite(credit.x, credit.y, TEX.credit);
+      sprite.anims.play(CREDIT_ANIMATION_KEY);
       sprite.body!.setAllowGravity(false);
       sprite.setData("creditValue", credit.value);
       sprite.setDepth(6);
@@ -329,6 +357,7 @@ export class TiledPhase5Runtime {
       const height = object.height ?? 32;
       const x = object.x ?? 0;
       const y = object.y ?? 0;
+      if (kind === "laser_grid") this.relocateLaserVisual(object, x, y, width, height);
       if (kind === "rotating_barrier") {
         this.buildRotatingBarrier(object, index, x, y, width, height);
         return;
@@ -354,6 +383,35 @@ export class TiledPhase5Runtime {
     this.updateRotatingBarriers(this.timeSource());
   }
 
+  /**
+   * Permite reposicionar o gameplay de um laser sem deixar a arte da camada
+   * Tiled na coordenada antiga. A propriedade só é necessária em mapas
+   * existentes cujo objeto foi deslocado após a composição visual.
+   */
+  private relocateLaserVisual(
+    object: Phaser.Types.Tilemaps.TiledObject,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+  ): void {
+    const sourceX = this.readNumber(object, "visual_source_x");
+    if (sourceX === undefined || sourceX === x || !this.hazardsLayer) return;
+    const sourceCol = Math.floor(sourceX / this.map.tileWidth);
+    const targetCol = Math.floor(x / this.map.tileWidth);
+    const startRow = Math.floor(y / this.map.tileHeight);
+    const endRow = Math.ceil((y + height) / this.map.tileHeight);
+    const columnWidth = Math.max(1, Math.ceil(width / this.map.tileWidth));
+    for (let row = startRow; row < endRow; row += 1) {
+      for (let offset = 0; offset < columnWidth; offset += 1) {
+        const sourceTile = this.hazardsLayer.getTileAt(sourceCol + offset, row);
+        if (!sourceTile || sourceTile.index === -1) continue;
+        this.hazardsLayer.putTileAt(sourceTile.index, targetCol + offset, row);
+        this.hazardsLayer.removeTileAt(sourceCol + offset, row);
+      }
+    }
+  }
+
   private buildRotatingBarrier(
     object: Phaser.Types.Tilemaps.TiledObject,
     index: number,
@@ -373,12 +431,10 @@ export class TiledPhase5Runtime {
       length / Math.max(1, nodeCount - 1) + 2,
     );
     const arm = this.scene.add
-      .rectangle(centerX, centerY, length, GAMEPLAY_TIMING.rotatingBarrier.nodeSize, 0xff4fe1, 0.88)
-      .setStrokeStyle(2, 0xffd8fa, 0.95)
-      .setDepth(6);
-    const hub = this.scene.add
-      .circle(centerX, centerY, 10, 0x2b1740, 1)
-      .setStrokeStyle(3, 0x7cfcea, 0.95)
+      .image(centerX, centerY, TILED_PHASE5_ROTATING_BARRIER_TEXTURE_KEY)
+      // O PNG possui respiro vertical para girar sem cortar as extremidades.
+      // Uma caixa quase quadrada dá presença ao braço sem ampliar a colisão.
+      .setDisplaySize(length * 1.08, Math.max(84, length))
       .setDepth(7);
     const collisionNodes = Array.from({ length: nodeCount }, () => {
       const node = this.scene.add.zone(centerX, centerY, nodeSize, nodeSize);
@@ -393,7 +449,6 @@ export class TiledPhase5Runtime {
       cycleMs: Math.max(1, this.readNumber(object, "cycle_ms") ?? GAMEPLAY_TIMING.rotatingBarrier.cycleMs),
       phaseMs: this.readNumber(object, "phase_ms") ?? index * 271,
       arm,
-      hub,
       collisionNodes,
     });
 
@@ -434,16 +489,15 @@ export class TiledPhase5Runtime {
   private buildAutomaticDoors(objects: Phaser.Types.Tilemaps.TiledObject[]): void {
     for (const object of objects) {
       const width = object.width ?? 32;
-      const height = object.height ?? 256;
       const x = object.x ?? 0;
       const y = object.y ?? 128;
       const doorCol = Math.floor(x / this.map.tileWidth);
       let firstDoorTileRow: number | undefined;
       for (let row = 0; row < this.map.height; row += 1) {
-        if (this.hazardsLayer?.getTileAt(doorCol, row)?.index === DOOR_FIRST_GID) {
-          firstDoorTileRow = row;
-          break;
-        }
+        const tile = this.hazardsLayer?.getTileAt(doorCol, row);
+        if (tile?.index !== DOOR_FIRST_GID) continue;
+        firstDoorTileRow ??= row;
+        tile.visible = false;
       }
       const collisionTop = (firstDoorTileRow ?? Math.floor(y / this.map.tileHeight))
         * this.map.tileHeight + this.offsetY;
@@ -456,12 +510,6 @@ export class TiledPhase5Runtime {
         collisionHeight,
       );
       this.scene.physics.add.existing(zone, true);
-      const bottomTileRow = Math.ceil((y + height) / this.map.tileHeight) - 1;
-      const bottomTile = this.hazardsLayer?.getTileAt(doorCol, bottomTileRow);
-      if (bottomTile?.index === DOOR_FIRST_GID) {
-        this.hazardsLayer?.putTileAt(DOOR_FIRST_GID, doorCol, bottomTileRow - 1);
-        bottomTile.visible = false;
-      }
       this.doors.push({
         id: this.readString(object, "id") ?? object.name ?? `door-${object.id}`,
         x,
@@ -478,6 +526,13 @@ export class TiledPhase5Runtime {
           })
           .setOrigin(0.5, 1)
           .setDepth(7),
+        visual: new ScanBarrierVisual(
+          this.scene,
+          TILED_FASE5_TILESETS[2].key,
+          x + width / 2,
+          collisionTop,
+          collisionHeight,
+        ),
         disabled: false,
       });
     }
@@ -639,12 +694,14 @@ export class TiledPhase5Runtime {
   private buildEndMarker(object: Phaser.Types.Tilemaps.TiledObject, label: string): void {
     const x = (object.x ?? this.lengthPx - 128) + (object.width ?? 0) / 2;
     const groundY = this.groundSurfaceYAt(x);
+    // Mesmo portão da campanha, sem a legenda de escolha de final.
     const marker = this.scene.add
-      .rectangle(x, groundY - 96, 10, 192, 0x7cfcea, 0.72)
-      .setStrokeStyle(2, 0xe8ecff, 0.9)
-      .setDepth(5);
+      .image(x, groundY + ASSET_BASELINE_PADDING, TILED_PHASE5_GATE_TEXTURE_KEY)
+      .setOrigin(0.5, 1)
+      .setDisplaySize(192, 224)
+      .setDepth(4);
     const text = this.scene.add
-      .text(x, groundY - 215, label, {
+      .text(x, groundY - 240, label, {
         fontFamily: "Courier New, monospace",
         fontSize: "20px",
         color: "#7CFCEA",
@@ -659,6 +716,11 @@ export class TiledPhase5Runtime {
   registerPhysics(player: Player): void {
     this.playerRef = player;
     this.scene.physics.add.collider(player.sprite, this.groundLayer);
+    // Só a pista multiplayer tem inimigos no Topo; a cena precisa ter carregado os sprites.
+    if (this.enemyObjects.length > 0) {
+      this.enemies = new EnemyRuntime(this.scene, player, this.enemyObjects, this.offsetY);
+      this.enemies.registerPlayerCollision(() => player.kill());
+    }
     for (const hazard of this.hazardZones) {
       this.scene.physics.add.overlap(player.sprite, hazard, () => player.kill());
     }
@@ -686,15 +748,86 @@ export class TiledPhase5Runtime {
   private destroyBreakable(target: RuntimeBreakable): void {
     const index = this.breakables.indexOf(target);
     if (index === -1) return;
+    AudioManager.playSfx(this.scene, SFX.breakableDestroy, { volume: 0.58 });
     this.breakables.splice(index, 1);
     const physicsBody = target.body.body as Phaser.Physics.Arcade.StaticBody | null;
     if (physicsBody) physicsBody.enable = false;
     target.collider?.destroy();
     target.collider = undefined;
     this.setBreakableTilesVisible(target, false);
+    this.spawnBarricadeFragments(target.visual);
     target.visual.destroy();
     target.body.destroy();
     this.playerRef?.resolvePressedSuccess();
+  }
+
+  /**
+   * Divide o sprite 96x44 em seis estilhaços. O primeiro tween dá o impacto
+   * do golpe; o segundo simula a queda e dissolve os pedaços. Como a descida
+   * Flesh usa este mesmo runtime, a animação vale para ambos os contextos.
+   */
+  private spawnBarricadeFragments(barricade: Phaser.GameObjects.Image): void {
+    const columns = 3;
+    const rows = 2;
+    const sourceWidth = barricade.texture.getSourceImage().width / columns;
+    const sourceHeight = barricade.texture.getSourceImage().height / rows;
+    const displayWidth = barricade.displayWidth / columns;
+    const displayHeight = barricade.displayHeight / rows;
+    const visualLeft = barricade.x - barricade.displayWidth / 2;
+    const visualTop = barricade.y - barricade.displayHeight;
+
+    for (let row = 0; row < rows; row += 1) {
+      for (let col = 0; col < columns; col += 1) {
+        const horizontalDirection = col === 0 ? -1 : col === columns - 1 ? 1 : Phaser.Math.RND.sign();
+        const fragment = this.scene.add
+          .image(
+            visualLeft + (col + 0.5) * displayWidth,
+            visualTop + (row + 0.5) * displayHeight,
+            TILED_PHASE5_BARRICADE_TEXTURE_KEY,
+          )
+          .setCrop(
+            Math.floor(col * sourceWidth),
+            Math.floor(row * sourceHeight),
+            Math.ceil(sourceWidth),
+            Math.ceil(sourceHeight),
+          )
+          .setDisplaySize(displayWidth, displayHeight)
+          .setDepth(6);
+
+        this.scene.tweens.add({
+          targets: fragment,
+          x: fragment.x + horizontalDirection * Phaser.Math.Between(18, 34),
+          y: fragment.y - Phaser.Math.Between(row === 0 ? 24 : 12, row === 0 ? 40 : 25),
+          angle: horizontalDirection * Phaser.Math.Between(20, 65),
+          duration: Phaser.Math.Between(110, 160),
+          ease: "Quad.easeOut",
+          onComplete: () => {
+            this.scene.tweens.add({
+              targets: fragment,
+              x: fragment.x + horizontalDirection * Phaser.Math.Between(10, 24),
+              y: fragment.y + Phaser.Math.Between(42, 72),
+              angle: fragment.angle + horizontalDirection * Phaser.Math.Between(35, 85),
+              alpha: 0,
+              duration: Phaser.Math.Between(170, 240),
+              ease: "Quad.easeIn",
+              onComplete: () => fragment.destroy(),
+            });
+          },
+        });
+      }
+    }
+
+    const impact = this.scene.add
+      .circle(barricade.x, barricade.y - barricade.displayHeight / 2, 10, 0x7cfcea, 0.85)
+      .setDepth(7);
+    this.scene.tweens.add({
+      targets: impact,
+      scale: 3.2,
+      alpha: 0,
+      duration: 180,
+      ease: "Quad.easeOut",
+      onComplete: () => impact.destroy(),
+    });
   }
 
   private destroyBreakableInAttackRange(attackX: number, attackY: number): void {
@@ -711,6 +844,8 @@ export class TiledPhase5Runtime {
   private setDoorDisabled(door: AutomaticDoor, disabled: boolean): void {
     if (door.disabled === disabled) return;
     door.disabled = disabled;
+    if (disabled) AudioManager.playSfx(this.scene, SFX.securityDoorUnlock, { volume: 0.56 });
+    door.visual.setEnabled(!disabled);
     const physicsBody = door.zone.body as Phaser.Physics.Arcade.StaticBody | null;
     if (physicsBody) physicsBody.enable = !disabled;
     door.prompt
@@ -770,8 +905,8 @@ export class TiledPhase5Runtime {
     }
   }
 
-  private revealGroup(group: string): void {
-    if (this.revealedGroups.has(group)) return;
+  private revealGroup(group: string): boolean {
+    if (this.revealedGroups.has(group)) return false;
     this.revealedGroups.add(group);
     for (const region of this.revealRegions.filter((item) => item.group === group)) {
       region.outline.setVisible(true);
@@ -780,6 +915,7 @@ export class TiledPhase5Runtime {
     for (const hidden of this.hiddenVisualRegions.filter((item) => item.group === group)) {
       this.setHiddenVisual(hidden, true);
     }
+    return true;
   }
 
   private clearPassedRevealGroups(playerX: number): void {
@@ -799,19 +935,26 @@ export class TiledPhase5Runtime {
   }
 
   setScanActive(active: boolean): void {
+    if (!active) this.enemies?.stopScan();
     if (!active || !this.playerRef) return;
     const playerX = this.playerRef.sprite.x;
+    this.enemies?.scan(playerX);
     this.disableNearestDoor(playerX);
     const groups = new Set(
       this.revealRegions
         .filter((region) => this.distanceToRegion(playerX, region) <= SCAN_RANGE)
         .map((region) => region.group),
     );
-    groups.forEach((group) => this.revealGroup(group));
+    let revealedSomething = false;
+    groups.forEach((group) => {
+      revealedSomething = this.revealGroup(group) || revealedSomething;
+    });
+    if (revealedSomething) AudioManager.playSfx(this.scene, SFX.scanReveal, { volume: 0.48 });
   }
 
   /** Restaura o trecho após uma morte sem recriar créditos, checkpoint ou cronômetro. */
   resetMutableObstacles(): void {
+    this.enemies?.reset();
     const activeBreakableIds = new Set(this.breakables.map((breakable) => breakable.id));
     for (const definition of this.breakableDefinitions) {
       if (!activeBreakableIds.has(definition.id)) this.createBreakable(definition);
@@ -862,6 +1005,7 @@ export class TiledPhase5Runtime {
     if (this.usesInternalTime) this.elapsedMs += Math.max(0, deltaMs);
     const now = this.timeSource();
     this.updateRotatingBarriers(now);
+    this.enemies?.update();
     this.clearPassedRevealGroups(player.sprite.x);
 
     this.creditSprites.forEach((sprite, id) => {
@@ -877,7 +1021,11 @@ export class TiledPhase5Runtime {
       if (this.checkpointTriggered.has(checkpoint.id)) continue;
       if (Math.abs(player.sprite.x - checkpoint.x) < 28) {
         this.checkpointTriggered.add(checkpoint.id);
-        const withFeedback = this.callbacks.onCheckpoint(checkpoint.id, checkpoint.x, checkpoint.y) !== false;
+        const withFeedback = this.callbacks.onCheckpoint(
+          checkpoint.id,
+          checkpoint.x + checkpoint.width / 2,
+          checkpoint.y,
+        ) !== false;
         this.checkpointMarkers.get(checkpoint.id)?.activate(withFeedback);
       }
     }
@@ -892,7 +1040,16 @@ export class TiledPhase5Runtime {
     }
   }
 
+  hideCredits(): void {
+    this.creditSprites.forEach((sprite) => {
+      const body = sprite.body as Phaser.Physics.Arcade.Body | null;
+      if (body) body.enable = false;
+      sprite.setActive(false).setVisible(false);
+    });
+  }
+
   destroy(): void {
+    this.enemies?.destroy();
     this.scene.events.off("player-attack-attempt", this.pressedAttackListener);
     this.scene.events.off("player-attack", this.normalAttackListener);
     this.creditSprites.forEach((sprite) => sprite.destroy());
@@ -900,12 +1057,12 @@ export class TiledPhase5Runtime {
     this.hazardZones.forEach((zone) => zone.destroy());
     this.rotatingBarriers.forEach((barrier) => {
       barrier.arm.destroy();
-      barrier.hub.destroy();
       barrier.collisionNodes.forEach((node) => node.destroy());
     });
     this.doors.forEach((door) => {
       door.zone.destroy();
       door.prompt.destroy();
+      door.visual.destroy();
     });
     this.breakables.forEach((breakable) => {
       breakable.collider?.destroy();

@@ -8,7 +8,8 @@ import {
   TILED_FASE3_TILESET_NAME,
 } from "../levels/TiledFase3";
 import { AbilityState } from "../systems/AbilityState";
-import { TEX } from "../utils/PlaceholderTextures";
+import { AudioManager, SFX } from "../systems/AudioManager";
+import { CREDIT_ANIMATION_KEY, TEX } from "../utils/PlaceholderTextures";
 import { EnemyRuntime } from "./EnemyRuntime";
 import { CheckpointMarker } from "./CheckpointMarker";
 
@@ -62,6 +63,7 @@ export class TiledPhase3Runtime {
   private readonly electricGateEffects: ElectricGateEffect[] = [];
   private readonly tutorialLabels: Phaser.GameObjects.Text[] = [];
   private electricGateTimer?: Phaser.Time.TimerEvent;
+  private electricGateLoopActive = false;
   private endGateTriggered = false;
   private playerRef?: Player;
   private runtimeEnemy?: EnemyRuntime;
@@ -76,6 +78,7 @@ export class TiledPhase3Runtime {
       onCheckpoint: (id: string, x: number, y: number) => boolean | void;
       onEndGate: (destination: string, implant?: keyof AbilityState) => void;
     },
+    private readonly options: { excludeEnemiesThroughX?: number } = {},
   ) {
     this.map = scene.make.tilemap({ key: TILED_FASE3_MAP_KEY });
     const tileset = this.map.addTilesetImage(TILED_FASE3_TILESET_NAME, TILED_FASE3_TILESET_KEY);
@@ -178,6 +181,7 @@ export class TiledPhase3Runtime {
     for (const credit of this.credits) {
       if (this.consolidatedThisPhase.has(credit.id)) continue;
       const sprite = this.scene.physics.add.sprite(credit.x, credit.y, TEX.credit);
+      sprite.anims.play(CREDIT_ANIMATION_KEY);
       sprite.body!.setAllowGravity(false);
       sprite.setData("creditValue", credit.value);
       sprite.setDepth(4);
@@ -365,12 +369,17 @@ export class TiledPhase3Runtime {
   }
 
   private getEnemyObjects(): Phaser.Types.Tilemaps.TiledObject[] {
-    return this.map.getObjectLayer("objects")?.objects.filter((object) => object.type === "enemy") ?? [];
+    return this.map.getObjectLayer("objects")?.objects.filter((object) => (
+      object.type === "enemy"
+      && (this.options.excludeEnemiesThroughX === undefined
+        || (object.x ?? 0) > this.options.excludeEnemiesThroughX)
+    )) ?? [];
   }
 
   private destroyBreakable(breakable: Phase3Breakable): void {
     const index = this.breakables.indexOf(breakable);
     if (index === -1) return;
+    AudioManager.playSfx(this.scene, SFX.breakableDestroy, { volume: 0.58 });
     this.breakables.splice(index, 1);
     const body = breakable.body.body as Phaser.Physics.Arcade.StaticBody | null;
     if (body) body.enable = false;
@@ -423,6 +432,7 @@ export class TiledPhase3Runtime {
 
   update(player: Player): void {
     this.runtimeEnemy?.update();
+    this.updateElectricGateAudio();
 
     this.creditSprites.forEach((sprite, id) => {
       if (!sprite.active) return;
@@ -437,7 +447,11 @@ export class TiledPhase3Runtime {
       if (this.checkpointTriggered.has(checkpoint.id)) continue;
       if (Math.abs(player.sprite.x - checkpoint.x) < 28) {
         this.checkpointTriggered.add(checkpoint.id);
-        const withFeedback = this.callbacks.onCheckpoint(checkpoint.id, checkpoint.x, checkpoint.y) !== false;
+        const withFeedback = this.callbacks.onCheckpoint(
+          checkpoint.id,
+          checkpoint.x + checkpoint.width / 2,
+          checkpoint.y,
+        ) !== false;
         this.checkpointMarkers.get(checkpoint.id)?.activate(withFeedback);
       }
     }
@@ -452,12 +466,40 @@ export class TiledPhase3Runtime {
     }
   }
 
+  hideCredits(): void {
+    this.creditSprites.forEach((sprite) => {
+      const body = sprite.body as Phaser.Physics.Arcade.Body | null;
+      if (body) body.enable = false;
+      sprite.setActive(false).setVisible(false);
+    });
+  }
+
   setScanActive(active: boolean): void {
     if (active) this.runtimeEnemy?.scan(this.playerRef?.sprite.x ?? 0);
     else this.runtimeEnemy?.stopScan();
   }
 
+  private updateElectricGateAudio(): void {
+    const view = this.scene.cameras.main.worldView;
+    const audible = this.electricGateEffects.some((effect) => (
+      effect.graphics.active
+      && effect.graphics.x + effect.width >= view.left - 64
+      && effect.graphics.x <= view.right + 64
+      && effect.graphics.y + effect.height >= view.top - 64
+      && effect.graphics.y <= view.bottom + 64
+    ));
+    if (audible === this.electricGateLoopActive) return;
+    this.electricGateLoopActive = audible;
+    if (audible) {
+      AudioManager.startLoop(this.scene, SFX.electricGate, { volume: 0.28 });
+    } else {
+      AudioManager.stopLoop(SFX.electricGate);
+    }
+  }
+
   destroy(): void {
+    AudioManager.stopLoop(SFX.electricGate);
+    this.electricGateLoopActive = false;
     this.scene.events.off("player-attack-attempt", this.pressedAttackListener);
     this.scene.events.off("player-attack", this.normalAttackListener);
     this.runtimeEnemy?.destroy();
