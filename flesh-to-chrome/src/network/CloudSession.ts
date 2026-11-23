@@ -38,6 +38,11 @@ export interface CampaignSyncState {
   restoredSave?: SaveData;
 }
 
+export interface LogoutResult {
+  localLogout: "completed";
+  refreshTokenRevocation: "confirmed" | "rejected" | "unavailable" | "not-requested";
+}
+
 interface PendingCampaignOperation {
   ownerId: string;
   operationId: string;
@@ -153,25 +158,60 @@ export class CloudSession {
     window.location.assign(`${api}/auth/google/start?return=${encodeURIComponent(returnTo)}`);
   }
 
-  static async logout(): Promise<void> {
+  static async logout(): Promise<LogoutResult> {
     const session = CloudSession.current();
-    if (!session) return;
     sessionStorage.removeItem(SESSION_KEY);
+    if (!session) return { localLogout: "completed", refreshTokenRevocation: "not-requested" };
     CloudSession.abortOwnerRequests(session.profile.id);
     campaignRevisions.delete(session.profile.id);
     blockedCampaigns.delete(session.profile.id);
     scheduledCampaigns.delete(session.profile.id);
     CloudSession.clearRetry(session.profile.id);
+    if (!session.refreshToken) {
+      return { localLogout: "completed", refreshTokenRevocation: "not-requested" };
+    }
     const api = await CloudSession.api();
-    if (!api) return;
-    await fetch(`${api}/auth/logout`, {
-      method: "POST",
-      headers: {
-        authorization: `Bearer ${session.accessToken}`,
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({ refreshToken: session.refreshToken }),
-    }).catch(() => undefined);
+    if (!api) {
+      console.warn("Refresh token revocation could not be requested.", { reason: "api-unavailable" });
+      return { localLogout: "completed", refreshTokenRevocation: "unavailable" };
+    }
+    try {
+      const response = await fetch(`${api}/auth/logout`, {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${session.accessToken}`,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ refreshToken: session.refreshToken }),
+      });
+      if (response.ok) {
+        return { localLogout: "completed", refreshTokenRevocation: "confirmed" };
+      }
+      let code = "HTTP_ERROR";
+      try {
+        const body = (await response.json()) as { error?: { code?: string } };
+        if (body.error?.code) code = body.error.code;
+      } catch {
+        // A classificação pelo status HTTP continua disponível mesmo sem corpo JSON.
+      }
+      const refreshTokenRevocation = code === "TOKEN_REVOCATION_REJECTED"
+        ? "rejected"
+        : "unavailable";
+      console.warn("Refresh token revocation was not confirmed.", {
+        status: response.status,
+        code,
+      });
+      return { localLogout: "completed", refreshTokenRevocation };
+    } catch (error) {
+      const errorName = typeof (error as { name?: unknown })?.name === "string"
+        ? (error as { name: string }).name
+        : "Error";
+      console.warn("Refresh token revocation was not confirmed.", {
+        reason: "network-error",
+        errorName,
+      });
+      return { localLogout: "completed", refreshTokenRevocation: "unavailable" };
+    }
   }
 
   static async me(): Promise<PlayerProfile | null> {

@@ -10,6 +10,7 @@ const {
 const { LambdaClient, InvokeCommand } = require("@aws-sdk/client-lambda");
 const { CognitoJwtVerifier } = require("aws-jwt-verify");
 const { assessLogin, pkceChallenge, randomToken, safeReturn, withTicket } = require("./oauth");
+const { revokeRefreshToken } = require("./revoke");
 
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const lambda = new LambdaClient({});
@@ -98,7 +99,7 @@ exports.handler = async (event) => {
     return fail(401, "UNAUTHENTICATED", "Access token ausente.", requestId);
   }
 
-  if (method === "POST" && path === "/auth/logout") return logout(event);
+  if (method === "POST" && path === "/auth/logout") return logout(event, requestId);
   if (method === "GET" && path === "/me") return profile(userId, claims);
 
   return fail(404, "NOT_FOUND", "Rota ausente.", requestId);
@@ -274,24 +275,35 @@ function redirectUri(event) {
   return host ? `https://${host}/auth/google/callback` : "";
 }
 
-async function logout(event) {
+async function logout(event, requestId) {
+  let body;
   try {
-    const body = readBody(event);
-    if (body.refreshToken && process.env.COGNITO_DOMAIN && process.env.COGNITO_CLIENT_ID) {
-      const basic = Buffer.from(`${process.env.COGNITO_CLIENT_ID}:${process.env.COGNITO_CLIENT_SECRET}`).toString("base64");
-      await fetch(`https://${process.env.COGNITO_DOMAIN}/oauth2/revoke`, {
-        method: "POST",
-        headers: {
-          authorization: `Basic ${basic}`,
-          "content-type": "application/x-www-form-urlencoded",
-        },
-        body: new URLSearchParams({ token: body.refreshToken }),
-      });
-    }
-  } catch (err) {
-    console.error(err.name || "logout");
+    body = readBody(event);
+  } catch {
+    return fail(400, "INVALID_BODY", "Corpo da requisição inválido.", requestId);
   }
-  return response(204, "");
+  if (!body.refreshToken) {
+    return fail(400, "REFRESH_TOKEN_REQUIRED", "Refresh token ausente.", requestId);
+  }
+
+  const result = await revokeRefreshToken({
+    domain: process.env.COGNITO_DOMAIN,
+    clientId: process.env.COGNITO_CLIENT_ID,
+    clientSecret: process.env.COGNITO_CLIENT_SECRET,
+    refreshToken: body.refreshToken,
+  });
+  if (result.status === "confirmed") return response(204, "");
+
+  console.error("refresh token revocation failed", {
+    requestId,
+    outcome: result.status,
+    providerStatus: result.providerStatus,
+    errorName: result.errorName,
+  });
+  if (result.status === "rejected") {
+    return fail(502, "TOKEN_REVOCATION_REJECTED", "O provedor rejeitou a revogação do token.", requestId);
+  }
+  return fail(503, "TOKEN_REVOCATION_UNAVAILABLE", "Não foi possível confirmar a revogação do token.", requestId);
 }
 
 async function profile(userId, claims) {

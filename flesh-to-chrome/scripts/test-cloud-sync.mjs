@@ -46,6 +46,7 @@ const window = {
 
 const requests = [];
 let requestMode = "load";
+let logoutMode = "success";
 let currentRevision = 1;
 let slowCampaignStarted = false;
 const restoredSave = {
@@ -85,7 +86,13 @@ async function fetchMock(url, options = {}) {
     }
     return response(200, { revision: currentRevision, state: restoredSave });
   }
-  if (url.endsWith("/auth/logout")) return response(204, {});
+  if (url.endsWith("/auth/logout")) {
+    if (logoutMode === "unavailable") throw new Error("logout network unavailable");
+    if (logoutMode === "rejected") {
+      return response(502, { error: { code: "TOKEN_REVOCATION_REJECTED" } });
+    }
+    return response(204, {});
+  }
   const body = JSON.parse(options.body || "{}");
   requests.push({ url, method: options.method, body, authorization: options.headers?.authorization });
   if (requestMode === "unavailable") throw new Error("network unavailable");
@@ -199,7 +206,10 @@ assert.equal(restoreRequest.method, "POST");
 assert.equal(restoredEvent.restoredSave.currentPhaseId, "fase5");
 assert.equal(CloudSession.campaignSyncState().status, "idle");
 
-await CloudSession.logout();
+const confirmedLogout = await CloudSession.logout();
+assert.equal(confirmedLogout.localLogout, "completed");
+assert.equal(confirmedLogout.refreshTokenRevocation, "confirmed");
+assert.equal(sessionStorage.getItem("flesh-to-chrome:session"), null);
 sessionStorage.setItem("flesh-to-chrome:session", JSON.stringify({
   accessToken: "access-a",
   refreshToken: "refresh-a",
@@ -236,4 +246,22 @@ const requestB = requests.find((request) => request.body?.state?.checkpoint?.x =
 assert.equal(requestB.authorization, "Bearer access-b");
 assert.equal(localStorage.getItem("flesh-to-chrome:campaign-sync:player-a") !== null, true);
 
-console.log("campaign sync: retry, conflito, restore-gate e isolamento por conta OK");
+logoutMode = "rejected";
+const rejectedLogout = await CloudSession.logout();
+assert.equal(rejectedLogout.refreshTokenRevocation, "rejected");
+assert.equal(sessionStorage.getItem("flesh-to-chrome:session"), null,
+  "erro HTTP na revogação não pode preservar a sessão local");
+
+sessionStorage.setItem("flesh-to-chrome:session", JSON.stringify({
+  accessToken: "access-c",
+  refreshToken: "refresh-c",
+  expiresAt: Date.now() + 60_000,
+  profile: { id: "player-c", name: "C", email: "c@example.com" },
+}));
+logoutMode = "unavailable";
+const unavailableLogout = await CloudSession.logout();
+assert.equal(unavailableLogout.refreshTokenRevocation, "unavailable");
+assert.equal(sessionStorage.getItem("flesh-to-chrome:session"), null,
+  "falha de rede na revogação não pode preservar a sessão local");
+
+console.log("campaign sync e logout seguro: retry, conflito, isolamento e revogação OK");

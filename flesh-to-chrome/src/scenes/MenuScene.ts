@@ -493,10 +493,18 @@ export class MenuScene extends Phaser.Scene {
 
   private async logout(): Promise<void> {
     const preparation = this.preparationGeneration;
-    await CloudSession.logout();
+    const result = await CloudSession.logout();
     if (!this.isCurrentPreparation(preparation)) return;
     SaveState.logoutLocal();
-    this.statusText?.setText("Visitante: fechar a aba apaga o progresso desta sessão.");
+    if (result.refreshTokenRevocation === "confirmed") {
+      this.statusText?.setText("Saída local concluída e token de renovação revogado.");
+    } else if (result.refreshTokenRevocation === "not-requested") {
+      this.statusText?.setText("Saída local concluída.");
+    } else {
+      this.statusText?.setText(
+        "Saída local concluída. Não foi possível confirmar a revogação do token; nenhuma sessão foi mantida neste navegador."
+      );
+    }
     this.finishPrepare();
   }
 
