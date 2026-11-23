@@ -17,12 +17,20 @@ publish_domain = config.get_bool("publishDomain") or False
 prefix = f"flesh-to-chrome-{stack}"
 root = Path(__file__).parent
 services_dir = root / "services"
-domain = "nihil-legere-possum.lat"
+domain = "flesh-to-chrome.negoci.online"
+cognito_domain_prefix = f"ftc-{stack}-negoci"
 is_prod = stack == "prod"
 
 zone = None
 if is_prod:
-    zone = aws.route53.Zone("nihil-legere-possum", name=domain)
+    zone = aws.route53.Zone(
+        "flesh-to-chrome-zone",
+        name=domain,
+        # Preserva a identidade do recurso no estado durante a troca de nome lógico.
+        opts=pulumi.ResourceOptions(
+            aliases=[pulumi.Alias(name="nihil-legere-possum")],
+        ),
+    )
     pulumi.export("nameservers", zone.name_servers)
     pulumi.export("domain", domain)
 
@@ -486,7 +494,7 @@ def players(api):
     )
     aws.cognito.UserPoolDomain(
         "players-domain",
-        domain=f"ftc-{stack}-legere",
+        domain=cognito_domain_prefix,
         user_pool_id=pool.id,
     )
     google = None
@@ -539,7 +547,7 @@ def players(api):
             audiences=[client.id],
         ),
     )
-    pulumi.export("login_domain", f"ftc-{stack}-legere.auth.{region}.amazoncognito.com")
+    pulumi.export("login_domain", f"{cognito_domain_prefix}.auth.{region}.amazoncognito.com")
     return pool, client, authorizer, google_enabled
 
 
@@ -605,7 +613,12 @@ if frontend is not None:
 else:
     allowed_origins = f"https://{domain},https://www.{domain}"
     frontend_origin = f"https://{domain}"
-login_host = pulumi.Output.concat("ftc-", stack, "-legere.auth.", pulumi.Config("aws").get("region") or "sa-east-1", ".amazoncognito.com")
+login_host = pulumi.Output.concat(
+    cognito_domain_prefix,
+    ".auth.",
+    pulumi.Config("aws").get("region") or "sa-east-1",
+    ".amazoncognito.com",
+)
 ses_from = f"noreply@{domain}" if is_prod and publish_domain else (config.get("sesFromEmail") or "")
 ses_identity = domain if is_prod and publish_domain else (config.get("sesFromEmail") or domain)
 mail_env = {"SES_FROM": ses_from} if ses_from else {}

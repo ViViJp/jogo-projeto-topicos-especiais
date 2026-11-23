@@ -90,7 +90,7 @@ O login Google só sai de `NOT_READY` com os dois valores abaixo. O segredo fica
 
 No Google Cloud, crie um cliente OAuth do tipo aplicação web. Em URIs de redirecionamento autorizados, coloque somente:
 
-`https://ftc-dev-legere.auth.sa-east-1.amazoncognito.com/oauth2/idpresponse`
+`https://ftc-dev-negoci.auth.sa-east-1.amazoncognito.com/oauth2/idpresponse`
 
 Na pasta `pulumi`, com a stack `dev` selecionada:
 
