@@ -1,4 +1,6 @@
+import hashlib
 import json
+import mimetypes
 import subprocess
 from pathlib import Path
 
@@ -43,7 +45,7 @@ def table(name, with_ttl=False):
     )
 
 
-def publish(service, table_resource):
+def publish(service, table_resource, variables=None, invoke_function=None, ses_identity=None):
     path = services_dir / service
     subprocess.run(["npm", "install", "--omit=dev"], cwd=path, check=True)
 
@@ -93,6 +95,46 @@ def publish(service, table_resource):
             )
         ),
     )
+    if service == "comunicacoes":
+        caller = aws.get_caller_identity()
+        region = pulumi.Config("aws").get("region") or "sa-east-1"
+        identity = ses_identity or domain
+        aws.iam.RolePolicy(
+            f"{service}-ses",
+            role=role.id,
+            policy=json.dumps(
+                {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Action": ["ses:SendEmail", "ses:SendRawEmail"],
+                            "Resource": f"arn:aws:ses:{region}:{caller.account_id}:identity/{identity}",
+                        }
+                    ],
+                }
+            ),
+        )
+    if invoke_function is not None:
+        aws.iam.RolePolicy(
+            f"{service}-invoke-service",
+            role=role.id,
+            policy=invoke_function.arn.apply(
+                lambda arn: json.dumps(
+                    {
+                        "Version": "2012-10-17",
+                        "Statement": [
+                            {
+                                "Effect": "Allow",
+                                "Action": "lambda:InvokeFunction",
+                                "Resource": arn,
+                            }
+                        ],
+                    }
+                )
+            ),
+        )
+    environment = {"TABLE_NAME": table_resource.name, **(variables or {})}
     fn = aws.lambda_.Function(
         service,
         name=f"{prefix}-{service}",
@@ -101,9 +143,7 @@ def publish(service, table_resource):
         role=role.arn,
         code=pulumi.FileArchive(str(path)),
         timeout=10,
-        environment=aws.lambda_.FunctionEnvironmentArgs(
-            variables={"TABLE_NAME": table_resource.name},
-        ),
+        environment=aws.lambda_.FunctionEnvironmentArgs(variables=environment),
     )
     pulumi.export(f"{service}_function", fn.name)
     pulumi.export(f"{service}_table", table_resource.name)
@@ -114,6 +154,7 @@ ROUTES = {
     "conta": [
         "GET /auth/google/start",
         "GET /auth/google/callback",
+        "POST /auth/session",
         "GET /me",
         "POST /auth/logout",
     ],
@@ -143,17 +184,7 @@ ROUTES = {
 }
 
 
-def http_api(functions):
-    api = aws.apigatewayv2.Api(
-        "http",
-        name=f"{prefix}-http",
-        protocol_type="HTTP",
-        cors_configuration=aws.apigatewayv2.ApiCorsConfigurationArgs(
-            allow_origins=["*"] if not is_prod else [f"https://{domain}", f"https://www.{domain}"],
-            allow_methods=["GET", "POST", "PUT", "PATCH", "OPTIONS"],
-            allow_headers=["authorization", "content-type"],
-        ),
-    )
+def http_api(api, functions, authorizer):
     routes = []
     for service, route_keys in ROUTES.items():
         fn = functions[service]
@@ -174,11 +205,20 @@ def http_api(functions):
         )
         for route_key in route_keys:
             slug = route_key.lower().replace(" ", "-").replace("/", "-").replace("{", "").replace("}", "")
+            public = route_key in (
+                "GET /auth/google/start",
+                "GET /auth/google/callback",
+                "POST /auth/session",
+                "POST /auth/logout",
+            )
             routes.append(
                 aws.apigatewayv2.Route(
                     f"route-{slug}",
                     api_id=api.id,
                     route_key=route_key,
+                    authorization_type="NONE" if public else "JWT",
+                    authorizer_id=None if public else authorizer.id,
+                    authorization_scopes=None if public else ["openid"],
                     target=integration.id.apply(lambda integration_id: f"integrations/{integration_id}"),
                 )
             )
@@ -193,7 +233,7 @@ def http_api(functions):
     return api, stage
 
 
-def frontend_cdn(certificate_arn=None, aliases=None):
+def frontend_cdn(certificate_arn=None, aliases=None, api_endpoint=None):
     bucket = aws.s3.Bucket(
         "frontend",
         bucket=f"{prefix}-frontend",
@@ -207,13 +247,16 @@ def frontend_cdn(certificate_arn=None, aliases=None):
         ignore_public_acls=True,
         restrict_public_buckets=True,
     )
-    aws.s3.BucketObjectv2(
-        "frontend-index",
-        bucket=bucket.id,
-        key="index.html",
-        source=pulumi.FileAsset(str(root / "frontend" / "index.html")),
-        content_type="text/html; charset=utf-8",
-    )
+    upload_frontend(bucket)
+    if api_endpoint is not None:
+        aws.s3.BucketObjectv2(
+            "frontend-cloud-config",
+            bucket=bucket.id,
+            key="cloud-config.json",
+            content=api_endpoint.apply(lambda endpoint: json.dumps({"api": endpoint})),
+            content_type="application/json; charset=utf-8",
+            cache_control="no-cache",
+        )
     oac = aws.cloudfront.OriginAccessControl(
         "frontend-oac",
         name=f"{prefix}-frontend",
@@ -234,6 +277,7 @@ def frontend_cdn(certificate_arn=None, aliases=None):
         )
         alias_args = {"aliases": aliases}
     cache = aws.cloudfront.get_cache_policy(name="Managed-CachingOptimized")
+    fresh = aws.cloudfront.get_cache_policy(name="Managed-CachingDisabled")
     distribution = aws.cloudfront.Distribution(
         "frontend",
         enabled=True,
@@ -255,6 +299,26 @@ def frontend_cdn(certificate_arn=None, aliases=None):
             compress=True,
             cache_policy_id=cache.id,
         ),
+        ordered_cache_behaviors=[
+            aws.cloudfront.DistributionOrderedCacheBehaviorArgs(
+                path_pattern="index.html",
+                target_origin_id="s3",
+                viewer_protocol_policy="redirect-to-https",
+                allowed_methods=["GET", "HEAD", "OPTIONS"],
+                cached_methods=["GET", "HEAD"],
+                compress=True,
+                cache_policy_id=fresh.id,
+            ),
+            aws.cloudfront.DistributionOrderedCacheBehaviorArgs(
+                path_pattern="cloud-config.json",
+                target_origin_id="s3",
+                viewer_protocol_policy="redirect-to-https",
+                allowed_methods=["GET", "HEAD", "OPTIONS"],
+                cached_methods=["GET", "HEAD"],
+                compress=True,
+                cache_policy_id=fresh.id,
+            ),
+        ],
         restrictions=aws.cloudfront.DistributionRestrictionsArgs(
             geo_restriction=aws.cloudfront.DistributionRestrictionsGeoRestrictionArgs(
                 restriction_type="none",
@@ -331,6 +395,7 @@ def prod_names(api, stage):
     named = frontend_cdn(
         certificate_arn=frontend_cert.certificate_arn,
         aliases=[domain, f"www.{domain}"],
+        api_endpoint=api.api_endpoint,
     )
     for hostname in (domain, f"www.{domain}"):
         slug = "apex" if hostname == domain else "www"
@@ -382,19 +447,193 @@ def prod_names(api, stage):
     pulumi.export("api_hostname", f"api.{domain}")
 
 
+def upload_frontend(bucket):
+    game = root.parent / "flesh-to-chrome"
+    subprocess.run(["npm", "install"], cwd=game, check=True)
+    subprocess.run(["npm", "run", "build"], cwd=game, check=True)
+    dist = game / "dist"
+    files = [path for path in dist.rglob("*") if path.is_file()]
+    if not files:
+        raise Exception("O build do frontend não gerou arquivos.")
+    for path in files:
+        key = path.relative_to(dist).as_posix()
+        guessed = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
+        if guessed.startswith("text/") or guessed in ("application/javascript", "application/json"):
+            guessed = f"{guessed}; charset=utf-8"
+        aws.s3.BucketObjectv2(
+            "frontend-index" if key == "index.html" else f"frontend-{hashlib.sha1(key.encode()).hexdigest()[:12]}",
+            bucket=bucket.id,
+            key=key,
+            source=pulumi.FileAsset(str(path)),
+            content_type=guessed,
+            cache_control="no-cache" if key == "index.html" else "public, max-age=86400",
+        )
+
+
+def players(api):
+    region = pulumi.Config("aws").get("region") or "sa-east-1"
+    google_id = config.get("googleClientId")
+    google_secret = config.get_secret("googleClientSecret")
+    google_enabled = bool(google_id) and google_secret is not None
+    pool = aws.cognito.UserPool(
+        "players",
+        name=f"{prefix}-players",
+        username_attributes=["email"],
+        auto_verified_attributes=["email"],
+        admin_create_user_config=aws.cognito.UserPoolAdminCreateUserConfigArgs(
+            allow_admin_create_user_only=True,
+        ),
+    )
+    aws.cognito.UserPoolDomain(
+        "players-domain",
+        domain=f"ftc-{stack}-legere",
+        user_pool_id=pool.id,
+    )
+    google = None
+    if google_enabled:
+        google = aws.cognito.IdentityProvider(
+            "google",
+            user_pool_id=pool.id,
+            provider_name="Google",
+            provider_type="Google",
+            provider_details=pulumi.Output.all(google_id, google_secret).apply(
+                lambda values: {
+                    "client_id": values[0],
+                    "client_secret": values[1],
+                    "authorize_scopes": "openid email profile",
+                }
+            ),
+            attribute_mapping={"email": "email", "name": "name", "username": "sub"},
+        )
+    oauth = {}
+    if google_enabled:
+        callbacks = [pulumi.Output.concat(api.api_endpoint, "/auth/google/callback")]
+        if is_prod and publish_domain:
+            callbacks.append(f"https://api.{domain}/auth/google/callback")
+        oauth = {
+            "allowed_oauth_flows_user_pool_client": True,
+            "allowed_oauth_flows": ["code"],
+            "allowed_oauth_scopes": ["openid", "email", "profile"],
+            "supported_identity_providers": ["Google"],
+            "callback_urls": callbacks,
+        }
+    client = aws.cognito.UserPoolClient(
+        "players-client",
+        name=f"{prefix}-web",
+        user_pool_id=pool.id,
+        generate_secret=True,
+        explicit_auth_flows=["ALLOW_REFRESH_TOKEN_AUTH"],
+        prevent_user_existence_errors="ENABLED",
+        enable_token_revocation=True,
+        opts=pulumi.ResourceOptions(depends_on=[google]) if google else None,
+        **oauth,
+    )
+    authorizer = aws.apigatewayv2.Authorizer(
+        "jwt",
+        api_id=api.id,
+        authorizer_type="JWT",
+        name=f"{prefix}-jwt",
+        identity_sources=["$request.header.Authorization"],
+        jwt_configuration=aws.apigatewayv2.AuthorizerJwtConfigurationArgs(
+            issuer=pool.id.apply(lambda pool_id: f"https://cognito-idp.{region}.amazonaws.com/{pool_id}"),
+            audiences=[client.id],
+        ),
+    )
+    pulumi.export("login_domain", f"ftc-{stack}-legere.auth.{region}.amazoncognito.com")
+    return pool, client, authorizer, google_enabled
+
+
+def prod_mail():
+    identity = aws.ses.DomainIdentity("ses-domain", domain=domain)
+    dkim = aws.ses.DomainDkim("ses-dkim", domain=identity.domain)
+    aws.route53.Record(
+        "ses-verification",
+        zone_id=zone.zone_id,
+        name=f"_amazonses.{domain}",
+        type="TXT",
+        ttl=600,
+        records=[identity.verification_token.apply(lambda token: f'"{token}"')],
+    )
+    for index in range(3):
+        token = dkim.dkim_tokens.apply(lambda values, index=index: values[index])
+        aws.route53.Record(
+            f"ses-dkim-{index}",
+            zone_id=zone.zone_id,
+            name=token.apply(lambda value: f"{value}._domainkey.{domain}"),
+            type="CNAME",
+            ttl=600,
+            records=[token.apply(lambda value: f"{value}.dkim.amazonses.com")],
+        )
+
+
+def open_api():
+    return aws.apigatewayv2.Api(
+        "http",
+        name=f"{prefix}-http",
+        protocol_type="HTTP",
+        cors_configuration=aws.apigatewayv2.ApiCorsConfigurationArgs(
+            allow_origins=["*"] if not is_prod else [f"https://{domain}", f"https://www.{domain}"],
+            allow_methods=["GET", "POST", "PUT", "PATCH", "OPTIONS"],
+            allow_headers=["authorization", "content-type"],
+        ),
+    )
+
+
 services = {
-    "conta": table("accounts"),
+    "conta": table("accounts", with_ttl=True),
     "campanha": table("campaigns"),
     "partidas": table("matches", with_ttl=True),
     "comunicacoes": table("communications"),
     "auditoria": table("audit"),
 }
 
-functions = {
-    service: publish(service, table_resource) for service, table_resource in services.items()
-}
-api, stage = http_api(functions)
 if is_prod and publish_domain:
-    prod_names(api, stage)
+    prod_mail()
+elif config.get("sesFromEmail"):
+    aws.ses.EmailIdentity("ses-from", email=config.get("sesFromEmail"))
+
+api = open_api()
+pool, client, authorizer, google_enabled = players(api)
+frontend = frontend_cdn(api_endpoint=api.api_endpoint) if not (is_prod and publish_domain) else None
+if frontend is not None:
+    allowed_origins = pulumi.Output.concat(
+        "https://",
+        frontend.domain_name,
+        ",http://localhost:1234,http://127.0.0.1:1234",
+    )
+    frontend_origin = pulumi.Output.concat("https://", frontend.domain_name)
 else:
-    frontend_cdn()
+    allowed_origins = f"https://{domain},https://www.{domain}"
+    frontend_origin = f"https://{domain}"
+login_host = pulumi.Output.concat("ftc-", stack, "-legere.auth.", pulumi.Config("aws").get("region") or "sa-east-1", ".amazoncognito.com")
+ses_from = f"noreply@{domain}" if is_prod and publish_domain else (config.get("sesFromEmail") or "")
+ses_identity = domain if is_prod and publish_domain else (config.get("sesFromEmail") or domain)
+mail_env = {"SES_FROM": ses_from} if ses_from else {}
+functions = {}
+functions["comunicacoes"] = publish(
+    "comunicacoes",
+    services["comunicacoes"],
+    mail_env,
+    ses_identity=ses_identity,
+)
+functions["campanha"] = publish("campanha", services["campanha"])
+functions["partidas"] = publish("partidas", services["partidas"])
+functions["auditoria"] = publish("auditoria", services["auditoria"])
+functions["conta"] = publish(
+    "conta",
+    services["conta"],
+    {
+        "COGNITO_DOMAIN": login_host,
+        "COGNITO_CLIENT_ID": client.id,
+        "COGNITO_CLIENT_SECRET": client.client_secret,
+        "COGNITO_POOL_ID": pool.id,
+        "GOOGLE_ENABLED": "true" if google_enabled else "false",
+        "COMUNICACOES_FUNCTION_NAME": functions["comunicacoes"].name,
+        "ALLOWED_ORIGINS": allowed_origins,
+        "FRONTEND_ORIGIN": frontend_origin,
+    },
+    invoke_function=functions["comunicacoes"],
+)
+api_resource, stage = http_api(api, functions, authorizer)
+if is_prod and publish_domain:
+    prod_names(api_resource, stage)

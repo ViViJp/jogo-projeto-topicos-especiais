@@ -1,4 +1,5 @@
 import { STORAGE_KEY } from "../config/GameConfig";
+import { CloudSession } from "../network/CloudSession";
 import { AbilityState, createInitialAbilityState } from "./AbilityState";
 
 /**
@@ -32,8 +33,12 @@ export interface SaveData {
   /** Seção 18 - preenchido a partir do Marco 4 (descida Flesh/Hollow). */
   descentState: {
     active: boolean;
-    brokenChain: boolean;
-    recoveredFragmentIds: string[];
+    step: string | null;
+    chainStatus: "inactive" | "active" | "broken" | "complete";
+    memories: string[];
+    pendingMemory: string | null;
+    removals: string[];
+    retryUsedByStage: Record<string, boolean>;
   };
   /** Seção 20.2/20.3 - save narrativo automático antes da escolha do Portão. */
   preGateSave: SaveData | null;
@@ -47,7 +52,15 @@ function defaultSave(): SaveData {
     checkpoint: { x: 0, y: 0, consolidatedCreditIds: [] },
     wallet: 0,
     abilities: createInitialAbilityState(),
-    descentState: { active: false, brokenChain: false, recoveredFragmentIds: [] },
+    descentState: {
+      active: false,
+      step: null,
+      chainStatus: "inactive",
+      memories: [],
+      pendingMemory: null,
+      removals: [],
+      retryUsedByStage: {},
+    },
     preGateSave: null,
     endingReached: null,
   };
@@ -66,8 +79,12 @@ function cloneSaveData(data: SaveData, includePreGateSave = true): SaveData {
     abilities: { ...data.abilities },
     descentState: {
       active: data.descentState.active,
-      brokenChain: data.descentState.brokenChain,
-      recoveredFragmentIds: [...data.descentState.recoveredFragmentIds],
+      step: data.descentState.step,
+      chainStatus: data.descentState.chainStatus,
+      memories: [...data.descentState.memories],
+      pendingMemory: data.descentState.pendingMemory,
+      removals: [...data.descentState.removals],
+      retryUsedByStage: { ...data.descentState.retryUsedByStage },
     },
     preGateSave: includePreGateSave && data.preGateSave
       ? cloneSaveData(data.preGateSave, false)
@@ -80,6 +97,17 @@ function normalizeSaveData(parsed: Partial<SaveData>): SaveData {
   const fresh = defaultSave();
   const checkpoint = parsed.checkpoint ?? fresh.checkpoint;
   const descentState = parsed.descentState ?? fresh.descentState;
+  const legacyDescent = descentState as typeof descentState & {
+    brokenChain?: boolean;
+    recoveredFragmentIds?: string[];
+  };
+  const chainStatus = ["inactive", "active", "broken", "complete"].includes(descentState.chainStatus)
+    ? descentState.chainStatus
+    : legacyDescent.brokenChain
+      ? "broken"
+      : descentState.active
+        ? "active"
+        : "inactive";
   const endingReached = ["chrome", "flesh", "hollow"].includes(parsed.endingReached ?? "")
     ? parsed.endingReached as SaveData["endingReached"]
     : null;
@@ -96,11 +124,19 @@ function normalizeSaveData(parsed: Partial<SaveData>): SaveData {
     },
     abilities: { ...fresh.abilities, ...(parsed.abilities ?? {}) },
     descentState: {
-      ...fresh.descentState,
-      ...descentState,
-      recoveredFragmentIds: Array.isArray(descentState.recoveredFragmentIds)
-        ? [...descentState.recoveredFragmentIds]
-        : [],
+      active: Boolean(descentState.active),
+      step: typeof descentState.step === "string" ? descentState.step : null,
+      chainStatus: chainStatus as SaveData["descentState"]["chainStatus"],
+      memories: Array.isArray(descentState.memories)
+        ? [...descentState.memories]
+        : Array.isArray(legacyDescent.recoveredFragmentIds)
+          ? [...legacyDescent.recoveredFragmentIds]
+          : [],
+      pendingMemory: typeof descentState.pendingMemory === "string" ? descentState.pendingMemory : null,
+      removals: Array.isArray(descentState.removals) ? [...descentState.removals] : [],
+      retryUsedByStage: descentState.retryUsedByStage && typeof descentState.retryUsedByStage === "object"
+        ? { ...descentState.retryUsedByStage }
+        : {},
     },
     preGateSave: null,
     endingReached,
@@ -111,33 +147,154 @@ function normalizeSaveData(parsed: Partial<SaveData>): SaveData {
   return normalized;
 }
 
+type SaveStore = "session" | "account";
+
+let ownerChosen = false;
+let ownerId: string | null = null;
+let guestBooted = false;
+
+function sessionKey(): string {
+  return `${STORAGE_KEY}:session`;
+}
+
+function accountKey(userId: string): string {
+  return `${STORAGE_KEY}:account:${userId}`;
+}
+
+function activeStore(): { store: SaveStore; key: string } {
+  if (ownerChosen && ownerId) return { store: "account", key: accountKey(ownerId) };
+  if (ownerChosen) return { store: "session", key: sessionKey() };
+  const session = CloudSession.current();
+  if (session) return { store: "account", key: accountKey(session.profile.id) };
+  const remembered = CloudSession.storedOwner();
+  if (remembered) return { store: "account", key: accountKey(remembered) };
+  return { store: "session", key: sessionKey() };
+}
+
+function readRaw(store: SaveStore, key: string): string | null {
+  return (store === "session" ? sessionStorage : localStorage).getItem(key);
+}
+
+function writeRaw(store: SaveStore, key: string, value: string): void {
+  (store === "session" ? sessionStorage : localStorage).setItem(key, value);
+}
+
 export class SaveState {
   private data: SaveData;
+  private place: { store: SaveStore; key: string };
 
-  private constructor(data: SaveData) {
+  private constructor(data: SaveData, place: { store: SaveStore; key: string }) {
     this.data = data;
+    this.place = place;
+  }
+
+  static sessionKey(): string {
+    return sessionKey();
+  }
+
+  static accountKey(userId: string): string {
+    return accountKey(userId);
+  }
+
+  static hasProgress(data: SaveData): boolean {
+    const abilities = Object.values(data.abilities).some(Boolean);
+    return (
+      data.currentPhaseId !== "fase1" ||
+      data.checkpoint.x !== 0 ||
+      data.checkpoint.y !== 0 ||
+      data.checkpoint.consolidatedCreditIds.length > 0 ||
+      data.wallet !== 0 ||
+      abilities ||
+      data.preGateSave !== null ||
+      data.endingReached !== null ||
+      data.descentState.active ||
+      data.descentState.memories.length > 0 ||
+      data.descentState.pendingMemory !== null ||
+      data.descentState.removals.length > 0
+    );
+  }
+
+  static readStored(store: SaveStore, key: string): SaveData | null {
+    try {
+      const raw = readRaw(store, key);
+      if (!raw) return null;
+      return normalizeSaveData(JSON.parse(raw) as Partial<SaveData>);
+    } catch {
+      return null;
+    }
+  }
+
+  static bootGuest(): void {
+    if (guestBooted) return;
+    guestBooted = true;
+    if (!new URLSearchParams(window.location.search).get("ticket")) {
+      sessionStorage.removeItem(sessionKey());
+    }
+  }
+
+  static bindAccount(userId: string): void {
+    ownerChosen = true;
+    ownerId = userId;
+  }
+
+  static bindSession(): void {
+    ownerChosen = true;
+    ownerId = null;
+  }
+
+  static prefer(store: SaveStore): void {
+    if (store === "session") SaveState.bindSession();
+    else {
+      const session = CloudSession.current();
+      if (session) SaveState.bindAccount(session.profile.id);
+      else SaveState.bindSession();
+    }
+  }
+
+  static importSession(userId: string): void {
+    const guest = SaveState.readStored("session", sessionKey());
+    if (guest) localStorage.setItem(accountKey(userId), JSON.stringify(guest));
+    sessionStorage.removeItem(sessionKey());
+    SaveState.bindAccount(userId);
+  }
+
+  static keepAccount(userId?: string): void {
+    const id = userId || ownerId || CloudSession.current()?.profile.id || "";
+    sessionStorage.removeItem(sessionKey());
+    if (!id) {
+      SaveState.bindSession();
+      return;
+    }
+    SaveState.bindAccount(id);
+  }
+
+  static keepSession(): void {
+    SaveState.bindSession();
+  }
+
+  static logoutLocal(): void {
+    sessionStorage.removeItem(sessionKey());
+    SaveState.bindSession();
   }
 
   static hasExistingSave(): boolean {
-    return localStorage.getItem(STORAGE_KEY) !== null;
+    const place = activeStore();
+    const stored = SaveState.readStored(place.store, place.key);
+    return stored !== null && SaveState.hasProgress(stored);
   }
 
   static load(): SaveState {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return new SaveState(defaultSave());
-      const parsed = JSON.parse(raw) as Partial<SaveData>;
-      return new SaveState(normalizeSaveData(parsed));
-    } catch (err) {
-      console.warn("[SaveState] save corrompido, iniciando novo estado", err);
-      return new SaveState(defaultSave());
-    }
+    const place = activeStore();
+    const stored = SaveState.readStored(place.store, place.key);
+    return new SaveState(stored ?? defaultSave(), place);
   }
 
   /** Seção 20.2 - Novo Jogo: apaga somente depois de confirmação (a confirmação é responsabilidade da MenuScene). */
   static newGame(): SaveState {
-    const fresh = new SaveState(defaultSave());
-    fresh.persist();
+    const place = activeStore();
+    const fresh = new SaveState(defaultSave(), place);
+    writeRaw(place.store, place.key, JSON.stringify(fresh.data));
+    if (place.store === "account") CloudSession.queueCampaignReset(cloneSaveData(fresh.data));
     return fresh;
   }
 
@@ -153,7 +310,11 @@ export class SaveState {
 
   setPhase(phaseId: string): void {
     this.data.currentPhaseId = phaseId;
-    this.data.checkpoint = { x: 0, y: 0, consolidatedCreditIds: [] };
+    this.data.checkpoint = {
+      x: 0,
+      y: 0,
+      consolidatedCreditIds: [...this.data.checkpoint.consolidatedCreditIds],
+    };
     this.persist();
   }
 
@@ -175,16 +336,25 @@ export class SaveState {
     return snapshot;
   }
 
-  /** Restaura atributos, carteira e progresso sem consumir o ponto pré-Portão. */
-  restorePreGateSave(): Readonly<SaveData> | null {
-    if (!this.data.preGateSave) return null;
-    const snapshot = cloneSaveData(this.data.preGateSave, false);
-    this.data = {
-      ...cloneSaveData(snapshot, false),
-      preGateSave: cloneSaveData(snapshot, false),
-      endingReached: null,
-    };
-    this.persist();
+  /**
+   * Aplica a restauração localmente sem usar o PUT normal da campanha.
+   * Para uma conta autenticada, `confirmed` deve ser o estado devolvido por
+   * POST /me/campaign/restore-gate; visitantes restauram o snapshot da sessão.
+   */
+  restorePreGateSave(confirmed?: SaveData): Readonly<SaveData> | null {
+    if (!confirmed && this.place.store === "account") return null;
+    if (!confirmed && !this.data.preGateSave) return null;
+    if (confirmed) {
+      this.data = cloneSaveData(confirmed);
+    } else {
+      const snapshot = cloneSaveData(this.data.preGateSave!, false);
+      this.data = {
+        ...cloneSaveData(snapshot, false),
+        preGateSave: cloneSaveData(snapshot, false),
+        endingReached: null,
+      };
+    }
+    writeRaw(this.place.store, this.place.key, JSON.stringify(this.data));
     return this.data;
   }
 
@@ -194,6 +364,9 @@ export class SaveState {
   }
 
   persist(): void {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(this.data));
+    writeRaw(this.place.store, this.place.key, JSON.stringify(this.data));
+    if (this.place.store === "account") {
+      CloudSession.queueCampaignSync(cloneSaveData(this.data));
+    }
   }
 }

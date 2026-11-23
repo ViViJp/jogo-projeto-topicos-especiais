@@ -27,7 +27,8 @@ function loadTypeScriptModule(filename) {
   moduleCache.set(absolutePath, module);
   const localRequire = (specifier) => {
     if (!specifier.startsWith(".")) throw new Error(`Import não suportado no teste: ${specifier}`);
-    const resolved = path.resolve(path.dirname(absolutePath), `${specifier}.ts`);
+    const base = path.resolve(path.dirname(absolutePath), specifier);
+    const resolved = fs.existsSync(`${base}.ts`) ? `${base}.ts` : `${base}.js`;
     return loadTypeScriptModule(resolved);
   };
   new vm.Script(output, { filename: absolutePath }).runInNewContext({
@@ -36,6 +37,7 @@ function loadTypeScriptModule(filename) {
     require: localRequire,
     console,
     localStorage,
+    sessionStorage: localStorage,
   });
   return module.exports;
 }
@@ -57,6 +59,8 @@ assert.deepEqual(
 
 save.markEndingReached("chrome");
 save.setPhase("fase1");
+assert.deepEqual(Array.from(save.get().checkpoint.consolidatedCreditIds), ["f5-credit-01"],
+  "trocar de fase preserva os IDs consolidados da campanha");
 const restored = save.restorePreGateSave();
 assert.ok(restored);
 assert.equal(restored.currentPhaseId, "fase5");
@@ -64,6 +68,16 @@ assert.equal(restored.wallet, 230);
 assert.equal(restored.endingReached, null);
 assert.ok(restored.preGateSave, "restaurar não consome o ponto pré-Portão");
 assert.deepEqual(Array.from(restored.checkpoint.consolidatedCreditIds), ["f5-credit-01"]);
+
+SaveState.bindAccount("account-test");
+const accountSave = SaveState.newGame();
+accountSave.setPhase("fase5");
+const accountSnapshot = accountSave.createPreGateSave();
+accountSave.markEndingReached("chrome");
+assert.equal(accountSave.restorePreGateSave(), null,
+  "conta autenticada não pode regredir localmente antes da confirmação remota");
+assert.ok(accountSave.restorePreGateSave({ ...accountSnapshot, preGateSave: null }),
+  "resposta confirmada de restore-gate deve ser aplicada ao cache da conta");
 
 const read = (relativePath) => fs.readFileSync(path.join(projectDirectory, relativePath), "utf8");
 const main = read("src/main.ts");
@@ -73,6 +87,7 @@ const clinic = read("src/scenes/ClinicScene.ts");
 const gate = read("src/scenes/GateScene.ts");
 const ending = read("src/scenes/EndingScene.ts");
 const game = read("src/scenes/GameScene.ts");
+const cloudSession = read("src/network/CloudSession.ts");
 const phase4 = read("src/objects/TiledPhase4Runtime.ts");
 const narrativePlaytest = read("docs/NARRATIVE_FLOW_PLAYTEST.md");
 
@@ -80,6 +95,16 @@ assert.match(main, /PrologueScene/);
 assert.match(main, /GateScene/);
 assert.match(menu, /Continuar do Portão/);
 assert.match(menu, /restorePreGateSave\(\)/);
+assert.match(menu, /CloudSession\.queueGateRestore\(\)/);
+assert.match(menu, /restorePreGateSave\(state\.restoredSave\)/);
+assert.match(cloudSession, /\/me\/campaign\/restore-gate/);
+assert.match(cloudSession, /operationId: operation\.operationId/,
+  "retentativas devem preservar o identificador da operação");
+assert.match(menu, /this\.ready = false/,
+  "MenuScene deve bloquear entradas enquanto recupera sessão e campanha");
+assert.match(menu, /const preparation = \+\+this\.preparationGeneration/);
+assert.match(menu, /if \(!this\.isCurrentPreparation\(preparation\)\) return;/,
+  "respostas de preparações antigas devem ser descartadas");
 assert.match(menu, /this\.scene\.start\("PrologueScene"\)/);
 assert.match(menu, /Portão — escolha final \(teste\)/);
 assert.match(menu, /this\.scene\.start\("GateScene", \{ testMode: true \}\)/);
