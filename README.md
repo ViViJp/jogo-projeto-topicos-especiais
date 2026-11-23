@@ -133,7 +133,7 @@ Os mesmos testes podem ser executados pela raiz com `npm test`.
 
 A especificação da disciplina fica em [`isn/`](isn/). O índice da sprint 1 é [`isn/docs/sprint1/README.md`](isn/docs/sprint1/README.md).
 
-A infraestrutura fica em [`pulumi/`](pulumi/): stacks `dev` e `prod`, zona `nihil-legere-possum.lat` em produção, cinco tabelas DynamoDB e cinco Lambdas. O cliente do jogo continua em `flesh-to-chrome/`.
+A infraestrutura fica em [`pulumi/`](pulumi/): stacks `dev` e `prod`, URL de produção `https://flesh-to-chrome.negoci.online`, cinco tabelas DynamoDB e cinco Lambdas. O cliente do jogo continua em `flesh-to-chrome/`.
 
 ```bash
 cd pulumi

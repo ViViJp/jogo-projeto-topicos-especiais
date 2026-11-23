@@ -1,6 +1,6 @@
 # Sprint 1 — Especificação do sistema
 
-Projeto **Flesh to Chrome**, ISN 2026.2. Equipe ISN: João Pedro e Victor Blum. Domínio previsto: `nihil-legere-possum.lat`.
+Projeto **Flesh to Chrome**, ISN 2026.2. Equipe ISN: João Pedro e Victor Blum. URL prevista: `https://flesh-to-chrome.negoci.online`.
 
 Esta entrega documenta o jogo completo planejado e os serviços de nuvem. Implementação e implantação são etapas posteriores. Referência: [GDD 1.0.0](../../../gdd.md).
 

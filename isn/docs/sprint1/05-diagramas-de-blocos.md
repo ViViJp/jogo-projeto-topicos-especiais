@@ -206,7 +206,7 @@ flowchart TD
   devcloud["Dev em nuvem — se utilizado"]
   prod["Produção AWS"]
   devdb["Dados e credenciais de dev"]
-  domain["nihil-legere-possum.lat"]
+  domain["flesh-to-chrome.negoci.online"]
   proddb["Dados e credenciais de prod"]
   dns["Route 53 + ACM: nomes e HTTPS"]
   git --> dev

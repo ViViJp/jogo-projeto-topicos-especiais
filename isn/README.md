@@ -10,7 +10,7 @@ As alterações desta pasta são a documentação e as entregas da ISN. O client
 
 Índice: [docs/sprint1/README.md](docs/sprint1/README.md)
 
-Domínio: `nihil-legere-possum.lat`
+URL do jogo: `https://flesh-to-chrome.negoci.online`
 
 Equipe (ISN): João Pedro, Victor Blum
 
