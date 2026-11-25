@@ -1,0 +1,97 @@
+name: ISN deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      stack:
+        description: Stack Pulumi
+        type: choice
+        options:
+          - dev
+          - prod
+        default: dev
+      apply:
+        description: Aplicar o plano depois do preview
+        type: boolean
+        default: false
+      confirm:
+        description: Para produção com apply, escreva publicar-prod
+        type: string
+        default: ""
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.stack == 'prod' && 'production' || 'dev' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Validar antes de publicar
+        run: |
+          npm ci
+          npm test
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Setup Pulumi
+        uses: pulumi/setup-pulumi@v2
+
+      - name: Confirmar produção
+        if: inputs.stack == 'prod' && inputs.apply && inputs.confirm != 'publicar-prod'
+        run: |
+          echo "Produção só publica se a confirmação for publicar-prod."
+          exit 1
+
+      - name: Credencial temporária
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: sa-east-1
+
+      - name: Preview
+        working-directory: pulumi
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+        run: |
+          python -m venv venv
+          ./venv/bin/pip install -r requirements.txt
+          source venv/bin/activate
+          pulumi stack select "${{ inputs.stack }}"
+          pulumi preview
+
+      - name: Publicar
+        if: inputs.apply
+        working-directory: pulumi
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+        run: |
+          source venv/bin/activate
+          pulumi up --yes
+
+      - name: Verificar
+        if: inputs.apply
+        working-directory: pulumi
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+        run: |
+          source venv/bin/activate
+          api="$(pulumi stack output http_api)"
+          site="$(pulumi stack output frontend)"
+          me="$(curl -s -o /dev/null -w "%{http_code}" "$api/me")"
+          page="$(curl -s -o /dev/null -w "%{http_code}" "https://$site")"
+          test "$me" = "401"
+          test "$page" = "200"
