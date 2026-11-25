@@ -106,12 +106,13 @@ O sistema exige dois usuários autenticados, criação/entrada em salas no backe
 | `GET /me/matches` | Cursor; limite 20 | D03 aprovada: `200`, resultados próprios dos últimos 30 dias. |
 | `POST /matches/{id}/connection-ticket` | Sessão autenticada; participante autorizado | Proposta: `201`, ticket de uso único e validade curta para abrir WSS; definir TTL, entrega e consumo atômico em D04. Não registrar o segredo em logs. |
 | `POST /matches/{id}/ready` | `operationId` | `200`, prontidão registrada; iniciar somente com dois participantes autenticados e prontos. |
+| `POST /matches/{id}/finish` | `operationId`, medições dos dois `participants` (`rawTimeMs`, `credits`, `dnf`) | `200`, classificação calculada e persistida pelo serviço. O cliente não envia vencedor; limites e participantes são validados. A autoridade sobre trajetória/marcos continua parcial até D04. |
 | `GET /matches/{id}` | Sessão de participante | `200`, estado e resultado/classificação persistidos se encerrada. |
 | `POST /matches/{id}/leave` | `operationId` | `200`; se em corrida, aplicar derrota por abandono conforme RN08; antes da largada, cancelar a sala conforme D03. |
 
 Conforme D03, conhecer o ID não basta: entrada exige convite vigente e sessão; o código é uma credencial compartilhável, não convite nominal. Consumi-lo e reservar vaga/vínculo ativo atomicamente; repetição idempotente não ocupa nova vaga. Rate limit e expiração são validados pelo backend, sem depender da remoção TTL. Somente participantes podem consultar estado privado da partida.
 
-O resultado consultável inclui participantes, tempos bruto/ajustado, créditos, classificação, vencedor ou empate e DNF/abandono, conforme a regra aplicável. Formato dos campos é proposta de contrato; não representa ranking global. A gravação é interna ao backend e não usa um endpoint no qual o cliente escolhe livremente o vencedor.
+O resultado consultável inclui participantes, tempos bruto/ajustado, créditos, classificação, vencedor ou empate e DNF/abandono, conforme a regra aplicável. Formato dos campos é proposta de contrato; não representa ranking global. No protótipo WebRTC, os clientes participantes relatam as medições observadas, mas não escolhem o vencedor: o serviço valida o vínculo/limites, calcula a classificação e aceita apenas a primeira conclusão transacional. Essa proteção ainda não comprova trajetória legítima nem substitui a autoridade prevista em D04.
 
 REST cobre organização e consulta. WSS é recomendado no [estudo de transportes](13-transporte-multiplayer.md); API Gateway WebSocket é o candidato a hospedagem, condicionado a D04, e cobre largada, entradas/estados sequenciados, checkpoint, coleta, chegada, desconexão e resultado. Cliente não publica unilateralmente vencedor nem tempo final confiável; o mecanismo de validação/autoridade deve ser fechado em D04. Gamepad produz entrada no navegador e usa o mesmo caminho do teclado; não há rota de gamepad no backend.
 

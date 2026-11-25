@@ -68,6 +68,12 @@ import {
   alexSlideAnimationKey,
 } from "../utils/AlexSprite";
 import { generatePlaceholderTextures } from "../utils/PlaceholderTextures";
+import { CloudSession } from "../network/CloudSession";
+import {
+  MatchParticipantResult,
+  MatchService,
+  RemoteMatch,
+} from "../network/MatchService";
 
 const SIGNALING_CHANNEL = "flesh-to-chrome-webrtc-v1";
 const SNAPSHOT_INTERVAL_MS = 1000 / 15;
@@ -104,6 +110,7 @@ export class MultiplayerScene extends Phaser.Scene {
   private opponentVisualState?: PlayerSnapshotMessage["state"];
 
   private statusText?: Phaser.GameObjects.Text;
+  private roomText?: Phaser.GameObjects.Text;
   private peersText?: Phaser.GameObjects.Text;
   private timerText?: Phaser.GameObjects.Text;
   private creditsText?: Phaser.GameObjects.Text;
@@ -150,6 +157,16 @@ export class MultiplayerScene extends Phaser.Scene {
   private lastRemoteCredits = 0;
   private remoteCheckpointReached = false;
   private remoteClockOffsetMs?: number;
+  private match?: RemoteMatch;
+  private inviteCode = "";
+  private backendReady = false;
+  private matchPollInFlight = false;
+  private lastMatchPollAt = 0;
+  private readyOperationId = "";
+  private leaveOperationId = "";
+  private finishOperationId = "";
+  private resultPersisted = false;
+  private resultPersistAttempts = 0;
   private remoteTarget?: {
     x: number;
     y: number;
@@ -261,6 +278,10 @@ export class MultiplayerScene extends Phaser.Scene {
   }
 
   create(): void {
+    if (!CloudSession.current()) {
+      this.scene.start("MenuScene");
+      return;
+    }
     generatePlaceholderTextures(this);
     AudioManager.playBgm(this, BGM.phase5, 0.3);
     this.cameras.main.setBackgroundColor(TILED_MULTIPLAYER_BACKGROUND);
@@ -285,7 +306,7 @@ export class MultiplayerScene extends Phaser.Scene {
     this.input$ = new InputManager(this);
     this.resetSessionState();
     this.createLobby();
-    void this.startMesh();
+    void this.prepareAuthenticatedMatch();
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.events.off(
@@ -329,9 +350,13 @@ export class MultiplayerScene extends Phaser.Scene {
     }
 
     if (this.phase === "finished" && time >= this.rematchAllowedAt && this.input$.isConfirmJustDown()) {
-      // Revanche: a cena reinicia na mesma sala (o ?room= continua na URL).
-      this.scene.restart();
+      this.backToMenu();
       return;
+    }
+
+    if (this.phase === "lobby" && this.match && !this.backendReady && time - this.lastMatchPollAt >= 1000) {
+      this.lastMatchPollAt = time;
+      void this.refreshBackendReady();
     }
 
     if (this.phase === "lobby" && this.mesh && time - this.lastHeartbeatAt >= 1000) {
@@ -368,7 +393,7 @@ export class MultiplayerScene extends Phaser.Scene {
 
   private resetSessionState(): void {
     this.localPeerId = createPeerId();
-    this.roomId = roomFromUrl();
+    this.roomId = "";
     this.opponentPeerId = undefined;
     this.remoteReady = false;
     this.preparedRaceId = undefined;
@@ -400,6 +425,16 @@ export class MultiplayerScene extends Phaser.Scene {
     this.remoteTarget = undefined;
     this.opponentVisualState = undefined;
     this.remoteClockOffsetMs = undefined;
+    this.match = undefined;
+    this.inviteCode = inviteFromUrl();
+    this.backendReady = false;
+    this.matchPollInFlight = false;
+    this.lastMatchPollAt = 0;
+    this.readyOperationId = MatchService.operationId();
+    this.leaveOperationId = MatchService.operationId();
+    this.finishOperationId = MatchService.operationId();
+    this.resultPersisted = false;
+    this.resultPersistAttempts = 0;
   }
 
   private createLobby(): void {
@@ -430,15 +465,15 @@ export class MultiplayerScene extends Phaser.Scene {
     this.registerViewportLayout(() => title.setX(this.scale.width / 2));
     this.addLobbyObject(title);
 
-    const roomText = this.add
+    const roomText = this.roomText = this.add
         .text(
           centerX,
           145,
-          `SALA  ${this.roomId}\nVOCÊ  ${this.localPeerId}`,
+          `RESERVANDO SALA...\nVOCÊ  ${this.localPeerId}`,
           { ...textStyle("#8892b0", "18px"), align: "center" }
         )
         .setOrigin(0.5);
-    this.registerViewportLayout(() => roomText.setX(this.scale.width / 2));
+    this.registerViewportLayout(() => this.roomText?.setX(this.scale.width / 2));
     this.addLobbyObject(roomText);
 
     this.statusText = this.add
@@ -499,6 +534,89 @@ export class MultiplayerScene extends Phaser.Scene {
   private registerViewportLayout(layout: () => void): void {
     this.viewportLayouts.push(layout);
     layout();
+  }
+
+  private async prepareAuthenticatedMatch(): Promise<void> {
+    const session = CloudSession.current();
+    if (!session) {
+      this.statusText?.setText("Entre com Google para acessar o multiplayer.").setColor("#ff8a8a");
+      return;
+    }
+
+    const requestedMatchId = matchFromUrl();
+    let result = requestedMatchId ? await MatchService.read(requestedMatchId) : undefined;
+    if (!result || result.status !== "ok") {
+      result = this.inviteCode
+        ? await MatchService.join(this.inviteCode, MatchService.operationId())
+        : await MatchService.create(MatchService.operationId());
+    }
+    if (result.status !== "ok" || !result.value) {
+      const message = result.status === "invalid"
+        ? "Convite inválido, expirado ou já utilizado."
+        : result.status === "conflict"
+          ? "Esta conta já possui uma partida ativa."
+          : result.status === "unauthenticated"
+            ? "Sua sessão expirou. Entre novamente pelo menu."
+            : "O serviço de partidas está indisponível.";
+      this.statusText?.setText(message).setColor("#ff8a8a");
+      this.peersText?.setText("ESC / B para voltar");
+      return;
+    }
+
+    this.match = result.value;
+    if (this.match.state === "finished" || this.match.state === "cancelled") {
+      this.statusText?.setText("Esta partida já foi encerrada.").setColor("#FFD37C");
+      this.peersText?.setText("Consulte o histórico no menu.");
+      return;
+    }
+    this.roomId = this.match.id;
+    this.inviteCode = this.match.inviteCode || this.inviteCode;
+    setMatchInUrl(this.inviteCode, this.match.id);
+    this.roomText?.setText(`SALA  ${this.inviteCode || this.match.id.slice(0, 12)}\nVOCÊ  ${this.localPeerId}`);
+    await this.confirmBackendReady();
+    if (!this.match || this.returning) return;
+    await this.startMesh();
+  }
+
+  private async confirmBackendReady(): Promise<void> {
+    if (!this.match || this.match.state !== "lobby") {
+      this.backendReady = this.match?.state === "running";
+      return;
+    }
+    const result = await MatchService.ready(this.match.id, this.readyOperationId);
+    if (result.status === "conflict") {
+      await this.refreshBackendReady();
+      return;
+    }
+    if (result.status !== "ok" || !result.value) {
+      this.statusText?.setText("Não foi possível confirmar sua prontidão.").setColor("#ff8a8a");
+      return;
+    }
+    this.match = result.value;
+    this.backendReady = this.match.state === "running";
+    this.statusText?.setText(
+      this.backendReady ? "Partida confirmada. Conectando ao oponente..." : "Pronto. Aguardando o segundo jogador...",
+    ).setColor(this.backendReady ? "#7CFCEA" : "#FFD37C");
+  }
+
+  private async refreshBackendReady(): Promise<void> {
+    if (!this.match || this.matchPollInFlight) return;
+    this.matchPollInFlight = true;
+    try {
+      const result = await MatchService.read(this.match.id);
+      if (result.status !== "ok" || !result.value) return;
+      this.match = result.value;
+      if (this.match.state === "running" && !this.backendReady) {
+        this.backendReady = true;
+        this.statusText?.setText("Os dois jogadores estão prontos. Sincronizando largada...").setColor("#7CFCEA");
+        this.sendReady();
+      } else if (this.match.state === "lobby") {
+        const userId = CloudSession.current()?.profile.id;
+        if (userId && !this.match.ready[userId]) await this.confirmBackendReady();
+      }
+    } finally {
+      this.matchPollInFlight = false;
+    }
   }
 
   private async startMesh(): Promise<void> {
@@ -568,7 +686,9 @@ export class MultiplayerScene extends Phaser.Scene {
       return;
     }
     this.peersText?.setText(`Oponente conectado: ${peerId}`);
-    this.statusText?.setText("Sincronizando largada...").setColor("#7CFCEA");
+    this.statusText?.setText(
+      this.backendReady ? "Sincronizando largada..." : "Aguardando prontidão confirmada pelo servidor...",
+    ).setColor(this.backendReady ? "#7CFCEA" : "#FFD37C");
     this.sendReady();
   }
 
@@ -641,6 +761,7 @@ export class MultiplayerScene extends Phaser.Scene {
   }
 
   private sendReady(): void {
+    if (!this.backendReady) return;
     this.mesh?.broadcast({
       type: "peer-state",
       protocolVersion: MULTIPLAYER_PROTOCOL_VERSION,
@@ -653,6 +774,7 @@ export class MultiplayerScene extends Phaser.Scene {
   private tryScheduleRace(): void {
     if (
       this.phase !== "lobby" ||
+      !this.backendReady ||
       !this.opponentPeerId ||
       !this.remoteReady ||
       this.preparedRaceId ||
@@ -1052,6 +1174,45 @@ export class MultiplayerScene extends Phaser.Scene {
     const localLine = this.formatResultLine("VOCÊ", this.localResult, this.localDnf);
     const remoteLine = this.formatResultLine("OPONENTE", this.remoteResult, this.remoteDnf);
     this.showResultOverlay(this.calculateVerdict(), [header, localLine, remoteLine].join("\n"));
+    void this.persistResult();
+  }
+
+  private async persistResult(): Promise<void> {
+    if (this.resultPersisted || !this.match?.guestUserId) return;
+    this.resultPersistAttempts += 1;
+    const session = CloudSession.current();
+    if (!session) return;
+    const localUserId = session.profile.id;
+    const remoteUserId = this.match.hostUserId === localUserId
+      ? this.match.guestUserId
+      : this.match.hostUserId;
+    const participant = (result: RaceResult | undefined, dnf: boolean): MatchParticipantResult => ({
+      rawTimeMs: dnf || !result ? null : Math.floor(result.rawTimeMs),
+      credits: result?.credits ?? 0,
+      dnf: dnf || !result,
+    });
+    const result = await MatchService.finish(this.match.id, {
+      [localUserId]: participant(this.localResult, this.localDnf),
+      [remoteUserId]: participant(this.remoteResult, this.remoteDnf),
+    }, this.finishOperationId);
+    if (result.status === "ok" && result.value) {
+      this.match = result.value;
+      this.resultPersisted = true;
+      return;
+    }
+    if (result.status === "conflict") {
+      const latest = await MatchService.read(this.match.id);
+      if (latest.status === "ok" && latest.value?.state === "finished") {
+        this.match = latest.value;
+        this.resultPersisted = true;
+        return;
+      }
+    }
+    console.warn("Resultado da partida ainda não foi confirmado no backend.", { status: result.status, code: result.code });
+    if (this.resultPersistAttempts < 5 && this.phase === "finished") {
+      const delay = Math.min(8_000, 500 * (2 ** (this.resultPersistAttempts - 1)));
+      this.time.delayedCall(delay, () => void this.persistResult());
+    }
   }
 
   private calculateVerdict(): string {
@@ -1080,9 +1241,12 @@ export class MultiplayerScene extends Phaser.Scene {
 
   private showDisconnectVictory(): void {
     if (this.phase === "finished") return;
-    this.phase = "finished";
-    this.freezePlayer();
-    this.showResultOverlay("VITÓRIA", "O oponente desconectou durante a corrida.");
+    this.remoteDnf = true;
+    this.localResult ??= {
+      rawTimeMs: Math.max(0, Date.now() - this.raceStartAt),
+      credits: this.collectedCredits.size,
+    };
+    this.showResults();
   }
 
   private showResultOverlay(verdict: string, details: string): void {
@@ -1099,7 +1263,7 @@ export class MultiplayerScene extends Phaser.Scene {
     const lines: Array<[number, string, string, string]> = [
       [centerY - 110, verdict, color, "48px"],
       [centerY + 10, details, "#e8ecff", "22px"],
-      [centerY + 135, "ENTER / A: revanche  •  ESC / B: menu", "#8892b0", "16px"],
+      [centerY + 135, "ENTER / A ou ESC / B: voltar ao menu", "#8892b0", "16px"],
     ];
     const resultTexts = lines.map(([y, content, textColor, size]) => (
       this.add.text(centerX, y, content, textStyle(textColor, size))
@@ -1322,6 +1486,10 @@ export class MultiplayerScene extends Phaser.Scene {
     this.meshStartId += 1;
     this.mesh?.stop();
     this.mesh = undefined;
+    if (this.phase === "finished" && !this.resultPersisted) void this.persistResult();
+    if (this.phase !== "finished" && this.match && this.match.state !== "finished" && this.match.state !== "cancelled") {
+      void MatchService.leave(this.match.id, this.leaveOperationId);
+    }
     removeRoomFromUrl();
     this.scene.start("MenuScene");
   }
@@ -1386,22 +1554,28 @@ async function loadIceConfiguration(serverUrl: string): Promise<RTCConfiguration
   }
 }
 
-function roomFromUrl(): string {
+function inviteFromUrl(): string {
   const url = new URL(window.location.href);
-  const requestedRoom = url.searchParams.get("room")?.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 32);
-  const roomId = requestedRoom || randomToken(8);
-  if (!requestedRoom) {
-    url.searchParams.set("room", roomId);
-    window.history.replaceState(null, "", url);
-  }
-  return roomId;
+  return url.searchParams.get("room")?.toUpperCase().replace(/[^A-Z2-9-]/g, "").slice(0, 11) || "";
+}
+
+function matchFromUrl(): string {
+  const url = new URL(window.location.href);
+  return url.searchParams.get("match")?.replace(/[^a-zA-Z0-9-]/g, "").slice(0, 64) || "";
+}
+
+function setMatchInUrl(inviteCode: string, matchId: string): void {
+  const url = new URL(window.location.href);
+  if (inviteCode) url.searchParams.set("room", inviteCode);
+  url.searchParams.set("match", matchId);
+  window.history.replaceState(null, "", url);
 }
 
 /** Ao abandonar a corrida, F5 deve permanecer no menu em vez de reabrir o convite. */
 function removeRoomFromUrl(): void {
   const url = new URL(window.location.href);
-  if (!url.searchParams.has("room")) return;
   url.searchParams.delete("room");
+  url.searchParams.delete("match");
   window.history.replaceState(null, "", url);
 }
 

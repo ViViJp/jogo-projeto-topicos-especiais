@@ -540,8 +540,18 @@ const manualRestartMethod = gameScene.slice(
 );
 assert.match(manualRestartMethod, /this\.credits\.resetPhase\(this\.phaseCredits\(\)\)/,
   "reinício manual deve zerar créditos da fase nas cinco implementações");
+assert.match(manualRestartMethod, /this\.save\.discardPendingDescentMemory\(\)/,
+  "reinício manual deve descartar somente a memória ainda pendente");
 assert.match(manualRestartMethod, /checkpointX: 0/);
 assert.match(manualRestartMethod, /checkpointY: 0/);
+const deathMethod = gameScene.slice(
+  gameScene.indexOf("private handlePlayerDeath"),
+  gameScene.indexOf("private restartFromPhaseStart"),
+);
+assert.match(deathMethod, /this\.save\.discardPendingDescentMemory\(\)/,
+  "morte deve descartar a memória ainda sem retirada ReForge");
+assert.match(gameScene, /isMenuDownJustDown\(\)[\s\S]*?discardPendingDescentMemory\(\)[\s\S]*?scene\.start\("MenuScene"\)/,
+  "sair da fase deve descartar a memória ainda pendente");
 assert.match(gameScene, /showFeedback = true[\s\S]*?if \(showFeedback\) this\.hud\.flashPrompt\("ATAQUE", 300\)/,
   "somente o primeiro pulso do golpe deve atualizar o HUD");
 assert.match(gameScene, /const alreadyActive = this\.data\$\.checkpointX > 0/);

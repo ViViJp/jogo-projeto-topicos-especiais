@@ -280,4 +280,29 @@ assert.equal(FakePeerConnection.instances.length, 2);
 assert.ok(fakeSignaling.sent.filter((message) => message.signal.type === "presence").length >= 2);
 mesh.stop();
 
+const menuSource = fs.readFileSync(path.join(projectDirectory, "src/scenes/MenuScene.ts"), "utf8");
+const bootSource = fs.readFileSync(path.join(projectDirectory, "src/scenes/BootScene.ts"), "utf8");
+const multiplayerSource = fs.readFileSync(path.join(projectDirectory, "src/scenes/MultiplayerScene.ts"), "utf8");
+const notificationSceneSource = fs.readFileSync(path.join(projectDirectory, "src/scenes/NotificationCenterScene.ts"), "utf8");
+const notificationServiceSource = fs.readFileSync(path.join(projectDirectory, "src/network/NotificationService.ts"), "utf8");
+const matchesSource = fs.readFileSync(path.join(projectDirectory, "../pulumi/services/partidas/index.js"), "utf8");
+assert.match(menuSource, /openMultiplayer[\s\S]*?if \(!CloudSession\.current\(\)\)/,
+  "visitante não pode abrir a cena multiplayer pelo menu");
+assert.match(bootSource, /hasMultiplayerInvite\(\) && CloudSession\.current\(\)/,
+  "convite direto também deve exigir sessão autenticada");
+assert.match(multiplayerSource, /MatchService\.join/);
+assert.match(multiplayerSource, /MatchService\.ready/);
+assert.match(multiplayerSource, /MatchService\.finish/);
+assert.match(multiplayerSource, /if \(!this\.backendReady\) return;/,
+  "handshake WebRTC deve aguardar prontidão confirmada pelo serviço Partidas");
+assert.match(matchesSource, /attribute_not_exists\(guestUserId\)/,
+  "duas entradas simultâneas devem disputar uma única condição transacional");
+assert.match(matchesSource, /async function finishMatch/);
+assert.match(matchesSource, /RESULT#/,
+  "conclusão e abandono devem materializar histórico privado por participante");
+assert.match(notificationSceneSource, /this\.ready = false;[\s\S]*?\+\+this\.loadGeneration/,
+  "a central deve bloquear interação e invalidar carregamentos de execuções anteriores");
+assert.match(notificationServiceSource, /const current = CloudSession\.current\(\);[\s\S]*?current\.profile\.id !== session\.profile\.id/,
+  "notificações não podem usar o token de outra conta após troca de sessão");
+
 console.log("Multiplayer: protocolo, fila de reconexão e renegociação WebRTC OK.");

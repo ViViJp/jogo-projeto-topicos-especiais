@@ -2,6 +2,7 @@ const crypto = require("crypto");
 const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
 const { DynamoDBDocumentClient, GetCommand, QueryCommand, TransactWriteCommand } = require("@aws-sdk/lib-dynamodb");
 const { generateCode, normalizeCode, hashCode } = require("./codes");
+const { buildRaceResult } = require("./results");
 
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const table = process.env.TABLE_NAME;
@@ -72,6 +73,27 @@ function operationPut(userId, operationId, mark, statusCode, payload) {
   };
 }
 
+function outboxPut(matchId, operationId, type, userIds, at, detail = {}) {
+  return {
+    Put: {
+      TableName: table,
+      Item: {
+        pk: `MATCH#${matchId}`,
+        sk: `OUTBOX#${operationId}`,
+        id: operationId,
+        userIds: [...new Set(userIds.filter(Boolean))],
+        type,
+        resource: matchId,
+        result: "accepted",
+        at,
+        correlation: operationId,
+        detail,
+      },
+      ConditionExpression: "attribute_not_exists(pk)",
+    },
+  };
+}
+
 exports.handler = async (event) => {
   const requestId = event.requestContext?.requestId || "";
   const userId = event.requestContext?.authorizer?.jwt?.claims?.sub || "";
@@ -87,7 +109,12 @@ exports.handler = async (event) => {
     if (method !== "GET" && !body.operationId) return fail(422, "INVALID", "operationId ausente.", requestId);
     const mark = crypto
       .createHash("sha256")
-      .update(JSON.stringify({ operationId: body.operationId, path, inviteCode: normalizeCode(body.inviteCode) }))
+      .update(JSON.stringify({
+        operationId: body.operationId,
+        path,
+        inviteCode: normalizeCode(body.inviteCode),
+        participants: body.participants,
+      }))
       .digest("hex");
     if (body.operationId) {
       const previous = await getKey(`USER#${userId}`, `OP#${body.operationId}`);
@@ -102,8 +129,9 @@ exports.handler = async (event) => {
 
     const ready = path.match(/^\/matches\/([^/]+)\/ready$/);
     const leave = path.match(/^\/matches\/([^/]+)\/leave$/);
+    const finish = path.match(/^\/matches\/([^/]+)\/finish$/);
     const read = path.match(/^\/matches\/([^/]+)$/);
-    const id = (ready || leave || read)?.[1];
+    const id = (ready || leave || finish || read)?.[1];
     if (!id || id === "join") return fail(404, "NOT_FOUND", "Rota ausente.", requestId);
 
     const match = await getKey(`MATCH#${id}`, "META");
@@ -113,6 +141,7 @@ exports.handler = async (event) => {
     if (method === "GET" && read) return response(200, publicMatch(match, userId));
     if (method === "POST" && ready) return markReady(userId, match, body.operationId, mark, requestId);
     if (method === "POST" && leave) return leaveMatch(userId, match, body.operationId, mark, requestId);
+    if (method === "POST" && finish) return finishMatch(userId, match, body, mark, requestId);
     return fail(404, "NOT_FOUND", "Rota ausente.", requestId);
   } catch (err) {
     if (err.name === "TransactionCanceledException" || err.name === "ConditionalCheckFailedException") {
@@ -220,6 +249,7 @@ async function createMatch(userId, operationId, mark) {
             ConditionExpression: "attribute_not_exists(pk)",
           },
         },
+        outboxPut(id, operationId, "match.created", [userId], createdAt),
         operationPut(userId, operationId, mark, 201, payload),
       ],
     })
@@ -266,6 +296,7 @@ async function joinMatch(userId, body, mark, requestId) {
             ConditionExpression: "attribute_not_exists(pk)",
           },
         },
+        outboxPut(match.id, body.operationId, "match.joined", [match.hostUserId, userId], nowIso()),
         operationPut(userId, body.operationId, mark, 200, payload),
       ],
     })
@@ -299,6 +330,13 @@ async function markReady(userId, match, operationId, mark, requestId) {
         },
       },
     },
+    outboxPut(
+      match.id,
+      operationId,
+      both ? "match.started" : "match.ready",
+      [match.hostUserId, match.guestUserId],
+      nowIso(),
+    ),
     operationPut(userId, operationId, mark, 200, payload),
   ];
   if (both) {
@@ -361,6 +399,14 @@ async function leaveMatch(userId, match, operationId, mark, requestId) {
         ExpressionAttributeValues: { ":yes": true },
       },
     },
+    outboxPut(
+      match.id,
+      operationId,
+      beforeStart ? "match.cancelled" : "match.finished",
+      [match.hostUserId, match.guestUserId],
+      finishedAt,
+      { winnerUserId: result?.winnerUserId || null, reason: result?.reason || "cancelled" },
+    ),
     operationPut(userId, operationId, mark, 200, payload),
   ];
   if (match.guestUserId) {
@@ -393,3 +439,66 @@ async function leaveMatch(userId, match, operationId, mark, requestId) {
   await db.send(new TransactWriteCommand({ TransactItems: items }));
   return response(200, payload);
 };
+
+async function finishMatch(userId, match, body, mark, requestId) {
+  if (match.state === "finished" && match.result) return response(200, publicMatch(match, userId));
+  if (match.state !== "running" || !match.guestUserId) {
+    return fail(409, "MATCH_CLOSED", "A partida não está em andamento.", requestId);
+  }
+  const participants = [match.hostUserId, match.guestUserId];
+  const calculated = buildRaceResult(body.participants, participants);
+  if (calculated.error) return fail(422, "INVALID_RESULT", calculated.error, requestId);
+  const result = calculated.result;
+  const next = {
+    ...match,
+    state: "finished",
+    result,
+    revision: match.revision + 1,
+  };
+  const payload = publicMatch(next, userId);
+  const items = [
+    {
+      Update: {
+        TableName: table,
+        Key: { pk: match.pk, sk: "META" },
+        UpdateExpression: "SET #state = :finished, #result = :result, finishedAt = :at, revision = revision + :one",
+        ConditionExpression: "#state = :running AND revision = :revision",
+        ExpressionAttributeNames: { "#state": "state", "#result": "result" },
+        ExpressionAttributeValues: {
+          ":finished": "finished",
+          ":running": "running",
+          ":result": result,
+          ":at": result.finishedAt,
+          ":one": 1,
+          ":revision": match.revision,
+        },
+      },
+    },
+    ...participants.map((participant) => ({
+      Delete: {
+        TableName: table,
+        Key: { pk: `USER#${participant}`, sk: "ACTIVE" },
+      },
+    })),
+    ...participants.map((participant) => ({
+      Put: {
+        TableName: table,
+        Item: {
+          pk: `USER#${participant}`,
+          sk: `RESULT#${result.finishedAt}#${match.id}`,
+          matchId: match.id,
+          at: result.finishedAt,
+          result,
+        },
+        ConditionExpression: "attribute_not_exists(pk)",
+      },
+    })),
+    outboxPut(match.id, body.operationId, "match.finished", participants, result.finishedAt, {
+      winnerUserId: result.winnerUserId,
+      reason: result.reason,
+    }),
+    operationPut(userId, body.operationId, mark, 200, payload),
+  ];
+  await db.send(new TransactWriteCommand({ TransactItems: items }));
+  return response(200, payload);
+}

@@ -25,9 +25,15 @@ function readBody(event) {
   return JSON.parse(raw);
 }
 
-const defaultPreferences = { categories: { welcome: true, ending: false, match: true }, channels: { game: true, email: false }, revision: 0 };
+const defaultPreferences = {
+  categories: { welcome: true, campaign: true, ending: true, match: true },
+  channels: { game: true, email: false },
+  revision: 0,
+};
 
 exports.handler = async (event) => {
+  if (Array.isArray(event.Records)) return consumeQueue(event.Records);
+  if (!event.requestContext?.http && event.action === "events") return consumeEvents(event.events || []);
   if (!event.requestContext?.http && event.action === "welcome") return sendWelcome(event);
 
   const requestId = event.requestContext?.requestId || "";
@@ -45,6 +51,7 @@ exports.handler = async (event) => {
           KeyConditionExpression: "pk = :pk AND begins_with(sk, :prefix)",
           ExpressionAttributeValues: { ":pk": userId, ":prefix": "NOTE#" },
           Limit: 20,
+          ScanIndexForward: false,
         })
       );
       const now = new Date().toISOString();
@@ -118,9 +125,105 @@ async function sendWelcome(event) {
   const email = event.email || "";
   const name = event.name || email || "jogador";
   if (!userId) return { notified: false, email: "skipped", attempts: 0 };
+  await db.send(new PutCommand({
+    TableName: table,
+    Item: { pk: userId, sk: "CONTACT", email, name, updatedAt: new Date().toISOString() },
+  }));
   const notified = await ensureNote(userId);
   const delivery = await deliverEmail(userId, email, name);
   return { notified, email: delivery.state, attempts: delivery.attempts };
+}
+
+async function consumeQueue(records) {
+  const batchItemFailures = [];
+  for (const record of records) {
+    try {
+      await consumeEvents([JSON.parse(record.body)]);
+    } catch (err) {
+      console.error("communication event ingestion failed", { errorName: err?.name || "Error" });
+      batchItemFailures.push({ itemIdentifier: record.messageId });
+    }
+  }
+  return { batchItemFailures };
+}
+
+async function consumeEvents(events) {
+  const processed = [];
+  for (const event of events) {
+    if (!event?.id || !event.type) continue;
+    const recipients = [...new Set([event.userId, ...(event.userIds || [])].filter(Boolean))];
+    if (event.type === "account.created") {
+      await sendWelcome({
+        userId: event.userId,
+        email: event.detail?.email || "",
+        name: event.detail?.name || "",
+      });
+      processed.push(event.id);
+      continue;
+    }
+    for (const userId of recipients) {
+      if (event.type.startsWith("campaign.") && event.detail?.milestoneKey) {
+        const ending = event.detail.ending || "";
+        const category = ending ? "ending" : "campaign";
+        await ensureEventNote(
+          userId,
+          `${category}-${event.resource}-${event.detail.milestoneKey}`,
+          category,
+          ending ? `ending:${ending}` : `campaign:${event.detail.milestoneKey}`,
+          event.at,
+        );
+        if (ending) await deliverEndingEmail(userId, ending);
+        processed.push(`${userId}:${event.id}`);
+      } else if (event.type === "match.finished") {
+        await ensureEventNote(userId, `match-${event.resource}`, "match", `match:${event.resource}`, event.at);
+        processed.push(`${userId}:${event.id}`);
+      }
+    }
+  }
+  return { processed };
+}
+
+async function ensureEventNote(userId, id, category, target, createdAt) {
+  const storedPreferences = await db.send(
+    new GetCommand({ TableName: table, Key: { pk: userId, sk: "PREFERENCES" } })
+  );
+  const preferences = storedPreferences.Item?.preferences || defaultPreferences;
+  if (preferences.channels?.game === false || preferences.categories?.[category] === false) return false;
+  const now = createdAt ? new Date(createdAt) : new Date();
+  try {
+    await db.send(new PutCommand({
+      TableName: table,
+      Item: {
+        pk: userId,
+        sk: `NOTE#${id}`,
+        id,
+        category,
+        target,
+        createdAt: now.toISOString(),
+        readAt: null,
+        expiresAt: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      },
+      ConditionExpression: "attribute_not_exists(pk)",
+    }));
+    return true;
+  } catch (err) {
+    if (err.name === "ConditionalCheckFailedException") return true;
+    throw err;
+  }
+}
+
+async function deliverEndingEmail(userId, ending) {
+  const preferences = await db.send(new GetCommand({ TableName: table, Key: { pk: userId, sk: "PREFERENCES" } }));
+  const selected = preferences.Item?.preferences || defaultPreferences;
+  if (!selected.channels?.email || !selected.categories?.ending) return { state: "skipped", attempts: 0 };
+  const contact = await db.send(new GetCommand({ TableName: table, Key: { pk: userId, sk: "CONTACT" } }));
+  const email = contact.Item?.email || "";
+  const name = contact.Item?.name || "jogador";
+  return deliverEmail(userId, email, name, {
+    key: `ending#${ending}`,
+    subject: "Final concluído em Flesh to Chrome",
+    text: `Olá, ${name}. O final ${ending.toUpperCase()} foi concluído e registrado na sua campanha.`,
+  });
 }
 
 async function ensureNote(userId) {
@@ -151,8 +254,8 @@ async function ensureNote(userId) {
   }
 }
 
-async function deliverEmail(userId, email, name) {
-  const key = { pk: userId, sk: "EMAIL#welcome" };
+async function deliverEmail(userId, email, name, template = {}) {
+  const key = { pk: userId, sk: `EMAIL#${template.key || "welcome"}` };
   const current = (await db.send(new GetCommand({ TableName: table, Key: key }))).Item;
   const attempts = Number(current?.attempts || 0);
   if (["sent", "skipped", "suppressed", "uncertain"].includes(current?.state)) {
@@ -181,10 +284,10 @@ async function deliverEmail(userId, email, name) {
         Source: from,
         Destination: { ToAddresses: [email] },
         Message: {
-          Subject: { Data: "Bem-vindo ao Flesh to Chrome", Charset: "UTF-8" },
+          Subject: { Data: template.subject || "Bem-vindo ao Flesh to Chrome", Charset: "UTF-8" },
           Body: {
             Text: {
-              Data: `Olá, ${name}. Sua conta foi criada. Se este e-mail falhar, o login continua valendo.`,
+              Data: template.text || `Olá, ${name}. Sua conta foi criada. Se este e-mail falhar, o login continua valendo.`,
               Charset: "UTF-8",
             },
           },
@@ -335,6 +438,7 @@ async function putDelivery(key, state, attempts, lastError) {
 exports.__test = {
   classifySesFailure,
   deliverEmail,
+  consumeEvents,
   reserveSend,
   setClients(nextDb, nextSes) {
     db = nextDb;

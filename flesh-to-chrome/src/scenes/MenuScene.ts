@@ -156,7 +156,9 @@ export class MenuScene extends Phaser.Scene {
     this.selectedIndex = 0;
 
     const startY = this.panelY + 104;
-    const spacing = 52;
+    const spacing = this.options.length > 1
+      ? Math.min(52, (this.panelHeight - 132) / (this.options.length - 1))
+      : 52;
     this.options.forEach((option, index) => {
       const text = this.add.text(this.panelX + 28, startY + index * spacing, option.label, {
         fontFamily: "Courier New, monospace",
@@ -186,8 +188,10 @@ export class MenuScene extends Phaser.Scene {
     }
     this.options.push({ label: "Novo Jogo", action: () => this.newGame(this.hasSave) });
     this.options.push({ label: "Controles", action: () => this.openControls(false) });
-    this.options.push({ label: "Multiplayer", action: () => this.openMultiplayer() });
     if (CloudSession.current()) {
+      this.options.push({ label: "Multiplayer", action: () => this.openMultiplayer() });
+      this.options.push({ label: "Histórico multiplayer", action: () => this.scene.start("MatchHistoryScene") });
+      this.options.push({ label: "Notificações", action: () => this.scene.start("NotificationCenterScene") });
       this.options.push({ label: "Sair", action: () => void this.logout() });
     } else {
       if (CloudSession.stored()) {
@@ -489,6 +493,10 @@ export class MenuScene extends Phaser.Scene {
   }
 
   private openMultiplayer(): void {
+    if (!CloudSession.current()) {
+      this.statusText?.setText("Entre com Google antes do multiplayer.");
+      return;
+    }
     startLoadingTransition(this, "MultiplayerScene");
   }
 

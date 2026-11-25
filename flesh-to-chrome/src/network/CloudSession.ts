@@ -154,7 +154,9 @@ export class CloudSession {
   static async login(): Promise<void> {
     const api = await CloudSession.api();
     if (!api) return;
-    const returnTo = `${window.location.origin}${window.location.pathname}`;
+    const returnUrl = new URL(window.location.href);
+    returnUrl.searchParams.delete("ticket");
+    const returnTo = `${returnUrl.origin}${returnUrl.pathname}${returnUrl.search}`;
     window.location.assign(`${api}/auth/google/start?return=${encodeURIComponent(returnTo)}`);
   }
 

@@ -19,47 +19,62 @@ function fail(statusCode, code, message, requestId) {
 async function ingest(events) {
   const stored = [];
   for (const entry of events) {
-    if (!entry?.id || !entry.userId) continue;
+    if (!entry?.id) continue;
     const at = entry.at || new Date().toISOString();
-    try {
-      await db.send(
-        new TransactWriteCommand({
-          TransactItems: [
-            {
-              Put: {
-                TableName: table,
-                Item: { pk: entry.userId, sk: `DEDUP#${entry.id}` },
-                ConditionExpression: "attribute_not_exists(pk)",
-              },
-            },
-            {
-              Put: {
-                TableName: table,
-                Item: {
-                  pk: entry.userId,
-                  sk: `EVENT#${at}#${entry.id}`,
-                  id: entry.id,
-                  type: entry.type,
-                  resource: entry.resource,
-                  result: entry.result,
-                  at,
-                  correlation: entry.correlation || entry.id,
+    const recipients = [...new Set([entry.userId, ...(entry.userIds || [])].filter(Boolean))];
+    for (const userId of recipients) {
+      try {
+        await db.send(
+          new TransactWriteCommand({
+            TransactItems: [
+              {
+                Put: {
+                  TableName: table,
+                  Item: { pk: userId, sk: `DEDUP#${entry.id}` },
+                  ConditionExpression: "attribute_not_exists(pk)",
                 },
-                ConditionExpression: "attribute_not_exists(pk)",
               },
-            },
-          ],
-        })
-      );
-      stored.push(entry.id);
-    } catch (err) {
-      if (err.name !== "TransactionCanceledException") throw err;
+              {
+                Put: {
+                  TableName: table,
+                  Item: {
+                    pk: userId,
+                    sk: `EVENT#${at}#${entry.id}`,
+                    id: entry.id,
+                    type: entry.type,
+                    resource: entry.resource,
+                    result: entry.result,
+                    at,
+                    correlation: entry.correlation || entry.id,
+                  },
+                  ConditionExpression: "attribute_not_exists(pk)",
+                },
+              },
+            ],
+          })
+        );
+        stored.push(`${userId}:${entry.id}`);
+      } catch (err) {
+        if (err.name !== "TransactionCanceledException") throw err;
+      }
     }
   }
   return { statusCode: 200, body: JSON.stringify({ stored }) };
 }
 
 exports.handler = async (event) => {
+  if (Array.isArray(event.Records)) {
+    const batchItemFailures = [];
+    for (const record of event.Records) {
+      try {
+        await ingest([JSON.parse(record.body)]);
+      } catch (err) {
+        console.error("audit event ingestion failed", { errorName: err?.name || "Error" });
+        batchItemFailures.push({ itemIdentifier: record.messageId });
+      }
+    }
+    return { batchItemFailures };
+  }
   if (!event.requestContext?.http && event.action === "ingest") return ingest(event.events || []);
 
   const requestId = event.requestContext?.requestId || "";
@@ -79,6 +94,7 @@ exports.handler = async (event) => {
       KeyConditionExpression: "pk = :pk AND begins_with(sk, :prefix)",
       ExpressionAttributeValues: { ":pk": userId, ":prefix": "EVENT#" },
       Limit: 20,
+      ScanIndexForward: false,
     })
   );
   const items = (out.Items || [])

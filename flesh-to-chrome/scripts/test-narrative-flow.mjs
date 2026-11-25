@@ -229,6 +229,32 @@ assert.deepEqual(
   "a primeira fase Flesh deve começar com os quatro implantes",
 );
 
+// D10: memória ainda sem retirada é efêmera; apenas procedimentos ReForge
+// concluídos sobrevivem a morte, reinício ou retomada posterior.
+const interruptedDescent = SaveState.newGame();
+interruptedDescent.beginDescent();
+assert.equal(interruptedDescent.recoverDescentFragment("glitch-topo-identidade"), true);
+assert.equal(interruptedDescent.discardPendingDescentMemory(), true);
+assert.equal(interruptedDescent.hasRecoveredCurrentFragment(), false,
+  "morte/reinício deve exigir nova coleta da memória pendente");
+assert.equal(interruptedDescent.recoverDescentFragment("glitch-topo-identidade"), true);
+assert.equal(interruptedDescent.completeDescentPhase(), "reforge");
+assert.ok(interruptedDescent.completeBioprinting());
+assert.equal(interruptedDescent.recoverDescentFragment("glitch-corporativo-voz"), true);
+interruptedDescent.discardPendingDescentMemory();
+assert.deepEqual(Array.from(interruptedDescent.get().descentState.recoveredFragmentIds),
+  ["glitch-topo-identidade"], "descartar D2 deve preservar D1 já consolidada");
+
+const exitDescent = SaveState.newGame();
+exitDescent.beginDescent();
+exitDescent.recoverDescentFragment("glitch-topo-identidade");
+const saveStatePath = path.join(projectDirectory, "src/systems/SaveState.ts");
+moduleCache.delete(path.resolve(saveStatePath));
+const { SaveState: ReloadedSaveState } = loadTypeScriptModule(saveStatePath);
+const resumedAfterExit = ReloadedSaveState.load();
+assert.equal(resumedAfterExit.hasRecoveredCurrentFragment(), false,
+  "retomar após sair não deve reintroduzir a memória pendente do cache local");
+
 const save = SaveState.newGame();
 save.setPhase("fase5");
 for (const ability of ["legs", "arms", "eyes", "thrusters"]) save.unlockAbility(ability);

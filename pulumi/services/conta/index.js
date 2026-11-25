@@ -359,6 +359,24 @@ async function ensureAccount(userId, claims) {
                 ConditionExpression: "attribute_not_exists(pk)",
               },
             },
+            {
+              Put: {
+                TableName: table,
+                Item: {
+                  pk: userId,
+                  sk: `OUTBOX#account-created-${userId}`,
+                  id: `account-created-${userId}`,
+                  userId,
+                  type: "account.created",
+                  resource: userId,
+                  result: "accepted",
+                  at: new Date().toISOString(),
+                  correlation: `account-created-${userId}`,
+                  detail: { email: account.email, name: account.name },
+                },
+                ConditionExpression: "attribute_not_exists(pk)",
+              },
+            },
           ],
         })
       );

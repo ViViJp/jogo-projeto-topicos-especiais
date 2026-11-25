@@ -97,7 +97,7 @@ function cloneSaveData(data: SaveData, includePreGateSave = true): SaveData {
   };
 }
 
-function normalizeSaveData(parsed: Partial<SaveData>): SaveData {
+function normalizeSaveData(parsed: Partial<SaveData>, volatileFragmentId?: string): SaveData {
   const fresh = defaultSave();
   const checkpoint = parsed.checkpoint ?? fresh.checkpoint;
   const descentState = (parsed.descentState ?? fresh.descentState) as Partial<DescentState> & {
@@ -117,15 +117,17 @@ function normalizeSaveData(parsed: Partial<SaveData>): SaveData {
   const currentStep = Number.isInteger(descentState.currentStep)
     ? Math.max(0, Math.min(DESCENT_STEPS.length, descentState.currentStep ?? 0))
     : Math.min(DESCENT_STEPS.length, legacyPairCount);
-  const recoveredFragmentIds = Array.isArray(descentState.recoveredFragmentIds)
-    ? [...descentState.recoveredFragmentIds]
+  const storedFragments = Array.isArray(descentState.recoveredFragmentIds)
+    ? descentState.recoveredFragmentIds
     : DESCENT_STEPS.slice(0, legacyPairCount).map((step) => step.fragmentId);
-  const pendingStep = descentState.pendingMemory
-    ? DESCENT_STEPS[Math.min(currentStep, DESCENT_STEPS.length - 1)]
-    : undefined;
-  if (pendingStep && !recoveredFragmentIds.includes(pendingStep.fragmentId)) {
-    recoveredFragmentIds.push(pendingStep.fragmentId);
-  }
+  const recoveredFragmentIds = DESCENT_STEPS.slice(0, currentStep).map((step) => step.fragmentId);
+  const pendingStep = descentStepAt(currentStep);
+  const preserveVolatileFragment = Boolean(
+    pendingStep &&
+    volatileFragmentId === pendingStep.fragmentId &&
+    (storedFragments.includes(pendingStep.fragmentId) || descentState.pendingMemory),
+  );
+  if (preserveVolatileFragment && pendingStep) recoveredFragmentIds.push(pendingStep.fragmentId);
   const retryPhaseByStage: Record<string, string> = {
     topo: "fase5",
     corporativo: "fase4",
@@ -162,9 +164,9 @@ function normalizeSaveData(parsed: Partial<SaveData>): SaveData {
       retryUsedPhaseIds: Array.isArray(descentState.retryUsedPhaseIds)
         ? [...descentState.retryUsedPhaseIds]
         : legacyRetries,
-      pendingRemoval: ["legs", "arms", "eyes", "thrusters"].includes(descentState.pendingRemoval ?? "")
+      pendingRemoval: preserveVolatileFragment && ["legs", "arms", "eyes", "thrusters"].includes(descentState.pendingRemoval ?? "")
         ? descentState.pendingRemoval as keyof AbilityState
-        : pendingStep?.implant ?? null,
+        : null,
     },
     preGateSave: null,
     endingReached,
@@ -180,6 +182,7 @@ type SaveStore = "session" | "account";
 let ownerChosen = false;
 let ownerId: string | null = null;
 let guestBooted = false;
+const volatilePendingFragments = new Map<string, string>();
 
 function sessionKey(): string {
   return `${STORAGE_KEY}:session`;
@@ -249,7 +252,12 @@ export class SaveState {
     try {
       const raw = readRaw(store, key);
       if (!raw) return null;
-      return normalizeSaveData(JSON.parse(raw) as Partial<SaveData>);
+      const normalized = normalizeSaveData(
+        JSON.parse(raw) as Partial<SaveData>,
+        volatilePendingFragments.get(key),
+      );
+      writeRaw(store, key, JSON.stringify(normalized));
+      return normalized;
     } catch {
       return null;
     }
@@ -284,7 +292,12 @@ export class SaveState {
 
   static importSession(userId: string): void {
     const guest = SaveState.readStored("session", sessionKey());
-    if (guest) localStorage.setItem(accountKey(userId), JSON.stringify(guest));
+    if (guest) {
+      localStorage.setItem(accountKey(userId), JSON.stringify(guest));
+      const pending = volatilePendingFragments.get(sessionKey());
+      if (pending) volatilePendingFragments.set(accountKey(userId), pending);
+    }
+    volatilePendingFragments.delete(sessionKey());
     sessionStorage.removeItem(sessionKey());
     SaveState.bindAccount(userId);
   }
@@ -323,6 +336,7 @@ export class SaveState {
   /** Seção 20.2 - Novo Jogo: apaga somente depois de confirmação (a confirmação é responsabilidade da MenuScene). */
   static newGame(): SaveState {
     const place = activeStore();
+    volatilePendingFragments.delete(place.key);
     const fresh = new SaveState(defaultSave(), place);
     writeRaw(place.store, place.key, JSON.stringify(fresh.data));
     if (place.store === "account") CloudSession.queueCampaignReset(cloneSaveData(fresh.data));
@@ -373,6 +387,7 @@ export class SaveState {
     this.data.checkpoint = { x: 0, y: 0, consolidatedCreditIds: [] };
     this.data.wallet = 0;
     this.data.endingReached = null;
+    volatilePendingFragments.delete(this.place.key);
     this.persist();
   }
 
@@ -386,6 +401,7 @@ export class SaveState {
     if (step.phaseId !== this.data.currentPhaseId || step.fragmentId !== fragmentId) return false;
     if (!this.data.descentState.recoveredFragmentIds.includes(fragmentId)) {
       this.data.descentState.recoveredFragmentIds.push(fragmentId);
+      volatilePendingFragments.set(this.place.key, fragmentId);
       this.persist();
     }
     return true;
@@ -394,6 +410,20 @@ export class SaveState {
   hasRecoveredCurrentFragment(): boolean {
     const step = descentStepAt(this.data.descentState.currentStep);
     return Boolean(step && this.data.descentState.recoveredFragmentIds.includes(step.fragmentId));
+  }
+
+  /** Descarta somente a memória ainda não consolidada pela ReForge atual. */
+  discardPendingDescentMemory(): boolean {
+    const descent = this.data.descentState;
+    const step = descentStepAt(descent.currentStep);
+    if (!step) return false;
+    const before = descent.recoveredFragmentIds.length;
+    descent.recoveredFragmentIds = descent.recoveredFragmentIds.filter((id) => id !== step.fragmentId);
+    const changed = before !== descent.recoveredFragmentIds.length || descent.pendingRemoval !== null;
+    descent.pendingRemoval = null;
+    volatilePendingFragments.delete(this.place.key);
+    if (changed) this.persist();
+    return changed;
   }
 
   /** Resultado da chegada ao fim de um setor da descida. */
@@ -428,6 +458,7 @@ export class SaveState {
     this.data.descentState.active = false;
     this.data.descentState.epiloguePending = false;
     this.data.descentState.pendingRemoval = null;
+    volatilePendingFragments.delete(this.place.key);
     this.data.checkpoint = { x: 0, y: 0, consolidatedCreditIds: [] };
     this.persist();
   }
@@ -440,6 +471,7 @@ export class SaveState {
     this.data.abilities[step.implant] = false;
     descent.pendingRemoval = null;
     descent.currentStep += 1;
+    volatilePendingFragments.delete(this.place.key);
     this.data.currentPhaseId = step.nextPhaseId;
     this.data.checkpoint = { x: 0, y: 0, consolidatedCreditIds: [] };
     this.data.wallet = 0;

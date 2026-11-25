@@ -78,7 +78,7 @@ pulumi stack output nameservers
 
 Esse primeiro `up` cria a zona, a US$ 0,50 por mês, e não pede certificado. Copie os nameservers e crie os registros NS de delegação de `flesh-to-chrome` na zona pai `negoci.online`. Quando a delegação responder, mude `publishDomain` para `true` e rode `pulumi up` de novo. Aí entram os certificados, a validação DNS e os aliases. Não ligue `publishDomain` antes da delegação: o `up` fica esperando o certificado e estoura o tempo. Não crie uma segunda zona para o mesmo subdomínio.
 
-As rotas privadas exigem o access token do Cognito, com escopo `openid`. ID token não passa. O início e o callback do Google, e a troca do ticket em `POST /auth/session`, continuam públicos. O `state` do login é aleatório, expira, só vale uma vez e precisa coincidir com o cookie da tentativa. O destino de retorno tem de ser a origem da CloudFront ou, na dev, `localhost:1234`.
+As rotas privadas exigem o access token do Cognito, com escopo `openid`. ID token não passa. O início e o callback do Google, a troca do ticket em `POST /auth/session` e a revogação em `POST /auth/logout` são públicos. O logout exige a posse do refresh token e usa o segredo do cliente somente dentro da Lambda; as rotas `/me`, campanha, partidas, comunicações e auditoria continuam protegidas. O `state` do login é aleatório, expira, só vale uma vez e precisa coincidir com o cookie da tentativa. O destino de retorno tem de ser a origem da CloudFront ou, na dev, `localhost:1234`.
 
 No primeiro cadastro, a Conta grava o pedido de boas-vindas e só enfileira a Lambda de comunicações. O login não espera o SES. A nota do jogo e o e-mail têm estados separados. O envio reserva a tentativa antes de chamar o SES. Se a resposta ficar incerta, não há segundo envio até a reconciliação. Sem remetente, o e-mail fica pendente e o login segue. Na dev, o remetente opcional é `flesh-to-chrome:sesFromEmail`. Na prod, o remetente `noreply@flesh-to-chrome.negoci.online` e a identidade SES só entram com `publishDomain` em `true`, no mesmo passo dos certificados. A permissão de envio aponta só para essa identidade.
 
@@ -109,7 +109,12 @@ pulumi config set flesh-to-chrome:sesFromEmail seu-email@exemplo.com
 
 ## O que esta entrega não publica
 
-- API Gateway WebSocket, ticket de conexão e o transporte da corrida. Continuam condicionados à decisão D04.
+- API Gateway WebSocket, ticket de conexão e autoridade de simulação da corrida. O serviço Partidas já reserva sala/participantes, confirma prontidão, persiste resultado e expõe histórico; posição, física e troca de snapshots continuam no WebRTC e condicionadas à decisão D04.
 - Loja e rotas `/me/cosmetics`. O cronograma da loja segue pendente.
-- O barramento do documento 12 (DynamoDB Streams, publicador, SQS e o feedback SNS). A boas-vindas fica gravada na conta e a Lambda de comunicações é chamada de forma assíncrona, com reserva da tentativa antes do SES. A campanha já grava o outbox na mesma transação do save. A Lambda de auditoria deduplica e persiste o evento quando recebe `{ "action": "ingest", "events": [...] }` por invocação direta. Essa invocação não está ligada a uma fila.
-- Suíte de testes, integração contínua e deploy contínuo. Ficam para a entrega seguinte.
+- Feedback técnico SES → SNS → SQS e a reconciliação automática de itens de outbox além da janela do Stream. O transporte principal já usa outbox transacional, DynamoDB Streams, publicador, filas separadas com DLQ e consumidores idempotentes de Auditoria e Comunicações. Itens da outbox permanecem preservados para recuperação operacional.
+- Integração contínua e deploy contínuo. A suíte local cobre contratos de gameplay, narrativa, multiplayer, nuvem, publicação da outbox e consumidores; automação de implantação fica para a entrega seguinte.
+
+## Cobertura parcial declarada
+
+- UC13/RF-J14: criação, convite, vaga única, prontidão, abandono, classificação, histórico e isolamento por JWT estão integrados ao serviço Partidas. O backend calcula a classificação a partir dos resultados enviados, mas ainda não é autoridade sobre cada frame da corrida; essa validação permanece em D04.
+- RF-ISN-08/RF-ISN-09: eventos de Conta, Campanha e Partidas chegam automaticamente a Auditoria e Comunicações sem bloquear a operação principal. A central no jogo, preferências, marcos, finais e resultados estão conectados. Feedback SES por SNS e reconciliação agendada da outbox ainda são pendências, portanto os requisitos não devem ser considerados integralmente encerrados.

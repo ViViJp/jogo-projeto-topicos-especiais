@@ -35,10 +35,13 @@ if is_prod:
     pulumi.export("domain", domain)
 
 
-def table(name, with_ttl=False):
+def table(name, with_ttl=False, with_stream=False):
     kwargs = {}
     if with_ttl:
         kwargs["ttl"] = aws.dynamodb.TableTtlArgs(attribute_name="ttl", enabled=True)
+    if with_stream:
+        kwargs["stream_enabled"] = True
+        kwargs["stream_view_type"] = "NEW_IMAGE"
     return aws.dynamodb.Table(
         name,
         name=f"{prefix}-{name}",
@@ -53,7 +56,7 @@ def table(name, with_ttl=False):
     )
 
 
-def publish(service, table_resource, variables=None, invoke_function=None, ses_identity=None):
+def publish(service, table_resource, variables=None, invoke_function=None, ses_identity=None, consume_queues=None):
     path = services_dir / service
     subprocess.run(["npm", "install", "--omit=dev"], cwd=path, check=True)
 
@@ -142,6 +145,30 @@ def publish(service, table_resource, variables=None, invoke_function=None, ses_i
                 )
             ),
         )
+    consume_policy = None
+    if consume_queues:
+        consume_policy = aws.iam.RolePolicy(
+            f"{service}-consume-events",
+            role=role.id,
+            policy=pulumi.Output.all(*[queue.arn for queue in consume_queues]).apply(
+                lambda arns: json.dumps(
+                    {
+                        "Version": "2012-10-17",
+                        "Statement": [
+                            {
+                                "Effect": "Allow",
+                                "Action": [
+                                    "sqs:ReceiveMessage",
+                                    "sqs:DeleteMessage",
+                                    "sqs:GetQueueAttributes",
+                                ],
+                                "Resource": arns,
+                            }
+                        ],
+                    }
+                )
+            ),
+        )
     environment = {"TABLE_NAME": table_resource.name, **(variables or {})}
     fn = aws.lambda_.Function(
         service,
@@ -152,10 +179,124 @@ def publish(service, table_resource, variables=None, invoke_function=None, ses_i
         code=pulumi.FileArchive(str(path)),
         timeout=10,
         environment=aws.lambda_.FunctionEnvironmentArgs(variables=environment),
+        opts=pulumi.ResourceOptions(depends_on=[consume_policy]) if consume_policy else None,
     )
     pulumi.export(f"{service}_function", fn.name)
     pulumi.export(f"{service}_table", table_resource.name)
     return fn
+
+
+def event_pipeline(
+    producer_tables,
+    audit_queue,
+    communications_queue,
+    publish_failure_queue,
+    audit_function,
+    communications_function,
+):
+    path = services_dir / "event-publisher"
+    subprocess.run(["npm", "install", "--omit=dev"], cwd=path, check=True)
+    role = aws.iam.Role(
+        "event-publisher-role",
+        assume_role_policy=json.dumps(
+            {
+                "Version": "2012-10-17",
+                "Statement": [{
+                    "Effect": "Allow",
+                    "Principal": {"Service": "lambda.amazonaws.com"},
+                    "Action": "sts:AssumeRole",
+                }],
+            }
+        ),
+    )
+    aws.iam.RolePolicyAttachment(
+        "event-publisher-logs",
+        role=role.name,
+        policy_arn="arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
+    )
+    stream_policy = aws.iam.RolePolicy(
+        "event-publisher-streams",
+        role=role.id,
+        policy=pulumi.Output.all(*[table_resource.stream_arn for table_resource in producer_tables]).apply(
+            lambda arns: json.dumps(
+                {
+                    "Version": "2012-10-17",
+                    "Statement": [{
+                        "Effect": "Allow",
+                        "Action": [
+                            "dynamodb:DescribeStream",
+                            "dynamodb:GetRecords",
+                            "dynamodb:GetShardIterator",
+                            "dynamodb:ListStreams",
+                        ],
+                        "Resource": arns,
+                    }],
+                }
+            )
+        ),
+    )
+    queue_policy = aws.iam.RolePolicy(
+        "event-publisher-queues",
+        role=role.id,
+        policy=pulumi.Output.all(audit_queue.arn, communications_queue.arn, publish_failure_queue.arn).apply(
+            lambda arns: json.dumps(
+                {
+                    "Version": "2012-10-17",
+                    "Statement": [{
+                        "Effect": "Allow",
+                        "Action": "sqs:SendMessage",
+                        "Resource": arns,
+                    }],
+                }
+            )
+        ),
+    )
+    publisher = aws.lambda_.Function(
+        "event-publisher",
+        name=f"{prefix}-event-publisher",
+        runtime=aws.lambda_.Runtime.NODE_JS22D_X,
+        handler="index.handler",
+        role=role.arn,
+        code=pulumi.FileArchive(str(path)),
+        timeout=15,
+        environment=aws.lambda_.FunctionEnvironmentArgs(
+            variables={
+                "AUDIT_QUEUE_URL": audit_queue.url,
+                "COMMUNICATIONS_QUEUE_URL": communications_queue.url,
+            }
+        ),
+        opts=pulumi.ResourceOptions(depends_on=[stream_policy, queue_policy]),
+    )
+    for index, table_resource in enumerate(producer_tables):
+        aws.lambda_.EventSourceMapping(
+            f"outbox-stream-{index}",
+            event_source_arn=table_resource.stream_arn,
+            function_name=publisher.arn,
+            starting_position="LATEST",
+            batch_size=10,
+            bisect_batch_on_function_error=True,
+            maximum_retry_attempts=5,
+            destination_config={
+                "on_failure": {
+                    "destination_arn": publish_failure_queue.arn,
+                }
+            },
+        )
+    aws.lambda_.EventSourceMapping(
+        "audit-events-consumer",
+        event_source_arn=audit_queue.arn,
+        function_name=audit_function.arn,
+        batch_size=10,
+        function_response_types=["ReportBatchItemFailures"],
+    )
+    aws.lambda_.EventSourceMapping(
+        "communication-events-consumer",
+        event_source_arn=communications_queue.arn,
+        function_name=communications_function.arn,
+        batch_size=10,
+        function_response_types=["ReportBatchItemFailures"],
+    )
+    return publisher
 
 
 ROUTES = {
@@ -178,6 +319,7 @@ ROUTES = {
         "GET /me/matches",
         "GET /matches/{id}",
         "POST /matches/{id}/ready",
+        "POST /matches/{id}/finish",
         "POST /matches/{id}/leave",
     ],
     "comunicacoes": [
@@ -588,12 +730,40 @@ def open_api():
 
 
 services = {
-    "conta": table("accounts", with_ttl=True),
-    "campanha": table("campaigns"),
-    "partidas": table("matches", with_ttl=True),
+    "conta": table("accounts", with_ttl=True, with_stream=True),
+    "campanha": table("campaigns", with_stream=True),
+    "partidas": table("matches", with_ttl=True, with_stream=True),
     "comunicacoes": table("communications"),
     "auditoria": table("audit"),
 }
+
+audit_dlq = aws.sqs.Queue("audit-events-dlq", name=f"{prefix}-audit-events-dlq", message_retention_seconds=1209600)
+communications_dlq = aws.sqs.Queue(
+    "communication-events-dlq",
+    name=f"{prefix}-communication-events-dlq",
+    message_retention_seconds=1209600,
+)
+outbox_publish_dlq = aws.sqs.Queue(
+    "outbox-publish-dlq",
+    name=f"{prefix}-outbox-publish-dlq",
+    message_retention_seconds=1209600,
+)
+audit_queue = aws.sqs.Queue(
+    "audit-events",
+    name=f"{prefix}-audit-events",
+    visibility_timeout_seconds=60,
+    redrive_policy=audit_dlq.arn.apply(
+        lambda arn: json.dumps({"deadLetterTargetArn": arn, "maxReceiveCount": 5})
+    ),
+)
+communications_queue = aws.sqs.Queue(
+    "communication-events",
+    name=f"{prefix}-communication-events",
+    visibility_timeout_seconds=60,
+    redrive_policy=communications_dlq.arn.apply(
+        lambda arn: json.dumps({"deadLetterTargetArn": arn, "maxReceiveCount": 5})
+    ),
+)
 
 if is_prod and publish_domain:
     prod_mail()
@@ -628,10 +798,11 @@ functions["comunicacoes"] = publish(
     services["comunicacoes"],
     mail_env,
     ses_identity=ses_identity,
+    consume_queues=[communications_queue],
 )
 functions["campanha"] = publish("campanha", services["campanha"])
 functions["partidas"] = publish("partidas", services["partidas"])
-functions["auditoria"] = publish("auditoria", services["auditoria"])
+functions["auditoria"] = publish("auditoria", services["auditoria"], consume_queues=[audit_queue])
 functions["conta"] = publish(
     "conta",
     services["conta"],
@@ -646,6 +817,14 @@ functions["conta"] = publish(
         "FRONTEND_ORIGIN": frontend_origin,
     },
     invoke_function=functions["comunicacoes"],
+)
+event_pipeline(
+    [services["conta"], services["campanha"], services["partidas"]],
+    audit_queue,
+    communications_queue,
+    outbox_publish_dlq,
+    functions["auditoria"],
+    functions["comunicacoes"],
 )
 api_resource, stage = http_api(api, functions, authorizer)
 if is_prod and publish_domain:
