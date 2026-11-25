@@ -464,11 +464,12 @@ export class ClinicScene extends Phaser.Scene {
       return;
     }
     save.setPhase(this.data$.nextPhaseId);
+    const consolidatedCreditIds = [...save.get().checkpoint.consolidatedCreditIds];
     startLoadingTransition(this, "GameScene", {
       phaseId: this.data$.nextPhaseId,
       checkpointX: 0,
       checkpointY: 0,
-      consolidatedCreditIds: [],
+      consolidatedCreditIds,
       wallet: this.data$.wallet,
       abilities: newAbilities,
     } as GameSceneData);

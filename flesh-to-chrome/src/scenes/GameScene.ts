@@ -5,6 +5,7 @@ import { InputManager } from "../systems/InputManager";
 import { CreditsSystem } from "../systems/CreditsSystem";
 import { HUD } from "../systems/HUD";
 import { SaveState } from "../systems/SaveState";
+import { CampaignSyncState, CloudSession } from "../network/CloudSession";
 import { AudioManager, SFX, bgmForPhase } from "../systems/AudioManager";
 import { descentRouteForPhase, descentStepForPhase } from "../systems/DescentProgression";
 import { DescentGlitchRuntime, DESCENT_MEMORY_FRAGMENT_TEXTURE_KEY } from "../objects/DescentGlitchRuntime";
@@ -211,6 +212,8 @@ export class GameScene extends Phaser.Scene {
   private restarting = false;
   private levelLengthPx = 0;
   private checkpointInteraction?: Phaser.Time.TimerEvent;
+  private syncStatusText?: Phaser.GameObjects.Text;
+  private stopCampaignSync?: () => void;
 
   private readonly handlePlayerAttack = (_x: number, _y: number, showFeedback = true): void => {
     if (showFeedback) this.hud.flashPrompt("ATAQUE", 300);
@@ -228,6 +231,7 @@ export class GameScene extends Phaser.Scene {
   private readonly handleViewportResize = (): void => {
     this.scanOverlay?.setDisplaySize(this.scale.width, this.scale.height);
     this.pauseText?.setPosition(this.scale.width / 2, this.scale.height / 2);
+    this.syncStatusText?.setPosition(this.scale.width - 18, 18);
   };
 
   private readonly handleSceneShutdown = (): void => {
@@ -235,6 +239,8 @@ export class GameScene extends Phaser.Scene {
     this.events.off("player-dash-start", this.handlePlayerDashStart);
     this.events.off("player-dash-ready", this.handlePlayerDashReady);
     this.scale.off(Phaser.Scale.Events.RESIZE, this.handleViewportResize);
+    this.stopCampaignSync?.();
+    this.stopCampaignSync = undefined;
   };
 
   constructor() {
@@ -260,6 +266,9 @@ export class GameScene extends Phaser.Scene {
     this.pauseText = undefined;
     this.scanOverlay = undefined;
     this.checkpointInteraction = undefined;
+    this.syncStatusText = undefined;
+    this.stopCampaignSync?.();
+    this.stopCampaignSync = undefined;
     this.data$ = {
       phaseId: data.phaseId,
       checkpointX: data.checkpointX ?? 0,
@@ -620,6 +629,14 @@ export class GameScene extends Phaser.Scene {
     this.credits = new CreditsSystem(this.data$.wallet, this.data$.consolidatedCreditIds);
     this.hud = new HUD(this);
     this.hud.setDashUnlocked(this.activeAbilities.thrusters);
+    this.syncStatusText = this.add.text(this.scale.width - 18, 18, "", {
+      fontFamily: "Courier New, monospace",
+      fontSize: "14px",
+      color: "#FFD37C",
+      backgroundColor: "#05050acc",
+      padding: { x: 8, y: 5 },
+    }).setOrigin(1, 0).setScrollFactor(0).setDepth(2100);
+    this.stopCampaignSync = CloudSession.subscribeCampaignSync((state) => this.renderCampaignSync(state));
     // A Scene é reutilizada após mortes/restarts: callbacks identificáveis
     // evitam acumular atualizações do HUD entre ciclos de vida.
     this.events.off("player-attack", this.handlePlayerAttack);
@@ -1145,8 +1162,14 @@ export class GameScene extends Phaser.Scene {
       this.time.paused = true;
       this.anims.pauseAll();
       const menuHelp = "\nS / ↓ para voltar ao menu principal";
+      const syncState = CloudSession.campaignSyncState();
+      const syncWarning = syncState.status === "idle"
+        ? ""
+        : syncState.status === "conflict"
+          ? "\nCONFLITO: o save local ainda não foi reconciliado."
+          : "\nAVISO: há progresso local aguardando a nuvem.";
       this.pauseText = this.add
-        .text(this.scale.width / 2, this.scale.height / 2, `PAUSADO\nESC / START para voltar | ENTER / A para reiniciar a fase${menuHelp}`, {
+        .text(this.scale.width / 2, this.scale.height / 2, `PAUSADO\nESC / START para voltar | ENTER / A para reiniciar a fase${menuHelp}${syncWarning}`, {
           fontFamily: "Courier New, monospace",
           fontSize: "26px",
           color: "#ffffff",
@@ -1166,6 +1189,23 @@ export class GameScene extends Phaser.Scene {
       this.pauseText?.destroy();
       this.pauseText = undefined;
     }
+  }
+
+  private renderCampaignSync(state: CampaignSyncState): void {
+    if (!this.syncStatusText) return;
+    if (state.status === "idle") {
+      this.syncStatusText.setText("").setVisible(false);
+      return;
+    }
+    const label = state.status === "syncing"
+      ? "SALVANDO NA NUVEM..."
+      : state.status === "conflict"
+        ? "CONFLITO DE SAVE — VOLTE AO MENU"
+        : "SAVE LOCAL — NUVEM PENDENTE";
+    this.syncStatusText
+      .setText(label)
+      .setColor(state.status === "conflict" ? "#ff8a8a" : "#FFD37C")
+      .setVisible(true);
   }
 
   update(_time: number, delta: number): void {

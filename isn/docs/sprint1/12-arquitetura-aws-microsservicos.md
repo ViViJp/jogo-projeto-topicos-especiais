@@ -30,7 +30,7 @@ Nenhum serviço consulta ou altera diretamente a tabela de outro. Referências c
 
 | Necessidade | Serviço escolhido / perfil inicial | Motivo e limite |
 | --- | --- | --- |
-| DNS público | Route 53: uma hosted zone pública para `nihil-legere-possum.lat` | Registros Alias para CloudFront/API Gateway, validações de certificado e registros de e-mail. Avaliar associação ao plano CloudFront Free. |
+| DNS público | Route 53: uma hosted zone pública para `flesh-to-chrome.negoci.online` | Registros Alias para CloudFront/API Gateway, validações de certificado e registros de e-mail. Avaliar associação ao plano CloudFront Free. |
 | HTTPS | AWS Certificate Manager (ACM) | Certificados para os nomes publicados; CloudFront usa certificado em `us-east-1`, API Gateway regional usa certificado na região da API. |
 | Frontend Phaser e assets | S3 privado + CloudFront, acesso à origem via OAC | Cache e distribuição do build; simulação permanece no navegador. Avaliar plano CloudFront Free separado do Free Plan da conta. |
 | Login externo | Cognito User Pools Lite + Google como provedor social | Terceirizar identidade; autorização de proprietário/participante permanece nas Lambdas. |
@@ -57,10 +57,10 @@ DNS informa ao navegador onde encontrar o serviço; não transporta o tráfego H
 
 | Nome / registro proposto | Destino / finalidade | Situação |
 | --- | --- | --- |
-| `nihil-legere-possum.lat` | Alias A para CloudFront; AAAA se IPv6 habilitado | Domínio já previsto no projeto; hospedagem DNS via Route 53 agora explícita. |
-| `www.nihil-legere-possum.lat` | Alias para a mesma distribuição, caso seja necessário | Nome adicional opcional; incluir no certificado se publicado. |
-| `api.nihil-legere-possum.lat` | Alias para o domínio personalizado regional do API Gateway HTTP | Nome proposto; configurar domínio, certificado e API mapping antes do Alias. |
-| `ws.nihil-legere-possum.lat` | Endpoint WebSocket personalizado, se D04 confirmar o transporte | Nome e configuração pendentes; inicialmente é possível usar o hostname gerado pela AWS. |
+| `flesh-to-chrome.negoci.online` | Alias A para CloudFront; AAAA se IPv6 habilitado | URL oficial prevista para o jogo; hospedagem DNS via Route 53 agora explícita. |
+| `www.flesh-to-chrome.negoci.online` | Alias para a mesma distribuição, caso seja necessário | Nome adicional opcional; incluir no certificado se publicado. |
+| `api.flesh-to-chrome.negoci.online` | Alias para o domínio personalizado regional do API Gateway HTTP | Nome proposto; configurar domínio, certificado e API mapping antes do Alias. |
+| `ws.flesh-to-chrome.negoci.online` | Endpoint WebSocket personalizado, se D04 confirmar o transporte | Nome e configuração pendentes; inicialmente é possível usar o hostname gerado pela AWS. |
 | Registros de validação ACM e SES | CNAME/TXT e outros registros exigidos pelo procedimento escolhido | Preservar validação de certificados e DKIM; configurar política DMARC e, se adotado, MAIL FROM próprio. |
 
 A associação Alias na raiz do domínio é suportada pelo Route 53 para CloudFront. [Configuração oficial](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/routing-to-cloudfront-distribution.html). Para HTTPS do frontend, o certificado ACM deve estar em `us-east-1`; para domínio regional da HTTP API, na mesma região da API. O certificado precisa cobrir o nome usado pelo cliente. [CloudFront/ACM](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/cnames-and-https-requirements.html), [domínio da HTTP API](https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-custom-domain-names.html).

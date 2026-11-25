@@ -1,10 +1,10 @@
 # Contrato REST inicial — proposta para ISN
 
-Este documento especifica a API prevista, **não uma API já implementada**. Prefixo proposto `/api/v1`, transporte HTTPS e JSON. A base usa API Gateway HTTP com integração por microsserviço Lambda e autenticação Cognito/Google; D03/D07 estão aprovadas; detalhes restantes estão em D04/D06/D08 e no documento 12. Este contrato não especifica o protocolo de sincronização por frame.
+Este documento é o contrato REST. Transporte HTTPS e JSON. As rotas publicadas na HTTP API ficam na raiz, sem o prefixo `/api/v1` que chegou a ser proposto: o handler compara `rawPath` com caminhos como `/me` e `/matches`, e o domínio personalizado não acrescenta prefixo. Rotas ainda descritas como proposta, como cosméticos e ticket de conexão, não estão publicadas. A base usa API Gateway HTTP com integração por microsserviço Lambda. O login publicado é o redirect Cognito com Google quando o provedor está configurado; sem essa configuração, `GET /auth/google/start` responde 503. As outras rotas exigem o JWT authorizer. D03/D07 estão aprovadas; detalhes restantes estão em D04/D06/D08 e no documento 12. Este contrato não especifica o protocolo de sincronização por frame.
 
 ## Convenções
 
-- Chamadas privadas usam access token Cognito em `Authorization: Bearer ...`, validado pelo JWT authorizer do HTTP API. Cada serviço valida ainda proprietário/participação. Não aceitar identidade declarada no corpo como prova de autenticação. Obtenção, armazenamento, renovação e logout dos tokens serão detalhados na integração Cognito; não presumir invalidação imediata de todo access token já emitido apenas por limpar sessão local.
+- Chamadas privadas usam access token Cognito em `Authorization: Bearer ...`, validado pelo JWT authorizer do HTTP API, com issuer, audiência, expiração e escopo `openid`. ID token não autoriza essas rotas. Cada serviço valida ainda proprietário/participação. Não aceitar identidade declarada no corpo como prova de autenticação. O callback devolve um ticket de uso único; o frontend troca esse ticket por tokens e descarta as credenciais no logout. Não presumir invalidação imediata de todo access token já emitido apenas por limpar sessão local.
 - Rotas `/me` operam somente sobre o usuário da sessão; não recebem `userId` arbitrário.
 - Erro JSON: `{ "error": { "code": "SAVE_CONFLICT", "message": "A campanha foi alterada em outra sessão.", "requestId": "..." } }`.
 - `401`: sessão ausente/expirada; `403`: operação sem permissão; `404`: recurso ausente ou não visível; `409`: conflito de revisão/estado; `422`: dados inválidos; `503`: indisponibilidade. Lista vazia retorna `200` com `items: []`.
@@ -15,9 +15,10 @@ Este documento especifica a API prevista, **não uma API já implementada**. Pre
 
 | Método e rota | Entrada | Saída / efeitos |
 | --- | --- | --- |
-| `GET /auth/google/start` | Destino de retorno validado pelo backend | Adaptador do serviço Conta: `302` para fluxo Cognito com Google; não autentica senhas por conta própria. |
-| `GET /auth/google/callback` | Retorno do fluxo Cognito e correlação | Serviço Conta integra retorno Cognito, valida identidade e registra acesso/primeiro cadastro. Entrega/renovação de tokens detalhadas na integração; primeiro cadastro solicita UC07. |
-| `GET /me` | Sessão | `200` com `id`, nome e e-mail disponível. |
+| `GET /auth/google/start` | Destino de retorno, aceito só se a origem estiver autorizada no ambiente | Adaptador do serviço Conta: grava um `state` aleatório de uso único e responde `302` para o fluxo Cognito com Google e PKCE. Destino externo é recusado. |
+| `GET /auth/google/callback` | Retorno do fluxo Cognito, `state` e cookie da tentativa | Valida `state`, expiração, uso único e a assinatura dos tokens antes de criar a conta. Primeiro cadastro solicita UC07. Responde `302` ao jogo com um ticket, sem token no endereço. |
+| `POST /auth/session` | Ticket de uso único | `200` com access token, refresh token e perfil; o ticket não pode ser repetido. |
+| `GET /me` | Access token | `200` com `id`, nome e e-mail disponível. |
 | `POST /auth/logout` | Sessão | `204`; registra saída e integra encerramento/revogação suportados pelo Cognito; frontend descarta credenciais. Access tokens seguem política de expiração/revogação definida na implementação. |
 
 ## Roteamento e responsabilidade
