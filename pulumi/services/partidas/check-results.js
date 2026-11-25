@@ -1,5 +1,5 @@
 const assert = require("assert");
-const { buildRaceResult, incompleteConfirmation, normalizeParticipant, submissionsAgree } = require("./results");
+const { buildRaceResult, disconnectOutcome, incompleteConfirmation, normalizeParticipant, submissionsAgree } = require("./results");
 
 const completed = buildRaceResult({
   host: { rawTimeMs: 50_000, credits: 4, dnf: false },
@@ -78,5 +78,14 @@ assert.equal(
 const unproven = incompleteConfirmation(pending, ["host", "guest"], submittedAt + 90_000, {});
 assert.equal(unproven.result.winnerUserId, null);
 assert.equal(unproven.result.reason, "inconclusive");
+
+for (const elapsed of [null, -1_000, 5_000, 15_000]) {
+  const disconnected = disconnectOutcome(elapsed);
+  assert.equal(disconnected.reason, "abandon");
+  assert.equal(disconnected.rawTimeMs, null, "desconexão não inventa tempo de conclusão");
+  assert.equal(disconnected.resultStatus, "confirmed");
+}
+assert.equal(normalizeParticipant({ rawTimeMs: 5_000, credits: 0, dnf: false }), null);
+assert.equal(normalizeParticipant({ rawTimeMs: 0, credits: 0, dnf: false }), null);
 
 console.log("match results: confirmação independente, divergência, DNF e limites OK");

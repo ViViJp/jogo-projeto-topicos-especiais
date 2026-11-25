@@ -108,6 +108,13 @@ export class MatchService {
     });
   }
 
+  static disconnect(matchId: string, operationId: string): Promise<MatchApiResult<RemoteMatch>> {
+    return MatchService.request(`/matches/${encodeURIComponent(matchId)}/finish`, {
+      method: "POST",
+      body: JSON.stringify({ operationId, disconnect: true }),
+    });
+  }
+
   static async connectionTicket(matchId: string): Promise<MatchApiResult<string>> {
     const result = await MatchService.request<{ ticket?: string }>(
       `/matches/${encodeURIComponent(matchId)}/connection-ticket`,

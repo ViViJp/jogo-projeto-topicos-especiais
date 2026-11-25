@@ -123,6 +123,15 @@ function incompleteConfirmation(submissions, participantIds, nowMs, context = {}
   };
 }
 
+function disconnectOutcome(elapsedMs) {
+  return {
+    elapsedMs: Number.isFinite(elapsedMs) ? elapsedMs : null,
+    reason: "abandon",
+    rawTimeMs: null,
+    resultStatus: "confirmed",
+  };
+}
+
 module.exports = {
   CONFIRMATION_WAIT_MS,
   adjustedTime,
@@ -131,4 +140,5 @@ module.exports = {
   normalizeParticipant,
   sameParticipant,
   submissionsAgree,
+  disconnectOutcome,
 };

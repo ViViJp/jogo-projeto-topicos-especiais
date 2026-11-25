@@ -168,6 +168,7 @@ export class MultiplayerScene extends Phaser.Scene {
   private leaveOperationId = "";
   private finishOperationId = "";
   private resultPersisted = false;
+  private disconnectAward = false;
   private resultPersistAttempts = 0;
   private heartbeatInFlight = false;
   private lastBackendHeartbeatAt = 0;
@@ -444,6 +445,7 @@ export class MultiplayerScene extends Phaser.Scene {
     this.leaveOperationId = MatchService.operationId();
     this.finishOperationId = MatchService.operationId();
     this.resultPersisted = false;
+    this.disconnectAward = false;
     this.resultPersistAttempts = 0;
     this.heartbeatInFlight = false;
     this.lastBackendHeartbeatAt = 0;
@@ -1226,7 +1228,11 @@ export class MultiplayerScene extends Phaser.Scene {
     const header = `${"".padEnd(8)}  ${"BRUTO".padEnd(9)}  ${"CR".padEnd(5)}  AJUSTADO`;
     const localLine = this.formatResultLine("VOCÊ", this.localResult, this.localDnf);
     const remoteLine = this.formatResultLine("OPONENTE", this.remoteResult, this.remoteDnf);
-    this.showResultOverlay(this.calculateVerdict(), [header, localLine, remoteLine].join("\n"));
+    const verdict = this.disconnectAward ? "VITÓRIA — ABANDONO" : this.calculateVerdict();
+    const details = this.disconnectAward
+      ? "OPONENTE DESCONECTOU\nA partida foi encerrada sem tempo de conclusão."
+      : [header, localLine, remoteLine].join("\n");
+    this.showResultOverlay(verdict, details);
     void this.persistResult();
   }
 
@@ -1235,6 +1241,20 @@ export class MultiplayerScene extends Phaser.Scene {
     this.resultPersistAttempts += 1;
     const session = CloudSession.current();
     if (!session) return;
+    if (this.disconnectAward) {
+      const awarded = await MatchService.disconnect(this.match.id, this.finishOperationId);
+      if (awarded.status === "ok" && awarded.value) {
+        this.match = awarded.value;
+        this.resultPersisted = true;
+        return;
+      }
+      console.warn("Abandono ainda não foi registrado no backend.", { status: awarded.status, code: awarded.code });
+      if (this.resultPersistAttempts < 5 && this.phase === "finished") {
+        const delay = Math.min(8_000, 500 * (2 ** (this.resultPersistAttempts - 1)));
+        this.time.delayedCall(delay, () => void this.persistResult());
+      }
+      return;
+    }
     const participant = (result: RaceResult | undefined, dnf: boolean): MatchParticipantResult => ({
       rawTimeMs: dnf || !result ? null : Math.floor(result.rawTimeMs),
       credits: result?.credits ?? 0,
@@ -1315,11 +1335,8 @@ export class MultiplayerScene extends Phaser.Scene {
 
   private showDisconnectVictory(): void {
     if (this.phase === "finished") return;
+    this.disconnectAward = true;
     this.remoteDnf = true;
-    this.localResult ??= {
-      rawTimeMs: Math.max(0, Date.now() - this.raceStartAt),
-      credits: this.collectedCredits.size,
-    };
     this.showResults();
   }
 

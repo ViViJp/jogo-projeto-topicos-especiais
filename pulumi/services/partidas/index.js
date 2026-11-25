@@ -2,7 +2,7 @@ const crypto = require("crypto");
 const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
 const { DynamoDBDocumentClient, DeleteCommand, GetCommand, PutCommand, QueryCommand, TransactWriteCommand, UpdateCommand } = require("@aws-sdk/lib-dynamodb");
 const { generateCode, normalizeCode, hashCode } = require("./codes");
-const { buildRaceResult, incompleteConfirmation, normalizeParticipant, submissionsAgree } = require("./results");
+const { buildRaceResult, disconnectOutcome, incompleteConfirmation, normalizeParticipant, submissionsAgree } = require("./results");
 const { consumeDecision, issueDecision } = require("./ticket");
 const { PRESENCE_LEASE_MS, participantIds, presenceFresh, presenceState, allParticipantsStale } = require("./lease");
 
@@ -136,6 +136,7 @@ exports.handler = async (event) => {
         inviteCode: normalizeCode(body.inviteCode),
         result: body.result,
         observedOpponent: body.observedOpponent,
+        ...(body.disconnect === true ? { disconnect: true } : {}),
       }))
       .digest("hex");
     if (body.operationId) {
@@ -735,7 +736,66 @@ async function recoverMatch(userId, match, operationId, mark, requestId) {
   return response(200, payload);
 }
 
+async function awardDisconnect(userId, match, operationId, mark) {
+  if (match.state === "finished") return response(200, publicMatch(match, userId));
+  if (match.state !== "running" || !match.guestUserId) {
+    return fail(409, "MATCH_CLOSED", "A partida não está em andamento.", "");
+  }
+  const outcome = disconnectOutcome(null);
+  const finishedAt = nowIso();
+  const result = {
+    winnerUserId: userId,
+    reason: outcome.reason,
+    finishedAt,
+    rawTimeMs: outcome.rawTimeMs,
+  };
+  const next = {
+    ...match,
+    state: "finished",
+    result,
+    resultStatus: outcome.resultStatus,
+    revision: match.revision + 1,
+  };
+  const payload = publicMatch(next, userId);
+  const participants = participantIds(match);
+  await db.send(new TransactWriteCommand({ TransactItems: [
+    {
+      Update: {
+        TableName: table,
+        Key: { pk: match.pk, sk: "META" },
+        UpdateExpression: "SET #state = :finished, #result = :result, resultStatus = :status, finishedAt = :at, revision = revision + :one",
+        ConditionExpression: "#state = :running AND revision = :revision",
+        ExpressionAttributeNames: { "#state": "state", "#result": "result" },
+        ExpressionAttributeValues: {
+          ":finished": "finished", ":running": "running", ":result": result,
+          ":status": outcome.resultStatus, ":at": finishedAt, ":one": 1,
+          ":revision": match.revision,
+        },
+      },
+    },
+    ...participants.map((participant) => ({
+      Delete: { TableName: table, Key: { pk: `USER#${participant}`, sk: "ACTIVE" } },
+    })),
+    ...participants.map((participant) => ({
+      Put: {
+        TableName: table,
+        Item: {
+          pk: `USER#${participant}`, sk: `RESULT#${finishedAt}#${match.id}`,
+          matchId: match.id, at: finishedAt, result, resultStatus: outcome.resultStatus,
+        },
+        ConditionExpression: "attribute_not_exists(pk)",
+      },
+    })),
+    outboxPut(match.id, operationId, "match.finished", participants, finishedAt, {
+      winnerUserId: userId, reason: outcome.reason,
+    }),
+    operationPut(userId, operationId, mark, 200, payload),
+  ] }));
+  return response(200, payload);
+}
+
 async function finishMatch(userId, match, body, mark, requestId) {
+  if (body.disconnect === true) return awardDisconnect(userId, match, body.operationId, mark);
   if (match.state === "finished") return response(200, publicMatch(match, userId));
   if (match.state !== "running" || !match.guestUserId) {
     return fail(409, "MATCH_CLOSED", "A partida não está em andamento.", requestId);
