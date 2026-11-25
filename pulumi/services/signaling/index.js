@@ -2,6 +2,7 @@ const {
   ApiGatewayManagementApiClient,
   PostToConnectionCommand,
 } = require("@aws-sdk/client-apigatewaymanagementapi");
+const { LambdaClient, InvokeCommand } = require("@aws-sdk/client-lambda");
 const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
 const {
   DynamoDBDocumentClient,
@@ -11,7 +12,10 @@ const {
   TransactWriteCommand,
 } = require("@aws-sdk/lib-dynamodb");
 
+const { authorizeIdentity } = require("./access");
+
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
+const lambda = new LambdaClient({});
 const table = process.env.TABLE_NAME;
 const connectionTtlSeconds = 2 * 60 * 60;
 
@@ -80,6 +84,9 @@ async function register(connectionId, envelope) {
   }
   if (envelope.signal.type !== "presence") {
     throw Object.assign(new Error("presence required"), { name: "RejectedConnection" });
+  }
+  if (!authorizeIdentity(current, envelope)) {
+    throw Object.assign(new Error("identity rejected"), { name: "RejectedConnection" });
   }
   const ttl = Math.floor(Date.now() / 1000) + connectionTtlSeconds;
   for (const slot of [0, 1]) {
@@ -186,17 +193,36 @@ async function removeConnection(connectionId, known) {
   return item;
 }
 
+function reject(statusCode, error) {
+  return { statusCode, body: JSON.stringify({ error }) };
+}
+
+async function consumeTicket(ticket) {
+  if (!ticket || !process.env.PARTIDAS_FUNCTION_NAME) return null;
+  const response = await lambda.send(new InvokeCommand({
+    FunctionName: process.env.PARTIDAS_FUNCTION_NAME,
+    InvocationType: "RequestResponse",
+    Payload: Buffer.from(JSON.stringify({ action: "consumeTicket", ticket })),
+  }));
+  if (response.FunctionError) return null;
+  const body = JSON.parse(Buffer.from(response.Payload || []).toString() || "{}");
+  if (!body.accepted || !body.userId || !body.matchId) return null;
+  return { userId: body.userId, matchId: body.matchId };
+}
+
 exports.handler = async (event) => {
   const route = event.requestContext?.routeKey;
   const connectionId = event.requestContext?.connectionId;
   if (!connectionId) return reject(400, "connection missing");
   try {
     if (route === "$connect") {
+      const identity = await consumeTicket(event.queryStringParameters?.ticket);
+      if (!identity) return reject(401, "ticket required");
       const ttl = Math.floor(Date.now() / 1000) + connectionTtlSeconds;
       await db.send(new TransactWriteCommand({ TransactItems: [{
         Put: {
           TableName: table,
-          Item: { ...connectionKey(connectionId), ttl },
+          Item: { ...connectionKey(connectionId), userId: identity.userId, matchId: identity.matchId, ttl },
           ConditionExpression: "attribute_not_exists(pk)",
         },
       }] }));

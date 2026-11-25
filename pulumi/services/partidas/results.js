@@ -1,6 +1,7 @@
 const MAX_RACE_DURATION_MS = 10 * 60 * 1000;
 const MAX_CREDITS = 20;
 const MIN_RACE_DURATION_MS = 15 * 1000;
+const CONFIRMATION_WAIT_MS = 60 * 1000;
 
 function adjustedTime(entry) {
   return Math.max(0, entry.rawTimeMs - Math.min(entry.credits * 500, 10_000));
@@ -73,4 +74,38 @@ function buildRaceResult(submission, participantIds, finishedAt = new Date().toI
   };
 }
 
-module.exports = { adjustedTime, buildRaceResult, normalizeParticipant, sameParticipant, submissionsAgree };
+function incompleteConfirmation(submissions, participantIds, nowMs, waitMs = CONFIRMATION_WAIT_MS) {
+  if (!Array.isArray(participantIds) || participantIds.length !== 2) return null;
+  const present = participantIds.filter((id) => submissions?.[id]);
+  if (present.length !== 1) return null;
+  const userId = present[0];
+  const submittedAt = Date.parse(submissions[userId].submittedAt || "");
+  if (!Number.isFinite(submittedAt) || nowMs < submittedAt + waitMs) return null;
+  const missingUserId = participantIds.find((id) => id !== userId);
+  const own = normalizeParticipant(submissions[userId].result);
+  if (!own || !missingUserId) return null;
+  return {
+    result: {
+      winnerUserId: userId,
+      reason: "abandon",
+      finishedAt: new Date(nowMs).toISOString(),
+      missingConfirmation: true,
+      unconfirmedUserId: missingUserId,
+      standings: [
+        { userId, ...own, adjustedTimeMs: own.dnf ? null : adjustedTime(own), place: 1 },
+        { userId: missingUserId, rawTimeMs: null, credits: 0, dnf: true, adjustedTimeMs: null, place: 2 },
+      ],
+    },
+    resultStatus: "confirmed",
+  };
+}
+
+module.exports = {
+  CONFIRMATION_WAIT_MS,
+  adjustedTime,
+  buildRaceResult,
+  incompleteConfirmation,
+  normalizeParticipant,
+  sameParticipant,
+  submissionsAgree,
+};

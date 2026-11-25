@@ -323,6 +323,7 @@ ROUTES = {
         "POST /matches/{id}/finish",
         "POST /matches/{id}/recover",
         "POST /matches/{id}/leave",
+        "POST /matches/{id}/connection-ticket",
     ],
     "comunicacoes": [
         "GET /me/notifications",
@@ -406,7 +407,11 @@ def frontend_cdn(certificate_arn=None, aliases=None, api_endpoint=None, signalin
             bucket=bucket.id,
             key="cloud-config.json",
             content=pulumi.Output.all(api_endpoint, signaling_endpoint).apply(
-                lambda endpoints: json.dumps({"api": endpoints[0], "signaling": endpoints[1] or ""})
+                lambda endpoints: json.dumps({
+                    "api": endpoints[0],
+                    "signaling": endpoints[1] or "",
+                    "iceServers": [{"urls": "stun:stun.l.google.com:19302"}],
+                })
             ),
             content_type="application/json; charset=utf-8",
             cache_control="no-cache",
@@ -734,7 +739,7 @@ def open_api():
     )
 
 
-def websocket_signaling(table_resource):
+def websocket_signaling(table_resource, partidas_function):
     path = services_dir / "signaling"
     subprocess.run(["npm", "install", "--omit=dev"], cwd=path, check=True)
     api = aws.apigatewayv2.Api(
@@ -762,7 +767,7 @@ def websocket_signaling(table_resource):
     access = aws.iam.RolePolicy(
         "signaling-access",
         role=role.id,
-        policy=pulumi.Output.all(table_resource.arn, api.execution_arn).apply(
+        policy=pulumi.Output.all(table_resource.arn, api.execution_arn, partidas_function.arn).apply(
             lambda values: json.dumps({
                 "Version": "2012-10-17",
                 "Statement": [
@@ -783,6 +788,11 @@ def websocket_signaling(table_resource):
                         "Action": "execute-api:ManageConnections",
                         "Resource": f"{values[1]}/*/@connections/*",
                     },
+                    {
+                        "Effect": "Allow",
+                        "Action": "lambda:InvokeFunction",
+                        "Resource": values[2],
+                    },
                 ],
             })
         ),
@@ -796,7 +806,10 @@ def websocket_signaling(table_resource):
         code=pulumi.FileArchive(str(path)),
         timeout=10,
         environment=aws.lambda_.FunctionEnvironmentArgs(
-            variables={"TABLE_NAME": table_resource.name}
+            variables={
+                "TABLE_NAME": table_resource.name,
+                "PARTIDAS_FUNCTION_NAME": partidas_function.name,
+            }
         ),
         opts=pulumi.ResourceOptions(depends_on=[logs, access]),
     )
@@ -887,8 +900,27 @@ elif config.get("sesFromEmail"):
     aws.ses.EmailIdentity("ses-from", email=config.get("sesFromEmail"))
 
 api = open_api()
-signaling_endpoint = websocket_signaling(services["signaling"])
 pool, client, authorizer, google_enabled = players(api)
+functions = {}
+login_host = pulumi.Output.concat(
+    cognito_domain_prefix,
+    ".auth.",
+    pulumi.Config("aws").get("region") or "sa-east-1",
+    ".amazoncognito.com",
+)
+ses_from = f"noreply@{domain}" if is_prod and publish_domain else (config.get("sesFromEmail") or "")
+ses_identity = domain if is_prod and publish_domain else (config.get("sesFromEmail") or domain)
+mail_env = {"SES_FROM": ses_from} if ses_from else {}
+functions["comunicacoes"] = publish(
+    "comunicacoes",
+    services["comunicacoes"],
+    mail_env,
+    ses_identity=ses_identity,
+    consume_queues=[communications_queue],
+)
+functions["campanha"] = publish("campanha", services["campanha"])
+functions["partidas"] = publish("partidas", services["partidas"])
+signaling_endpoint = websocket_signaling(services["signaling"], functions["partidas"])
 frontend = frontend_cdn(
     api_endpoint=api.api_endpoint,
     signaling_endpoint=signaling_endpoint,
@@ -903,25 +935,6 @@ if frontend is not None:
 else:
     allowed_origins = f"https://{domain},https://www.{domain}"
     frontend_origin = f"https://{domain}"
-login_host = pulumi.Output.concat(
-    cognito_domain_prefix,
-    ".auth.",
-    pulumi.Config("aws").get("region") or "sa-east-1",
-    ".amazoncognito.com",
-)
-ses_from = f"noreply@{domain}" if is_prod and publish_domain else (config.get("sesFromEmail") or "")
-ses_identity = domain if is_prod and publish_domain else (config.get("sesFromEmail") or domain)
-mail_env = {"SES_FROM": ses_from} if ses_from else {}
-functions = {}
-functions["comunicacoes"] = publish(
-    "comunicacoes",
-    services["comunicacoes"],
-    mail_env,
-    ses_identity=ses_identity,
-    consume_queues=[communications_queue],
-)
-functions["campanha"] = publish("campanha", services["campanha"])
-functions["partidas"] = publish("partidas", services["partidas"])
 functions["auditoria"] = publish("auditoria", services["auditoria"], consume_queues=[audit_queue])
 functions["conta"] = publish(
     "conta",

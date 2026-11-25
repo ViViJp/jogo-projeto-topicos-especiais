@@ -1,5 +1,5 @@
 const assert = require("assert");
-const { buildRaceResult, normalizeParticipant, submissionsAgree } = require("./results");
+const { buildRaceResult, incompleteConfirmation, normalizeParticipant, submissionsAgree } = require("./results");
 
 const completed = buildRaceResult({
   host: { rawTimeMs: 50_000, credits: 4, dnf: false },
@@ -41,5 +41,20 @@ assert.equal(submissionsAgree({
 }, ["host", "guest"]), false, "resultados divergentes não podem confirmar vencedor");
 assert.equal(submissionsAgree({ host: submissions.host }, ["host", "guest"]), false,
   "um jogador não pode definir unilateralmente a classificação");
+
+const submittedAt = Date.parse("2026-11-25T12:00:00.000Z");
+const pending = {
+  host: {
+    result: { rawTimeMs: 50_000, credits: 4, dnf: false },
+    observedOpponent: { rawTimeMs: null, credits: 0, dnf: true },
+    submittedAt: new Date(submittedAt).toISOString(),
+  },
+};
+assert.equal(incompleteConfirmation(pending, ["host", "guest"], submittedAt + 30_000), null);
+const abandoned = incompleteConfirmation(pending, ["host", "guest"], submittedAt + 60_000);
+assert.equal(abandoned.result.winnerUserId, "host");
+assert.equal(abandoned.result.reason, "abandon");
+assert.equal(abandoned.result.unconfirmedUserId, "guest");
+assert.equal(abandoned.resultStatus, "confirmed");
 
 console.log("match results: confirmação independente, divergência, DNF e limites OK");

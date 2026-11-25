@@ -577,6 +577,8 @@ export class MultiplayerScene extends Phaser.Scene {
     }
 
     this.match = result.value;
+    const profileId = CloudSession.current()?.profile.id;
+    if (profileId) this.localPeerId = profileId;
     if (this.match.state === "finished" || this.match.state === "cancelled") {
       this.statusText?.setText("Esta partida já foi encerrada.").setColor("#FFD37C");
       this.peersText?.setText("Consulte o histórico no menu.");
@@ -656,7 +658,12 @@ export class MultiplayerScene extends Phaser.Scene {
     this.heartbeatInFlight = true;
     try {
       const result = await MatchService.heartbeat(this.match.id, connected);
-      if (result.status === "ok" && result.value) this.match = result.value;
+      if (result.status === "ok" && result.value) {
+        this.match = result.value;
+        if (this.phase === "finished" && this.match.state === "finished" && this.match.result?.reason === "abandon") {
+          this.flashRaceMessage("OPONENTE NÃO CONFIRMOU — VITÓRIA POR ABANDONO");
+        }
+      }
     } finally {
       this.heartbeatInFlight = false;
     }
@@ -670,7 +677,7 @@ export class MultiplayerScene extends Phaser.Scene {
     }
 
     try {
-      const signaling = await resolveSignaling();
+      const signaling = await resolveSignaling(this.match?.id);
       const rtcConfiguration = signaling.serverUrl
         ? await loadIceConfiguration(signaling.serverUrl)
         : undefined;
@@ -1246,6 +1253,7 @@ export class MultiplayerScene extends Phaser.Scene {
       this.resultPersisted = true;
       if (this.match.resultStatus === "pending") {
         this.flashRaceMessage("RESULTADO ENVIADO — AGUARDANDO CONFIRMAÇÃO DO OPONENTE");
+        this.time.delayedCall(65_000, () => void this.readFinalResult());
       } else if (this.match.resultStatus === "disputed") {
         this.flashRaceMessage("RESULTADOS DIVERGENTES — CLASSIFICAÇÃO EM ANÁLISE");
       }
@@ -1263,6 +1271,16 @@ export class MultiplayerScene extends Phaser.Scene {
     if (this.resultPersistAttempts < 5 && this.phase === "finished") {
       const delay = Math.min(8_000, 500 * (2 ** (this.resultPersistAttempts - 1)));
       this.time.delayedCall(delay, () => void this.persistResult());
+    }
+  }
+
+  private async readFinalResult(): Promise<void> {
+    if (!this.match || this.match.state === "finished") return;
+    const latest = await MatchService.read(this.match.id);
+    if (latest.status !== "ok" || !latest.value) return;
+    this.match = latest.value;
+    if (this.match.state === "finished" && this.match.result?.reason === "abandon") {
+      this.flashRaceMessage("OPONENTE NÃO CONFIRMOU — VITÓRIA POR ABANDONO");
     }
   }
 
@@ -1574,7 +1592,7 @@ interface ResolvedSignaling {
   serverUrl?: string;
 }
 
-async function resolveSignaling(): Promise<ResolvedSignaling> {
+async function resolveSignaling(matchId?: string): Promise<ResolvedSignaling> {
   const configuredServer = new URL(window.location.href).searchParams.get("signal") || await CloudSession.signaling();
   if (configuredServer === "local") {
     if (!("BroadcastChannel" in window)) throw new Error("BroadcastChannel indisponivel.");
@@ -1592,10 +1610,23 @@ async function resolveSignaling(): Promise<ResolvedSignaling> {
   if (parsedUrl.protocol !== "wss:" && !(localPage && localSignal)) {
     throw new Error("Ambientes publicados exigem sinalização WSS.");
   }
-  return { transport: new WebSocketSignaling(parsedUrl.toString()), serverUrl: parsedUrl.toString() };
+  const ticketProvider = matchId && CloudSession.current()
+    ? async () => {
+      const issued = await MatchService.connectionTicket(matchId);
+      if (issued.status !== "ok" || !issued.value) throw new Error("Ticket de conexão recusado.");
+      return issued.value;
+    }
+    : undefined;
+  return {
+    transport: new WebSocketSignaling(parsedUrl.toString(), ticketProvider),
+    serverUrl: parsedUrl.toString(),
+  };
 }
 
-async function loadIceConfiguration(serverUrl: string): Promise<RTCConfiguration | undefined> {
+async function loadIceConfiguration(serverUrl?: string): Promise<RTCConfiguration | undefined> {
+  const published = await CloudSession.iceServers();
+  if (published.length) return { iceServers: published };
+  if (!serverUrl) return undefined;
   const configurationUrl = new URL(serverUrl);
   configurationUrl.protocol = configurationUrl.protocol === "wss:" ? "https:" : "http:";
   configurationUrl.pathname = "/ice-config";

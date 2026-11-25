@@ -1,8 +1,9 @@
 const crypto = require("crypto");
 const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
-const { DynamoDBDocumentClient, GetCommand, QueryCommand, TransactWriteCommand, UpdateCommand } = require("@aws-sdk/lib-dynamodb");
+const { DynamoDBDocumentClient, DeleteCommand, GetCommand, PutCommand, QueryCommand, TransactWriteCommand, UpdateCommand } = require("@aws-sdk/lib-dynamodb");
 const { generateCode, normalizeCode, hashCode } = require("./codes");
-const { buildRaceResult, normalizeParticipant, submissionsAgree } = require("./results");
+const { buildRaceResult, incompleteConfirmation, normalizeParticipant, submissionsAgree } = require("./results");
+const { consumeDecision, issueDecision } = require("./ticket");
 const { PRESENCE_LEASE_MS, participantIds, presenceFresh, allParticipantsStale } = require("./lease");
 
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
@@ -97,6 +98,15 @@ function outboxPut(matchId, operationId, type, userIds, at, detail = {}) {
 }
 
 exports.handler = async (event) => {
+  if (event?.action === "consumeTicket") {
+    try {
+      return await consumeStoredTicket(event.ticket);
+    } catch (err) {
+      if (err.name === "ConditionalCheckFailedException") return { accepted: false, reason: "used" };
+      console.error(err);
+      return { accepted: false };
+    }
+  }
   const requestId = event.requestContext?.requestId || "";
   const userId = event.requestContext?.authorizer?.jwt?.claims?.sub || "";
   if (!userId) return fail(401, "UNAUTHENTICATED", "Sessão ausente.", requestId);
@@ -105,6 +115,12 @@ exports.handler = async (event) => {
   const path = event.rawPath || "";
 
   try {
+    const ticketRoute = path.match(/^\/matches\/([^/]+)\/connection-ticket$/);
+    if (method === "POST" && ticketRoute) {
+      const ticketMatch = await getKey(`MATCH#${ticketRoute[1]}`, "META");
+      if (!ticketMatch) return fail(404, "NOT_FOUND", "Partida ausente.", requestId);
+      return issueConnectionTicket(userId, ticketMatch, requestId);
+    }
     if (method === "GET" && path === "/me/matches") return listResults(event, userId);
 
     const body = method === "GET" ? {} : readBody(event);
@@ -145,7 +161,7 @@ exports.handler = async (event) => {
     if (!match) return fail(404, "NOT_FOUND", "Partida ausente.", requestId);
     const participant = match.hostUserId === userId || match.guestUserId === userId;
     if (!participant) return fail(403, "FORBIDDEN", "Partida de outro jogador.", requestId);
-    if (method === "GET" && read) return response(200, publicMatch(match, userId));
+    if (method === "GET" && read) return response(200, publicMatch(await settleIfExpired(match), userId));
     if (method === "POST" && heartbeat) return heartbeatMatch(userId, match, body, requestId);
     if (method === "POST" && ready) return markReady(userId, match, body.operationId, mark, requestId);
     if (method === "POST" && leave) return leaveMatch(userId, match, body.operationId, mark, requestId);
@@ -162,7 +178,115 @@ exports.handler = async (event) => {
   }
 };
 
+async function issueConnectionTicket(userId, match, requestId) {
+  const decision = issueDecision(match, userId, Date.now());
+  if (decision.error === "not-participant") return fail(403, "FORBIDDEN", "Partida de outro jogador.", requestId);
+  if (decision.error) return fail(409, "MATCH_CLOSED", "A partida não aceita mais conexão.", requestId);
+  const ticket = crypto.randomBytes(32).toString("base64url");
+  await db.send(new PutCommand({
+    TableName: table,
+    Item: {
+      pk: `TICKET#${ticket}`,
+      sk: "TICKET",
+      userId,
+      matchId: match.id,
+      expiresAt: decision.expiresAt,
+      ttl: Math.floor(Date.parse(decision.expiresAt) / 1000),
+    },
+    ConditionExpression: "attribute_not_exists(pk)",
+  }));
+  return response(201, { ticket, expiresAt: decision.expiresAt, userId, matchId: match.id });
+}
+
+async function consumeStoredTicket(ticket) {
+  if (!ticket || typeof ticket !== "string" || ticket.length > 128) return { accepted: false, reason: "unauthenticated" };
+  const found = await getKey(`TICKET#${ticket}`, "TICKET");
+  const decision = consumeDecision(found, Date.now());
+  if (!decision.userId) return { accepted: false, reason: decision.error };
+  await db.send(new DeleteCommand({
+    TableName: table,
+    Key: { pk: `TICKET#${ticket}`, sk: "TICKET" },
+    ConditionExpression: "expiresAt > :now",
+    ExpressionAttributeValues: { ":now": new Date().toISOString() },
+  }));
+  return { accepted: true, userId: decision.userId, matchId: decision.matchId };
+}
+
+async function closeMissingConfirmation(match, operationId, waitMs) {
+  const decision = incompleteConfirmation(match.submissions, participantIds(match), Date.now(), waitMs);
+  if (!decision || match.state !== "running") return match;
+  const finishedAt = decision.result.finishedAt;
+  const participants = participantIds(match);
+  try {
+    await db.send(new TransactWriteCommand({ TransactItems: [
+      {
+        Update: {
+          TableName: table,
+          Key: { pk: match.pk, sk: "META" },
+          UpdateExpression: "SET #state = :finished, #result = :result, resultStatus = :confirmed, finishedAt = :at, revision = revision + :one",
+          ConditionExpression: "#state = :running AND resultStatus = :pending AND revision = :revision",
+          ExpressionAttributeNames: { "#state": "state", "#result": "result" },
+          ExpressionAttributeValues: {
+            ":finished": "finished", ":running": "running", ":pending": "pending",
+            ":result": decision.result, ":confirmed": "confirmed", ":at": finishedAt,
+            ":one": 1, ":revision": match.revision,
+          },
+        },
+      },
+      ...participants.map((participant) => ({
+        Delete: { TableName: table, Key: { pk: `USER#${participant}`, sk: "ACTIVE" } },
+      })),
+      ...participants.map((participant) => ({
+        Put: {
+          TableName: table,
+          Item: {
+            pk: `USER#${participant}`, sk: `RESULT#${finishedAt}#${match.id}`,
+            matchId: match.id, at: finishedAt, result: decision.result, resultStatus: "confirmed",
+          },
+          ConditionExpression: "attribute_not_exists(pk)",
+        },
+      })),
+      outboxPut(match.id, operationId, "match.finished", participants, finishedAt, {
+        winnerUserId: decision.result.winnerUserId,
+        reason: "abandon",
+        missingConfirmation: true,
+        unconfirmedUserId: decision.result.unconfirmedUserId,
+      }),
+    ] }));
+  } catch (err) {
+    if (err.name !== "TransactionCanceledException" && err.name !== "ConditionalCheckFailedException") throw err;
+    return (await getKey(match.pk, "META")) || match;
+  }
+  return {
+    ...match,
+    state: "finished",
+    result: decision.result,
+    resultStatus: "confirmed",
+    finishedAt,
+    revision: match.revision + 1,
+  };
+}
+
+function missingPlayerLeft(match) {
+  const ids = participantIds(match);
+  const present = ids.filter((id) => match.submissions?.[id]);
+  if (present.length !== 1) return false;
+  const missing = ids.find((id) => id !== present[0]);
+  return Boolean(missing) && !presenceFresh(match, missing);
+}
+
+function settleIfExpired(match) {
+  return closeMissingConfirmation(match, `missing-${match.id}`, missingPlayerLeft(match) ? 0 : undefined);
+}
+
 async function listResults(event, userId) {
+  const active = await getKey(`USER#${userId}`, "ACTIVE");
+  if (active?.matchId) {
+    const current = await getKey(`MATCH#${active.matchId}`, "META");
+    if (current?.state === "running" && current.resultStatus === "pending") {
+      await closeMissingConfirmation(current, `missing-${current.id}`, missingPlayerLeft(current) ? 0 : undefined);
+    }
+  }
   const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
   let startKey;
   if (event.queryStringParameters?.cursor) {
@@ -196,30 +320,39 @@ async function createMatch(userId, operationId, mark) {
     if (old && (old.state === "lobby" || old.state === "running")) {
       const lobbyExpired = old.state === "lobby" && old.lobbyExpiresAt <= nowIso();
       if (!lobbyExpired && !allParticipantsStale(old)) {
-        return response(200, publicMatch(old, userId));
-      }
-      const cleanupAt = nowIso();
-      await db.send(new TransactWriteCommand({ TransactItems: [
-        {
-          Update: {
-            TableName: table,
-            Key: { pk: old.pk, sk: "META" },
-            UpdateExpression: "SET #state = :cancelled, resultStatus = :expired, revision = revision + :one",
-            ConditionExpression: "#state = :current AND revision = :revision",
-            ExpressionAttributeNames: { "#state": "state" },
-            ExpressionAttributeValues: {
-              ":cancelled": "cancelled", ":expired": "expired", ":one": 1,
-              ":current": old.state, ":revision": old.revision,
+        const settled = await settleIfExpired(old);
+        if (settled.state === "lobby" || settled.state === "running") {
+          return response(200, publicMatch(settled, userId));
+        }
+      } else {
+        const closed = old.state === "running"
+          ? await closeMissingConfirmation(old, `${operationId}-missing`, 0)
+          : old;
+        if (closed.state === "lobby" || closed.state === "running") {
+          const cleanupAt = nowIso();
+          await db.send(new TransactWriteCommand({ TransactItems: [
+            {
+              Update: {
+                TableName: table,
+                Key: { pk: old.pk, sk: "META" },
+                UpdateExpression: "SET #state = :cancelled, resultStatus = :expired, revision = revision + :one",
+                ConditionExpression: "#state = :current AND revision = :revision",
+                ExpressionAttributeNames: { "#state": "state" },
+                ExpressionAttributeValues: {
+                  ":cancelled": "cancelled", ":expired": "expired", ":one": 1,
+                  ":current": old.state, ":revision": old.revision,
+                },
+              },
             },
-          },
-        },
-        ...participantIds(old).map((participant) => ({
-          Delete: { TableName: table, Key: { pk: `USER#${participant}`, sk: "ACTIVE" } },
-        })),
-        outboxPut(old.id, `${operationId}-expired`, "match.cancelled", participantIds(old), cleanupAt, {
-          reason: "presence-timeout",
-        }),
-      ] }));
+            ...participantIds(old).map((participant) => ({
+              Delete: { TableName: table, Key: { pk: `USER#${participant}`, sk: "ACTIVE" } },
+            })),
+            outboxPut(old.id, `${operationId}-expired`, "match.cancelled", participantIds(old), cleanupAt, {
+              reason: "presence-timeout",
+            }),
+          ] }));
+        }
+      }
     } else {
       await db.send(new TransactWriteCommand({ TransactItems: [{
         Delete: { TableName: table, Key: { pk: `USER#${userId}`, sk: "ACTIVE" } },
@@ -336,6 +469,11 @@ async function joinMatch(userId, body, mark, requestId) {
 }
 
 async function heartbeatMatch(userId, match, body, requestId) {
+  const settled = await settleIfExpired(match);
+  if (settled.state !== "lobby" && settled.state !== "running") {
+    return response(200, publicMatch(settled, userId));
+  }
+  match = settled;
   if (match.state !== "lobby" && match.state !== "running") {
     return fail(409, "MATCH_CLOSED", "A partida já foi encerrada.", requestId);
   }

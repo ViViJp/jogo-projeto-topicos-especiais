@@ -108,6 +108,17 @@ export class MatchService {
     });
   }
 
+  static async connectionTicket(matchId: string): Promise<MatchApiResult<string>> {
+    const result = await MatchService.request<{ ticket?: string }>(
+      `/matches/${encodeURIComponent(matchId)}/connection-ticket`,
+      { method: "POST" },
+    );
+    if (result.status !== "ok" || !result.value?.ticket) {
+      return { status: result.status === "ok" ? "unavailable" : result.status, code: result.code };
+    }
+    return { status: "ok", value: result.value.ticket };
+  }
+
   static history(): Promise<MatchApiResult<{ items: MatchHistoryItem[]; nextCursor: string | null }>> {
     return MatchService.request("/me/matches");
   }

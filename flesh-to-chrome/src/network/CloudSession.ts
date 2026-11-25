@@ -69,7 +69,8 @@ interface SessionResponse {
 let apiBase: string | null = null;
 let publishedApi = "";
 let publishedSignaling = "";
-let cloudConfigRequest: Promise<{ api: string; signaling: string }> | null = null;
+let publishedIceServers: Array<{ urls: string }> = [];
+let cloudConfigRequest: Promise<{ api: string; signaling: string; iceServers: Array<{ urls: string }> }> | null = null;
 const campaignRevisions = new Map<string, number>();
 const campaignQueues = new Map<string, PendingCampaignOperation[]>();
 const syncingCampaigns = new Set<string>();
@@ -143,6 +144,11 @@ export class CloudSession {
     } catch {
       return null;
     }
+  }
+
+  static async iceServers(): Promise<Array<{ urls: string }>> {
+    await readPublishedConfig();
+    return publishedIceServers;
   }
 
   static async completeLoginIfNeeded(): Promise<PlayerSession | null> {
@@ -725,17 +731,32 @@ export class CloudSession {
   }
 }
 
-async function readPublishedConfig(): Promise<{ api: string; signaling: string }> {
+async function readPublishedConfig(): Promise<{ api: string; signaling: string; iceServers: Array<{ urls: string }> }> {
   if (cloudConfigRequest) return cloudConfigRequest;
   cloudConfigRequest = (async () => {
     try {
       const response = await fetch("/cloud-config.json", { cache: "no-store" });
-      if (!response.ok) return { api: "", signaling: "" };
-      const body = (await response.json()) as { api?: string; signaling?: string };
-      return { api: body.api || "", signaling: body.signaling || "" };
+      if (!response.ok) return { api: "", signaling: "", iceServers: [] };
+      const body = (await response.json()) as { api?: string; signaling?: string; iceServers?: unknown };
+      const iceServers = publicStunServers(body.iceServers);
+      publishedIceServers = iceServers;
+      return { api: body.api || "", signaling: body.signaling || "", iceServers };
     } catch {
-      return { api: "", signaling: "" };
+      return { api: "", signaling: "", iceServers: [] };
     }
   })();
   return cloudConfigRequest;
+}
+
+function publicStunServers(value: unknown): Array<{ urls: string }> {
+  if (!Array.isArray(value)) return [];
+  const servers: Array<{ urls: string }> = [];
+  for (const item of value) {
+    if (!item || typeof item !== "object") continue;
+    const urls = (item as { urls?: unknown }).urls;
+    const list = Array.isArray(urls) ? urls : [urls];
+    const stun = list.find((url): url is string => typeof url === "string" && url.startsWith("stun:"));
+    if (stun) servers.push({ urls: stun });
+  }
+  return servers;
 }

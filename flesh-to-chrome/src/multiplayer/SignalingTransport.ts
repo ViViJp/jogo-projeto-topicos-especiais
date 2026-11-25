@@ -67,7 +67,10 @@ export class WebSocketSignaling implements SignalingTransport {
   private queue: SignalEnvelope[] = [];
   private presence?: SignalEnvelope;
 
-  constructor(private readonly serverUrl: string) {}
+  constructor(
+    private readonly serverUrl: string,
+    private readonly ticketProvider?: () => Promise<string>,
+  ) {}
 
   open(
     onMessage: (message: SignalEnvelope) => void,
@@ -109,10 +112,28 @@ export class WebSocketSignaling implements SignalingTransport {
   }
 
   private connect(): void {
+    void this.openSocket();
+  }
+
+  private async openSocket(): Promise<void> {
     this.onStateChange?.("connecting");
+    let url = this.serverUrl;
+    try {
+      if (this.ticketProvider) {
+        const ticket = await this.ticketProvider();
+        if (this.manuallyClosed) return;
+        const parsed = new URL(this.serverUrl);
+        parsed.searchParams.set("ticket", ticket);
+        url = parsed.toString();
+      }
+    } catch {
+      this.onStateChange?.("error");
+      this.scheduleReconnect();
+      return;
+    }
     let socket: WebSocket;
     try {
-      socket = new WebSocket(this.serverUrl);
+      socket = new WebSocket(url);
     } catch {
       this.onStateChange?.("error");
       this.scheduleReconnect();
