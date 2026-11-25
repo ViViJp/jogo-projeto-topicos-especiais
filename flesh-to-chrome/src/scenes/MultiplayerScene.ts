@@ -89,6 +89,8 @@ const QUIT_CONFIRM_WINDOW_MS = 1_500;
 const REMATCH_GUARD_MS = 800;
 const OPPONENT_MAX_LEAD_MS = 150;
 const OPPONENT_MAX_LEAD_SPEED = 1_000;
+const MATCH_HEARTBEAT_INTERVAL_MS = 10_000;
+const MATCH_PRESENCE_LEASE_MS = 45_000;
 const ALL_ABILITIES = { legs: true, arms: true, eyes: true, thrusters: true } as const;
 
 type RacePhase = "lobby" | "countdown" | "racing" | "finished";
@@ -167,6 +169,9 @@ export class MultiplayerScene extends Phaser.Scene {
   private finishOperationId = "";
   private resultPersisted = false;
   private resultPersistAttempts = 0;
+  private heartbeatInFlight = false;
+  private lastBackendHeartbeatAt = 0;
+  private recoverOperationId = "";
   private remoteTarget?: {
     x: number;
     y: number;
@@ -359,6 +364,11 @@ export class MultiplayerScene extends Phaser.Scene {
       void this.refreshBackendReady();
     }
 
+    if (this.match && time - this.lastBackendHeartbeatAt >= MATCH_HEARTBEAT_INTERVAL_MS) {
+      this.lastBackendHeartbeatAt = time;
+      void this.sendBackendHeartbeat(Boolean(this.opponentPeerId));
+    }
+
     if (this.phase === "lobby" && this.mesh && time - this.lastHeartbeatAt >= 1000) {
       this.sendReady();
       this.lastHeartbeatAt = time;
@@ -435,6 +445,9 @@ export class MultiplayerScene extends Phaser.Scene {
     this.finishOperationId = MatchService.operationId();
     this.resultPersisted = false;
     this.resultPersistAttempts = 0;
+    this.heartbeatInFlight = false;
+    this.lastBackendHeartbeatAt = 0;
+    this.recoverOperationId = MatchService.operationId();
   }
 
   private createLobby(): void {
@@ -573,16 +586,35 @@ export class MultiplayerScene extends Phaser.Scene {
     this.inviteCode = this.match.inviteCode || this.inviteCode;
     setMatchInUrl(this.inviteCode, this.match.id);
     this.roomText?.setText(`SALA  ${this.inviteCode || this.match.id.slice(0, 12)}\nVOCÊ  ${this.localPeerId}`);
-    await this.confirmBackendReady();
+    await this.sendBackendHeartbeat(false);
     if (!this.match || this.returning) return;
     await this.startMesh();
+    this.time.delayedCall(MATCH_PRESENCE_LEASE_MS + 1_000, () => {
+      if (
+        this.phase === "lobby" &&
+        !this.opponentPeerId &&
+        this.match &&
+        (this.match.state === "running" || Boolean(this.match.guestUserId))
+      ) {
+        void this.recoverAbandonedMatch();
+      }
+    });
   }
 
   private async confirmBackendReady(): Promise<void> {
-    if (!this.match || this.match.state !== "lobby") {
+    if (!this.match || !this.opponentPeerId) return;
+    if (this.match.state !== "lobby") {
       this.backendReady = this.match?.state === "running";
+      if (this.backendReady) this.sendReady();
       return;
     }
+    const heartbeat = await MatchService.heartbeat(this.match.id, true);
+    if (heartbeat.status === "conflict") {
+      await this.refreshBackendReady();
+      return;
+    }
+    if (heartbeat.status !== "ok" || !heartbeat.value) return;
+    this.match = heartbeat.value;
     const result = await MatchService.ready(this.match.id, this.readyOperationId);
     if (result.status === "conflict") {
       await this.refreshBackendReady();
@@ -610,12 +642,23 @@ export class MultiplayerScene extends Phaser.Scene {
         this.backendReady = true;
         this.statusText?.setText("Os dois jogadores estão prontos. Sincronizando largada...").setColor("#7CFCEA");
         this.sendReady();
-      } else if (this.match.state === "lobby") {
+      } else if (this.match.state === "lobby" && this.opponentPeerId) {
         const userId = CloudSession.current()?.profile.id;
         if (userId && !this.match.ready[userId]) await this.confirmBackendReady();
       }
     } finally {
       this.matchPollInFlight = false;
+    }
+  }
+
+  private async sendBackendHeartbeat(connected: boolean): Promise<void> {
+    if (!this.match || this.heartbeatInFlight || this.match.state === "finished" || this.match.state === "cancelled") return;
+    this.heartbeatInFlight = true;
+    try {
+      const result = await MatchService.heartbeat(this.match.id, connected);
+      if (result.status === "ok" && result.value) this.match = result.value;
+    } finally {
+      this.heartbeatInFlight = false;
     }
   }
 
@@ -627,7 +670,7 @@ export class MultiplayerScene extends Phaser.Scene {
     }
 
     try {
-      const signaling = resolveSignaling();
+      const signaling = await resolveSignaling();
       const rtcConfiguration = signaling.serverUrl
         ? await loadIceConfiguration(signaling.serverUrl)
         : undefined;
@@ -663,6 +706,7 @@ export class MultiplayerScene extends Phaser.Scene {
         console.error("Falha no mesh WebRTC", (event as CustomEvent<unknown>).detail);
         if (this.phase === "lobby") {
           this.statusText?.setText("Falha ao conectar com o oponente.").setColor("#ff8a8a");
+          void this.sendBackendHeartbeat(false);
         }
       });
       this.mesh.addEventListener("protocolerror", (event) => {
@@ -689,7 +733,7 @@ export class MultiplayerScene extends Phaser.Scene {
     this.statusText?.setText(
       this.backendReady ? "Sincronizando largada..." : "Aguardando prontidão confirmada pelo servidor...",
     ).setColor(this.backendReady ? "#7CFCEA" : "#FFD37C");
-    this.sendReady();
+    void this.confirmBackendReady();
   }
 
   private handlePeerReconnecting(peerId: string): void {
@@ -705,6 +749,7 @@ export class MultiplayerScene extends Phaser.Scene {
     if (peerId !== this.opponentPeerId) return;
     if (this.phase === "countdown" || this.phase === "racing") {
       this.showDisconnectVictory();
+      this.time.delayedCall(MATCH_PRESENCE_LEASE_MS + 1_000, () => void this.recoverAbandonedMatch());
       return;
     }
     if (this.phase === "lobby") {
@@ -712,6 +757,9 @@ export class MultiplayerScene extends Phaser.Scene {
       this.preparedRaceId = undefined;
       this.opponentPeerId = undefined;
       this.remoteReady = false;
+      this.backendReady = false;
+      this.readyOperationId = MatchService.operationId();
+      void this.sendBackendHeartbeat(false);
       this.peersText?.setText("Aguardando oponente");
       this.statusText?.setText("Oponente desconectou. Convide novamente.").setColor("#FFD37C");
     }
@@ -1182,22 +1230,25 @@ export class MultiplayerScene extends Phaser.Scene {
     this.resultPersistAttempts += 1;
     const session = CloudSession.current();
     if (!session) return;
-    const localUserId = session.profile.id;
-    const remoteUserId = this.match.hostUserId === localUserId
-      ? this.match.guestUserId
-      : this.match.hostUserId;
     const participant = (result: RaceResult | undefined, dnf: boolean): MatchParticipantResult => ({
       rawTimeMs: dnf || !result ? null : Math.floor(result.rawTimeMs),
       credits: result?.credits ?? 0,
       dnf: dnf || !result,
     });
-    const result = await MatchService.finish(this.match.id, {
-      [localUserId]: participant(this.localResult, this.localDnf),
-      [remoteUserId]: participant(this.remoteResult, this.remoteDnf),
-    }, this.finishOperationId);
+    const result = await MatchService.finish(
+      this.match.id,
+      participant(this.localResult, this.localDnf),
+      participant(this.remoteResult, this.remoteDnf),
+      this.finishOperationId,
+    );
     if (result.status === "ok" && result.value) {
       this.match = result.value;
       this.resultPersisted = true;
+      if (this.match.resultStatus === "pending") {
+        this.flashRaceMessage("RESULTADO ENVIADO — AGUARDANDO CONFIRMAÇÃO DO OPONENTE");
+      } else if (this.match.resultStatus === "disputed") {
+        this.flashRaceMessage("RESULTADOS DIVERGENTES — CLASSIFICAÇÃO EM ANÁLISE");
+      }
       return;
     }
     if (result.status === "conflict") {
@@ -1247,6 +1298,17 @@ export class MultiplayerScene extends Phaser.Scene {
       credits: this.collectedCredits.size,
     };
     this.showResults();
+  }
+
+  private async recoverAbandonedMatch(): Promise<void> {
+    if (!this.match || this.match.state === "finished" || this.match.state === "cancelled") return;
+    const result = await MatchService.recover(this.match.id, this.recoverOperationId);
+    if (result.status === "ok" && result.value) {
+      this.match = result.value;
+      this.resultPersisted = this.match.state === "finished";
+    } else if (result.status === "conflict" && result.code === "MATCH_CONFLICT" && !this.returning) {
+      this.time.delayedCall(1_000, () => void this.recoverAbandonedMatch());
+    }
   }
 
   private showResultOverlay(verdict: string, details: string): void {
@@ -1512,24 +1574,25 @@ interface ResolvedSignaling {
   serverUrl?: string;
 }
 
-function resolveSignaling(): ResolvedSignaling {
-  const configuredServer = new URL(window.location.href).searchParams.get("signal");
+async function resolveSignaling(): Promise<ResolvedSignaling> {
+  const configuredServer = new URL(window.location.href).searchParams.get("signal") || await CloudSession.signaling();
   if (configuredServer === "local") {
     if (!("BroadcastChannel" in window)) throw new Error("BroadcastChannel indisponivel.");
     return { transport: new BroadcastChannelSignaling(SIGNALING_CHANNEL) };
   }
 
-  const serverUrl = configuredServer || defaultSignalingUrl();
+  if (!configuredServer) throw new Error("Sinalização não configurada para este ambiente.");
+  const serverUrl = configuredServer;
   const parsedUrl = new URL(serverUrl);
   if (parsedUrl.protocol !== "ws:" && parsedUrl.protocol !== "wss:") {
     throw new Error("A URL de sinalizacao precisa usar ws:// ou wss://.");
   }
+  const localPage = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+  const localSignal = parsedUrl.hostname === "localhost" || parsedUrl.hostname === "127.0.0.1";
+  if (parsedUrl.protocol !== "wss:" && !(localPage && localSignal)) {
+    throw new Error("Ambientes publicados exigem sinalização WSS.");
+  }
   return { transport: new WebSocketSignaling(parsedUrl.toString()), serverUrl: parsedUrl.toString() };
-}
-
-function defaultSignalingUrl(): string {
-  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-  return `${protocol}//${window.location.hostname}/ws`;
 }
 
 async function loadIceConfiguration(serverUrl: string): Promise<RTCConfiguration | undefined> {

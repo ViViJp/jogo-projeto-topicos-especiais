@@ -1,8 +1,9 @@
 const crypto = require("crypto");
 const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
-const { DynamoDBDocumentClient, GetCommand, QueryCommand, TransactWriteCommand } = require("@aws-sdk/lib-dynamodb");
+const { DynamoDBDocumentClient, GetCommand, QueryCommand, TransactWriteCommand, UpdateCommand } = require("@aws-sdk/lib-dynamodb");
 const { generateCode, normalizeCode, hashCode } = require("./codes");
-const { buildRaceResult } = require("./results");
+const { buildRaceResult, normalizeParticipant, submissionsAgree } = require("./results");
+const { PRESENCE_LEASE_MS, participantIds, presenceFresh, allParticipantsStale } = require("./lease");
 
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const table = process.env.TABLE_NAME;
@@ -41,6 +42,7 @@ function publicMatch(item, userId) {
     guestUserId: item.guestUserId || null,
     ready: item.ready || {},
     result: item.result || null,
+    resultStatus: item.resultStatus || "none",
     revision: item.revision,
   };
   if (userId === item.hostUserId && item.state === "lobby") view.inviteCode = item.inviteCode;
@@ -106,14 +108,18 @@ exports.handler = async (event) => {
     if (method === "GET" && path === "/me/matches") return listResults(event, userId);
 
     const body = method === "GET" ? {} : readBody(event);
-    if (method !== "GET" && !body.operationId) return fail(422, "INVALID", "operationId ausente.", requestId);
+    const heartbeat = path.match(/^\/matches\/([^/]+)\/heartbeat$/);
+    if (method !== "GET" && !heartbeat && !body.operationId) {
+      return fail(422, "INVALID", "operationId ausente.", requestId);
+    }
     const mark = crypto
       .createHash("sha256")
       .update(JSON.stringify({
         operationId: body.operationId,
         path,
         inviteCode: normalizeCode(body.inviteCode),
-        participants: body.participants,
+        result: body.result,
+        observedOpponent: body.observedOpponent,
       }))
       .digest("hex");
     if (body.operationId) {
@@ -130,8 +136,9 @@ exports.handler = async (event) => {
     const ready = path.match(/^\/matches\/([^/]+)\/ready$/);
     const leave = path.match(/^\/matches\/([^/]+)\/leave$/);
     const finish = path.match(/^\/matches\/([^/]+)\/finish$/);
+    const recover = path.match(/^\/matches\/([^/]+)\/recover$/);
     const read = path.match(/^\/matches\/([^/]+)$/);
-    const id = (ready || leave || finish || read)?.[1];
+    const id = (ready || leave || finish || recover || heartbeat || read)?.[1];
     if (!id || id === "join") return fail(404, "NOT_FOUND", "Rota ausente.", requestId);
 
     const match = await getKey(`MATCH#${id}`, "META");
@@ -139,8 +146,10 @@ exports.handler = async (event) => {
     const participant = match.hostUserId === userId || match.guestUserId === userId;
     if (!participant) return fail(403, "FORBIDDEN", "Partida de outro jogador.", requestId);
     if (method === "GET" && read) return response(200, publicMatch(match, userId));
+    if (method === "POST" && heartbeat) return heartbeatMatch(userId, match, body, requestId);
     if (method === "POST" && ready) return markReady(userId, match, body.operationId, mark, requestId);
     if (method === "POST" && leave) return leaveMatch(userId, match, body.operationId, mark, requestId);
+    if (method === "POST" && recover) return recoverMatch(userId, match, body.operationId, mark, requestId);
     if (method === "POST" && finish) return finishMatch(userId, match, body, mark, requestId);
     return fail(404, "NOT_FOUND", "Rota ausente.", requestId);
   } catch (err) {
@@ -174,6 +183,7 @@ async function listResults(event, userId) {
       matchId: item.matchId,
       at: item.at,
       result: item.result,
+      resultStatus: item.resultStatus || "confirmed",
     })),
     nextCursor: out.LastEvaluatedKey ? Buffer.from(JSON.stringify(out.LastEvaluatedKey)).toString("base64") : null,
   });
@@ -183,26 +193,38 @@ async function createMatch(userId, operationId, mark) {
   const active = await getKey(`USER#${userId}`, "ACTIVE");
   if (active) {
     const old = await getKey(`MATCH#${active.matchId}`, "META");
-    const lobbyDead = old && old.state === "lobby" && old.lobbyExpiresAt <= nowIso();
-    if (!lobbyDead) return fail(409, "ACTIVE_MATCH", "Já existe uma partida ativa.", "");
-    const cleanup = [
-      releaseActive(userId, old.id),
-      {
-        Update: {
-          TableName: table,
-          Key: { pk: `MATCH#${old.id}`, sk: "META" },
-          UpdateExpression: "SET #state = :cancelled",
-          ConditionExpression: "#state = :lobby AND lobbyExpiresAt <= :now",
-          ExpressionAttributeNames: { "#state": "state" },
-          ExpressionAttributeValues: { ":cancelled": "cancelled", ":lobby": "lobby", ":now": nowIso() },
+    if (old && (old.state === "lobby" || old.state === "running")) {
+      const lobbyExpired = old.state === "lobby" && old.lobbyExpiresAt <= nowIso();
+      if (!lobbyExpired && !allParticipantsStale(old)) {
+        return response(200, publicMatch(old, userId));
+      }
+      const cleanupAt = nowIso();
+      await db.send(new TransactWriteCommand({ TransactItems: [
+        {
+          Update: {
+            TableName: table,
+            Key: { pk: old.pk, sk: "META" },
+            UpdateExpression: "SET #state = :cancelled, resultStatus = :expired, revision = revision + :one",
+            ConditionExpression: "#state = :current AND revision = :revision",
+            ExpressionAttributeNames: { "#state": "state" },
+            ExpressionAttributeValues: {
+              ":cancelled": "cancelled", ":expired": "expired", ":one": 1,
+              ":current": old.state, ":revision": old.revision,
+            },
+          },
         },
-      },
-    ];
-    for (const participant of [old.hostUserId, old.guestUserId].filter((id) => id && id !== userId)) {
-      const link = await getKey(`USER#${participant}`, "ACTIVE");
-      if (link && link.matchId === old.id) cleanup.push(releaseActive(participant, old.id));
+        ...participantIds(old).map((participant) => ({
+          Delete: { TableName: table, Key: { pk: `USER#${participant}`, sk: "ACTIVE" } },
+        })),
+        outboxPut(old.id, `${operationId}-expired`, "match.cancelled", participantIds(old), cleanupAt, {
+          reason: "presence-timeout",
+        }),
+      ] }));
+    } else {
+      await db.send(new TransactWriteCommand({ TransactItems: [{
+        Delete: { TableName: table, Key: { pk: `USER#${userId}`, sk: "ACTIVE" } },
+      }] }));
     }
-    await db.send(new TransactWriteCommand({ TransactItems: cleanup }));
   }
 
   const id = crypto.randomUUID();
@@ -220,6 +242,9 @@ async function createMatch(userId, operationId, mark) {
     inviteCode: code,
     hostUserId: userId,
     ready: { [userId]: false },
+    presence: { [userId]: { lastSeenAt: createdAt, connected: false } },
+    submissions: {},
+    resultStatus: "none",
     lobbyExpiresAt,
     createdAt,
   };
@@ -266,7 +291,10 @@ async function joinMatch(userId, body, mark, requestId) {
   if (!match || match.state !== "lobby" || match.guestUserId || match.hostUserId === userId || match.lobbyExpiresAt <= nowIso()) {
     return fail(422, "INVITE_REJECTED", "Convite inválido.", requestId);
   }
-  const payload = publicMatch({ ...match, guestUserId: userId, revision: match.revision + 1 }, userId);
+  const joinedAt = nowIso();
+  const presence = { ...(match.presence || {}), [userId]: { lastSeenAt: joinedAt, connected: false } };
+  const ready = { ...(match.ready || {}), [userId]: false };
+  const payload = publicMatch({ ...match, guestUserId: userId, presence, ready, revision: match.revision + 1 }, userId);
   await db.send(
     new TransactWriteCommand({
       TransactItems: [
@@ -274,10 +302,13 @@ async function joinMatch(userId, body, mark, requestId) {
           Update: {
             TableName: table,
             Key: { pk: match.pk, sk: "META" },
-            UpdateExpression: "SET guestUserId = :guest, revision = revision + :one",
+            UpdateExpression: "SET guestUserId = :guest, presence = :presence, ready = :ready, revision = revision + :one",
             ConditionExpression: "#state = :lobby AND attribute_not_exists(guestUserId) AND hostUserId <> :guest AND lobbyExpiresAt > :now",
             ExpressionAttributeNames: { "#state": "state" },
-            ExpressionAttributeValues: { ":guest": userId, ":one": 1, ":lobby": "lobby", ":now": nowIso() },
+            ExpressionAttributeValues: {
+              ":guest": userId, ":presence": presence, ":ready": ready,
+              ":one": 1, ":lobby": "lobby", ":now": joinedAt,
+            },
           },
         },
         {
@@ -296,7 +327,7 @@ async function joinMatch(userId, body, mark, requestId) {
             ConditionExpression: "attribute_not_exists(pk)",
           },
         },
-        outboxPut(match.id, body.operationId, "match.joined", [match.hostUserId, userId], nowIso()),
+        outboxPut(match.id, body.operationId, "match.joined", [match.hostUserId, userId], joinedAt),
         operationPut(userId, body.operationId, mark, 200, payload),
       ],
     })
@@ -304,25 +335,81 @@ async function joinMatch(userId, body, mark, requestId) {
   return response(200, payload);
 }
 
+async function heartbeatMatch(userId, match, body, requestId) {
+  if (match.state !== "lobby" && match.state !== "running") {
+    return fail(409, "MATCH_CLOSED", "A partida já foi encerrada.", requestId);
+  }
+  const connected = body.connected === true;
+  const presence = { lastSeenAt: nowIso(), connected };
+  const names = { "#presence": "presence", "#user": userId, "#state": "state" };
+  const values = { ":presence": presence, ":lobby": "lobby", ":running": "running" };
+  const setExpressions = ["#presence.#user = :presence"];
+  values[":one"] = 1;
+  values[":revision"] = match.revision;
+  if (match.state === "lobby" && !connected) {
+    names["#ready"] = "ready";
+    setExpressions.push("#ready.#user = :notReady");
+    values[":notReady"] = false;
+  }
+  const update = `SET ${setExpressions.join(", ")} ADD revision :one`;
+  await db.send(new UpdateCommand({
+    TableName: table,
+    Key: { pk: match.pk, sk: "META" },
+    UpdateExpression: update,
+    ConditionExpression: "(#state = :lobby OR #state = :running) AND revision = :revision",
+    ExpressionAttributeNames: names,
+    ExpressionAttributeValues: values,
+  }));
+  const next = {
+    ...match,
+    revision: match.revision + 1,
+    presence: { ...(match.presence || {}), [userId]: presence },
+    ready: match.state === "lobby" && !connected
+      ? { ...(match.ready || {}), [userId]: false }
+      : match.ready,
+  };
+  return response(200, publicMatch(next, userId));
+}
+
 async function markReady(userId, match, operationId, mark, requestId) {
   if (match.state !== "lobby" || match.lobbyExpiresAt <= nowIso()) {
     return fail(409, "MATCH_CLOSED", "A partida não está aguardando largada.", requestId);
   }
+  const readyAt = nowIso();
+  const presence = {
+    ...(match.presence || {}),
+    [userId]: { lastSeenAt: readyAt, connected: true },
+  };
   const ready = { ...(match.ready || {}), [userId]: true };
-  const both = Boolean(match.guestUserId) && ready[match.hostUserId] && ready[match.guestUserId];
-  const next = { ...match, ready, state: both ? "running" : "lobby", revision: match.revision + 1 };
+  const both = Boolean(match.guestUserId)
+    && ready[match.hostUserId]
+    && ready[match.guestUserId]
+    && presence[match.hostUserId]?.connected
+    && presence[match.guestUserId]?.connected
+    && presenceFresh({ ...match, presence }, match.hostUserId)
+    && presenceFresh({ ...match, presence }, match.guestUserId);
+  const next = {
+    ...match,
+    presence,
+    ready,
+    state: both ? "running" : "lobby",
+    startedAt: both ? readyAt : match.startedAt,
+    revision: match.revision + 1,
+  };
   const payload = publicMatch(next, userId);
   const items = [
     {
       Update: {
         TableName: table,
         Key: { pk: match.pk, sk: "META" },
-        UpdateExpression: "SET ready = :ready, #state = :state, revision = revision + :one",
+        UpdateExpression: "SET ready = :ready, presence = :presence, #state = :state, startedAt = :startedAt, revision = revision + :one",
         ConditionExpression: "#state = :lobby AND revision = :revision AND lobbyExpiresAt > :now",
         ExpressionAttributeNames: { "#state": "state" },
         ExpressionAttributeValues: {
           ":ready": ready,
+          ":presence": presence,
           ":state": next.state,
+          ":startedAt": next.startedAt || null,
           ":one": 1,
           ":lobby": "lobby",
           ":revision": match.revision,
@@ -335,7 +422,7 @@ async function markReady(userId, match, operationId, mark, requestId) {
       operationId,
       both ? "match.started" : "match.ready",
       [match.hostUserId, match.guestUserId],
-      nowIso(),
+      readyAt,
     ),
     operationPut(userId, operationId, mark, 200, payload),
   ];
@@ -362,20 +449,29 @@ async function leaveMatch(userId, match, operationId, mark, requestId) {
   const finishedAt = nowIso();
   const result = beforeStart
     ? null
-    : { winnerUserId: match.hostUserId === userId ? match.guestUserId : match.hostUserId, reason: "abandon" };
+    : {
+      winnerUserId: match.hostUserId === userId ? match.guestUserId : match.hostUserId,
+      reason: "abandon",
+      finishedAt,
+    };
   const nextState = beforeStart ? "cancelled" : "finished";
-  const payload = publicMatch({ ...match, state: nextState, result, revision: match.revision + 1 }, userId);
+  const resultStatus = beforeStart ? "cancelled" : "confirmed";
+  const payload = publicMatch({
+    ...match, state: nextState, result, resultStatus, revision: match.revision + 1,
+  }, userId);
   const items = [
     {
       Update: {
         TableName: table,
         Key: { pk: match.pk, sk: "META" },
-        UpdateExpression: "SET #state = :state, #result = :result, revision = revision + :one",
+        UpdateExpression: "SET #state = :state, #result = :result, resultStatus = :resultStatus, finishedAt = :at, revision = revision + :one",
         ConditionExpression: "#state = :current AND revision = :revision",
         ExpressionAttributeNames: { "#state": "state", "#result": "result" },
         ExpressionAttributeValues: {
           ":state": nextState,
           ":result": result,
+          ":resultStatus": resultStatus,
+          ":at": finishedAt,
           ":one": 1,
           ":current": match.state,
           ":revision": match.revision,
@@ -430,6 +526,7 @@ async function leaveMatch(userId, match, operationId, mark, requestId) {
             matchId: match.id,
             at: finishedAt,
             result,
+            resultStatus,
           },
           ConditionExpression: "attribute_not_exists(pk)",
         },
@@ -440,65 +537,158 @@ async function leaveMatch(userId, match, operationId, mark, requestId) {
   return response(200, payload);
 };
 
-async function finishMatch(userId, match, body, mark, requestId) {
-  if (match.state === "finished" && match.result) return response(200, publicMatch(match, userId));
-  if (match.state !== "running" || !match.guestUserId) {
-    return fail(409, "MATCH_CLOSED", "A partida não está em andamento.", requestId);
+async function recoverMatch(userId, match, operationId, mark, requestId) {
+  if (match.state !== "lobby" && match.state !== "running") {
+    return response(200, publicMatch(match, userId));
   }
-  const participants = [match.hostUserId, match.guestUserId];
-  const calculated = buildRaceResult(body.participants, participants);
-  if (calculated.error) return fail(422, "INVALID_RESULT", calculated.error, requestId);
-  const result = calculated.result;
+  const opponentId = participantIds(match).find((id) => id !== userId);
+  if (opponentId && presenceFresh(match, opponentId)) {
+    return fail(409, "MATCH_ACTIVE", "O outro participante ainda possui presença válida.", requestId);
+  }
+  if (match.state === "lobby") {
+    return leaveMatch(userId, match, operationId, mark, requestId);
+  }
+  if (!opponentId) return leaveMatch(userId, match, operationId, mark, requestId);
+
+  const finishedAt = nowIso();
+  const result = { winnerUserId: userId, reason: "abandon", finishedAt };
   const next = {
     ...match,
     state: "finished",
     result,
+    resultStatus: "confirmed",
     revision: match.revision + 1,
   };
   const payload = publicMatch(next, userId);
-  const items = [
+  const participants = participantIds(match);
+  await db.send(new TransactWriteCommand({ TransactItems: [
     {
       Update: {
         TableName: table,
         Key: { pk: match.pk, sk: "META" },
-        UpdateExpression: "SET #state = :finished, #result = :result, finishedAt = :at, revision = revision + :one",
-        ConditionExpression: "#state = :running AND revision = :revision",
-        ExpressionAttributeNames: { "#state": "state", "#result": "result" },
+        UpdateExpression: "SET #state = :finished, #result = :result, resultStatus = :confirmed, finishedAt = :at, revision = revision + :one",
+        ConditionExpression: "#state = :running AND revision = :revision AND (attribute_not_exists(presence.#opponent) OR presence.#opponent.lastSeenAt < :cutoff)",
+        ExpressionAttributeNames: { "#state": "state", "#result": "result", "#opponent": opponentId },
         ExpressionAttributeValues: {
-          ":finished": "finished",
-          ":running": "running",
-          ":result": result,
-          ":at": result.finishedAt,
-          ":one": 1,
+          ":finished": "finished", ":running": "running", ":result": result,
+          ":confirmed": "confirmed", ":at": finishedAt, ":one": 1,
           ":revision": match.revision,
+          ":cutoff": new Date(Date.now() - PRESENCE_LEASE_MS).toISOString(),
         },
       },
     },
     ...participants.map((participant) => ({
-      Delete: {
-        TableName: table,
-        Key: { pk: `USER#${participant}`, sk: "ACTIVE" },
-      },
+      Delete: { TableName: table, Key: { pk: `USER#${participant}`, sk: "ACTIVE" } },
     })),
     ...participants.map((participant) => ({
       Put: {
         TableName: table,
         Item: {
-          pk: `USER#${participant}`,
-          sk: `RESULT#${result.finishedAt}#${match.id}`,
-          matchId: match.id,
-          at: result.finishedAt,
-          result,
+          pk: `USER#${participant}`, sk: `RESULT#${finishedAt}#${match.id}`,
+          matchId: match.id, at: finishedAt, result, resultStatus: "confirmed",
         },
         ConditionExpression: "attribute_not_exists(pk)",
       },
     })),
-    outboxPut(match.id, body.operationId, "match.finished", participants, result.finishedAt, {
-      winnerUserId: result.winnerUserId,
-      reason: result.reason,
+    outboxPut(match.id, operationId, "match.finished", participants, finishedAt, {
+      winnerUserId: userId, reason: "abandon",
+    }),
+    operationPut(userId, operationId, mark, 200, payload),
+  ] }));
+  return response(200, payload);
+}
+
+async function finishMatch(userId, match, body, mark, requestId) {
+  if (match.state === "finished") return response(200, publicMatch(match, userId));
+  if (match.state !== "running" || !match.guestUserId) {
+    return fail(409, "MATCH_CLOSED", "A partida não está em andamento.", requestId);
+  }
+  const ownResult = normalizeParticipant(body.result);
+  const observedOpponent = normalizeParticipant(body.observedOpponent);
+  if (!ownResult || !observedOpponent) {
+    return fail(422, "INVALID_RESULT", "Resultado próprio ou confirmação do adversário inválido.", requestId);
+  }
+  const serverElapsedMs = Date.now() - Date.parse(match.startedAt || "");
+  if (!ownResult.dnf && (!Number.isFinite(serverElapsedMs) || ownResult.rawTimeMs > serverElapsedMs + 2_500)) {
+    return fail(422, "IMPOSSIBLE_TIME", "Tempo incompatível com o início registrado da corrida.", requestId);
+  }
+  if (match.submissions?.[userId]) {
+    return response(200, publicMatch(match, userId));
+  }
+  const submittedAt = nowIso();
+  const submissions = {
+    ...(match.submissions || {}),
+    [userId]: { result: ownResult, observedOpponent, submittedAt },
+  };
+  const participants = participantIds(match);
+  const complete = participants.every((participant) => submissions[participant]);
+  if (!complete) {
+    const next = { ...match, submissions, resultStatus: "pending", revision: match.revision + 1 };
+    const payload = publicMatch(next, userId);
+    await db.send(new TransactWriteCommand({ TransactItems: [
+      {
+        Update: {
+          TableName: table,
+          Key: { pk: match.pk, sk: "META" },
+          UpdateExpression: "SET submissions = :submissions, resultStatus = :pending, revision = revision + :one",
+          ConditionExpression: "#state = :running AND revision = :revision",
+          ExpressionAttributeNames: { "#state": "state" },
+          ExpressionAttributeValues: {
+            ":submissions": submissions, ":pending": "pending", ":one": 1,
+            ":running": "running", ":revision": match.revision,
+          },
+        },
+      },
+      operationPut(userId, body.operationId, mark, 200, payload),
+    ] }));
+    return response(200, payload);
+  }
+
+  const confirmed = submissionsAgree(submissions, participants);
+  const finishedAt = nowIso();
+  const calculated = confirmed
+    ? buildRaceResult(Object.fromEntries(participants.map((id) => [id, submissions[id].result])), participants, finishedAt)
+    : null;
+  const result = confirmed
+    ? calculated.result
+    : { winnerUserId: null, reason: "disputed", finishedAt };
+  const resultStatus = confirmed ? "confirmed" : "disputed";
+  const next = {
+    ...match, submissions, state: "finished", result, resultStatus, revision: match.revision + 1,
+  };
+  const payload = publicMatch(next, userId);
+  await db.send(new TransactWriteCommand({ TransactItems: [
+    {
+      Update: {
+        TableName: table,
+        Key: { pk: match.pk, sk: "META" },
+        UpdateExpression: "SET submissions = :submissions, #state = :finished, #result = :result, resultStatus = :resultStatus, finishedAt = :at, revision = revision + :one",
+        ConditionExpression: "#state = :running AND revision = :revision",
+        ExpressionAttributeNames: { "#state": "state", "#result": "result" },
+        ExpressionAttributeValues: {
+          ":submissions": submissions, ":finished": "finished", ":running": "running",
+          ":result": result, ":resultStatus": resultStatus, ":at": finishedAt,
+          ":one": 1, ":revision": match.revision,
+        },
+      },
+    },
+    ...participants.map((participant) => ({
+      Delete: { TableName: table, Key: { pk: `USER#${participant}`, sk: "ACTIVE" } },
+    })),
+    ...participants.map((participant) => ({
+      Put: {
+        TableName: table,
+        Item: {
+          pk: `USER#${participant}`, sk: `RESULT#${finishedAt}#${match.id}`,
+          matchId: match.id, at: finishedAt, result, resultStatus,
+        },
+        ConditionExpression: "attribute_not_exists(pk)",
+      },
+    })),
+    outboxPut(match.id, body.operationId, "match.finished", participants, finishedAt, {
+      winnerUserId: result.winnerUserId, reason: result.reason, resultStatus,
     }),
     operationPut(userId, body.operationId, mark, 200, payload),
-  ];
-  await db.send(new TransactWriteCommand({ TransactItems: items }));
+  ] }));
   return response(200, payload);
 }

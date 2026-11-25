@@ -8,7 +8,7 @@ export interface MatchParticipantResult {
 
 export interface MatchResult {
   winnerUserId: string | null;
-  reason: "completed" | "abandon";
+  reason: "completed" | "abandon" | "disputed";
   finishedAt?: string;
   standings?: Array<MatchParticipantResult & {
     userId: string;
@@ -28,6 +28,7 @@ export interface RemoteMatch {
   inviteCode?: string;
   ready: Record<string, boolean>;
   result: MatchResult | null;
+  resultStatus: "none" | "pending" | "confirmed" | "disputed" | "cancelled" | "expired";
   revision: number;
 }
 
@@ -35,6 +36,7 @@ export interface MatchHistoryItem {
   matchId: string;
   at: string;
   result: MatchResult;
+  resultStatus: RemoteMatch["resultStatus"];
 }
 
 export interface MatchApiResult<T> {
@@ -73,6 +75,20 @@ export class MatchService {
     });
   }
 
+  static heartbeat(matchId: string, connected: boolean): Promise<MatchApiResult<RemoteMatch>> {
+    return MatchService.request(`/matches/${encodeURIComponent(matchId)}/heartbeat`, {
+      method: "POST",
+      body: JSON.stringify({ connected }),
+    });
+  }
+
+  static recover(matchId: string, operationId: string): Promise<MatchApiResult<RemoteMatch>> {
+    return MatchService.request(`/matches/${encodeURIComponent(matchId)}/recover`, {
+      method: "POST",
+      body: JSON.stringify({ operationId }),
+    });
+  }
+
   static leave(matchId: string, operationId: string): Promise<MatchApiResult<RemoteMatch>> {
     return MatchService.request(`/matches/${encodeURIComponent(matchId)}/leave`, {
       method: "POST",
@@ -82,12 +98,13 @@ export class MatchService {
 
   static finish(
     matchId: string,
-    participants: Record<string, MatchParticipantResult>,
+    result: MatchParticipantResult,
+    observedOpponent: MatchParticipantResult,
     operationId: string,
   ): Promise<MatchApiResult<RemoteMatch>> {
     return MatchService.request(`/matches/${encodeURIComponent(matchId)}/finish`, {
       method: "POST",
-      body: JSON.stringify({ operationId, participants }),
+      body: JSON.stringify({ operationId, result, observedOpponent }),
     });
   }
 

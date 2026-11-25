@@ -68,6 +68,8 @@ interface SessionResponse {
 
 let apiBase: string | null = null;
 let publishedApi = "";
+let publishedSignaling = "";
+let cloudConfigRequest: Promise<{ api: string; signaling: string }> | null = null;
 const campaignRevisions = new Map<string, number>();
 const campaignQueues = new Map<string, PendingCampaignOperation[]>();
 const syncingCampaigns = new Set<string>();
@@ -105,7 +107,9 @@ export class CloudSession {
 
   static async api(): Promise<string | null> {
     if (apiBase) return apiBase;
-    publishedApi = await readPublishedApi();
+    const config = await readPublishedConfig();
+    publishedApi = config.api;
+    publishedSignaling = config.signaling;
     const pageHost = window.location.hostname;
     const localPage = pageHost === "localhost" || pageHost === "127.0.0.1";
     const fromQuery = new URLSearchParams(window.location.search).get("api");
@@ -119,6 +123,26 @@ export class CloudSession {
     if (!publishedApi) return null;
     apiBase = allowedApiOrigin(publishedApi, publishedApi, pageHost);
     return apiBase || null;
+  }
+
+  static async signaling(): Promise<string | null> {
+    if (!publishedSignaling) {
+      const config = await readPublishedConfig();
+      publishedApi ||= config.api;
+      publishedSignaling = config.signaling;
+    }
+    if (!publishedSignaling) return null;
+    try {
+      const url = new URL(publishedSignaling);
+      const localPage = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+      const localSignal = url.hostname === "localhost" || url.hostname === "127.0.0.1";
+      if (url.username || url.password) return null;
+      if (url.protocol === "wss:") return url.toString();
+      if (localPage && localSignal && url.protocol === "ws:") return url.toString();
+      return null;
+    } catch {
+      return null;
+    }
   }
 
   static async completeLoginIfNeeded(): Promise<PlayerSession | null> {
@@ -701,13 +725,17 @@ export class CloudSession {
   }
 }
 
-async function readPublishedApi(): Promise<string> {
-  try {
-    const response = await fetch("/cloud-config.json", { cache: "no-store" });
-    if (!response.ok) return "";
-    const body = (await response.json()) as { api?: string };
-    return body.api || "";
-  } catch {
-    return "";
-  }
+async function readPublishedConfig(): Promise<{ api: string; signaling: string }> {
+  if (cloudConfigRequest) return cloudConfigRequest;
+  cloudConfigRequest = (async () => {
+    try {
+      const response = await fetch("/cloud-config.json", { cache: "no-store" });
+      if (!response.ok) return { api: "", signaling: "" };
+      const body = (await response.json()) as { api?: string; signaling?: string };
+      return { api: body.api || "", signaling: body.signaling || "" };
+    } catch {
+      return { api: "", signaling: "" };
+    }
+  })();
+  return cloudConfigRequest;
 }

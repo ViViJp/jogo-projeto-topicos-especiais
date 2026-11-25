@@ -106,7 +106,9 @@ O sistema exige dois usuários autenticados, criação/entrada em salas no backe
 | `GET /me/matches` | Cursor; limite 20 | D03 aprovada: `200`, resultados próprios dos últimos 30 dias. |
 | `POST /matches/{id}/connection-ticket` | Sessão autenticada; participante autorizado | Proposta: `201`, ticket de uso único e validade curta para abrir WSS; definir TTL, entrega e consumo atômico em D04. Não registrar o segredo em logs. |
 | `POST /matches/{id}/ready` | `operationId` | `200`, prontidão registrada; iniciar somente com dois participantes autenticados e prontos. |
-| `POST /matches/{id}/finish` | `operationId`, medições dos dois `participants` (`rawTimeMs`, `credits`, `dnf`) | `200`, classificação calculada e persistida pelo serviço. O cliente não envia vencedor; limites e participantes são validados. A autoridade sobre trajetória/marcos continua parcial até D04. |
+| `POST /matches/{id}/heartbeat` | `connected` | `200`, renova o lease do participante e informa se o DataChannel está conectado; não inicia a corrida. |
+| `POST /matches/{id}/finish` | `operationId`, `result` próprio e `observedOpponent` | `200`, armazena uma submissão independente. A classificação só é confirmada após as duas versões cruzarem; divergências ficam sem vencedor. Tempos abaixo do mínimo da pista são rejeitados. |
+| `POST /matches/{id}/recover` | `operationId` | Retoma a partida ativa ou encerra com segurança somente quando o lease do adversário expirou. |
 | `GET /matches/{id}` | Sessão de participante | `200`, estado e resultado/classificação persistidos se encerrada. |
 | `POST /matches/{id}/leave` | `operationId` | `200`; se em corrida, aplicar derrota por abandono conforme RN08; antes da largada, cancelar a sala conforme D03. |
 

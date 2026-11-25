@@ -318,8 +318,10 @@ ROUTES = {
         "POST /matches/join",
         "GET /me/matches",
         "GET /matches/{id}",
+        "POST /matches/{id}/heartbeat",
         "POST /matches/{id}/ready",
         "POST /matches/{id}/finish",
+        "POST /matches/{id}/recover",
         "POST /matches/{id}/leave",
     ],
     "comunicacoes": [
@@ -383,7 +385,7 @@ def http_api(api, functions, authorizer):
     return api, stage
 
 
-def frontend_cdn(certificate_arn=None, aliases=None, api_endpoint=None):
+def frontend_cdn(certificate_arn=None, aliases=None, api_endpoint=None, signaling_endpoint=None):
     bucket = aws.s3.Bucket(
         "frontend",
         bucket=f"{prefix}-frontend",
@@ -403,7 +405,9 @@ def frontend_cdn(certificate_arn=None, aliases=None, api_endpoint=None):
             "frontend-cloud-config",
             bucket=bucket.id,
             key="cloud-config.json",
-            content=api_endpoint.apply(lambda endpoint: json.dumps({"api": endpoint})),
+            content=pulumi.Output.all(api_endpoint, signaling_endpoint).apply(
+                lambda endpoints: json.dumps({"api": endpoints[0], "signaling": endpoints[1] or ""})
+            ),
             content_type="application/json; charset=utf-8",
             cache_control="no-cache",
         )
@@ -534,7 +538,7 @@ def certificate(name, domain_name, alternative_names, provider=None):
     return validation
 
 
-def prod_names(api, stage):
+def prod_names(api, stage, signaling_endpoint):
     use1 = aws.Provider("us-east-1", region="us-east-1")
     frontend_cert = certificate(
         "frontend-cert",
@@ -546,6 +550,7 @@ def prod_names(api, stage):
         certificate_arn=frontend_cert.certificate_arn,
         aliases=[domain, f"www.{domain}"],
         api_endpoint=api.api_endpoint,
+        signaling_endpoint=signaling_endpoint,
     )
     for hostname in (domain, f"www.{domain}"):
         slug = "apex" if hostname == domain else "www"
@@ -729,12 +734,123 @@ def open_api():
     )
 
 
+def websocket_signaling(table_resource):
+    path = services_dir / "signaling"
+    subprocess.run(["npm", "install", "--omit=dev"], cwd=path, check=True)
+    api = aws.apigatewayv2.Api(
+        "signaling-websocket",
+        name=f"{prefix}-signaling",
+        protocol_type="WEBSOCKET",
+        route_selection_expression="$request.body.action",
+    )
+    role = aws.iam.Role(
+        "signaling-role",
+        assume_role_policy=json.dumps({
+            "Version": "2012-10-17",
+            "Statement": [{
+                "Effect": "Allow",
+                "Principal": {"Service": "lambda.amazonaws.com"},
+                "Action": "sts:AssumeRole",
+            }],
+        }),
+    )
+    logs = aws.iam.RolePolicyAttachment(
+        "signaling-logs",
+        role=role.name,
+        policy_arn="arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
+    )
+    access = aws.iam.RolePolicy(
+        "signaling-access",
+        role=role.id,
+        policy=pulumi.Output.all(table_resource.arn, api.execution_arn).apply(
+            lambda values: json.dumps({
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Effect": "Allow",
+                        "Action": [
+                            "dynamodb:GetItem",
+                            "dynamodb:PutItem",
+                            "dynamodb:UpdateItem",
+                            "dynamodb:DeleteItem",
+                            "dynamodb:Query",
+                            "dynamodb:TransactWriteItems",
+                        ],
+                        "Resource": values[0],
+                    },
+                    {
+                        "Effect": "Allow",
+                        "Action": "execute-api:ManageConnections",
+                        "Resource": f"{values[1]}/*/@connections/*",
+                    },
+                ],
+            })
+        ),
+    )
+    function = aws.lambda_.Function(
+        "signaling",
+        name=f"{prefix}-signaling",
+        runtime=aws.lambda_.Runtime.NODE_JS22D_X,
+        handler="index.handler",
+        role=role.arn,
+        code=pulumi.FileArchive(str(path)),
+        timeout=10,
+        environment=aws.lambda_.FunctionEnvironmentArgs(
+            variables={"TABLE_NAME": table_resource.name}
+        ),
+        opts=pulumi.ResourceOptions(depends_on=[logs, access]),
+    )
+    integration = aws.apigatewayv2.Integration(
+        "signaling-integration",
+        api_id=api.id,
+        integration_type="AWS_PROXY",
+        integration_method="POST",
+        integration_uri=function.invoke_arn,
+    )
+    routes = [
+        aws.apigatewayv2.Route(
+            f"signaling-{route[1:]}",
+            api_id=api.id,
+            route_key=route,
+            target=integration.id.apply(lambda value: f"integrations/{value}"),
+        )
+        for route in ("$connect", "$disconnect", "$default")
+    ]
+    aws.lambda_.Permission(
+        "signaling-invoke",
+        action="lambda:InvokeFunction",
+        function=function.name,
+        principal="apigateway.amazonaws.com",
+        source_arn=api.execution_arn.apply(lambda arn: f"{arn}/*/*"),
+    )
+    deployment = aws.apigatewayv2.Deployment(
+        "signaling-deployment",
+        api_id=api.id,
+        triggers={"routes": pulumi.Output.all(integration.id, *[route.id for route in routes]).apply(
+            lambda values: hashlib.sha1("|".join(values).encode()).hexdigest()
+        )},
+        opts=pulumi.ResourceOptions(depends_on=routes),
+    )
+    signaling_stage = aws.apigatewayv2.Stage(
+        "signaling-live",
+        api_id=api.id,
+        name="live",
+        deployment_id=deployment.id,
+    )
+    endpoint = pulumi.Output.all(api.api_endpoint, signaling_stage.id).apply(
+        lambda values: f"{values[0]}/live"
+    )
+    pulumi.export("signaling_websocket", endpoint)
+    return endpoint
+
+
 services = {
     "conta": table("accounts", with_ttl=True, with_stream=True),
     "campanha": table("campaigns", with_stream=True),
     "partidas": table("matches", with_ttl=True, with_stream=True),
     "comunicacoes": table("communications"),
     "auditoria": table("audit"),
+    "signaling": table("signaling", with_ttl=True),
 }
 
 audit_dlq = aws.sqs.Queue("audit-events-dlq", name=f"{prefix}-audit-events-dlq", message_retention_seconds=1209600)
@@ -771,8 +887,12 @@ elif config.get("sesFromEmail"):
     aws.ses.EmailIdentity("ses-from", email=config.get("sesFromEmail"))
 
 api = open_api()
+signaling_endpoint = websocket_signaling(services["signaling"])
 pool, client, authorizer, google_enabled = players(api)
-frontend = frontend_cdn(api_endpoint=api.api_endpoint) if not (is_prod and publish_domain) else None
+frontend = frontend_cdn(
+    api_endpoint=api.api_endpoint,
+    signaling_endpoint=signaling_endpoint,
+) if not (is_prod and publish_domain) else None
 if frontend is not None:
     allowed_origins = pulumi.Output.concat(
         "https://",
@@ -828,4 +948,4 @@ event_pipeline(
 )
 api_resource, stage = http_api(api, functions, authorizer)
 if is_prod and publish_domain:
-    prod_names(api_resource, stage)
+    prod_names(api_resource, stage, signaling_endpoint)

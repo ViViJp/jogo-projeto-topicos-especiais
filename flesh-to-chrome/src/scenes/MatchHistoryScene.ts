@@ -55,7 +55,9 @@ export class MatchHistoryScene extends Phaser.Scene {
 
   private formatItem(item: MatchHistoryItem, userId: string): string {
     const winner = item.result?.winnerUserId;
-    const verdict = winner === null ? "EMPATE" : winner === userId ? "VITÓRIA" : "DERROTA";
+    const verdict = item.resultStatus === "disputed"
+      ? "CLASSIFICAÇÃO PENDENTE"
+      : winner === null ? "EMPATE" : winner === userId ? "VITÓRIA" : "DERROTA";
     const date = new Date(item.at).toLocaleString("pt-BR");
     return `${date}  •  ${verdict}\nPartida ${item.matchId.slice(0, 12)}`;
   }

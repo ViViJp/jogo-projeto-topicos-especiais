@@ -7,7 +7,7 @@ const MAX_PROTOCOL_TIMESTAMP = Date.UTC(2100, 0, 1);
 const MAX_COORDINATE = 1_000_000;
 const MAX_ABSOLUTE_Y = 10_000;
 const MAX_ABSOLUTE_VELOCITY = 10_000;
-const IDENTIFIER_PATTERN = /^[a-zA-Z0-9_-]{1,32}$/;
+const IDENTIFIER_PATTERN = /^[a-zA-Z0-9_-]{1,64}$/;
 
 interface RaceScopedMessage {
   protocolVersion: typeof MULTIPLAYER_PROTOCOL_VERSION;

@@ -1,5 +1,6 @@
 const MAX_RACE_DURATION_MS = 10 * 60 * 1000;
 const MAX_CREDITS = 20;
+const MIN_RACE_DURATION_MS = 15 * 1000;
 
 function adjustedTime(entry) {
   return Math.max(0, entry.rawTimeMs - Math.min(entry.credits * 500, 10_000));
@@ -11,8 +12,21 @@ function normalizeParticipant(value) {
   if (!Number.isInteger(credits) || credits < 0 || credits > MAX_CREDITS) return null;
   if (value.dnf) return { rawTimeMs: null, credits, dnf: true };
   const rawTimeMs = Number(value.rawTimeMs);
-  if (!Number.isInteger(rawTimeMs) || rawTimeMs < 0 || rawTimeMs > MAX_RACE_DURATION_MS) return null;
+  if (!Number.isInteger(rawTimeMs) || rawTimeMs < MIN_RACE_DURATION_MS || rawTimeMs > MAX_RACE_DURATION_MS) return null;
   return { rawTimeMs, credits, dnf: false };
+}
+
+function sameParticipant(left, right) {
+  if (!left || !right || left.dnf !== right.dnf || left.credits !== right.credits) return false;
+  return left.dnf || left.rawTimeMs === right.rawTimeMs;
+}
+
+function submissionsAgree(submissions, participantIds) {
+  if (!participantIds.every((id) => submissions[id])) return false;
+  return participantIds.every((userId) => {
+    const opponentId = participantIds.find((id) => id !== userId);
+    return sameParticipant(submissions[userId].observedOpponent, submissions[opponentId].result);
+  });
 }
 
 function buildRaceResult(submission, participantIds, finishedAt = new Date().toISOString()) {
@@ -59,4 +73,4 @@ function buildRaceResult(submission, participantIds, finishedAt = new Date().toI
   };
 }
 
-module.exports = { adjustedTime, buildRaceResult };
+module.exports = { adjustedTime, buildRaceResult, normalizeParticipant, sameParticipant, submissionsAgree };

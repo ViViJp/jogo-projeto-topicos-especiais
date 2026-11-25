@@ -1,5 +1,5 @@
 const assert = require("assert");
-const { buildRaceResult } = require("./results");
+const { buildRaceResult, normalizeParticipant, submissionsAgree } = require("./results");
 
 const completed = buildRaceResult({
   host: { rawTimeMs: 50_000, credits: 4, dnf: false },
@@ -19,7 +19,27 @@ assert.equal(buildRaceResult({ host: { rawTimeMs: 1, credits: 0, dnf: false } },
   "participantes divergentes");
 assert.equal(buildRaceResult({
   host: { rawTimeMs: -1, credits: 0, dnf: false },
-  guest: { rawTimeMs: 1, credits: 0, dnf: false },
+  guest: { rawTimeMs: 20_000, credits: 0, dnf: false },
 }, ["host", "guest"]).error, "resultado de participante inválido");
 
-console.log("match results: classificação, DNF e validação OK");
+assert.equal(normalizeParticipant({ rawTimeMs: 1, credits: 20, dnf: false }), null,
+  "tempo artificialmente baixo deve ser rejeitado");
+const submissions = {
+  host: {
+    result: { rawTimeMs: 50_000, credits: 4, dnf: false },
+    observedOpponent: { rawTimeMs: 49_000, credits: 1, dnf: false },
+  },
+  guest: {
+    result: { rawTimeMs: 49_000, credits: 1, dnf: false },
+    observedOpponent: { rawTimeMs: 50_000, credits: 4, dnf: false },
+  },
+};
+assert.equal(submissionsAgree(submissions, ["host", "guest"]), true);
+assert.equal(submissionsAgree({
+  ...submissions,
+  guest: { ...submissions.guest, observedOpponent: { rawTimeMs: 16_000, credits: 20, dnf: false } },
+}, ["host", "guest"]), false, "resultados divergentes não podem confirmar vencedor");
+assert.equal(submissionsAgree({ host: submissions.host }, ["host", "guest"]), false,
+  "um jogador não pode definir unilateralmente a classificação");
+
+console.log("match results: confirmação independente, divergência, DNF e limites OK");

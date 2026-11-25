@@ -187,7 +187,7 @@ function validIceCandidate(value) {
 }
 
 function validIdentifier(value) {
-  return typeof value === "string" && /^[a-zA-Z0-9_-]{1,32}$/.test(value);
+  return typeof value === "string" && /^[a-zA-Z0-9_-]{1,64}$/.test(value);
 }
 
 function isRecord(value) {

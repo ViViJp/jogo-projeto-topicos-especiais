@@ -286,6 +286,9 @@ const multiplayerSource = fs.readFileSync(path.join(projectDirectory, "src/scene
 const notificationSceneSource = fs.readFileSync(path.join(projectDirectory, "src/scenes/NotificationCenterScene.ts"), "utf8");
 const notificationServiceSource = fs.readFileSync(path.join(projectDirectory, "src/network/NotificationService.ts"), "utf8");
 const matchesSource = fs.readFileSync(path.join(projectDirectory, "../pulumi/services/partidas/index.js"), "utf8");
+const matchServiceSource = fs.readFileSync(path.join(projectDirectory, "src/network/MatchService.ts"), "utf8");
+const cloudSessionSource = fs.readFileSync(path.join(projectDirectory, "src/network/CloudSession.ts"), "utf8");
+const infrastructureSource = fs.readFileSync(path.join(projectDirectory, "../pulumi/__main__.py"), "utf8");
 assert.match(menuSource, /openMultiplayer[\s\S]*?if \(!CloudSession\.current\(\)\)/,
   "visitante não pode abrir a cena multiplayer pelo menu");
 assert.match(bootSource, /hasMultiplayerInvite\(\) && CloudSession\.current\(\)/,
@@ -293,11 +296,27 @@ assert.match(bootSource, /hasMultiplayerInvite\(\) && CloudSession\.current\(\)/
 assert.match(multiplayerSource, /MatchService\.join/);
 assert.match(multiplayerSource, /MatchService\.ready/);
 assert.match(multiplayerSource, /MatchService\.finish/);
+assert.match(multiplayerSource, /await resolveSignaling\(\)/,
+  "a sinalização publicada deve ser resolvida antes de abrir o mesh");
+assert.doesNotMatch(multiplayerSource, /window\.location\.hostname}\/ws/,
+  "produção não pode presumir /ws na origem estática");
+assert.match(cloudSessionSource, /body\.signaling/,
+  "cloud-config deve fornecer explicitamente o WSS publicado");
+assert.match(infrastructureSource, /protocol_type="WEBSOCKET"/);
+assert.match(infrastructureSource, /"signaling": endpoints\[1\]/);
 assert.match(multiplayerSource, /if \(!this\.backendReady\) return;/,
   "handshake WebRTC deve aguardar prontidão confirmada pelo serviço Partidas");
+assert.match(multiplayerSource, /handlePeerConnected[\s\S]*?confirmBackendReady/,
+  "prontidão REST só pode ser confirmada depois que o DataChannel abrir");
+assert.match(matchServiceSource, /heartbeat\(matchId: string, connected: boolean\)/);
+assert.match(matchServiceSource, /observedOpponent: MatchParticipantResult/,
+  "cada jogador deve confirmar o resultado recebido do adversário");
 assert.match(matchesSource, /attribute_not_exists\(guestUserId\)/,
   "duas entradas simultâneas devem disputar uma única condição transacional");
 assert.match(matchesSource, /async function finishMatch/);
+assert.match(matchesSource, /submissionsAgree/);
+assert.match(matchesSource, /resultStatus = :pending/);
+assert.match(matchesSource, /async function recoverMatch/);
 assert.match(matchesSource, /RESULT#/,
   "conclusão e abandono devem materializar histórico privado por participante");
 assert.match(notificationSceneSource, /this\.ready = false;[\s\S]*?\+\+this\.loadGeneration/,
