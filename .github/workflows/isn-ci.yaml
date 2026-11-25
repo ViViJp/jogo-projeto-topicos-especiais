@@ -1,0 +1,25 @@
+name: ISN
+
+on:
+  pull_request:
+  push:
+    branches:
+      - dev-nuvem
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Validar contratos, jogo e nuvem
+        run: |
+          npm ci
+          npm test

@@ -14,7 +14,7 @@
     "test:gameplay": "npm --prefix flesh-to-chrome run test:gameplay",
     "test:narrative": "npm --prefix flesh-to-chrome run test:narrative",
     "test:multiplayer": "npm --prefix flesh-to-chrome run test:multiplayer",
-    "test:cloud": "node pulumi/services/check-rules.js && node pulumi/services/conta/check-revoke.js && node flesh-to-chrome/src/network/check-campaign-state.js && node flesh-to-chrome/scripts/test-cloud-sync.mjs && node pulumi/services/comunicacoes/check-delivery.js",
+    "test:cloud": "node pulumi/services/check-rules.js && node pulumi/services/conta/check-oauth.js && node pulumi/services/conta/check-revoke.js && node flesh-to-chrome/src/network/check-api-origin.js && node flesh-to-chrome/src/network/check-campaign-state.js && node flesh-to-chrome/scripts/test-cloud-sync.mjs && node pulumi/services/comunicacoes/check-delivery.js",
     "validate:assets": "npm --prefix flesh-to-chrome run validate:assets",
     "postinstall": "npm --prefix flesh-to-chrome install"
   }
