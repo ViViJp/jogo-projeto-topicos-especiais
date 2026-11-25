@@ -8,7 +8,7 @@ export interface MatchParticipantResult {
 
 export interface MatchResult {
   winnerUserId: string | null;
-  reason: "completed" | "abandon" | "disputed";
+  reason: "completed" | "abandon" | "disputed" | "inconclusive";
   finishedAt?: string;
   standings?: Array<MatchParticipantResult & {
     userId: string;

@@ -9,4 +9,36 @@ function claimSlot(occupied) {
   return null;
 }
 
-module.exports = { authorizeIdentity, claimSlot };
+function recordExpired(record, nowSeconds) {
+  if (!record) return true;
+  const expiresAt = Number(record.expiresAt);
+  if (!Number.isFinite(expiresAt)) return true;
+  return expiresAt <= nowSeconds;
+}
+
+function replacementPlan(slots, peer, userId, nowSeconds) {
+  const list = [slots?.[0] || null, slots?.[1] || null];
+  const ownIndex = list.findIndex((slot) => slot?.peerId === userId);
+  let slot = ownIndex;
+  if (slot < 0) {
+    slot = list.findIndex((item) => recordExpired(item, nowSeconds));
+  }
+  if (slot < 0) return null;
+  const occupying = list[slot];
+  const ownPeer = peer?.peerId === userId ? peer : null;
+  const displaced = occupying && occupying.peerId !== userId ? occupying : null;
+  const oldSlot = ownPeer && Number.isInteger(ownPeer.slot) ? ownPeer.slot : null;
+  return {
+    slot,
+    previousConnectionId: ownPeer?.connectionId || null,
+    retireSlot: oldSlot !== null && oldSlot !== slot && list[oldSlot]?.peerId === userId ? oldSlot : null,
+    displacedPeerId: displaced?.peerId || null,
+    displacedConnectionId: displaced?.connectionId || null,
+  };
+}
+
+function disconnectMayRelease(record, connectionId) {
+  return Boolean(record?.connectionId) && record.connectionId === connectionId;
+}
+
+module.exports = { authorizeIdentity, claimSlot, disconnectMayRelease, recordExpired, replacementPlan };

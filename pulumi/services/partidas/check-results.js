@@ -50,11 +50,33 @@ const pending = {
     submittedAt: new Date(submittedAt).toISOString(),
   },
 };
-assert.equal(incompleteConfirmation(pending, ["host", "guest"], submittedAt + 30_000), null);
-const abandoned = incompleteConfirmation(pending, ["host", "guest"], submittedAt + 60_000);
+assert.equal(
+  incompleteConfirmation(pending, ["host", "guest"], submittedAt + 90_000, { opponentPresent: true }),
+  null,
+  "adversário conectado não perde por tempo esgotado",
+);
+const abandoned = incompleteConfirmation(pending, ["host", "guest"], submittedAt + 90_000, { opponentAbsent: true });
 assert.equal(abandoned.result.winnerUserId, "host");
 assert.equal(abandoned.result.reason, "abandon");
 assert.equal(abandoned.result.unconfirmedUserId, "guest");
 assert.equal(abandoned.resultStatus, "confirmed");
+const loneDnf = {
+  host: {
+    result: { rawTimeMs: null, credits: 0, dnf: true },
+    observedOpponent: { rawTimeMs: null, credits: 0, dnf: true },
+    submittedAt: new Date(submittedAt).toISOString(),
+  },
+};
+const dnfAbsent = incompleteConfirmation(loneDnf, ["host", "guest"], submittedAt + 90_000, { opponentAbsent: true });
+assert.equal(dnfAbsent.result.winnerUserId, null, "DNF não recebe vitória automática");
+assert.equal(dnfAbsent.result.reason, "inconclusive");
+assert.equal(dnfAbsent.resultStatus, "expired");
+assert.equal(
+  incompleteConfirmation(loneDnf, ["host", "guest"], submittedAt + 90_000, { opponentPresent: true }),
+  null,
+);
+const unproven = incompleteConfirmation(pending, ["host", "guest"], submittedAt + 90_000, {});
+assert.equal(unproven.result.winnerUserId, null);
+assert.equal(unproven.result.reason, "inconclusive");
 
 console.log("match results: confirmação independente, divergência, DNF e limites OK");

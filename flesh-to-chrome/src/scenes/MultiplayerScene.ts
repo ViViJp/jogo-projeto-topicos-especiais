@@ -660,9 +660,7 @@ export class MultiplayerScene extends Phaser.Scene {
       const result = await MatchService.heartbeat(this.match.id, connected);
       if (result.status === "ok" && result.value) {
         this.match = result.value;
-        if (this.phase === "finished" && this.match.state === "finished" && this.match.result?.reason === "abandon") {
-          this.flashRaceMessage("OPONENTE NÃO CONFIRMOU — VITÓRIA POR ABANDONO");
-        }
+        if (this.phase === "finished" && this.match.state === "finished") this.announceFinalResult();
       }
     } finally {
       this.heartbeatInFlight = false;
@@ -1279,8 +1277,15 @@ export class MultiplayerScene extends Phaser.Scene {
     const latest = await MatchService.read(this.match.id);
     if (latest.status !== "ok" || !latest.value) return;
     this.match = latest.value;
-    if (this.match.state === "finished" && this.match.result?.reason === "abandon") {
+    this.announceFinalResult();
+  }
+
+  private announceFinalResult(): void {
+    if (this.match?.state !== "finished") return;
+    if (this.match.result?.reason === "abandon") {
       this.flashRaceMessage("OPONENTE NÃO CONFIRMOU — VITÓRIA POR ABANDONO");
+    } else if (this.match.result?.reason === "inconclusive") {
+      this.flashRaceMessage("SEM CLASSIFICAÇÃO — RESULTADO INCONCLUSIVO");
     }
   }
 

@@ -16,7 +16,7 @@ Module._load = function load(request, parent, isMain) {
   }
   return originalLoad(request, parent, isMain);
 };
-const { authorizeIdentity, claimSlot } = require("./access");
+const { authorizeIdentity, claimSlot, disconnectMayRelease, replacementPlan } = require("./access");
 const { parseEnvelope } = require("./index").__test;
 Module._load = originalLoad;
 
@@ -34,5 +34,23 @@ assert.equal(authorizeIdentity({ userId: "host", matchId: "room-1" }, presence),
 assert.equal(authorizeIdentity({ userId: "peer_a", matchId: "room-1" }, presence), true);
 assert.equal(claimSlot([0, 1]), null, "a terceira vaga é recusada");
 assert.equal(claimSlot([0]), 1);
+
+const now = 1_700_000_000;
+const live = (peerId, connectionId, slot) => ({ peerId, connectionId, slot, expiresAt: now + 60 });
+assert.equal(replacementPlan([live("a", "old", 0), live("b", "b1", 1)], live("a", "old", 0), "c", now), null);
+const replaced = replacementPlan([live("a", "old", 0), live("b", "b1", 1)], live("a", "old", 0), "a", now);
+assert.equal(replaced.slot, 0, "reconexão reaproveita a vaga do mesmo jogador");
+assert.equal(replaced.previousConnectionId, "old");
+assert.equal(replaced.displacedPeerId, null);
+const expired = replacementPlan(
+  [{ peerId: "a", connectionId: "old", slot: 0, expiresAt: now - 1 }, live("b", "b1", 1)],
+  null,
+  "c",
+  now,
+);
+assert.equal(expired.slot, 0, "vaga expirada não bloqueia outra conexão");
+assert.equal(expired.displacedPeerId, "a");
+assert.equal(disconnectMayRelease({ connectionId: "new" }, "old"), false, "queda antiga não remove a conexão nova");
+assert.equal(disconnectMayRelease({ connectionId: "old" }, "old"), true);
 
 console.log("signaling: envelope e limites OK");

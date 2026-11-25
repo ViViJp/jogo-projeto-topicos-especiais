@@ -296,7 +296,7 @@ assert.match(bootSource, /hasMultiplayerInvite\(\) && CloudSession\.current\(\)/
 assert.match(multiplayerSource, /MatchService\.join/);
 assert.match(multiplayerSource, /MatchService\.ready/);
 assert.match(multiplayerSource, /MatchService\.finish/);
-assert.match(multiplayerSource, /await resolveSignaling\(\)/,
+assert.match(multiplayerSource, /await resolveSignaling\(/,
   "a sinalização publicada deve ser resolvida antes de abrir o mesh");
 assert.doesNotMatch(multiplayerSource, /window\.location\.hostname}\/ws/,
   "produção não pode presumir /ws na origem estática");

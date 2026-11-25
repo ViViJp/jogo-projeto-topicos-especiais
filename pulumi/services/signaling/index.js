@@ -12,7 +12,7 @@ const {
   TransactWriteCommand,
 } = require("@aws-sdk/lib-dynamodb");
 
-const { authorizeIdentity } = require("./access");
+const { authorizeIdentity, replacementPlan } = require("./access");
 
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const lambda = new LambdaClient({});
@@ -29,6 +29,11 @@ function reject(statusCode, message) {
 
 function connectionKey(connectionId) {
   return { pk: `CONNECTION#${connectionId}`, sk: "META" };
+}
+
+async function roomRecord(roomId, sk) {
+  const out = await db.send(new GetCommand({ TableName: table, Key: { pk: `ROOM#${roomId}`, sk } }));
+  return out.Item || null;
 }
 
 function validIdentifier(value) {
@@ -88,48 +93,80 @@ async function register(connectionId, envelope) {
   if (!authorizeIdentity(current, envelope)) {
     throw Object.assign(new Error("identity rejected"), { name: "RejectedConnection" });
   }
-  const ttl = Math.floor(Date.now() / 1000) + connectionTtlSeconds;
-  for (const slot of [0, 1]) {
-    try {
-      await db.send(new TransactWriteCommand({ TransactItems: [
-        {
-          Put: {
-            TableName: table,
-            Item: {
-              pk: `ROOM#${envelope.roomId}`, sk: `PEER#${envelope.from}`,
-              connectionId, peerId: envelope.from, slot, ttl,
-            },
-            ConditionExpression: "attribute_not_exists(pk)",
-          },
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  const expiresAt = nowSeconds + connectionTtlSeconds;
+  const roomId = envelope.roomId;
+  const peerId = envelope.from;
+  const [slot0, slot1, ownPeer] = await Promise.all([
+    roomRecord(roomId, "SLOT#0"),
+    roomRecord(roomId, "SLOT#1"),
+    roomRecord(roomId, `PEER#${peerId}`),
+  ]);
+  const plan = replacementPlan([slot0, slot1], ownPeer, peerId, nowSeconds);
+  if (!plan) throw Object.assign(new Error("room full or peer duplicated"), { name: "RejectedConnection" });
+  const names = { "#ttl": "expiresAt" };
+  const values = { ":peer": peerId, ":now": nowSeconds };
+  const slotCondition = "attribute_not_exists(pk) OR peerId = :peer OR attribute_not_exists(#ttl) OR #ttl <= :now";
+  const items = [
+    {
+      Put: {
+        TableName: table,
+        Item: {
+          pk: `ROOM#${roomId}`, sk: `PEER#${peerId}`,
+          connectionId, peerId, slot: plan.slot, ttl: expiresAt, expiresAt, roomId,
         },
-        {
-          Put: {
-            TableName: table,
-            Item: {
-              pk: `ROOM#${envelope.roomId}`, sk: `SLOT#${slot}`,
-              connectionId, peerId: envelope.from, ttl,
-            },
-            ConditionExpression: "attribute_not_exists(pk)",
-          },
+        ConditionExpression: slotCondition,
+        ExpressionAttributeNames: names,
+        ExpressionAttributeValues: values,
+      },
+    },
+    {
+      Put: {
+        TableName: table,
+        Item: {
+          pk: `ROOM#${roomId}`, sk: `SLOT#${plan.slot}`,
+          connectionId, peerId, slot: plan.slot, ttl: expiresAt, expiresAt, roomId,
         },
-        {
-          Update: {
-            TableName: table,
-            Key: connectionKey(connectionId),
-            UpdateExpression: "SET roomId = :room, peerId = :peer, slot = :slot, ttl = :ttl",
-            ConditionExpression: "attribute_not_exists(roomId) AND attribute_exists(pk)",
-            ExpressionAttributeValues: {
-              ":room": envelope.roomId, ":peer": envelope.from, ":slot": slot, ":ttl": ttl,
-            },
-          },
+        ConditionExpression: slotCondition,
+        ExpressionAttributeNames: names,
+        ExpressionAttributeValues: values,
+      },
+    },
+    {
+      Update: {
+        TableName: table,
+        Key: connectionKey(connectionId),
+        UpdateExpression: "SET roomId = :room, peerId = :peerId, slot = :slot, ttl = :ttl, expiresAt = :expires",
+        ConditionExpression: "attribute_not_exists(roomId) AND attribute_exists(pk)",
+        ExpressionAttributeValues: {
+          ":room": roomId, ":peerId": peerId, ":slot": plan.slot, ":ttl": expiresAt, ":expires": expiresAt,
         },
-      ] }));
-      return { ...current, roomId: envelope.roomId, peerId: envelope.from, slot };
-    } catch (error) {
-      if (error?.name !== "TransactionCanceledException") throw error;
-    }
+      },
+    },
+  ];
+  if (plan.displacedPeerId && plan.displacedConnectionId) {
+    items.push({
+      Delete: {
+        TableName: table,
+        Key: { pk: `ROOM#${roomId}`, sk: `PEER#${plan.displacedPeerId}` },
+        ConditionExpression: "connectionId = :old AND (attribute_not_exists(#ttl) OR #ttl <= :now)",
+        ExpressionAttributeNames: names,
+        ExpressionAttributeValues: { ":old": plan.displacedConnectionId, ":now": nowSeconds },
+      },
+    });
   }
-  throw Object.assign(new Error("room full or peer duplicated"), { name: "RejectedConnection" });
+  if (Number.isInteger(plan.retireSlot) && plan.previousConnectionId) {
+    items.push({
+      Delete: {
+        TableName: table,
+        Key: { pk: `ROOM#${roomId}`, sk: `SLOT#${plan.retireSlot}` },
+        ConditionExpression: "peerId = :peer AND connectionId = :old",
+        ExpressionAttributeValues: { ":peer": peerId, ":old": plan.previousConnectionId },
+      },
+    });
+  }
+  await db.send(new TransactWriteCommand({ TransactItems: items }));
+  return { ...current, roomId, peerId, slot: plan.slot };
 }
 
 async function roomPeers(roomId) {
@@ -189,12 +226,10 @@ async function removeConnection(connectionId, known) {
     ] }));
   } catch (error) {
     if (error?.name !== "TransactionCanceledException") throw error;
+    await db.send(new DeleteCommand({ TableName: table, Key: connectionKey(connectionId) }));
+    return null;
   }
   return item;
-}
-
-function reject(statusCode, error) {
-  return { statusCode, body: JSON.stringify({ error }) };
 }
 
 async function consumeTicket(ticket) {

@@ -13,4 +13,10 @@ function allParticipantsStale(match, now = Date.now(), leaseMs = PRESENCE_LEASE_
   return participantIds(match).every((userId) => !presenceFresh(match, userId, now, leaseMs));
 }
 
-module.exports = { PRESENCE_LEASE_MS, participantIds, presenceFresh, allParticipantsStale };
+function presenceState(match, userId, now = Date.now(), leaseMs = PRESENCE_LEASE_MS) {
+  const seen = Date.parse(match.presence?.[userId]?.lastSeenAt || "");
+  if (!Number.isFinite(seen)) return "unknown";
+  return now - seen <= leaseMs ? "present" : "absent";
+}
+
+module.exports = { PRESENCE_LEASE_MS, allParticipantsStale, participantIds, presenceFresh, presenceState };

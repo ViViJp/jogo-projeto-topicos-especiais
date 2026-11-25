@@ -74,26 +74,49 @@ function buildRaceResult(submission, participantIds, finishedAt = new Date().toI
   };
 }
 
-function incompleteConfirmation(submissions, participantIds, nowMs, waitMs = CONFIRMATION_WAIT_MS) {
+function incompleteConfirmation(submissions, participantIds, nowMs, context = {}) {
   if (!Array.isArray(participantIds) || participantIds.length !== 2) return null;
   const present = participantIds.filter((id) => submissions?.[id]);
   if (present.length !== 1) return null;
   const userId = present[0];
   const submittedAt = Date.parse(submissions[userId].submittedAt || "");
-  if (!Number.isFinite(submittedAt) || nowMs < submittedAt + waitMs) return null;
+  if (!Number.isFinite(submittedAt)) return null;
   const missingUserId = participantIds.find((id) => id !== userId);
   const own = normalizeParticipant(submissions[userId].result);
   if (!own || !missingUserId) return null;
+  if (context.opponentPresent === true) return null;
+  const opponentAbsent = context.opponentAbsent === true;
+  if (!opponentAbsent && nowMs < submittedAt + CONFIRMATION_WAIT_MS) return null;
+  const finishedAt = new Date(nowMs).toISOString();
+  const missingStanding = {
+    userId: missingUserId, rawTimeMs: null, credits: 0, dnf: true, adjustedTimeMs: null, place: null,
+  };
+  if (!opponentAbsent || own.dnf) {
+    return {
+      result: {
+        winnerUserId: null,
+        reason: "inconclusive",
+        finishedAt,
+        missingConfirmation: true,
+        unconfirmedUserId: missingUserId,
+        standings: [
+          { userId, ...own, adjustedTimeMs: own.dnf ? null : adjustedTime(own), place: null },
+          missingStanding,
+        ],
+      },
+      resultStatus: "expired",
+    };
+  }
   return {
     result: {
       winnerUserId: userId,
       reason: "abandon",
-      finishedAt: new Date(nowMs).toISOString(),
+      finishedAt,
       missingConfirmation: true,
       unconfirmedUserId: missingUserId,
       standings: [
-        { userId, ...own, adjustedTimeMs: own.dnf ? null : adjustedTime(own), place: 1 },
-        { userId: missingUserId, rawTimeMs: null, credits: 0, dnf: true, adjustedTimeMs: null, place: 2 },
+        { userId, ...own, adjustedTimeMs: adjustedTime(own), place: 1 },
+        { ...missingStanding, place: 2 },
       ],
     },
     resultStatus: "confirmed",

@@ -4,7 +4,7 @@ const { DynamoDBDocumentClient, DeleteCommand, GetCommand, PutCommand, QueryComm
 const { generateCode, normalizeCode, hashCode } = require("./codes");
 const { buildRaceResult, incompleteConfirmation, normalizeParticipant, submissionsAgree } = require("./results");
 const { consumeDecision, issueDecision } = require("./ticket");
-const { PRESENCE_LEASE_MS, participantIds, presenceFresh, allParticipantsStale } = require("./lease");
+const { PRESENCE_LEASE_MS, participantIds, presenceFresh, presenceState, allParticipantsStale } = require("./lease");
 
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const table = process.env.TABLE_NAME;
@@ -212,23 +212,30 @@ async function consumeStoredTicket(ticket) {
   return { accepted: true, userId: decision.userId, matchId: decision.matchId };
 }
 
-async function closeMissingConfirmation(match, operationId, waitMs) {
-  const decision = incompleteConfirmation(match.submissions, participantIds(match), Date.now(), waitMs);
+async function closeMissingConfirmation(match, operationId) {
+  const ids = participantIds(match);
+  const submitted = ids.filter((id) => match.submissions?.[id]);
+  const missingUserId = submitted.length === 1 ? ids.find((id) => id !== submitted[0]) : null;
+  const state = missingUserId ? presenceState(match, missingUserId) : "unknown";
+  const decision = incompleteConfirmation(match.submissions, ids, Date.now(), {
+    opponentAbsent: state === "absent",
+    opponentPresent: state === "present",
+  });
   if (!decision || match.state !== "running") return match;
   const finishedAt = decision.result.finishedAt;
-  const participants = participantIds(match);
+  const participants = ids;
   try {
     await db.send(new TransactWriteCommand({ TransactItems: [
       {
         Update: {
           TableName: table,
           Key: { pk: match.pk, sk: "META" },
-          UpdateExpression: "SET #state = :finished, #result = :result, resultStatus = :confirmed, finishedAt = :at, revision = revision + :one",
+          UpdateExpression: "SET #state = :finished, #result = :result, resultStatus = :status, finishedAt = :at, revision = revision + :one",
           ConditionExpression: "#state = :running AND resultStatus = :pending AND revision = :revision",
           ExpressionAttributeNames: { "#state": "state", "#result": "result" },
           ExpressionAttributeValues: {
             ":finished": "finished", ":running": "running", ":pending": "pending",
-            ":result": decision.result, ":confirmed": "confirmed", ":at": finishedAt,
+            ":result": decision.result, ":status": decision.resultStatus, ":at": finishedAt,
             ":one": 1, ":revision": match.revision,
           },
         },
@@ -241,14 +248,14 @@ async function closeMissingConfirmation(match, operationId, waitMs) {
           TableName: table,
           Item: {
             pk: `USER#${participant}`, sk: `RESULT#${finishedAt}#${match.id}`,
-            matchId: match.id, at: finishedAt, result: decision.result, resultStatus: "confirmed",
+            matchId: match.id, at: finishedAt, result: decision.result, resultStatus: decision.resultStatus,
           },
           ConditionExpression: "attribute_not_exists(pk)",
         },
       })),
       outboxPut(match.id, operationId, "match.finished", participants, finishedAt, {
         winnerUserId: decision.result.winnerUserId,
-        reason: "abandon",
+        reason: decision.result.reason,
         missingConfirmation: true,
         unconfirmedUserId: decision.result.unconfirmedUserId,
       }),
@@ -261,22 +268,14 @@ async function closeMissingConfirmation(match, operationId, waitMs) {
     ...match,
     state: "finished",
     result: decision.result,
-    resultStatus: "confirmed",
+    resultStatus: decision.resultStatus,
     finishedAt,
     revision: match.revision + 1,
   };
 }
 
-function missingPlayerLeft(match) {
-  const ids = participantIds(match);
-  const present = ids.filter((id) => match.submissions?.[id]);
-  if (present.length !== 1) return false;
-  const missing = ids.find((id) => id !== present[0]);
-  return Boolean(missing) && !presenceFresh(match, missing);
-}
-
 function settleIfExpired(match) {
-  return closeMissingConfirmation(match, `missing-${match.id}`, missingPlayerLeft(match) ? 0 : undefined);
+  return closeMissingConfirmation(match, `missing-${match.id}`);
 }
 
 async function listResults(event, userId) {
@@ -284,7 +283,7 @@ async function listResults(event, userId) {
   if (active?.matchId) {
     const current = await getKey(`MATCH#${active.matchId}`, "META");
     if (current?.state === "running" && current.resultStatus === "pending") {
-      await closeMissingConfirmation(current, `missing-${current.id}`, missingPlayerLeft(current) ? 0 : undefined);
+      await closeMissingConfirmation(current, `missing-${current.id}`);
     }
   }
   const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
@@ -326,7 +325,7 @@ async function createMatch(userId, operationId, mark) {
         }
       } else {
         const closed = old.state === "running"
-          ? await closeMissingConfirmation(old, `${operationId}-missing`, 0)
+          ? await closeMissingConfirmation(old, `${operationId}-missing`)
           : old;
         if (closed.state === "lobby" || closed.state === "running") {
           const cleanupAt = nowIso();
