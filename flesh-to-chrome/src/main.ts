@@ -15,6 +15,8 @@ import { GeorgeRefusalScene } from "./scenes/GeorgeRefusalScene";
 import { ControlsScene } from "./scenes/ControlsScene";
 import { FeedbackScene } from "./scenes/FeedbackScene";
 import { LoadingScene } from "./scenes/LoadingScene";
+import { MatchHistoryScene } from "./scenes/MatchHistoryScene";
+import { NotificationCenterScene } from "./scenes/NotificationCenterScene";
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -92,6 +94,8 @@ const config: Phaser.Types.Core.GameConfig = {
     EndingScene,
     FeedbackScene,
     MultiplayerScene,
+    MatchHistoryScene,
+    NotificationCenterScene,
   ],
 };
 

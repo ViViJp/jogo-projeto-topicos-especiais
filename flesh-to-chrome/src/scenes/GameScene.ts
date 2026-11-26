@@ -1084,6 +1084,7 @@ export class GameScene extends Phaser.Scene {
   private handlePlayerDeath(): void {
     if (this.restarting) return;
     this.restarting = true;
+    this.save.discardPendingDescentMemory();
     this.credits.discardUncollected();
     this.cameras.main.shake(150, 0.01);
     this.hud.flashPrompt("Alex não resistiu — reiniciando do checkpoint", 900);
@@ -1108,6 +1109,7 @@ export class GameScene extends Phaser.Scene {
   private restartFromPhaseStart(): void {
     if (this.restarting) return;
     this.restarting = true;
+    this.save.discardPendingDescentMemory();
     this.credits.resetPhase(this.phaseCredits());
     const consolidatedIds = this.credits.getConsolidatedIds();
     const wallet = this.credits.getTotal();
@@ -1217,6 +1219,7 @@ export class GameScene extends Phaser.Scene {
 
     if (this.isPaused) {
       if (this.input$.isMenuDownJustDown()) {
+        this.save.discardPendingDescentMemory();
         this.togglePause();
         this.scene.start("MenuScene");
         this.input$.postUpdate();

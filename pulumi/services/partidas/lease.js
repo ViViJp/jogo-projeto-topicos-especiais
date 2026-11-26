@@ -1,0 +1,35 @@
+const PRESENCE_LEASE_MS = 45 * 1000;
+
+function participantIds(match) {
+  return [match.hostUserId, match.guestUserId].filter(Boolean);
+}
+
+function presenceFresh(match, userId, now = Date.now(), leaseMs = PRESENCE_LEASE_MS) {
+  const seen = Date.parse(match.presence?.[userId]?.lastSeenAt || "");
+  return Number.isFinite(seen) && now - seen <= leaseMs;
+}
+
+function allParticipantsStale(match, now = Date.now(), leaseMs = PRESENCE_LEASE_MS) {
+  return participantIds(match).every((userId) => !presenceFresh(match, userId, now, leaseMs));
+}
+
+function presenceState(match, userId, now = Date.now(), leaseMs = PRESENCE_LEASE_MS) {
+  const seen = Date.parse(match.presence?.[userId]?.lastSeenAt || "");
+  if (!Number.isFinite(seen)) return "unknown";
+  return now - seen <= leaseMs ? "present" : "absent";
+}
+
+function awardDisconnectAllowed(match, userId, now = Date.now(), leaseMs = PRESENCE_LEASE_MS) {
+  const opponentId = participantIds(match).find((id) => id !== userId);
+  if (!opponentId) return false;
+  return presenceState(match, opponentId, now, leaseMs) === "absent";
+}
+
+module.exports = {
+  PRESENCE_LEASE_MS,
+  allParticipantsStale,
+  awardDisconnectAllowed,
+  participantIds,
+  presenceFresh,
+  presenceState,
+};

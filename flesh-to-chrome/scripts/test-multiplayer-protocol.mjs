@@ -280,4 +280,50 @@ assert.equal(FakePeerConnection.instances.length, 2);
 assert.ok(fakeSignaling.sent.filter((message) => message.signal.type === "presence").length >= 2);
 mesh.stop();
 
+const menuSource = fs.readFileSync(path.join(projectDirectory, "src/scenes/MenuScene.ts"), "utf8");
+const bootSource = fs.readFileSync(path.join(projectDirectory, "src/scenes/BootScene.ts"), "utf8");
+const multiplayerSource = fs.readFileSync(path.join(projectDirectory, "src/scenes/MultiplayerScene.ts"), "utf8");
+const notificationSceneSource = fs.readFileSync(path.join(projectDirectory, "src/scenes/NotificationCenterScene.ts"), "utf8");
+const notificationServiceSource = fs.readFileSync(path.join(projectDirectory, "src/network/NotificationService.ts"), "utf8");
+const matchesSource = fs.readFileSync(path.join(projectDirectory, "../pulumi/services/partidas/index.js"), "utf8");
+const matchServiceSource = fs.readFileSync(path.join(projectDirectory, "src/network/MatchService.ts"), "utf8");
+const cloudSessionSource = fs.readFileSync(path.join(projectDirectory, "src/network/CloudSession.ts"), "utf8");
+const infrastructureSource = fs.readFileSync(path.join(projectDirectory, "../pulumi/__main__.py"), "utf8");
+const syncSource = fs.readFileSync(path.join(projectDirectory, "src/network/MatchResultSync.ts"), "utf8");
+assert.match(menuSource, /openMultiplayer[\s\S]*?if \(!CloudSession\.current\(\)\)/,
+  "visitante não pode abrir a cena multiplayer pelo menu");
+assert.match(bootSource, /hasMultiplayerInvite\(\) && CloudSession\.current\(\)/,
+  "convite direto também deve exigir sessão autenticada");
+assert.match(multiplayerSource, /MatchService\.join/);
+assert.match(multiplayerSource, /MatchService\.ready/);
+assert.match(syncSource, /MatchService\.finish/);
+assert.match(multiplayerSource, /kind: "finish"/);
+assert.match(multiplayerSource, /await resolveSignaling\(/,
+  "a sinalização publicada deve ser resolvida antes de abrir o mesh");
+assert.doesNotMatch(multiplayerSource, /window\.location\.hostname}\/ws/,
+  "produção não pode presumir /ws na origem estática");
+assert.match(cloudSessionSource, /body\.signaling/,
+  "cloud-config deve fornecer explicitamente o WSS publicado");
+assert.match(infrastructureSource, /protocol_type="WEBSOCKET"/);
+assert.match(infrastructureSource, /"signaling": endpoints\[1\]/);
+assert.match(multiplayerSource, /if \(!this\.backendReady\) return;/,
+  "handshake WebRTC deve aguardar prontidão confirmada pelo serviço Partidas");
+assert.match(multiplayerSource, /handlePeerConnected[\s\S]*?confirmBackendReady/,
+  "prontidão REST só pode ser confirmada depois que o DataChannel abrir");
+assert.match(matchServiceSource, /heartbeat\(matchId: string, connected: boolean\)/);
+assert.match(matchServiceSource, /observedOpponent: MatchParticipantResult/,
+  "cada jogador deve confirmar o resultado recebido do adversário");
+assert.match(matchesSource, /attribute_not_exists\(guestUserId\)/,
+  "duas entradas simultâneas devem disputar uma única condição transacional");
+assert.match(matchesSource, /async function finishMatch/);
+assert.match(matchesSource, /submissionsAgree/);
+assert.match(matchesSource, /resultStatus = :pending/);
+assert.match(matchesSource, /async function recoverMatch/);
+assert.match(matchesSource, /RESULT#/,
+  "conclusão e abandono devem materializar histórico privado por participante");
+assert.match(notificationSceneSource, /this\.ready = false;[\s\S]*?\+\+this\.loadGeneration/,
+  "a central deve bloquear interação e invalidar carregamentos de execuções anteriores");
+assert.match(notificationServiceSource, /const current = CloudSession\.current\(\);[\s\S]*?current\.profile\.id !== session\.profile\.id/,
+  "notificações não podem usar o token de outra conta após troca de sessão");
+
 console.log("Multiplayer: protocolo, fila de reconexão e renegociação WebRTC OK.");

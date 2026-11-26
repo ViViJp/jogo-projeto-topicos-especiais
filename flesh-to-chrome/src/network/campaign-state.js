@@ -9,7 +9,6 @@ const fragmentOrder = [
   "glitch-industrial-familia",
 ];
 const descentPhaseOrder = ["fase5", "fase4", "fase3", "fase2-intro"];
-const abilityRemovalOrder = ["thrusters", "eyes", "arms", "legs"];
 const creditLimits = {
   "f1-risk": 15,
   "f1-safe": 1,
@@ -108,12 +107,9 @@ function activeDescent(save) {
       ? "complete"
       : "active";
   if (chainStatus === "complete" && completedCount !== removalOrder.length) chainStatus = "active";
-  const recovered = Array.isArray(source.recoveredFragmentIds) ? source.recoveredFragmentIds : [];
-  const nextMemoryRecovered = recovered.includes(fragmentOrder[completedCount])
-    || source.pendingRemoval === abilityRemovalOrder[completedCount];
-  let pendingMemory = nextMemoryRecovered ? memoryOrder[completedCount] || null : null;
-  if (typeof source.pendingMemory === "string") pendingMemory = source.pendingMemory;
-  if (pendingMemory !== memoryOrder[completedCount] || chainStatus !== "active") pendingMemory = null;
+  // Memória só pertence ao contrato remoto depois da retirada correspondente.
+  // A coleta ainda pendente é efêmera e não pode voltar de cache/nuvem após saída.
+  const pendingMemory = null;
   const retryUsedByStage = {};
   if (source.retryUsedByStage && typeof source.retryUsedByStage === "object") {
     Object.assign(retryUsedByStage, source.retryUsedByStage);
@@ -258,11 +254,7 @@ function fromApiState(state, includeSnapshot = true) {
     removalOrder.length,
     prefixFrom(descent.removals, removalOrder).length,
   );
-  const pendingIndex = memoryOrder.indexOf(descent.pendingMemory);
   const recoveredFragmentIds = fragmentOrder.slice(0, completedCount);
-  if (pendingIndex === completedCount && fragmentOrder[pendingIndex]) {
-    recoveredFragmentIds.push(fragmentOrder[pendingIndex]);
-  }
   const retryUsedPhaseIds = Object.entries(descent.retryUsedByStage || {})
     .filter(([, used]) => used)
     .map(([stageId]) => phaseForStage(stageId))
@@ -291,7 +283,7 @@ function fromApiState(state, includeSnapshot = true) {
       currentStep: completedCount,
       recoveredFragmentIds,
       retryUsedPhaseIds,
-      pendingRemoval: pendingIndex === completedCount ? abilityRemovalOrder[pendingIndex] || null : null,
+      pendingRemoval: null,
     },
     preGateSave,
     endingReached: ["chrome", "flesh", "hollow"].includes(state?.ending) ? state.ending : null,

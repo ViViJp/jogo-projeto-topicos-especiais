@@ -86,6 +86,22 @@ class FakeDb {
   }
 }
 
+class EventDb {
+  constructor() { this.items = new Map(); }
+  key(value) { return `${value.pk}|${value.sk}`; }
+  async send(commandValue) {
+    const input = commandValue.input;
+    if (commandValue instanceof GetCommand) return { Item: this.items.get(this.key(input.Key)) };
+    if (commandValue instanceof PutCommand) {
+      const key = this.key(input.Item);
+      if (input.ConditionExpression && this.items.has(key)) conditionalFailure();
+      this.items.set(key, { ...input.Item });
+      return {};
+    }
+    conditionalFailure();
+  }
+}
+
 (async () => {
   const db = new FakeDb({ pk: "u", sk: "EMAIL#welcome", state: "failed", attempts: 4 });
   communications.setClients(db, { send: async () => ({ MessageId: "m-1" }) });
@@ -139,6 +155,32 @@ class FakeDb {
   assert.equal(uncertainAfterAccept.state, "uncertain");
   assert.equal(persistenceFailure.item.state, "uncertain");
   assert.equal(persistenceFailure.item.messageId, "ses-message-2");
+
+  const eventDb = new EventDb();
+  communications.setClients(eventDb, { send: async () => ({ MessageId: "unused" }) });
+  const campaignEvent = {
+    id: "campaign-op-1",
+    userId: "player-1",
+    type: "campaign.saved",
+    resource: "campaign-player-1",
+    at: "2026-11-25T12:00:00.000Z",
+    detail: { milestoneKey: "implant-1", ending: null },
+  };
+  await communications.consumeEvents([campaignEvent, campaignEvent]);
+  assert.equal(
+    [...eventDb.items.values()].filter((item) => item.sk?.startsWith("NOTE#campaign-")).length,
+    1,
+    "replay do mesmo marco não pode duplicar notificação",
+  );
+  await communications.consumeEvents([{
+    id: "match-op-1",
+    userIds: ["player-1", "player-2"],
+    type: "match.finished",
+    resource: "match-1",
+    at: "2026-11-25T12:10:00.000Z",
+  }]);
+  assert.ok(eventDb.items.has("player-1|NOTE#match-match-1"));
+  assert.ok(eventDb.items.has("player-2|NOTE#match-match-1"));
 
   console.log("communications delivery ok");
 })().catch((error) => {

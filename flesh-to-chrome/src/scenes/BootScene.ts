@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { generatePlaceholderTextures, TEX } from "../utils/PlaceholderTextures";
 import { AudioManager } from "../systems/AudioManager";
 import { startLoadingTransition } from "../systems/SceneTransition";
+import { CloudSession } from "../network/CloudSession";
 
 export class BootScene extends Phaser.Scene {
   private inviteProgressFill?: Phaser.GameObjects.Graphics;
@@ -14,7 +15,7 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload(): void {
-    if (this.hasMultiplayerInvite()) this.createInviteLoadingView();
+    if (this.hasMultiplayerInvite() && CloudSession.current()) this.createInviteLoadingView();
     AudioManager.preload(this);
     if (!this.textures.exists(TEX.credit)) {
       this.load.spritesheet(
@@ -28,7 +29,7 @@ export class BootScene extends Phaser.Scene {
   create(): void {
     this.load.off(Phaser.Loader.Events.PROGRESS, this.handleInviteLoadProgress);
     generatePlaceholderTextures(this);
-    if (this.hasMultiplayerInvite()) {
+    if (this.hasMultiplayerInvite() && CloudSession.current()) {
       startLoadingTransition(this, "MultiplayerScene", undefined, "CIRCUITO MULTIPLAYER");
       return;
     }

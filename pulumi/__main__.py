@@ -35,10 +35,13 @@ if is_prod:
     pulumi.export("domain", domain)
 
 
-def table(name, with_ttl=False):
+def table(name, with_ttl=False, with_stream=False):
     kwargs = {}
     if with_ttl:
         kwargs["ttl"] = aws.dynamodb.TableTtlArgs(attribute_name="ttl", enabled=True)
+    if with_stream:
+        kwargs["stream_enabled"] = True
+        kwargs["stream_view_type"] = "NEW_IMAGE"
     return aws.dynamodb.Table(
         name,
         name=f"{prefix}-{name}",
@@ -53,7 +56,7 @@ def table(name, with_ttl=False):
     )
 
 
-def publish(service, table_resource, variables=None, invoke_function=None, ses_identity=None):
+def publish(service, table_resource, variables=None, invoke_function=None, ses_identity=None, consume_queues=None):
     path = services_dir / service
     subprocess.run(["npm", "install", "--omit=dev"], cwd=path, check=True)
 
@@ -142,6 +145,30 @@ def publish(service, table_resource, variables=None, invoke_function=None, ses_i
                 )
             ),
         )
+    consume_policy = None
+    if consume_queues:
+        consume_policy = aws.iam.RolePolicy(
+            f"{service}-consume-events",
+            role=role.id,
+            policy=pulumi.Output.all(*[queue.arn for queue in consume_queues]).apply(
+                lambda arns: json.dumps(
+                    {
+                        "Version": "2012-10-17",
+                        "Statement": [
+                            {
+                                "Effect": "Allow",
+                                "Action": [
+                                    "sqs:ReceiveMessage",
+                                    "sqs:DeleteMessage",
+                                    "sqs:GetQueueAttributes",
+                                ],
+                                "Resource": arns,
+                            }
+                        ],
+                    }
+                )
+            ),
+        )
     environment = {"TABLE_NAME": table_resource.name, **(variables or {})}
     fn = aws.lambda_.Function(
         service,
@@ -152,10 +179,124 @@ def publish(service, table_resource, variables=None, invoke_function=None, ses_i
         code=pulumi.FileArchive(str(path)),
         timeout=10,
         environment=aws.lambda_.FunctionEnvironmentArgs(variables=environment),
+        opts=pulumi.ResourceOptions(depends_on=[consume_policy]) if consume_policy else None,
     )
     pulumi.export(f"{service}_function", fn.name)
     pulumi.export(f"{service}_table", table_resource.name)
     return fn
+
+
+def event_pipeline(
+    producer_tables,
+    audit_queue,
+    communications_queue,
+    publish_failure_queue,
+    audit_function,
+    communications_function,
+):
+    path = services_dir / "event-publisher"
+    subprocess.run(["npm", "install", "--omit=dev"], cwd=path, check=True)
+    role = aws.iam.Role(
+        "event-publisher-role",
+        assume_role_policy=json.dumps(
+            {
+                "Version": "2012-10-17",
+                "Statement": [{
+                    "Effect": "Allow",
+                    "Principal": {"Service": "lambda.amazonaws.com"},
+                    "Action": "sts:AssumeRole",
+                }],
+            }
+        ),
+    )
+    aws.iam.RolePolicyAttachment(
+        "event-publisher-logs",
+        role=role.name,
+        policy_arn="arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
+    )
+    stream_policy = aws.iam.RolePolicy(
+        "event-publisher-streams",
+        role=role.id,
+        policy=pulumi.Output.all(*[table_resource.stream_arn for table_resource in producer_tables]).apply(
+            lambda arns: json.dumps(
+                {
+                    "Version": "2012-10-17",
+                    "Statement": [{
+                        "Effect": "Allow",
+                        "Action": [
+                            "dynamodb:DescribeStream",
+                            "dynamodb:GetRecords",
+                            "dynamodb:GetShardIterator",
+                            "dynamodb:ListStreams",
+                        ],
+                        "Resource": arns,
+                    }],
+                }
+            )
+        ),
+    )
+    queue_policy = aws.iam.RolePolicy(
+        "event-publisher-queues",
+        role=role.id,
+        policy=pulumi.Output.all(audit_queue.arn, communications_queue.arn, publish_failure_queue.arn).apply(
+            lambda arns: json.dumps(
+                {
+                    "Version": "2012-10-17",
+                    "Statement": [{
+                        "Effect": "Allow",
+                        "Action": "sqs:SendMessage",
+                        "Resource": arns,
+                    }],
+                }
+            )
+        ),
+    )
+    publisher = aws.lambda_.Function(
+        "event-publisher",
+        name=f"{prefix}-event-publisher",
+        runtime=aws.lambda_.Runtime.NODE_JS22D_X,
+        handler="index.handler",
+        role=role.arn,
+        code=pulumi.FileArchive(str(path)),
+        timeout=15,
+        environment=aws.lambda_.FunctionEnvironmentArgs(
+            variables={
+                "AUDIT_QUEUE_URL": audit_queue.url,
+                "COMMUNICATIONS_QUEUE_URL": communications_queue.url,
+            }
+        ),
+        opts=pulumi.ResourceOptions(depends_on=[stream_policy, queue_policy]),
+    )
+    for index, table_resource in enumerate(producer_tables):
+        aws.lambda_.EventSourceMapping(
+            f"outbox-stream-{index}",
+            event_source_arn=table_resource.stream_arn,
+            function_name=publisher.arn,
+            starting_position="LATEST",
+            batch_size=10,
+            bisect_batch_on_function_error=True,
+            maximum_retry_attempts=5,
+            destination_config={
+                "on_failure": {
+                    "destination_arn": publish_failure_queue.arn,
+                }
+            },
+        )
+    aws.lambda_.EventSourceMapping(
+        "audit-events-consumer",
+        event_source_arn=audit_queue.arn,
+        function_name=audit_function.arn,
+        batch_size=10,
+        function_response_types=["ReportBatchItemFailures"],
+    )
+    aws.lambda_.EventSourceMapping(
+        "communication-events-consumer",
+        event_source_arn=communications_queue.arn,
+        function_name=communications_function.arn,
+        batch_size=10,
+        function_response_types=["ReportBatchItemFailures"],
+    )
+    return publisher
 
 
 ROUTES = {
@@ -177,8 +318,12 @@ ROUTES = {
         "POST /matches/join",
         "GET /me/matches",
         "GET /matches/{id}",
+        "POST /matches/{id}/heartbeat",
         "POST /matches/{id}/ready",
+        "POST /matches/{id}/finish",
+        "POST /matches/{id}/recover",
         "POST /matches/{id}/leave",
+        "POST /matches/{id}/connection-ticket",
     ],
     "comunicacoes": [
         "GET /me/notifications",
@@ -241,7 +386,7 @@ def http_api(api, functions, authorizer):
     return api, stage
 
 
-def frontend_cdn(certificate_arn=None, aliases=None, api_endpoint=None):
+def frontend_cdn(certificate_arn=None, aliases=None, api_endpoint=None, signaling_endpoint=None):
     bucket = aws.s3.Bucket(
         "frontend",
         bucket=f"{prefix}-frontend",
@@ -261,7 +406,13 @@ def frontend_cdn(certificate_arn=None, aliases=None, api_endpoint=None):
             "frontend-cloud-config",
             bucket=bucket.id,
             key="cloud-config.json",
-            content=api_endpoint.apply(lambda endpoint: json.dumps({"api": endpoint})),
+            content=pulumi.Output.all(api_endpoint, signaling_endpoint).apply(
+                lambda endpoints: json.dumps({
+                    "api": endpoints[0],
+                    "signaling": endpoints[1] or "",
+                    "iceServers": [{"urls": "stun:stun.l.google.com:19302"}],
+                })
+            ),
             content_type="application/json; charset=utf-8",
             cache_control="no-cache",
         )
@@ -392,7 +543,7 @@ def certificate(name, domain_name, alternative_names, provider=None):
     return validation
 
 
-def prod_names(api, stage):
+def prod_names(api, stage, signaling_endpoint):
     use1 = aws.Provider("us-east-1", region="us-east-1")
     frontend_cert = certificate(
         "frontend-cert",
@@ -404,6 +555,7 @@ def prod_names(api, stage):
         certificate_arn=frontend_cert.certificate_arn,
         aliases=[domain, f"www.{domain}"],
         api_endpoint=api.api_endpoint,
+        signaling_endpoint=signaling_endpoint,
     )
     for hostname in (domain, f"www.{domain}"):
         slug = "apex" if hostname == domain else "www"
@@ -587,13 +739,160 @@ def open_api():
     )
 
 
+def websocket_signaling(table_resource, partidas_function):
+    path = services_dir / "signaling"
+    subprocess.run(["npm", "install", "--omit=dev"], cwd=path, check=True)
+    api = aws.apigatewayv2.Api(
+        "signaling-websocket",
+        name=f"{prefix}-signaling",
+        protocol_type="WEBSOCKET",
+        route_selection_expression="$request.body.action",
+    )
+    role = aws.iam.Role(
+        "signaling-role",
+        assume_role_policy=json.dumps({
+            "Version": "2012-10-17",
+            "Statement": [{
+                "Effect": "Allow",
+                "Principal": {"Service": "lambda.amazonaws.com"},
+                "Action": "sts:AssumeRole",
+            }],
+        }),
+    )
+    logs = aws.iam.RolePolicyAttachment(
+        "signaling-logs",
+        role=role.name,
+        policy_arn="arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
+    )
+    access = aws.iam.RolePolicy(
+        "signaling-access",
+        role=role.id,
+        policy=pulumi.Output.all(table_resource.arn, api.execution_arn, partidas_function.arn).apply(
+            lambda values: json.dumps({
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Effect": "Allow",
+                        "Action": [
+                            "dynamodb:GetItem",
+                            "dynamodb:PutItem",
+                            "dynamodb:UpdateItem",
+                            "dynamodb:DeleteItem",
+                            "dynamodb:Query",
+                            "dynamodb:TransactWriteItems",
+                        ],
+                        "Resource": values[0],
+                    },
+                    {
+                        "Effect": "Allow",
+                        "Action": "execute-api:ManageConnections",
+                        "Resource": f"{values[1]}/*/@connections/*",
+                    },
+                    {
+                        "Effect": "Allow",
+                        "Action": "lambda:InvokeFunction",
+                        "Resource": values[2],
+                    },
+                ],
+            })
+        ),
+    )
+    function = aws.lambda_.Function(
+        "signaling",
+        name=f"{prefix}-signaling",
+        runtime=aws.lambda_.Runtime.NODE_JS22D_X,
+        handler="index.handler",
+        role=role.arn,
+        code=pulumi.FileArchive(str(path)),
+        timeout=10,
+        environment=aws.lambda_.FunctionEnvironmentArgs(
+            variables={
+                "TABLE_NAME": table_resource.name,
+                "PARTIDAS_FUNCTION_NAME": partidas_function.name,
+            }
+        ),
+        opts=pulumi.ResourceOptions(depends_on=[logs, access]),
+    )
+    integration = aws.apigatewayv2.Integration(
+        "signaling-integration",
+        api_id=api.id,
+        integration_type="AWS_PROXY",
+        integration_method="POST",
+        integration_uri=function.invoke_arn,
+    )
+    routes = [
+        aws.apigatewayv2.Route(
+            f"signaling-{route[1:]}",
+            api_id=api.id,
+            route_key=route,
+            target=integration.id.apply(lambda value: f"integrations/{value}"),
+        )
+        for route in ("$connect", "$disconnect", "$default")
+    ]
+    aws.lambda_.Permission(
+        "signaling-invoke",
+        action="lambda:InvokeFunction",
+        function=function.name,
+        principal="apigateway.amazonaws.com",
+        source_arn=api.execution_arn.apply(lambda arn: f"{arn}/*/*"),
+    )
+    deployment = aws.apigatewayv2.Deployment(
+        "signaling-deployment",
+        api_id=api.id,
+        triggers={"routes": pulumi.Output.all(integration.id, *[route.id for route in routes]).apply(
+            lambda values: hashlib.sha1("|".join(values).encode()).hexdigest()
+        )},
+        opts=pulumi.ResourceOptions(depends_on=routes),
+    )
+    signaling_stage = aws.apigatewayv2.Stage(
+        "signaling-live",
+        api_id=api.id,
+        name="live",
+        deployment_id=deployment.id,
+    )
+    endpoint = pulumi.Output.all(api.api_endpoint, signaling_stage.id).apply(
+        lambda values: f"{values[0]}/live"
+    )
+    pulumi.export("signaling_websocket", endpoint)
+    return endpoint
+
+
 services = {
-    "conta": table("accounts", with_ttl=True),
-    "campanha": table("campaigns"),
-    "partidas": table("matches", with_ttl=True),
+    "conta": table("accounts", with_ttl=True, with_stream=True),
+    "campanha": table("campaigns", with_stream=True),
+    "partidas": table("matches", with_ttl=True, with_stream=True),
     "comunicacoes": table("communications"),
     "auditoria": table("audit"),
+    "signaling": table("signaling", with_ttl=True),
 }
+
+audit_dlq = aws.sqs.Queue("audit-events-dlq", name=f"{prefix}-audit-events-dlq", message_retention_seconds=1209600)
+communications_dlq = aws.sqs.Queue(
+    "communication-events-dlq",
+    name=f"{prefix}-communication-events-dlq",
+    message_retention_seconds=1209600,
+)
+outbox_publish_dlq = aws.sqs.Queue(
+    "outbox-publish-dlq",
+    name=f"{prefix}-outbox-publish-dlq",
+    message_retention_seconds=1209600,
+)
+audit_queue = aws.sqs.Queue(
+    "audit-events",
+    name=f"{prefix}-audit-events",
+    visibility_timeout_seconds=60,
+    redrive_policy=audit_dlq.arn.apply(
+        lambda arn: json.dumps({"deadLetterTargetArn": arn, "maxReceiveCount": 5})
+    ),
+)
+communications_queue = aws.sqs.Queue(
+    "communication-events",
+    name=f"{prefix}-communication-events",
+    visibility_timeout_seconds=60,
+    redrive_policy=communications_dlq.arn.apply(
+        lambda arn: json.dumps({"deadLetterTargetArn": arn, "maxReceiveCount": 5})
+    ),
+)
 
 if is_prod and publish_domain:
     prod_mail()
@@ -602,7 +901,30 @@ elif config.get("sesFromEmail"):
 
 api = open_api()
 pool, client, authorizer, google_enabled = players(api)
-frontend = frontend_cdn(api_endpoint=api.api_endpoint) if not (is_prod and publish_domain) else None
+functions = {}
+login_host = pulumi.Output.concat(
+    cognito_domain_prefix,
+    ".auth.",
+    pulumi.Config("aws").get("region") or "sa-east-1",
+    ".amazoncognito.com",
+)
+ses_from = f"noreply@{domain}" if is_prod and publish_domain else (config.get("sesFromEmail") or "")
+ses_identity = domain if is_prod and publish_domain else (config.get("sesFromEmail") or domain)
+mail_env = {"SES_FROM": ses_from} if ses_from else {}
+functions["comunicacoes"] = publish(
+    "comunicacoes",
+    services["comunicacoes"],
+    mail_env,
+    ses_identity=ses_identity,
+    consume_queues=[communications_queue],
+)
+functions["campanha"] = publish("campanha", services["campanha"])
+functions["partidas"] = publish("partidas", services["partidas"])
+signaling_endpoint = websocket_signaling(services["signaling"], functions["partidas"])
+frontend = frontend_cdn(
+    api_endpoint=api.api_endpoint,
+    signaling_endpoint=signaling_endpoint,
+) if not (is_prod and publish_domain) else None
 if frontend is not None:
     allowed_origins = pulumi.Output.concat(
         "https://",
@@ -613,25 +935,7 @@ if frontend is not None:
 else:
     allowed_origins = f"https://{domain},https://www.{domain}"
     frontend_origin = f"https://{domain}"
-login_host = pulumi.Output.concat(
-    cognito_domain_prefix,
-    ".auth.",
-    pulumi.Config("aws").get("region") or "sa-east-1",
-    ".amazoncognito.com",
-)
-ses_from = f"noreply@{domain}" if is_prod and publish_domain else (config.get("sesFromEmail") or "")
-ses_identity = domain if is_prod and publish_domain else (config.get("sesFromEmail") or domain)
-mail_env = {"SES_FROM": ses_from} if ses_from else {}
-functions = {}
-functions["comunicacoes"] = publish(
-    "comunicacoes",
-    services["comunicacoes"],
-    mail_env,
-    ses_identity=ses_identity,
-)
-functions["campanha"] = publish("campanha", services["campanha"])
-functions["partidas"] = publish("partidas", services["partidas"])
-functions["auditoria"] = publish("auditoria", services["auditoria"])
+functions["auditoria"] = publish("auditoria", services["auditoria"], consume_queues=[audit_queue])
 functions["conta"] = publish(
     "conta",
     services["conta"],
@@ -647,6 +951,14 @@ functions["conta"] = publish(
     },
     invoke_function=functions["comunicacoes"],
 )
+event_pipeline(
+    [services["conta"], services["campanha"], services["partidas"]],
+    audit_queue,
+    communications_queue,
+    outbox_publish_dlq,
+    functions["auditoria"],
+    functions["comunicacoes"],
+)
 api_resource, stage = http_api(api, functions, authorizer)
 if is_prod and publish_domain:
-    prod_names(api_resource, stage)
+    prod_names(api_resource, stage, signaling_endpoint)

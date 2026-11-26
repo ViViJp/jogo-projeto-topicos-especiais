@@ -62,8 +62,9 @@ assert.equal(validateState(descentState), "");
 const restoredDescent = fromApiState(descentState);
 assert.equal(restoredDescent.descentState.currentStep, 1);
 assert.deepEqual(restoredDescent.descentState.recoveredFragmentIds,
-  ["glitch-topo-identidade", "glitch-corporativo-voz"]);
-assert.equal(restoredDescent.descentState.pendingRemoval, "eyes");
+  ["glitch-topo-identidade"], "a nuvem só restaura memórias consolidadas");
+assert.equal(restoredDescent.descentState.pendingRemoval, null);
+assert.equal(descentState.descent.pendingMemory, null, "memória pendente não deve ser sincronizada");
 assert.deepEqual(restoredDescent.descentState.retryUsedPhaseIds, ["fase5"]);
 
 const tampered = {

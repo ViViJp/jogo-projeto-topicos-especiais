@@ -102,6 +102,15 @@ async function save(userId, body, current, requestId, eventType, mark, checkTran
     ConditionExpression: exists ? "revision = :expected" : "attribute_not_exists(pk)",
   };
   if (exists) campaignPut.ExpressionAttributeValues = { ":expected": body.expectedRevision };
+  const implantCount = Array.isArray(payload.state.implants) ? payload.state.implants.length : 0;
+  const removalCount = Array.isArray(payload.state.descent?.removals) ? payload.state.descent.removals.length : 0;
+  const milestoneKey = payload.state.ending
+    ? `ending-${payload.state.ending}`
+    : removalCount > 0
+      ? `removal-${removalCount}`
+      : payload.state.phase === "ascent" && implantCount > 0
+        ? `implant-${implantCount}`
+        : null;
 
   await db.send(
     new TransactWriteCommand({
@@ -120,6 +129,12 @@ async function save(userId, body, current, requestId, eventType, mark, checkTran
               result: "accepted",
               at: payload.updatedAt,
               correlation: body.operationId,
+              detail: {
+                phase: payload.state.phase,
+                stageId: payload.state.stageId,
+                ending: payload.state.ending,
+                milestoneKey,
+              },
             },
             ConditionExpression: "attribute_not_exists(pk)",
           },

@@ -68,6 +68,13 @@ import {
   alexSlideAnimationKey,
 } from "../utils/AlexSprite";
 import { generatePlaceholderTextures } from "../utils/PlaceholderTextures";
+import { CloudSession } from "../network/CloudSession";
+import { MatchResultSync } from "../network/MatchResultSync";
+import {
+  MatchParticipantResult,
+  MatchService,
+  RemoteMatch,
+} from "../network/MatchService";
 
 const SIGNALING_CHANNEL = "flesh-to-chrome-webrtc-v1";
 const SNAPSHOT_INTERVAL_MS = 1000 / 15;
@@ -83,6 +90,8 @@ const QUIT_CONFIRM_WINDOW_MS = 1_500;
 const REMATCH_GUARD_MS = 800;
 const OPPONENT_MAX_LEAD_MS = 150;
 const OPPONENT_MAX_LEAD_SPEED = 1_000;
+const MATCH_HEARTBEAT_INTERVAL_MS = 10_000;
+const MATCH_PRESENCE_LEASE_MS = 45_000;
 const ALL_ABILITIES = { legs: true, arms: true, eyes: true, thrusters: true } as const;
 
 type RacePhase = "lobby" | "countdown" | "racing" | "finished";
@@ -104,6 +113,7 @@ export class MultiplayerScene extends Phaser.Scene {
   private opponentVisualState?: PlayerSnapshotMessage["state"];
 
   private statusText?: Phaser.GameObjects.Text;
+  private roomText?: Phaser.GameObjects.Text;
   private peersText?: Phaser.GameObjects.Text;
   private timerText?: Phaser.GameObjects.Text;
   private creditsText?: Phaser.GameObjects.Text;
@@ -150,6 +160,19 @@ export class MultiplayerScene extends Phaser.Scene {
   private lastRemoteCredits = 0;
   private remoteCheckpointReached = false;
   private remoteClockOffsetMs?: number;
+  private match?: RemoteMatch;
+  private inviteCode = "";
+  private backendReady = false;
+  private matchPollInFlight = false;
+  private lastMatchPollAt = 0;
+  private readyOperationId = "";
+  private leaveOperationId = "";
+  private finishOperationId = "";
+  private resultPersisted = false;
+  private disconnectAward = false;
+  private heartbeatInFlight = false;
+  private lastBackendHeartbeatAt = 0;
+  private recoverOperationId = "";
   private remoteTarget?: {
     x: number;
     y: number;
@@ -261,6 +284,10 @@ export class MultiplayerScene extends Phaser.Scene {
   }
 
   create(): void {
+    if (!CloudSession.current()) {
+      this.scene.start("MenuScene");
+      return;
+    }
     generatePlaceholderTextures(this);
     AudioManager.playBgm(this, BGM.phase5, 0.3);
     this.cameras.main.setBackgroundColor(TILED_MULTIPLAYER_BACKGROUND);
@@ -285,7 +312,7 @@ export class MultiplayerScene extends Phaser.Scene {
     this.input$ = new InputManager(this);
     this.resetSessionState();
     this.createLobby();
-    void this.startMesh();
+    void this.prepareAuthenticatedMatch();
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.events.off(
@@ -329,9 +356,18 @@ export class MultiplayerScene extends Phaser.Scene {
     }
 
     if (this.phase === "finished" && time >= this.rematchAllowedAt && this.input$.isConfirmJustDown()) {
-      // Revanche: a cena reinicia na mesma sala (o ?room= continua na URL).
-      this.scene.restart();
+      this.backToMenu();
       return;
+    }
+
+    if (this.phase === "lobby" && this.match && !this.backendReady && time - this.lastMatchPollAt >= 1000) {
+      this.lastMatchPollAt = time;
+      void this.refreshBackendReady();
+    }
+
+    if (this.match && time - this.lastBackendHeartbeatAt >= MATCH_HEARTBEAT_INTERVAL_MS) {
+      this.lastBackendHeartbeatAt = time;
+      void this.sendBackendHeartbeat(Boolean(this.opponentPeerId));
     }
 
     if (this.phase === "lobby" && this.mesh && time - this.lastHeartbeatAt >= 1000) {
@@ -368,7 +404,7 @@ export class MultiplayerScene extends Phaser.Scene {
 
   private resetSessionState(): void {
     this.localPeerId = createPeerId();
-    this.roomId = roomFromUrl();
+    this.roomId = "";
     this.opponentPeerId = undefined;
     this.remoteReady = false;
     this.preparedRaceId = undefined;
@@ -400,6 +436,19 @@ export class MultiplayerScene extends Phaser.Scene {
     this.remoteTarget = undefined;
     this.opponentVisualState = undefined;
     this.remoteClockOffsetMs = undefined;
+    this.match = undefined;
+    this.inviteCode = inviteFromUrl();
+    this.backendReady = false;
+    this.matchPollInFlight = false;
+    this.lastMatchPollAt = 0;
+    this.readyOperationId = MatchService.operationId();
+    this.leaveOperationId = MatchService.operationId();
+    this.finishOperationId = MatchService.operationId();
+    this.resultPersisted = false;
+    this.disconnectAward = false;
+    this.heartbeatInFlight = false;
+    this.lastBackendHeartbeatAt = 0;
+    this.recoverOperationId = MatchService.operationId();
   }
 
   private createLobby(): void {
@@ -430,15 +479,15 @@ export class MultiplayerScene extends Phaser.Scene {
     this.registerViewportLayout(() => title.setX(this.scale.width / 2));
     this.addLobbyObject(title);
 
-    const roomText = this.add
+    const roomText = this.roomText = this.add
         .text(
           centerX,
           145,
-          `SALA  ${this.roomId}\nVOCÊ  ${this.localPeerId}`,
+          `RESERVANDO SALA...\nVOCÊ  ${this.localPeerId}`,
           { ...textStyle("#8892b0", "18px"), align: "center" }
         )
         .setOrigin(0.5);
-    this.registerViewportLayout(() => roomText.setX(this.scale.width / 2));
+    this.registerViewportLayout(() => this.roomText?.setX(this.scale.width / 2));
     this.addLobbyObject(roomText);
 
     this.statusText = this.add
@@ -501,6 +550,124 @@ export class MultiplayerScene extends Phaser.Scene {
     layout();
   }
 
+  private async prepareAuthenticatedMatch(): Promise<void> {
+    const session = CloudSession.current();
+    if (!session) {
+      this.statusText?.setText("Entre com Google para acessar o multiplayer.").setColor("#ff8a8a");
+      return;
+    }
+
+    const requestedMatchId = matchFromUrl();
+    let result = requestedMatchId ? await MatchService.read(requestedMatchId) : undefined;
+    if (!result || result.status !== "ok") {
+      result = this.inviteCode
+        ? await MatchService.join(this.inviteCode, MatchService.operationId())
+        : await MatchService.create(MatchService.operationId());
+    }
+    if (result.status !== "ok" || !result.value) {
+      const message = result.status === "invalid"
+        ? "Convite inválido, expirado ou já utilizado."
+        : result.status === "conflict"
+          ? "Esta conta já possui uma partida ativa."
+          : result.status === "unauthenticated"
+            ? "Sua sessão expirou. Entre novamente pelo menu."
+            : "O serviço de partidas está indisponível.";
+      this.statusText?.setText(message).setColor("#ff8a8a");
+      this.peersText?.setText("ESC / B para voltar");
+      return;
+    }
+
+    this.match = result.value;
+    const profileId = CloudSession.current()?.profile.id;
+    if (profileId) this.localPeerId = profileId;
+    if (this.match.state === "finished" || this.match.state === "cancelled") {
+      this.statusText?.setText("Esta partida já foi encerrada.").setColor("#FFD37C");
+      this.peersText?.setText("Consulte o histórico no menu.");
+      return;
+    }
+    this.roomId = this.match.id;
+    this.inviteCode = this.match.inviteCode || this.inviteCode;
+    setMatchInUrl(this.inviteCode, this.match.id);
+    this.roomText?.setText(`SALA  ${this.inviteCode || this.match.id.slice(0, 12)}\nVOCÊ  ${this.localPeerId}`);
+    await this.sendBackendHeartbeat(false);
+    if (!this.match || this.returning) return;
+    await this.startMesh();
+    this.time.delayedCall(MATCH_PRESENCE_LEASE_MS + 1_000, () => {
+      if (
+        this.phase === "lobby" &&
+        !this.opponentPeerId &&
+        this.match &&
+        (this.match.state === "running" || Boolean(this.match.guestUserId))
+      ) {
+        void this.recoverAbandonedMatch();
+      }
+    });
+  }
+
+  private async confirmBackendReady(): Promise<void> {
+    if (!this.match || !this.opponentPeerId) return;
+    if (this.match.state !== "lobby") {
+      this.backendReady = this.match?.state === "running";
+      if (this.backendReady) this.sendReady();
+      return;
+    }
+    const heartbeat = await MatchService.heartbeat(this.match.id, true);
+    if (heartbeat.status === "conflict") {
+      await this.refreshBackendReady();
+      return;
+    }
+    if (heartbeat.status !== "ok" || !heartbeat.value) return;
+    this.match = heartbeat.value;
+    const result = await MatchService.ready(this.match.id, this.readyOperationId);
+    if (result.status === "conflict") {
+      await this.refreshBackendReady();
+      return;
+    }
+    if (result.status !== "ok" || !result.value) {
+      this.statusText?.setText("Não foi possível confirmar sua prontidão.").setColor("#ff8a8a");
+      return;
+    }
+    this.match = result.value;
+    this.backendReady = this.match.state === "running";
+    this.statusText?.setText(
+      this.backendReady ? "Partida confirmada. Conectando ao oponente..." : "Pronto. Aguardando o segundo jogador...",
+    ).setColor(this.backendReady ? "#7CFCEA" : "#FFD37C");
+  }
+
+  private async refreshBackendReady(): Promise<void> {
+    if (!this.match || this.matchPollInFlight) return;
+    this.matchPollInFlight = true;
+    try {
+      const result = await MatchService.read(this.match.id);
+      if (result.status !== "ok" || !result.value) return;
+      this.match = result.value;
+      if (this.match.state === "running" && !this.backendReady) {
+        this.backendReady = true;
+        this.statusText?.setText("Os dois jogadores estão prontos. Sincronizando largada...").setColor("#7CFCEA");
+        this.sendReady();
+      } else if (this.match.state === "lobby" && this.opponentPeerId) {
+        const userId = CloudSession.current()?.profile.id;
+        if (userId && !this.match.ready[userId]) await this.confirmBackendReady();
+      }
+    } finally {
+      this.matchPollInFlight = false;
+    }
+  }
+
+  private async sendBackendHeartbeat(connected: boolean): Promise<void> {
+    if (!this.match || this.heartbeatInFlight || this.match.state === "finished" || this.match.state === "cancelled") return;
+    this.heartbeatInFlight = true;
+    try {
+      const result = await MatchService.heartbeat(this.match.id, connected);
+      if (result.status === "ok" && result.value) {
+        this.match = result.value;
+        if (this.phase === "finished" && this.match.state === "finished") this.announceFinalResult();
+      }
+    } finally {
+      this.heartbeatInFlight = false;
+    }
+  }
+
   private async startMesh(): Promise<void> {
     const startId = ++this.meshStartId;
     if (!("RTCPeerConnection" in window) || !("WebSocket" in window)) {
@@ -509,7 +676,7 @@ export class MultiplayerScene extends Phaser.Scene {
     }
 
     try {
-      const signaling = resolveSignaling();
+      const signaling = await resolveSignaling(this.match?.id);
       const rtcConfiguration = signaling.serverUrl
         ? await loadIceConfiguration(signaling.serverUrl)
         : undefined;
@@ -545,6 +712,7 @@ export class MultiplayerScene extends Phaser.Scene {
         console.error("Falha no mesh WebRTC", (event as CustomEvent<unknown>).detail);
         if (this.phase === "lobby") {
           this.statusText?.setText("Falha ao conectar com o oponente.").setColor("#ff8a8a");
+          void this.sendBackendHeartbeat(false);
         }
       });
       this.mesh.addEventListener("protocolerror", (event) => {
@@ -568,8 +736,10 @@ export class MultiplayerScene extends Phaser.Scene {
       return;
     }
     this.peersText?.setText(`Oponente conectado: ${peerId}`);
-    this.statusText?.setText("Sincronizando largada...").setColor("#7CFCEA");
-    this.sendReady();
+    this.statusText?.setText(
+      this.backendReady ? "Sincronizando largada..." : "Aguardando prontidão confirmada pelo servidor...",
+    ).setColor(this.backendReady ? "#7CFCEA" : "#FFD37C");
+    void this.confirmBackendReady();
   }
 
   private handlePeerReconnecting(peerId: string): void {
@@ -585,6 +755,7 @@ export class MultiplayerScene extends Phaser.Scene {
     if (peerId !== this.opponentPeerId) return;
     if (this.phase === "countdown" || this.phase === "racing") {
       this.showDisconnectVictory();
+      this.time.delayedCall(MATCH_PRESENCE_LEASE_MS + 1_000, () => void this.recoverAbandonedMatch());
       return;
     }
     if (this.phase === "lobby") {
@@ -592,6 +763,9 @@ export class MultiplayerScene extends Phaser.Scene {
       this.preparedRaceId = undefined;
       this.opponentPeerId = undefined;
       this.remoteReady = false;
+      this.backendReady = false;
+      this.readyOperationId = MatchService.operationId();
+      void this.sendBackendHeartbeat(false);
       this.peersText?.setText("Aguardando oponente");
       this.statusText?.setText("Oponente desconectou. Convide novamente.").setColor("#FFD37C");
     }
@@ -641,6 +815,7 @@ export class MultiplayerScene extends Phaser.Scene {
   }
 
   private sendReady(): void {
+    if (!this.backendReady) return;
     this.mesh?.broadcast({
       type: "peer-state",
       protocolVersion: MULTIPLAYER_PROTOCOL_VERSION,
@@ -653,6 +828,7 @@ export class MultiplayerScene extends Phaser.Scene {
   private tryScheduleRace(): void {
     if (
       this.phase !== "lobby" ||
+      !this.backendReady ||
       !this.opponentPeerId ||
       !this.remoteReady ||
       this.preparedRaceId ||
@@ -1051,7 +1227,60 @@ export class MultiplayerScene extends Phaser.Scene {
     const header = `${"".padEnd(8)}  ${"BRUTO".padEnd(9)}  ${"CR".padEnd(5)}  AJUSTADO`;
     const localLine = this.formatResultLine("VOCÊ", this.localResult, this.localDnf);
     const remoteLine = this.formatResultLine("OPONENTE", this.remoteResult, this.remoteDnf);
-    this.showResultOverlay(this.calculateVerdict(), [header, localLine, remoteLine].join("\n"));
+    const verdict = this.disconnectAward ? "VITÓRIA — ABANDONO" : this.calculateVerdict();
+    const details = this.disconnectAward
+      ? "OPONENTE DESCONECTOU\nA vitória entra no histórico quando o servidor confirmar a ausência."
+      : [header, localLine, remoteLine].join("\n");
+    this.showResultOverlay(verdict, details);
+    void this.persistResult();
+  }
+
+  private persistResult(): void {
+    if (this.resultPersisted || !this.match?.guestUserId) return;
+    const session = CloudSession.current();
+    if (!session) return;
+    MatchResultSync.watch(this.finishOperationId, (match) => {
+      if (this.returning) return;
+      this.match = match;
+      this.resultPersisted = true;
+      if (match.resultStatus === "pending") {
+        this.flashRaceMessage("RESULTADO ENVIADO — AGUARDANDO CONFIRMAÇÃO DO OPONENTE");
+      } else if (match.resultStatus === "disputed") {
+        this.flashRaceMessage("RESULTADOS DIVERGENTES — CLASSIFICAÇÃO EM ANÁLISE");
+      } else {
+        this.announceFinalResult();
+      }
+    });
+    if (this.disconnectAward) {
+      MatchResultSync.enqueue({
+        kind: "disconnect",
+        matchId: this.match.id,
+        operationId: this.finishOperationId,
+      });
+      this.flashRaceMessage("RESULTADO AINDA NÃO CONFIRMADO");
+      return;
+    }
+    const participant = (result: RaceResult | undefined, dnf: boolean): MatchParticipantResult => ({
+      rawTimeMs: dnf || !result ? null : Math.floor(result.rawTimeMs),
+      credits: result?.credits ?? 0,
+      dnf: dnf || !result,
+    });
+    MatchResultSync.enqueue({
+      kind: "finish",
+      matchId: this.match.id,
+      operationId: this.finishOperationId,
+      result: participant(this.localResult, this.localDnf),
+      observedOpponent: participant(this.remoteResult, this.remoteDnf),
+    });
+  }
+
+  private announceFinalResult(): void {
+    if (this.match?.state !== "finished") return;
+    if (this.match.result?.reason === "abandon") {
+      this.flashRaceMessage("OPONENTE NÃO CONFIRMOU — VITÓRIA POR ABANDONO");
+    } else if (this.match.result?.reason === "inconclusive") {
+      this.flashRaceMessage("SEM CLASSIFICAÇÃO — RESULTADO INCONCLUSIVO");
+    }
   }
 
   private calculateVerdict(): string {
@@ -1080,9 +1309,20 @@ export class MultiplayerScene extends Phaser.Scene {
 
   private showDisconnectVictory(): void {
     if (this.phase === "finished") return;
-    this.phase = "finished";
-    this.freezePlayer();
-    this.showResultOverlay("VITÓRIA", "O oponente desconectou durante a corrida.");
+    this.disconnectAward = true;
+    this.remoteDnf = true;
+    this.showResults();
+  }
+
+  private async recoverAbandonedMatch(): Promise<void> {
+    if (!this.match || this.match.state === "finished" || this.match.state === "cancelled") return;
+    const result = await MatchService.recover(this.match.id, this.recoverOperationId);
+    if (result.status === "ok" && result.value) {
+      this.match = result.value;
+      this.resultPersisted = this.match.state === "finished";
+    } else if (result.status === "conflict" && result.code === "MATCH_CONFLICT" && !this.returning) {
+      this.time.delayedCall(1_000, () => void this.recoverAbandonedMatch());
+    }
   }
 
   private showResultOverlay(verdict: string, details: string): void {
@@ -1099,7 +1339,7 @@ export class MultiplayerScene extends Phaser.Scene {
     const lines: Array<[number, string, string, string]> = [
       [centerY - 110, verdict, color, "48px"],
       [centerY + 10, details, "#e8ecff", "22px"],
-      [centerY + 135, "ENTER / A: revanche  •  ESC / B: menu", "#8892b0", "16px"],
+      [centerY + 135, "ENTER / A ou ESC / B: voltar ao menu", "#8892b0", "16px"],
     ];
     const resultTexts = lines.map(([y, content, textColor, size]) => (
       this.add.text(centerX, y, content, textStyle(textColor, size))
@@ -1322,6 +1562,11 @@ export class MultiplayerScene extends Phaser.Scene {
     this.meshStartId += 1;
     this.mesh?.stop();
     this.mesh = undefined;
+    if (this.phase === "finished" && !this.resultPersisted) this.persistResult();
+    MatchResultSync.noteSceneClosed();
+    if (this.phase !== "finished" && this.match && this.match.state !== "finished" && this.match.state !== "cancelled") {
+      void MatchService.leave(this.match.id, this.leaveOperationId);
+    }
     removeRoomFromUrl();
     this.scene.start("MenuScene");
   }
@@ -1344,27 +1589,41 @@ interface ResolvedSignaling {
   serverUrl?: string;
 }
 
-function resolveSignaling(): ResolvedSignaling {
-  const configuredServer = new URL(window.location.href).searchParams.get("signal");
+async function resolveSignaling(matchId?: string): Promise<ResolvedSignaling> {
+  const configuredServer = new URL(window.location.href).searchParams.get("signal") || await CloudSession.signaling();
   if (configuredServer === "local") {
     if (!("BroadcastChannel" in window)) throw new Error("BroadcastChannel indisponivel.");
     return { transport: new BroadcastChannelSignaling(SIGNALING_CHANNEL) };
   }
 
-  const serverUrl = configuredServer || defaultSignalingUrl();
+  if (!configuredServer) throw new Error("Sinalização não configurada para este ambiente.");
+  const serverUrl = configuredServer;
   const parsedUrl = new URL(serverUrl);
   if (parsedUrl.protocol !== "ws:" && parsedUrl.protocol !== "wss:") {
     throw new Error("A URL de sinalizacao precisa usar ws:// ou wss://.");
   }
-  return { transport: new WebSocketSignaling(parsedUrl.toString()), serverUrl: parsedUrl.toString() };
+  const localPage = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+  const localSignal = parsedUrl.hostname === "localhost" || parsedUrl.hostname === "127.0.0.1";
+  if (parsedUrl.protocol !== "wss:" && !(localPage && localSignal)) {
+    throw new Error("Ambientes publicados exigem sinalização WSS.");
+  }
+  const ticketProvider = matchId && CloudSession.current()
+    ? async () => {
+      const issued = await MatchService.connectionTicket(matchId);
+      if (issued.status !== "ok" || !issued.value) throw new Error("Ticket de conexão recusado.");
+      return issued.value;
+    }
+    : undefined;
+  return {
+    transport: new WebSocketSignaling(parsedUrl.toString(), ticketProvider),
+    serverUrl: parsedUrl.toString(),
+  };
 }
 
-function defaultSignalingUrl(): string {
-  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-  return `${protocol}//${window.location.hostname}/ws`;
-}
-
-async function loadIceConfiguration(serverUrl: string): Promise<RTCConfiguration | undefined> {
+async function loadIceConfiguration(serverUrl?: string): Promise<RTCConfiguration | undefined> {
+  const published = await CloudSession.iceServers();
+  if (published.length) return { iceServers: published };
+  if (!serverUrl) return undefined;
   const configurationUrl = new URL(serverUrl);
   configurationUrl.protocol = configurationUrl.protocol === "wss:" ? "https:" : "http:";
   configurationUrl.pathname = "/ice-config";
@@ -1386,22 +1645,28 @@ async function loadIceConfiguration(serverUrl: string): Promise<RTCConfiguration
   }
 }
 
-function roomFromUrl(): string {
+function inviteFromUrl(): string {
   const url = new URL(window.location.href);
-  const requestedRoom = url.searchParams.get("room")?.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 32);
-  const roomId = requestedRoom || randomToken(8);
-  if (!requestedRoom) {
-    url.searchParams.set("room", roomId);
-    window.history.replaceState(null, "", url);
-  }
-  return roomId;
+  return url.searchParams.get("room")?.toUpperCase().replace(/[^A-Z2-9-]/g, "").slice(0, 11) || "";
+}
+
+function matchFromUrl(): string {
+  const url = new URL(window.location.href);
+  return url.searchParams.get("match")?.replace(/[^a-zA-Z0-9-]/g, "").slice(0, 64) || "";
+}
+
+function setMatchInUrl(inviteCode: string, matchId: string): void {
+  const url = new URL(window.location.href);
+  if (inviteCode) url.searchParams.set("room", inviteCode);
+  url.searchParams.set("match", matchId);
+  window.history.replaceState(null, "", url);
 }
 
 /** Ao abandonar a corrida, F5 deve permanecer no menu em vez de reabrir o convite. */
 function removeRoomFromUrl(): void {
   const url = new URL(window.location.href);
-  if (!url.searchParams.has("room")) return;
   url.searchParams.delete("room");
+  url.searchParams.delete("match");
   window.history.replaceState(null, "", url);
 }
 

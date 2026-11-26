@@ -1,0 +1,8 @@
+{
+  "name": "event-publisher",
+  "private": true,
+  "dependencies": {
+    "@aws-sdk/client-sqs": "^3.686.0",
+    "@aws-sdk/util-dynamodb": "^3.686.0"
+  }
+}
