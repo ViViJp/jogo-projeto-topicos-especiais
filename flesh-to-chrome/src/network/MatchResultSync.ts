@@ -1,16 +1,19 @@
 import { CloudSession } from "./CloudSession";
 import { MatchParticipantResult, MatchService, RemoteMatch } from "./MatchService";
 import {
+  LEGACY_NOTICE,
   StoredResultJob,
-  attemptDisposition,
+  applyAttempt,
   enqueueResult,
-  markConfirmed,
-  markFailure,
-  markRejected,
+  finishPump,
   markSceneClosed,
-  pendingNotice,
+  mergeStores,
+  migrateStore,
+  releaseOwnerListeners,
+  requestPump,
   retryDelay,
   selectForSend,
+  statusNotice,
 } from "./match-result-sync";
 
 const STORAGE_KEY = "flesh-to-chrome:match-result:v1";
@@ -19,10 +22,11 @@ type Listener = (match: RemoteMatch) => void;
 type Store = Record<string, StoredResultJob[]>;
 
 export class MatchResultSync {
-  private static store: Store = MatchResultSync.read();
+  private static store: Store = MatchResultSync.load();
   private static listeners = new Map<string, Listener>();
   private static timer: number | undefined;
   private static pumping = false;
+  private static pendingPumps: { ownerId?: string | null; delay: number; retry?: boolean }[] = [];
 
   static enqueue(job: {
     kind: StoredResultJob["kind"];
@@ -39,7 +43,7 @@ export class MatchResultSync {
       [ownerId]: enqueueResult(queue, { ...job, ownerId }),
     };
     MatchResultSync.save();
-    MatchResultSync.schedule(0);
+    MatchResultSync.schedule(0, ownerId);
   }
 
   static watch(operationId: string, listener: Listener): void {
@@ -55,28 +59,40 @@ export class MatchResultSync {
       ...MatchResultSync.store,
       [ownerId]: markSceneClosed(MatchResultSync.store[ownerId]),
     };
+    MatchResultSync.listeners = new Map(
+      releaseOwnerListeners([...MatchResultSync.listeners.keys()], ownerId)
+        .map((key) => [key, MatchResultSync.listeners.get(key)!]),
+    );
     MatchResultSync.save();
-    MatchResultSync.schedule(0);
+    MatchResultSync.schedule(0, ownerId);
   }
 
   static pendingNotice(): string | null {
     const ownerId = CloudSession.current()?.profile.id;
-    if (!ownerId) return null;
-    return pendingNotice(MatchResultSync.store[ownerId] || []);
+    const own = ownerId ? statusNotice(MatchResultSync.store[ownerId] || []) : null;
+    const legacy = MatchResultSync.store.__legacy?.length ? LEGACY_NOTICE : null;
+    return [own, legacy].filter(Boolean).join("\n") || null;
   }
 
   static resume(): void {
-    MatchResultSync.store = MatchResultSync.read();
+    const loaded = MatchResultSync.read();
+    if (loaded) MatchResultSync.store = mergeStores(MatchResultSync.store, loaded);
     const ownerId = CloudSession.current()?.profile.id;
-    if (ownerId && selectForSend(MatchResultSync.store[ownerId] || [], ownerId)) MatchResultSync.schedule(0);
+    if (ownerId && selectForSend(MatchResultSync.store[ownerId] || [], ownerId)) MatchResultSync.schedule(0, ownerId);
   }
 
-  private static schedule(delay: number): void {
-    if (MatchResultSync.timer !== undefined) return;
+  private static schedule(delay: number, ownerId: string | null = null, retry = false): void {
+    const decision = requestPump(
+      { pumping: MatchResultSync.pumping, pending: MatchResultSync.pendingPumps },
+      { delay, ownerId, retry },
+    );
+    MatchResultSync.pendingPumps = decision.pending;
+    if (!decision.start) return;
+    if (MatchResultSync.timer !== undefined) window.clearTimeout(MatchResultSync.timer);
     MatchResultSync.timer = window.setTimeout(() => {
       MatchResultSync.timer = undefined;
       void MatchResultSync.pump();
-    }, delay);
+    }, decision.start.delay);
   }
 
   private static async pump(): Promise<void> {
@@ -84,7 +100,11 @@ export class MatchResultSync {
     const ownerId = CloudSession.current()?.profile.id || null;
     const queue = ownerId ? MatchResultSync.store[ownerId] || [] : [];
     const job = selectForSend(queue, ownerId);
-    if (!ownerId || !job || job.ownerId !== ownerId) return;
+    if (!ownerId || !job || job.ownerId !== ownerId) {
+      MatchResultSync.pendingPumps = MatchResultSync.pendingPumps.filter((item) => item.ownerId !== ownerId);
+      MatchResultSync.armPending();
+      return;
+    }
     MatchResultSync.pumping = true;
     try {
       if (CloudSession.current()?.profile.id !== job.ownerId) return;
@@ -97,37 +117,39 @@ export class MatchResultSync {
           job.operationId,
         );
       if (CloudSession.current()?.profile.id !== job.ownerId) return;
-      const disposition = attemptDisposition(response.status);
-      const stored = disposition === "confirmed" && response.value
-        && (job.kind === "finish" || response.value.state === "finished");
-      if (stored && response.value) {
+      const applied = applyAttempt(MatchResultSync.store[job.ownerId] || [], job, response);
+      MatchResultSync.replace(job.ownerId, applied.queue);
+      if (applied.disposition === "confirmed" && response.value) {
         const listener = MatchResultSync.listeners.get(`${job.ownerId}:${job.operationId}`);
-        MatchResultSync.replace(job.ownerId, markConfirmed(MatchResultSync.store[job.ownerId] || [], job.operationId, job.ownerId));
         MatchResultSync.listeners.delete(`${job.ownerId}:${job.operationId}`);
         listener?.(response.value);
-        if (selectForSend(MatchResultSync.store[job.ownerId] || [], job.ownerId)) MatchResultSync.schedule(0);
+        if (selectForSend(MatchResultSync.store[job.ownerId] || [], job.ownerId)) MatchResultSync.schedule(0, job.ownerId);
         return;
       }
-      if (disposition === "permanent") {
-        MatchResultSync.replace(
-          job.ownerId,
-          markRejected(MatchResultSync.store[job.ownerId] || [], job.operationId, job.ownerId, response.code || "invalid"),
-        );
+      if (applied.disposition === "permanent") {
         MatchResultSync.listeners.delete(`${job.ownerId}:${job.operationId}`);
-        if (selectForSend(MatchResultSync.store[job.ownerId] || [], job.ownerId)) MatchResultSync.schedule(0);
+        if (selectForSend(MatchResultSync.store[job.ownerId] || [], job.ownerId)) MatchResultSync.schedule(0, job.ownerId);
         return;
       }
-      MatchResultSync.replace(
-        job.ownerId,
-        markFailure(MatchResultSync.store[job.ownerId] || [], job.operationId, job.ownerId),
-      );
       const current = selectForSend(MatchResultSync.store[job.ownerId] || [], job.ownerId);
       if (!current) return;
       const opponentStillPresent = response.status === "conflict" && response.code === "MATCH_ACTIVE";
-      MatchResultSync.schedule(retryDelay(current.failures, opponentStillPresent));
+      MatchResultSync.schedule(retryDelay(current.failures, opponentStillPresent), job.ownerId, true);
     } finally {
       MatchResultSync.pumping = false;
+      MatchResultSync.armPending();
     }
+  }
+
+  private static armPending(): void {
+    const decision = finishPump({ pumping: false, pending: MatchResultSync.pendingPumps });
+    MatchResultSync.pendingPumps = decision.pending;
+    if (!decision.start) return;
+    if (MatchResultSync.timer !== undefined) window.clearTimeout(MatchResultSync.timer);
+    MatchResultSync.timer = window.setTimeout(() => {
+      MatchResultSync.timer = undefined;
+      void MatchResultSync.pump();
+    }, decision.start.delay);
   }
 
   private static replace(ownerId: string, queue: StoredResultJob[]): void {
@@ -135,16 +157,18 @@ export class MatchResultSync {
     MatchResultSync.save();
   }
 
-  private static read(): Store {
+  private static load(): Store {
+    return MatchResultSync.read() || {};
+  }
+
+  private static read(): Store | null {
     try {
+      if (typeof sessionStorage === "undefined") return null;
       const raw = sessionStorage.getItem(STORAGE_KEY);
       if (!raw) return {};
-      const parsed = JSON.parse(raw) as Store | StoredResultJob[];
-      if (Array.isArray(parsed)) return {};
-      if (!parsed || typeof parsed !== "object") return {};
-      return parsed;
+      return migrateStore(JSON.parse(raw));
     } catch {
-      return {};
+      return null;
     }
   }
 

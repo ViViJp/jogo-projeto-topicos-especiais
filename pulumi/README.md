@@ -109,7 +109,7 @@ pulumi config set flesh-to-chrome:sesFromEmail seu-email@exemplo.com
 
 ## O que esta entrega não publica
 
-- Ticket autenticado de conexão e autoridade de simulação da corrida. A sinalização WSS já é publicada por API Gateway WebSocket e informada ao jogo por `cloud-config.json`; posição, física e snapshots continuam no WebRTC e condicionados à decisão D04.
+- Autoridade de simulação da corrida. O ticket de conexão já sai em `POST /matches/{id}/connection-ticket` e é consumido no `$connect` do WebSocket. A desconexão durante a corrida só vira vitória em `POST /matches/{id}/finish` com `disconnect: true`, depois que o lease de presença do adversário expira. Posição, física e snapshots continuam no WebRTC e condicionados à decisão D04. O `cloud-config.json` publica a URL WSS e um STUN público; credenciais TURN não entram nesse arquivo.
 - Loja e rotas `/me/cosmetics`. O cronograma da loja segue pendente.
 - Feedback técnico SES → SNS → SQS e a reconciliação automática de itens de outbox além da janela do Stream. O transporte principal já usa outbox transacional, DynamoDB Streams, publicador, filas separadas com DLQ e consumidores idempotentes de Auditoria e Comunicações. Itens da outbox permanecem preservados para recuperação operacional.
 - Integração contínua e deploy contínuo. A suíte local cobre contratos de gameplay, narrativa, multiplayer, nuvem, publicação da outbox e consumidores; automação de implantação fica para a entrega seguinte.

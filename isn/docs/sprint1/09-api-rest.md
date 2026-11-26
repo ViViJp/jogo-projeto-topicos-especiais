@@ -104,10 +104,10 @@ O sistema exige dois usuários autenticados, criação/entrada em salas no backe
 | `POST /matches` | `operationId` | D03 aprovada: `201`, ID, pista/versão, código/link de convite e expiração do lobby; criador no primeiro slot. |
 | `POST /matches/join` | `operationId`, `inviteCode` | D03 aprovada: resolve convite por chave e reserva segunda vaga; `200` com sala autorizada. Convite inválido/expirado é rejeitado, sem expor detalhes privados. |
 | `GET /me/matches` | Cursor; limite 20 | D03 aprovada: `200`, resultados próprios dos últimos 30 dias. |
-| `POST /matches/{id}/connection-ticket` | Sessão autenticada; participante autorizado | Proposta: `201`, ticket de uso único e validade curta para abrir WSS; definir TTL, entrega e consumo atômico em D04. Não registrar o segredo em logs. |
+| `POST /matches/{id}/connection-ticket` | Sessão autenticada; participante autorizado | `201`, ticket de uso único e validade de 2 minutos para abrir o WebSocket. O `$connect` consome o ticket e o vincula ao usuário e à partida. Não registrar o segredo em logs. |
 | `POST /matches/{id}/ready` | `operationId` | `200`, prontidão registrada; iniciar somente com dois participantes autenticados e prontos. |
 | `POST /matches/{id}/heartbeat` | `connected` | `200`, renova o lease do participante e informa se o DataChannel está conectado; não inicia a corrida. |
-| `POST /matches/{id}/finish` | `operationId`, `result` próprio e `observedOpponent` | `200`, armazena uma submissão independente. A classificação só é confirmada após as duas versões cruzarem; divergências ficam sem vencedor. Tempos abaixo do mínimo da pista são rejeitados. |
+| `POST /matches/{id}/finish` | `operationId`, `result` próprio e `observedOpponent`; ou `disconnect: true` | `200`, armazena uma submissão independente. A classificação só é confirmada após as duas versões cruzarem; divergências ficam sem vencedor. Tempos abaixo do mínimo da pista são rejeitados. Com `disconnect: true`, a vitória só é gravada depois que o lease de presença do adversário expira. Presença ainda válida responde `409 MATCH_ACTIVE`. Partida já encerrada ou cancelada não é reenviada. |
 | `POST /matches/{id}/recover` | `operationId` | Retoma a partida ativa ou encerra com segurança somente quando o lease do adversário expirou. |
 | `GET /matches/{id}` | Sessão de participante | `200`, estado e resultado/classificação persistidos se encerrada. |
 | `POST /matches/{id}/leave` | `operationId` | `200`; se em corrida, aplicar derrota por abandono conforme RN08; antes da largada, cancelar a sala conforme D03. |
