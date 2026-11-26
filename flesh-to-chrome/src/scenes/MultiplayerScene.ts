@@ -69,6 +69,7 @@ import {
 } from "../utils/AlexSprite";
 import { generatePlaceholderTextures } from "../utils/PlaceholderTextures";
 import { CloudSession } from "../network/CloudSession";
+import { MatchResultSync } from "../network/MatchResultSync";
 import {
   MatchParticipantResult,
   MatchService,
@@ -169,7 +170,6 @@ export class MultiplayerScene extends Phaser.Scene {
   private finishOperationId = "";
   private resultPersisted = false;
   private disconnectAward = false;
-  private resultPersistAttempts = 0;
   private heartbeatInFlight = false;
   private lastBackendHeartbeatAt = 0;
   private recoverOperationId = "";
@@ -446,7 +446,6 @@ export class MultiplayerScene extends Phaser.Scene {
     this.finishOperationId = MatchService.operationId();
     this.resultPersisted = false;
     this.disconnectAward = false;
-    this.resultPersistAttempts = 0;
     this.heartbeatInFlight = false;
     this.lastBackendHeartbeatAt = 0;
     this.recoverOperationId = MatchService.operationId();
@@ -1230,29 +1229,35 @@ export class MultiplayerScene extends Phaser.Scene {
     const remoteLine = this.formatResultLine("OPONENTE", this.remoteResult, this.remoteDnf);
     const verdict = this.disconnectAward ? "VITÓRIA — ABANDONO" : this.calculateVerdict();
     const details = this.disconnectAward
-      ? "OPONENTE DESCONECTOU\nA partida foi encerrada sem tempo de conclusão."
+      ? "OPONENTE DESCONECTOU\nA vitória entra no histórico quando o servidor confirmar a ausência."
       : [header, localLine, remoteLine].join("\n");
     this.showResultOverlay(verdict, details);
     void this.persistResult();
   }
 
-  private async persistResult(): Promise<void> {
+  private persistResult(): void {
     if (this.resultPersisted || !this.match?.guestUserId) return;
-    this.resultPersistAttempts += 1;
     const session = CloudSession.current();
     if (!session) return;
+    MatchResultSync.watch(this.finishOperationId, (match) => {
+      if (this.returning) return;
+      this.match = match;
+      this.resultPersisted = true;
+      if (match.resultStatus === "pending") {
+        this.flashRaceMessage("RESULTADO ENVIADO — AGUARDANDO CONFIRMAÇÃO DO OPONENTE");
+      } else if (match.resultStatus === "disputed") {
+        this.flashRaceMessage("RESULTADOS DIVERGENTES — CLASSIFICAÇÃO EM ANÁLISE");
+      } else {
+        this.announceFinalResult();
+      }
+    });
     if (this.disconnectAward) {
-      const awarded = await MatchService.disconnect(this.match.id, this.finishOperationId);
-      if (awarded.status === "ok" && awarded.value) {
-        this.match = awarded.value;
-        this.resultPersisted = true;
-        return;
-      }
-      console.warn("Abandono ainda não foi registrado no backend.", { status: awarded.status, code: awarded.code });
-      if (this.resultPersistAttempts < 5 && this.phase === "finished") {
-        const delay = Math.min(8_000, 500 * (2 ** (this.resultPersistAttempts - 1)));
-        this.time.delayedCall(delay, () => void this.persistResult());
-      }
+      MatchResultSync.enqueue({
+        kind: "disconnect",
+        matchId: this.match.id,
+        operationId: this.finishOperationId,
+      });
+      this.flashRaceMessage("RESULTADO AINDA NÃO CONFIRMADO");
       return;
     }
     const participant = (result: RaceResult | undefined, dnf: boolean): MatchParticipantResult => ({
@@ -1260,44 +1265,13 @@ export class MultiplayerScene extends Phaser.Scene {
       credits: result?.credits ?? 0,
       dnf: dnf || !result,
     });
-    const result = await MatchService.finish(
-      this.match.id,
-      participant(this.localResult, this.localDnf),
-      participant(this.remoteResult, this.remoteDnf),
-      this.finishOperationId,
-    );
-    if (result.status === "ok" && result.value) {
-      this.match = result.value;
-      this.resultPersisted = true;
-      if (this.match.resultStatus === "pending") {
-        this.flashRaceMessage("RESULTADO ENVIADO — AGUARDANDO CONFIRMAÇÃO DO OPONENTE");
-        this.time.delayedCall(65_000, () => void this.readFinalResult());
-      } else if (this.match.resultStatus === "disputed") {
-        this.flashRaceMessage("RESULTADOS DIVERGENTES — CLASSIFICAÇÃO EM ANÁLISE");
-      }
-      return;
-    }
-    if (result.status === "conflict") {
-      const latest = await MatchService.read(this.match.id);
-      if (latest.status === "ok" && latest.value?.state === "finished") {
-        this.match = latest.value;
-        this.resultPersisted = true;
-        return;
-      }
-    }
-    console.warn("Resultado da partida ainda não foi confirmado no backend.", { status: result.status, code: result.code });
-    if (this.resultPersistAttempts < 5 && this.phase === "finished") {
-      const delay = Math.min(8_000, 500 * (2 ** (this.resultPersistAttempts - 1)));
-      this.time.delayedCall(delay, () => void this.persistResult());
-    }
-  }
-
-  private async readFinalResult(): Promise<void> {
-    if (!this.match || this.match.state === "finished") return;
-    const latest = await MatchService.read(this.match.id);
-    if (latest.status !== "ok" || !latest.value) return;
-    this.match = latest.value;
-    this.announceFinalResult();
+    MatchResultSync.enqueue({
+      kind: "finish",
+      matchId: this.match.id,
+      operationId: this.finishOperationId,
+      result: participant(this.localResult, this.localDnf),
+      observedOpponent: participant(this.remoteResult, this.remoteDnf),
+    });
   }
 
   private announceFinalResult(): void {
@@ -1588,7 +1562,8 @@ export class MultiplayerScene extends Phaser.Scene {
     this.meshStartId += 1;
     this.mesh?.stop();
     this.mesh = undefined;
-    if (this.phase === "finished" && !this.resultPersisted) void this.persistResult();
+    if (this.phase === "finished" && !this.resultPersisted) this.persistResult();
+    MatchResultSync.noteSceneClosed();
     if (this.phase !== "finished" && this.match && this.match.state !== "finished" && this.match.state !== "cancelled") {
       void MatchService.leave(this.match.id, this.leaveOperationId);
     }

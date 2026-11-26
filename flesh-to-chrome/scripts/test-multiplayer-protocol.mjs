@@ -289,13 +289,15 @@ const matchesSource = fs.readFileSync(path.join(projectDirectory, "../pulumi/ser
 const matchServiceSource = fs.readFileSync(path.join(projectDirectory, "src/network/MatchService.ts"), "utf8");
 const cloudSessionSource = fs.readFileSync(path.join(projectDirectory, "src/network/CloudSession.ts"), "utf8");
 const infrastructureSource = fs.readFileSync(path.join(projectDirectory, "../pulumi/__main__.py"), "utf8");
+const syncSource = fs.readFileSync(path.join(projectDirectory, "src/network/MatchResultSync.ts"), "utf8");
 assert.match(menuSource, /openMultiplayer[\s\S]*?if \(!CloudSession\.current\(\)\)/,
   "visitante não pode abrir a cena multiplayer pelo menu");
 assert.match(bootSource, /hasMultiplayerInvite\(\) && CloudSession\.current\(\)/,
   "convite direto também deve exigir sessão autenticada");
 assert.match(multiplayerSource, /MatchService\.join/);
 assert.match(multiplayerSource, /MatchService\.ready/);
-assert.match(multiplayerSource, /MatchService\.finish/);
+assert.match(syncSource, /MatchService\.finish/);
+assert.match(multiplayerSource, /kind: "finish"/);
 assert.match(multiplayerSource, /await resolveSignaling\(/,
   "a sinalização publicada deve ser resolvida antes de abrir o mesh");
 assert.doesNotMatch(multiplayerSource, /window\.location\.hostname}\/ws/,

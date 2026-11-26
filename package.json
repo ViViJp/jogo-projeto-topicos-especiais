@@ -13,7 +13,7 @@
     "test": "npm run typecheck && npm run validate:assets && npm run test:gameplay && npm run test:narrative && npm run test:multiplayer && npm run test:cloud",
     "test:gameplay": "npm --prefix flesh-to-chrome run test:gameplay",
     "test:narrative": "npm --prefix flesh-to-chrome run test:narrative",
-    "test:multiplayer": "npm --prefix flesh-to-chrome run test:multiplayer && node pulumi/services/partidas/check-results.js && node pulumi/services/partidas/check-lease.js && node pulumi/services/partidas/check-ticket.js",
+    "test:multiplayer": "npm --prefix flesh-to-chrome run test:multiplayer && node pulumi/services/partidas/check-results.js && node pulumi/services/partidas/check-lease.js && node pulumi/services/partidas/check-ticket.js && node flesh-to-chrome/src/network/check-match-result-sync.js",
     "test:cloud": "node pulumi/services/check-rules.js && node pulumi/services/conta/check-revoke.js && node pulumi/services/event-publisher/check-publisher.js && node pulumi/services/signaling/check-signaling.js && node flesh-to-chrome/src/network/check-campaign-state.js && node flesh-to-chrome/scripts/test-cloud-sync.mjs && node pulumi/services/comunicacoes/check-delivery.js",
     "validate:assets": "npm --prefix flesh-to-chrome run validate:assets",
     "postinstall": "npm --prefix flesh-to-chrome install"

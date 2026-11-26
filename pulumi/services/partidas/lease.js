@@ -19,4 +19,17 @@ function presenceState(match, userId, now = Date.now(), leaseMs = PRESENCE_LEASE
   return now - seen <= leaseMs ? "present" : "absent";
 }
 
-module.exports = { PRESENCE_LEASE_MS, allParticipantsStale, participantIds, presenceFresh, presenceState };
+function awardDisconnectAllowed(match, userId, now = Date.now(), leaseMs = PRESENCE_LEASE_MS) {
+  const opponentId = participantIds(match).find((id) => id !== userId);
+  if (!opponentId) return false;
+  return presenceState(match, opponentId, now, leaseMs) === "absent";
+}
+
+module.exports = {
+  PRESENCE_LEASE_MS,
+  allParticipantsStale,
+  awardDisconnectAllowed,
+  participantIds,
+  presenceFresh,
+  presenceState,
+};

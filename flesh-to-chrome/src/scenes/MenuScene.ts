@@ -3,6 +3,7 @@ import { MenuBackdrop, drawTechPanel, preloadMenuBackdrop } from "../objects/Men
 import { AudioManager, BGM, SFX } from "../systems/AudioManager";
 import { InputManager } from "../systems/InputManager";
 import { CampaignSyncState, CloudSession } from "../network/CloudSession";
+import { MatchResultSync } from "../network/MatchResultSync";
 import { SaveState, SaveData } from "../systems/SaveState";
 import { GameSceneData } from "./GameScene";
 import { startLoadingTransition } from "../systems/SceneTransition";
@@ -334,6 +335,9 @@ export class MenuScene extends Phaser.Scene {
     this.hasSave = SaveState.hasExistingSave();
     this.ready = true;
     this.showMainMenu();
+    MatchResultSync.resume();
+    const notice = MatchResultSync.pendingNotice();
+    if (notice) this.statusText?.setText(notice);
   }
 
   private showChoice(): void {
